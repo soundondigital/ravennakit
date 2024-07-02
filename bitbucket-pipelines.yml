@@ -11,6 +11,7 @@ definitions:
         script:
           - git submodule update --recursive --init
           - brew install pkg-config
+          - export PYTHONPATH="${PYTHONPATH}:$BITBUCKET_CLONE_DIR"
           - python3 -m pip install pygit2 boto3
           - python3 -u ci/build.py --path-to-build build-macos --build-number $BITBUCKET_BUILD_NUMBER
     - step: &build-windows
@@ -20,6 +21,7 @@ definitions:
         name: 'Build for Windows'
         script:
           - git submodule update --recursive --init
+          - $env:PYTHONPATH = "$env:PYTHONPATH;$env:BITBUCKET_CLONE_DIR"
           - python -m pip install pygit2 boto3
           - python -u ci/build.py --path-to-build build-windows --build-number "$env:BITBUCKET_BUILD_NUMBER"
     - step: &deploy-to-production
