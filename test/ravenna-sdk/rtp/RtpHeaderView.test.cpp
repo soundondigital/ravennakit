@@ -359,7 +359,7 @@ TEST_CASE("Payload start index", "[RTP]") {
         };
 
         const rav::RtpHeaderView header(data, sizeof(data));
-        REQUIRE(header.payload_start_index() == 12);
+        REQUIRE(header.header_total_length() == 12);
     }
 
     SECTION("Test payload start index without csrc and with extension") {
@@ -399,7 +399,7 @@ TEST_CASE("Payload start index", "[RTP]") {
         };
 
         const rav::RtpHeaderView header(data, sizeof(data));
-        REQUIRE(header.payload_start_index() == 24);
+        REQUIRE(header.header_total_length() == 24);
     }
 
     SECTION("Test payload start index with csrc and extension") {
@@ -449,7 +449,7 @@ TEST_CASE("Payload start index", "[RTP]") {
         };
 
         const rav::RtpHeaderView header(data, sizeof(data));
-        REQUIRE(header.payload_start_index() == 32);
+        REQUIRE(header.header_total_length() == 32);
     }
 }
 

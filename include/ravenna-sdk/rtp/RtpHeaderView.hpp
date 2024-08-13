@@ -109,7 +109,7 @@ class RtpHeaderView {
     /**
      * @returns Returns the start index of the payload data.
      */
-    [[nodiscard]] size_t payload_start_index() const;
+    [[nodiscard]] size_t header_total_length() const;
 
     /**
      * @return Returns a view to the payload data.

@@ -141,7 +141,7 @@ rav::BufferView<const uint8_t> rav::RtpHeaderView::get_header_extension_data() c
     return {&data_[data_start_index], num_32bit_words * sizeof(uint32_t)};
 }
 
-size_t rav::RtpHeaderView::payload_start_index() const {
+size_t rav::RtpHeaderView::header_total_length() const {
     size_t extension_length_octets = 0;  // Including the extension header.
     if (extension()) {
         extension_length_octets = kHeaderExtensionLengthOctets;
@@ -156,11 +156,11 @@ rav::BufferView<const unsigned char> rav::RtpHeaderView::payload_data() const {
         return {};
     }
 
-    if (data_length_ < payload_start_index()) {
+    if (data_length_ < header_total_length()) {
         return {};
     }
 
-    return {data_ + payload_start_index(), data_length_ - payload_start_index()};
+    return {data_ + header_total_length(), data_length_ - header_total_length()};
 }
 
 std::string rav::RtpHeaderView::to_string() const {
@@ -176,6 +176,6 @@ std::string rav::RtpHeaderView::to_string() const {
         sequence_number(),
         timestamp(),
         ssrc(),
-        payload_start_index()
+        header_total_length()
     );
 }
