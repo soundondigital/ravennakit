@@ -74,10 +74,10 @@ find_package(asio CONFIG REQUIRED)
 
 add_library(ravenna_sdk STATIC
         include/ravenna-sdk/containers/BufferView.hpp
-        include/ravenna-sdk/rtp/RtpHeaderView.hpp
+        include/ravenna-sdk/rtp/RtpPacketView.hpp
         include/ravenna-sdk/platform/ByteOrder.hpp
         include/ravenna-sdk/util/Util.hpp
-        src/ravenna-sdk/rtp/RtpHeaderView.cpp
+        src/ravenna-sdk/rtp/RtpPacketView.cpp
         src/ravenna-sdk/util/empty_source.cpp
 )
 
@@ -122,7 +122,7 @@ target_link_libraries(unicast_receiver_example
 ##############
 
 add_executable(ravenna_sdk_tests
-        test/ravenna-sdk/rtp/RtpHeaderView.test.cpp
+        test/ravenna-sdk/rtp/RtpPacketView.test.cpp
         test/ravenna-sdk/util/Util.test.cpp
         test/ravenna-sdk/containers/BufferView.test.cpp
         test/ravenna-sdk/platform/ByteOrder.test.cpp
