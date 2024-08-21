@@ -20,6 +20,7 @@ enum class VerificationResult {
     InvalidPointer,
     InvalidHeaderLength,
     InvalidSenderInfoLength,
+    InvalidReportBlockLength,
     InvalidVersion,
 };
 

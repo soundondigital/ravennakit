@@ -25,9 +25,6 @@ constexpr auto kSenderInfoLength = kSenderReportNtpTimestampFullLength + rav::rt
 constexpr auto kSenderReportMinLength = kHeaderLength + kSenderInfoLength;
 }
 
-rav::RtcpReportBlockView::RtcpReportBlockView(const uint8_t* data, const size_t data_length) :
-    data_(data), data_length_(data_length) {}
-
 rav::RtcpPacketView::RtcpPacketView(const uint8_t* data, const size_t data_length) :
     data_(data), data_length_(data_length) {}
 
@@ -165,6 +162,11 @@ uint32_t rav::RtcpPacketView::octet_count() const {
     }
 
     return byte_order::read_be<uint32_t>(data_ + offset);
+}
+
+rav::RtcpReportBlockView rav::RtcpPacketView::get_report_block(size_t index) const {
+    // TODO
+    return {};
 }
 
 std::string rav::RtcpPacketView::to_string() const {

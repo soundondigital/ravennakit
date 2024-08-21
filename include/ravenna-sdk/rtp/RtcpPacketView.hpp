@@ -14,24 +14,11 @@
 #include <cstdint>
 #include <string>
 
+#include "RtcpReportBlockView.h"
 #include "Rtp.hpp"
 #include "ravenna-sdk/ntp/TimeStamp.hpp"
 
 namespace rav {
-
-class RtcpReportBlockView {
-  public:
-    /**
-     * Constructs an RTCP report block view from the given data.
-     * @param data The RTCP report block data.
-     * @param data_length The length of the RTCP report block in bytes.
-     */
-    RtcpReportBlockView(const uint8_t* data, size_t data_length);
-
-  private:
-    const uint8_t* data_ {};
-    size_t data_length_ {0};
-};
 
 class RtcpPacketView {
   public:
@@ -115,6 +102,13 @@ class RtcpPacketView {
      * @returns The senders octet count, if packet type is sender report, otherwise returns 0.
      */
     [[nodiscard]] uint32_t octet_count() const;
+
+    /**
+     * Fetches the report block for given index.
+     * @param index The index of the report block to get.
+     * @return The report block.
+     */
+    [[nodiscard]] RtcpReportBlockView get_report_block(size_t index) const;
 
     /**
      * @returns A string representation of the RTCP header.
