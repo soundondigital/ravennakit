@@ -22,18 +22,11 @@ TEST_CASE("RtpPacketView | Parse an RTP header from data", "[RtpPacketView]") {
         // m, pt
         0b01100010,
         // sequence number
-        0xab,
-        0xcd,
+        0xab, 0xcd,
         // timestamp
-        0xab,
-        0xcd,
-        0xef,
-        0x01,
+        0xab, 0xcd, 0xef, 0x01,
         // ssrc
-        0x01,
-        0x02,
-        0x03,
-        0x04
+        0x01, 0x02, 0x03, 0x04
     };
 
     SECTION("A header with invalid data should result in Status::InvalidLength") {
@@ -101,7 +94,10 @@ TEST_CASE("RtpPacketView | Parse an RTP header from data", "[RtpPacketView]") {
     }
 }
 
-TEST_CASE("RtpPacketView | Parsing header data should not lead to undefined behaviour or invalid memory access", "[RtpPacketView]") {
+TEST_CASE(
+    "RtpPacketView | Parsing header data should not lead to undefined behaviour or invalid memory access",
+    "[RtpPacketView]"
+) {
     rav::RtpPacketView packet(nullptr, 0);
 
     SECTION("Status should be ok") {
