@@ -20,6 +20,8 @@ namespace rav {
 
 class RtcpReportBlockView {
   public:
+    static constexpr auto kReportBlockLength = 24;
+
     /**
      * Constructs an invalid report block;
      */
@@ -78,6 +80,16 @@ class RtcpReportBlockView {
      * @return The delay since the last SR.
      */
     [[nodiscard]] uint32_t delay_since_last_sr() const;
+
+    /**
+     * @returns The pointer to the data, or nullptr if not pointing to any data.
+     */
+    [[nodiscard]] const uint8_t* data() const;
+
+    /**
+     * @return The length of the data.
+     */
+    [[nodiscard]] size_t data_length() const;
 
   private:
     const uint8_t* data_ {};

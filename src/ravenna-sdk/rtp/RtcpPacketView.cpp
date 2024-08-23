@@ -23,7 +23,7 @@ constexpr auto kSenderReportOctetCountLength = 4;
 constexpr auto kSenderInfoLength = kSenderReportNtpTimestampFullLength + rav::rtp::kRtpTimestampLength
     + kSenderReportPacketCountLength + kSenderReportOctetCountLength;
 constexpr auto kSenderReportMinLength = kHeaderLength + kSenderInfoLength;
-}
+}  // namespace
 
 rav::RtcpPacketView::RtcpPacketView(const uint8_t* data, const size_t data_length) :
     data_(data), data_length_(data_length) {}
@@ -164,21 +164,26 @@ uint32_t rav::RtcpPacketView::octet_count() const {
     return byte_order::read_be<uint32_t>(data_ + offset);
 }
 
-rav::RtcpReportBlockView rav::RtcpPacketView::get_report_block(size_t index) const {
-    // TODO
-    return {};
+rav::RtcpReportBlockView rav::RtcpPacketView::get_report_block(const size_t index) const {
+    if (index >= reception_report_count()) {
+        return {};
+    }
+
+    if (data_length_ < kSenderReportMinLength + RtcpReportBlockView::kReportBlockLength * (index + 1)) {
+        return {};
+    }
+
+    return {
+        data_ + kSenderReportMinLength + RtcpReportBlockView::kReportBlockLength * index,
+        RtcpReportBlockView::kReportBlockLength
+    };
 }
 
 std::string rav::RtcpPacketView::to_string() const {
     auto header = fmt::format(
         "RTCP Packet: valid={} version={} padding={} reception_report_count={} packet_type={} length={} ssrc={}",
-        verify() == rtp::Result::Ok,
-        version(),
-        padding(),
-        reception_report_count(),
-        packet_type_to_string(packet_type()),
-        length(),
-        ssrc()
+        verify() == rtp::Result::Ok, version(), padding(), reception_report_count(),
+        packet_type_to_string(packet_type()), length(), ssrc()
     );
 
     if (packet_type() == PacketType::SenderReport) {}

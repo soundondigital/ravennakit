@@ -14,37 +14,12 @@
 
 namespace {
 std::array<uint8_t, 24> default_packet {
-    // SSRC
-    0x00,
-    0x01,
-    0x02,
-    0x03,
-    // Fraction lost
-    0x04,
-    // Cumulative number of packets lost
-    0x05,
-    0x06,
-    0x07,
-    // Extended highest sequence number received
-    0x08,
-    0x09,
-    0x0a,
-    0x0b,
-    // Inter arrival jitter
-    0x0c,
-    0x0d,
-    0x0e,
-    0x0f,
-    // Last SR (LSR)
-    0x10,
-    0x11,
-    0x12,
-    0x13,
-    // Delay since last SR (DLSR)
-    0x14,
-    0x15,
-    0x16,
-    0x17,
+    0x00, 0x01, 0x02, 0x03,  // SSRC
+    0x04, 0x05, 0x06, 0x07,  // Fraction lost | cumulative number of packets lost
+    0x08, 0x09, 0x0a, 0x0b,  // Extended highest sequence number received
+    0x0c, 0x0d, 0x0e, 0x0f,  // Inter arrival jitter
+    0x10, 0x11, 0x12, 0x13,  // Last SR (LSR)
+    0x14, 0x15, 0x16, 0x17,  // Delay since last SR (DLSR)
 };
 }
 
@@ -127,4 +102,14 @@ TEST_CASE("RtcpReportBlockView | last_sr_timestamp()", "[RtcpReportBlockView]") 
 TEST_CASE("RtcpReportBlockView | delay_since_last_sr()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
     REQUIRE(report.delay_since_last_sr() == 0x14151617);
+}
+
+TEST_CASE("RtcpReportBlockView | data()", "[RtcpReportBlockView]") {
+    const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
+    REQUIRE(report.data() == default_packet.data());
+}
+
+TEST_CASE("RtcpReportBlockView | data_length()", "[RtcpReportBlockView]") {
+    const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
+    REQUIRE(report.data_length() == default_packet.size());
 }

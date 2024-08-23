@@ -8,12 +8,13 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
+#include "ravenna-sdk/rtp/RtpPacketView.hpp"
+
 #include <fmt/core.h>
 
 #include <asio/detail/socket_ops.hpp>
 
 #include "ravenna-sdk/platform/ByteOrder.hpp"
-#include "ravenna-sdk/rtp/RtpPacketView.hpp"
 
 namespace {
 constexpr size_t kRtpHeaderBaseLengthOctets = 12;
@@ -161,16 +162,7 @@ rav::BufferView<const unsigned char> rav::RtpPacketView::payload_data() const {
 std::string rav::RtpPacketView::to_string() const {
     return fmt::format(
         "RTP Header: valid={} version={} padding={} extension={} csrc_count={} market_bit={} payload_type={} sequence_number={} timestamp={} ssrc={} payload_start_index={}",
-        verify() == rtp::Result::Ok,
-        version(),
-        padding(),
-        extension(),
-        csrc_count(),
-        marker_bit(),
-        payload_type(),
-        sequence_number(),
-        timestamp(),
-        ssrc(),
-        header_total_length()
+        verify() == rtp::Result::Ok, version(), padding(), extension(), csrc_count(), marker_bit(), payload_type(),
+        sequence_number(), timestamp(), ssrc(), header_total_length()
     );
 }

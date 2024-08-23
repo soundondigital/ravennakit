@@ -63,7 +63,7 @@ class RtcpPacketView {
     [[nodiscard]] bool padding() const;
 
     /**
-     * @returns The reception report count. Should always be higher than zero.
+     * @returns The reception report count. Zero is a valid value.
      */
     [[nodiscard]] uint8_t reception_report_count() const;
 

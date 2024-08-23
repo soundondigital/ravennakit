@@ -14,10 +14,6 @@
 
 #include "ravenna-sdk/platform/ByteOrder.hpp"
 
-namespace {
-constexpr auto kReportBlockLength = 24;
-}
-
 rav::RtcpReportBlockView::RtcpReportBlockView(const uint8_t* data, const size_t data_length) :
     data_(data), data_length_(data_length) {}
 
@@ -68,4 +64,12 @@ rav::ntp::Timestamp rav::RtcpReportBlockView::last_sr_timestamp() const {
 
 uint32_t rav::RtcpReportBlockView::delay_since_last_sr() const {
     return byte_order::read_be<uint32_t>(data_ + 20);
+}
+
+const uint8_t* rav::RtcpReportBlockView::data() const {
+    return data_;
+}
+
+size_t rav::RtcpReportBlockView::data_length() const {
+    return data_length_;
 }
