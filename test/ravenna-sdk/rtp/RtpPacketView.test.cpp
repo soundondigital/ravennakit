@@ -22,12 +22,12 @@ TEST_CASE("RtpPacketView | Parse an RTP header from data", "[RtpPacketView]") {
         // m, pt
         0b01100010,
         // sequence number
-        0xAB,
-        0xCD,
+        0xab,
+        0xcd,
         // timestamp
-        0xAB,
-        0xCD,
-        0xEF,
+        0xab,
+        0xcd,
+        0xef,
         0x01,
         // ssrc
         0x01,
@@ -160,12 +160,12 @@ TEST_CASE("RtpPacketView | Correctly handle CSRCs", "[RtpPacketView]") {
         // m, pt
         0b01100001,
         // sequence number
-        0xAB,
-        0xCD,
+        0xab,
+        0xcd,
         // timestamp
-        0xAB,
-        0xCD,
-        0xEF,
+        0xab,
+        0xcd,
+        0xef,
         0x01,
         // ssrc
         0x01,
@@ -215,12 +215,12 @@ TEST_CASE("RtpPacketView | Header extension", "[RtpPacketView]") {
             // m, pt
             0b01100001,
             // sequence number
-            0xAB,
-            0xCD,
+            0xab,
+            0xcd,
             // timestamp
-            0xAB,
-            0xCD,
-            0xEF,
+            0xab,
+            0xcd,
+            0xef,
             0x01,
             // ssrc
             0x01,
@@ -270,12 +270,12 @@ TEST_CASE("RtpPacketView | Header extension", "[RtpPacketView]") {
             // m, pt
             0b01100001,
             // sequence number
-            0xAB,
-            0xCD,
+            0xab,
+            0xcd,
             // timestamp
-            0xAB,
-            0xCD,
-            0xEF,
+            0xab,
+            0xcd,
+            0xef,
             0x01,
             // ssrc
             0x01,
@@ -316,12 +316,12 @@ TEST_CASE("RtpPacketView | Header extension", "[RtpPacketView]") {
             // m, pt
             0b01100001,
             // sequence number
-            0xAB,
-            0xCD,
+            0xab,
+            0xcd,
             // timestamp
-            0xAB,
-            0xCD,
-            0xEF,
+            0xab,
+            0xcd,
+            0xef,
             0x01,
             // ssrc
             0x01,
@@ -348,12 +348,12 @@ TEST_CASE("RtpPacketView | Payload start index", "[RtpPacketView]") {
             // m, pt
             0b01100001,
             // sequence number
-            0xAB,
-            0xCD,
+            0xab,
+            0xcd,
             // timestamp
-            0xAB,
-            0xCD,
-            0xEF,
+            0xab,
+            0xcd,
+            0xef,
             0x01,
             // ssrc
             0x01,
@@ -373,12 +373,12 @@ TEST_CASE("RtpPacketView | Payload start index", "[RtpPacketView]") {
             // m, pt
             0b01100001,
             // sequence number
-            0xAB,
-            0xCD,
+            0xab,
+            0xcd,
             // timestamp
-            0xAB,
-            0xCD,
-            0xEF,
+            0xab,
+            0xcd,
+            0xef,
             0x01,
             // ssrc
             0x01,
@@ -413,12 +413,12 @@ TEST_CASE("RtpPacketView | Payload start index", "[RtpPacketView]") {
             // m, pt
             0b01100001,
             // sequence number
-            0xAB,
-            0xCD,
+            0xab,
+            0xcd,
             // timestamp
-            0xAB,
-            0xCD,
-            0xEF,
+            0xab,
+            0xcd,
+            0xef,
             0x01,
             // ssrc
             0x01,
@@ -465,12 +465,12 @@ TEST_CASE("RtpPacketView | Payload buffer view", "[RtpPacketView]") {
             // m, pt
             0b01100001,
             // sequence number
-            0xAB,
-            0xCD,
+            0xab,
+            0xcd,
             // timestamp
-            0xAB,
-            0xCD,
-            0xEF,
+            0xab,
+            0xcd,
+            0xef,
             0x01,
             // ssrc
             0x01,
@@ -502,12 +502,12 @@ TEST_CASE("RtpPacketView | Payload buffer view", "[RtpPacketView]") {
             // m, pt
             0b01100001,
             // sequence number
-            0xAB,
-            0xCD,
+            0xab,
+            0xcd,
             // timestamp
-            0xAB,
-            0xCD,
-            0xEF,
+            0xab,
+            0xcd,
+            0xef,
             0x01,
             // ssrc
             0x01,
@@ -554,12 +554,12 @@ TEST_CASE("RtpPacketView | Payload buffer view", "[RtpPacketView]") {
             // m, pt
             0b01100001,
             // sequence number
-            0xAB,
-            0xCD,
+            0xab,
+            0xcd,
             // timestamp
-            0xAB,
-            0xCD,
-            0xEF,
+            0xab,
+            0xcd,
+            0xef,
             0x01,
             // ssrc
             0x01,

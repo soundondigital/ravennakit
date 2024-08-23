@@ -15,11 +15,11 @@
 TEST_CASE("byte_order | swap_bytes()", "[byte_order]") {
     constexpr uint16_t u16 = 0x1234;
     constexpr uint32_t u32 = 0x12345678;
-    constexpr uint64_t u64 = 0x1234567890ABCDEF;
+    constexpr uint64_t u64 = 0x1234567890abcdef;
 
     REQUIRE(rav::byte_order::swap_bytes(u16) == 0x3412);
     REQUIRE(rav::byte_order::swap_bytes(u32) == 0x78563412);
-    REQUIRE(rav::byte_order::swap_bytes(u64) == 0xEFCDAB9078563412);
+    REQUIRE(rav::byte_order::swap_bytes(u64) == 0xefcdab9078563412);
 }
 
 TEST_CASE("byte_order | read()", "[byte_order]") {
@@ -35,11 +35,11 @@ TEST_CASE("byte_order | read()", "[byte_order]") {
     REQUIRE(rav::byte_order::read_be<uint32_t>(u32be) == 0x12345678);
     REQUIRE(rav::byte_order::read_le<uint32_t>(u32le) == 0x12345678);
 
-    constexpr uint8_t u64be[] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF};
-    constexpr uint8_t u64le[] = {0xEF, 0xCD, 0xAB, 0x90, 0x78, 0x56, 0x34, 0x12};
+    constexpr uint8_t u64be[] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef};
+    constexpr uint8_t u64le[] = {0xef, 0xcd, 0xab, 0x90, 0x78, 0x56, 0x34, 0x12};
 
-    REQUIRE(rav::byte_order::read_be<uint64_t>(u64be) == 0x1234567890ABCDEF);
-    REQUIRE(rav::byte_order::read_le<uint64_t>(u64le) == 0x1234567890ABCDEF);
+    REQUIRE(rav::byte_order::read_be<uint64_t>(u64be) == 0x1234567890abcdef);
+    REQUIRE(rav::byte_order::read_le<uint64_t>(u64le) == 0x1234567890abcdef);
 }
 
 TEST_CASE("byte_order | write()", "[byte_order]") {
@@ -69,20 +69,20 @@ TEST_CASE("byte_order | write()", "[byte_order]") {
 
     uint8_t u64[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 
-    rav::byte_order::write_be<uint64_t>(u64, 0x1234567890ABCDEF);
+    rav::byte_order::write_be<uint64_t>(u64, 0x1234567890abcdef);
     REQUIRE(u64[0] == 0x12);
     REQUIRE(u64[1] == 0x34);
     REQUIRE(u64[2] == 0x56);
     REQUIRE(u64[3] == 0x78);
     REQUIRE(u64[4] == 0x90);
-    REQUIRE(u64[5] == 0xAB);
-    REQUIRE(u64[6] == 0xCD);
-    REQUIRE(u64[7] == 0xEF);
+    REQUIRE(u64[5] == 0xab);
+    REQUIRE(u64[6] == 0xcd);
+    REQUIRE(u64[7] == 0xef);
 
-    rav::byte_order::write_le<uint64_t>(u64, 0x1234567890ABCDEF);
-    REQUIRE(u64[0] == 0xEF);
-    REQUIRE(u64[1] == 0xCD);
-    REQUIRE(u64[2] == 0xAB);
+    rav::byte_order::write_le<uint64_t>(u64, 0x1234567890abcdef);
+    REQUIRE(u64[0] == 0xef);
+    REQUIRE(u64[1] == 0xcd);
+    REQUIRE(u64[2] == 0xab);
     REQUIRE(u64[3] == 0x90);
     REQUIRE(u64[4] == 0x78);
     REQUIRE(u64[5] == 0x56);

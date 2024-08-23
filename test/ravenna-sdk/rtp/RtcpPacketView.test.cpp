@@ -162,11 +162,11 @@ TEST_CASE("RtcpPacketView | packet_type()", "[RtcpPacketView]") {
 }
 
 TEST_CASE("RtcpPacketView | length()", "[RtcpPacketView]") {
-    uint8_t data[] = {0xFF, 0xFF, 0xAB, 0xCD};
+    uint8_t data[] = {0xff, 0xff, 0xab, 0xcd};
     const rav::RtcpPacketView packet(data, sizeof(data));
 
     SECTION("0xABCD") {
-        REQUIRE(packet.length() == 0xABCE);
+        REQUIRE(packet.length() == 0xabce); // Length is encoded minus one
     }
 
     SECTION("0x0") {
@@ -175,15 +175,15 @@ TEST_CASE("RtcpPacketView | length()", "[RtcpPacketView]") {
         REQUIRE(packet.length() == 0x1);  // Length is encoded minus one
     }
 
-    SECTION("0xFFFF") {
-        data[2] = 0xFF;
+    SECTION("0xffff") {
+        data[2] = 0xff;
         data[3] = 0xFE;
-        REQUIRE(packet.length() == 0xFFFF);
+        REQUIRE(packet.length() == 0xffff);
     }
 }
 
 TEST_CASE("RtcpPacketView | ssrc()", "[RtcpPacketView]") {
-    uint8_t data[] = {0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x02, 0x03, 0x04};
+    uint8_t data[] = {0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04};
     const rav::RtcpPacketView packet(data, sizeof(data));
 
     SECTION("0x01020304") {
@@ -198,12 +198,12 @@ TEST_CASE("RtcpPacketView | ssrc()", "[RtcpPacketView]") {
         REQUIRE(packet.ssrc() == 0x0);
     }
 
-    SECTION("0xFFFF") {
-        data[4] = 0xFF;
-        data[5] = 0xFF;
-        data[6] = 0xFF;
-        data[7] = 0xFF;
-        REQUIRE(packet.ssrc() == 0xFFFFFFFF);
+    SECTION("0xffff") {
+        data[4] = 0xff;
+        data[5] = 0xff;
+        data[6] = 0xff;
+        data[7] = 0xff;
+        REQUIRE(packet.ssrc() == 0xffffffff);
     }
 }
 
@@ -240,7 +240,7 @@ TEST_CASE("RtcpPacketView | ntp_timestamp()", "[RtcpPacketView]") {
         // packet type
         200,
         // length
-        0xAB,
+        0xab,
         0XCD,
         // csrc
         0x01,
@@ -293,13 +293,13 @@ TEST_CASE("RtcpPacketView | rtp_timestamp()", "[RtcpPacketView]") {
         // NTP MSW
         0x08,
         0x09,
-        0x0A,
-        0x0B,
+        0x0a,
+        0x0b,
         // NTP LSW
-        0x0C,
-        0x0D,
-        0x0E,
-        0x0F,
+        0x0c,
+        0x0d,
+        0x0e,
+        0x0f,
         // RTP timestamp
         0x10,
         0x11,
@@ -342,13 +342,13 @@ TEST_CASE("RtcpPacketView | packet_count()", "[RtcpPacketView]") {
         // NTP MSW
         0x08,
         0x09,
-        0x0A,
-        0x0B,
+        0x0a,
+        0x0b,
         // NTP LSW
-        0x0C,
-        0x0D,
-        0x0E,
-        0x0F,
+        0x0c,
+        0x0d,
+        0x0e,
+        0x0f,
         // RTP timestamp
         0x10,
         0x11,
@@ -396,13 +396,13 @@ TEST_CASE("RtcpPacketView | octet_count()", "[RtcpPacketView]") {
         // NTP MSW
         0x08,
         0x09,
-        0x0A,
-        0x0B,
+        0x0a,
+        0x0b,
         // NTP LSW
-        0x0C,
-        0x0D,
-        0x0E,
-        0x0F,
+        0x0c,
+        0x0d,
+        0x0e,
+        0x0f,
         // RTP timestamp
         0x10,
         0x11,
@@ -416,8 +416,8 @@ TEST_CASE("RtcpPacketView | octet_count()", "[RtcpPacketView]") {
         // Senders octet count
         0x18,
         0x19,
-        0x1A,
-        0x1B
+        0x1a,
+        0x1b
     };
 
     SECTION("Sender report with too little data") {
@@ -428,7 +428,7 @@ TEST_CASE("RtcpPacketView | octet_count()", "[RtcpPacketView]") {
     const rav::RtcpPacketView packet(data, sizeof(data));
 
     SECTION("Sender report") {
-        REQUIRE(packet.octet_count() == 0x18191A1B);
+        REQUIRE(packet.octet_count() == 0x18191a1b);
     }
 
     SECTION("Receiver report") {

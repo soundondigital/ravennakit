@@ -28,13 +28,13 @@ std::array<uint8_t, 24> default_packet {
     // Extended highest sequence number received
     0x08,
     0x09,
-    0x0A,
-    0x0B,
+    0x0a,
+    0x0b,
     // Inter arrival jitter
-    0x0C,
-    0x0D,
-    0x0E,
-    0x0F,
+    0x0c,
+    0x0d,
+    0x0e,
+    0x0f,
     // Last SR (LSR)
     0x10,
     0x11,
@@ -109,12 +109,12 @@ TEST_CASE("RtcpReportBlockView | number_of_packets_lost()", "[RtcpReportBlockVie
 
 TEST_CASE("RtcpReportBlockView | extended_highest_sequence_number_received()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
-    REQUIRE(report.extended_highest_sequence_number_received() == 0x08090A0B);
+    REQUIRE(report.extended_highest_sequence_number_received() == 0x08090a0b);
 }
 
 TEST_CASE("RtcpReportBlockView | inter_arrival_jitter()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
-    REQUIRE(report.inter_arrival_jitter() == 0x0C0D0E0F);
+    REQUIRE(report.inter_arrival_jitter() == 0x0c0d0e0f);
 }
 
 TEST_CASE("RtcpReportBlockView | last_sr_timestamp()", "[RtcpReportBlockView]") {
