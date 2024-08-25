@@ -19,6 +19,7 @@
 #if (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)) || (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__)
     #define RAV_LITTLE_ENDIAN 0
     #define RAV_BIG_ENDIAN 1
+#warning "Big endian systems have not been tested yet"
 #else
     #define RAV_LITTLE_ENDIAN 1
     #define RAV_BIG_ENDIAN 0
@@ -59,7 +60,7 @@ Type swap_bytes(Type value) {
 }
 
 /**
- * Reads a value from the given data in native byte order.
+ * Reads a value from the given data in native byte order (not to be confused with network-endian).
  * @tparam Type The type of the value to read.
  * @param data The data which holds the encoded value.
  * @return The decoded value.
@@ -102,7 +103,7 @@ Type read_le(const uint8_t* data) {
 }
 
 /**
- * Writes a value to the given destination in native byte order.
+ * Writes a value to the given destination in native byte order (not to be confused with network-endian).
  * @tparam Type The type of the value to write.
  * @param dst The destination where the value should be written.
  * @param value The value to write.
