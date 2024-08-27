@@ -33,18 +33,18 @@ TEST_CASE("RtpPacketView | Parse an RTP header from data", "[RtpPacketView]") {
 
     SECTION("A header with invalid data should result in Status::InvalidLength") {
         rav::RtpPacketView packet(data, sizeof(data) - 1);
-        REQUIRE(packet.verify() == rav::rtp::Result::InvalidHeaderLength);
+        REQUIRE(packet.validate() == rav::rtp::Result::InvalidHeaderLength);
     }
 
     SECTION("A header with more data should result in Status::Ok") {
         rav::RtpPacketView packet(data, sizeof(data) + 1);
-        REQUIRE(packet.verify() == rav::rtp::Result::Ok);
+        REQUIRE(packet.validate() == rav::rtp::Result::Ok);
     }
 
     rav::RtpPacketView packet(data, sizeof(data));
 
     SECTION("Status should be ok") {
-        REQUIRE(packet.verify() == rav::rtp::Result::Ok);
+        REQUIRE(packet.validate() == rav::rtp::Result::Ok);
     }
 
     SECTION("Version should be 2") {
@@ -85,7 +85,7 @@ TEST_CASE("RtpPacketView | Parse an RTP header from data", "[RtpPacketView]") {
 
     SECTION("A version higher than should result in InvalidVersion") {
         data[0] = 0b11000000;
-        REQUIRE(packet.verify() == rav::rtp::Result::InvalidVersion);
+        REQUIRE(packet.validate() == rav::rtp::Result::InvalidVersion);
     }
 
     SECTION("Header to string should result in this string") {
@@ -103,7 +103,7 @@ TEST_CASE(
     rav::RtpPacketView packet(nullptr, 0);
 
     SECTION("Status should be ok") {
-        REQUIRE(packet.verify() == rav::rtp::Result::InvalidPointer);
+        REQUIRE(packet.validate() == rav::rtp::Result::InvalidPointer);
     }
 
     SECTION("Version should be 0") {
@@ -185,7 +185,7 @@ TEST_CASE("RtpPacketView | Correctly handle CSRCs", "[RtpPacketView]") {
     const rav::RtpPacketView packet(data, sizeof(data) - sizeof(uint32_t) * 2);
 
     SECTION("Status should be ok") {
-        REQUIRE(packet.verify() == rav::rtp::Result::InvalidHeaderLength);
+        REQUIRE(packet.validate() == rav::rtp::Result::InvalidHeaderLength);
     }
 
     SECTION("CSRC Count should be 2") {

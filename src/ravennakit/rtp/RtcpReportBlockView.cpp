@@ -21,7 +21,7 @@ bool rav::RtcpReportBlockView::is_valid() const {
     return data_ != nullptr;
 }
 
-rav::rtp::Result rav::RtcpReportBlockView::verify() const {
+rav::rtp::Result rav::RtcpReportBlockView::validate() const {
     if (data_ == nullptr) {
         return rtp::Result::InvalidPointer;
     }

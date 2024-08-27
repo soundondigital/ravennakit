@@ -33,11 +33,11 @@ class RtpPacketView {
     RtpPacketView(const uint8_t* data, size_t data_length);
 
     /**
-     * Verifies the RTP header data. After this method returns all other methods should return valid data and not lead
+     * ies the RTP header data. After this method returns all other methods should return valid data and not lead
      * to undefined behavior.
-     * @returns The result of the verification.
+     * @returns The result of the validation.
      */
-    [[nodiscard]] rtp::Result verify() const;
+    [[nodiscard]] rtp::Result validate() const;
 
     /**
      * @returns The version of the RTP header.

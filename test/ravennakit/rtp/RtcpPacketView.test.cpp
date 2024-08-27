@@ -15,7 +15,7 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-TEST_CASE("RtcpPacketView | verify()", "[RtcpPacketView]") {
+TEST_CASE("RtcpPacketView | validate()", "[RtcpPacketView]") {
     std::array<uint8_t, 28> data {
         // Header
         0x82, 0xc8, 0xc8, 0x14,  // v, p, rc | packet type | length
@@ -28,31 +28,31 @@ TEST_CASE("RtcpPacketView | verify()", "[RtcpPacketView]") {
         0x18, 0x19, 0x1a, 0x1b,  // Senders octet count
     };
 
-    SECTION("Verification should fail when the view doesn't point to data") {
+    SECTION("Validation should fail when the view doesn't point to data") {
         const rav::RtcpPacketView packet(nullptr, data.size());
-        REQUIRE(packet.verify() == rav::rtp::Result::InvalidPointer);
+        REQUIRE(packet.validate() == rav::rtp::Result::InvalidPointer);
     }
 
-    SECTION("Verification should fail when passing an invalid length") {
+    SECTION("Validation should fail when passing an invalid length") {
         const rav::RtcpPacketView packet(data.data(), 0);
-        REQUIRE(packet.verify() == rav::rtp::Result::InvalidHeaderLength);
+        REQUIRE(packet.validate() == rav::rtp::Result::InvalidHeaderLength);
     }
 
     const rav::RtcpPacketView packet(data.data(), data.size());
 
-    SECTION("At this point verification should pass") {
-        REQUIRE(packet.verify() == rav::rtp::Result::Ok);
+    SECTION("At this point validation should pass") {
+        REQUIRE(packet.validate() == rav::rtp::Result::Ok);
     }
 
-    SECTION("Verification should fail when the version is not 2") {
+    SECTION("Validation should fail when the version is not 2") {
         data[0] = 0;
         REQUIRE(packet.version() == 0);
-        REQUIRE(packet.verify() == rav::rtp::Result::InvalidVersion);
+        REQUIRE(packet.validate() == rav::rtp::Result::InvalidVersion);
     }
 
-    SECTION("Verification should fail when there is no room for sender info") {
+    SECTION("Validation should fail when there is no room for sender info") {
         const rav::RtcpPacketView short_packet(data.data(), data.size() - 1);
-        REQUIRE(short_packet.verify() == rav::rtp::Result::InvalidSenderInfoLength);
+        REQUIRE(short_packet.validate() == rav::rtp::Result::InvalidSenderInfoLength);
     }
 }
 

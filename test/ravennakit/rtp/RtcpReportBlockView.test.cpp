@@ -45,25 +45,25 @@ TEST_CASE("RtcpReportBlockView | is_valid()", "[RtcpReportBlockView]") {
     }
 }
 
-TEST_CASE("RtcpReportBlockView | verify()", "[RtcpReportBlockView]") {
-    SECTION("Verification should fail when the view doesn't point to data") {
+TEST_CASE("RtcpReportBlockView | validate()", "[RtcpReportBlockView]") {
+    SECTION("Validation should fail when the view doesn't point to data") {
         const rav::RtcpReportBlockView report(nullptr, 0);
-        REQUIRE(rav::rtp::Result::InvalidPointer == report.verify());
+        REQUIRE(rav::rtp::Result::InvalidPointer == report.validate());
     }
 
-    SECTION("Verification should fail when the packet is too short") {
+    SECTION("Validation should fail when the packet is too short") {
         const rav::RtcpReportBlockView report(default_packet.data(), 23);
-        REQUIRE(rav::rtp::Result::InvalidReportBlockLength == report.verify());
+        REQUIRE(rav::rtp::Result::InvalidReportBlockLength == report.validate());
     }
 
-    SECTION("Verification should fail when the packet is too long") {
+    SECTION("Validation should fail when the packet is too long") {
         const rav::RtcpReportBlockView report(default_packet.data(), 25);
-        REQUIRE(rav::rtp::Result::InvalidReportBlockLength == report.verify());
+        REQUIRE(rav::rtp::Result::InvalidReportBlockLength == report.validate());
     }
 
-    SECTION("Or else verification should pass") {
+    SECTION("Or else validation should pass") {
         const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
-        REQUIRE(rav::rtp::Result::Ok == report.verify());
+        REQUIRE(rav::rtp::Result::Ok == report.validate());
     }
 }
 

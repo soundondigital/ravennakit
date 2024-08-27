@@ -37,7 +37,7 @@ class RtcpReportBlockView {
     /**
      * @returns True if this report block appears to be correct, or false if not.
      */
-    [[nodiscard]] rtp::Result verify() const;
+    [[nodiscard]] rtp::Result validate() const;
 
     /**
      * @returns The SSRC of the sender of the RTCP report block.
@@ -75,7 +75,7 @@ class RtcpReportBlockView {
     [[nodiscard]] uint32_t delay_since_last_sr() const;
 
     /**
-     * Checks if this view references data. Note that this method does not validate the data itself; use verify() for
+     * Checks if this view references data. Note that this method does not validate the data itself; use validate() for
      * data validation.
      * @returns True if this view points to data.
      */

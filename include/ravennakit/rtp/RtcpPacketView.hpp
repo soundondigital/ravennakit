@@ -49,11 +49,12 @@ class RtcpPacketView {
     RtcpPacketView(const uint8_t* data, size_t data_length);
 
     /**
-     * Verifies the RTP header data. After this method returns all other methods should return valid data and not lead
+     * Validates the RTP header data. After this method returns all other methods should return valid data and not lead
      * to undefined behavior.
-     * @returns The result of the verification.
+     * TODO: Add more validation checks.
+     * @returns The result of the validation.
      */
-    [[nodiscard]] rtp::Result verify() const;
+    [[nodiscard]] rtp::Result validate() const;
 
     /**
      * @returns The version of the RTP header.
@@ -125,7 +126,7 @@ class RtcpPacketView {
     [[nodiscard]] RtcpPacketView get_next_packet() const;
 
     /**
-     * Checks if this view references data. Note that this method does not validate the data itself; use verify() for
+     * Checks if this view references data. Note that this method does not validate the data itself; use validate() for
      * data validation.
      * @returns True if this view points to data.
      */

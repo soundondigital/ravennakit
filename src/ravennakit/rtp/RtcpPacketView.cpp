@@ -27,7 +27,7 @@ constexpr size_t kSenderInfoLength = kSenderReportNtpTimestampFullLength + rav::
 rav::RtcpPacketView::RtcpPacketView(const uint8_t* data, const size_t data_length) :
     data_(data), data_length_(data_length) {}
 
-rav::rtp::Result rav::RtcpPacketView::verify() const {
+rav::rtp::Result rav::RtcpPacketView::validate() const {
     if (data_ == nullptr) {
         return rtp::Result::InvalidPointer;
     }
@@ -231,7 +231,7 @@ size_t rav::RtcpPacketView::data_length() const {
 std::string rav::RtcpPacketView::to_string() const {
     auto header = fmt::format(
         "RTCP Packet valid={} | Header version={} padding={} reception_report_count={} packet_type={} length={} ssrc={}",
-        verify() == rtp::Result::Ok, version(), padding(), reception_report_count(),
+        validate() == rtp::Result::Ok, version(), padding(), reception_report_count(),
         packet_type_to_string(packet_type()), length(), ssrc()
     );
 
