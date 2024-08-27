@@ -10,13 +10,12 @@
 
 #include "ravennakit/rtp/RtpPacketView.hpp"
 
+#include <array>
 #include <asio/detail/socket_ops.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <array>
-
-TEST_CASE("RtpPacketView | Parse an RTP header from data", "[RtpPacketView]") {
+TEST_CASE("RtpPacketView :: RtpPacketView()", "[RtpPacketView]") {
     uint8_t data[] = {
 
         // v, p, x, cc
@@ -96,10 +95,7 @@ TEST_CASE("RtpPacketView | Parse an RTP header from data", "[RtpPacketView]") {
     }
 }
 
-TEST_CASE(
-    "RtpPacketView | Parsing header data should not lead to undefined behaviour or invalid memory access",
-    "[RtpPacketView]"
-) {
+TEST_CASE("RtpPacketView :: validate()", "[RtpPacketView]") {
     rav::RtpPacketView packet(nullptr, 0);
 
     SECTION("Status should be ok") {
@@ -151,7 +147,7 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("RtpPacketView | Correctly handle CSRCs", "[RtpPacketView]") {
+TEST_CASE("RtpPacketView :: ssrc()", "[RtpPacketView]") {
     const uint8_t data[] = {
         // v, p, x, cc
         0b10000010,
@@ -205,7 +201,7 @@ TEST_CASE("RtpPacketView | Correctly handle CSRCs", "[RtpPacketView]") {
     }
 }
 
-TEST_CASE("RtpPacketView | Header extension", "[RtpPacketView]") {
+TEST_CASE("RtpPacketView :: get_header_extension_data()", "[RtpPacketView]") {
     SECTION("Test header extension with csrc and extension") {
         const uint8_t data[] = {
             // v, p, x, cc
@@ -336,7 +332,7 @@ TEST_CASE("RtpPacketView | Header extension", "[RtpPacketView]") {
     }
 }
 
-TEST_CASE("RtpPacketView | Payload start index", "[RtpPacketView]") {
+TEST_CASE("RtpPacketView :: header_total_length()", "[RtpPacketView]") {
     SECTION("Test payload start index without csrc and without extension") {
         const uint8_t data[] = {
             // v, p, x, cc
@@ -453,7 +449,7 @@ TEST_CASE("RtpPacketView | Payload start index", "[RtpPacketView]") {
     }
 }
 
-TEST_CASE("RtpPacketView | Payload buffer view", "[RtpPacketView]") {
+TEST_CASE("RtpPacketView :: payload_data()", "[RtpPacketView]") {
     SECTION("Test getting payload without csrc and without extension") {
         const uint8_t data[] = {
             // v, p, x, cc

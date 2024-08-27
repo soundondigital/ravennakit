@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("util | num_elements_in_array()", "[util]") {
+TEST_CASE("util :: num_elements_in_array()", "[util]") {
     SECTION("Test int buffer") {
         int data[] = {1, 2, 3, 4, 5};
         REQUIRE(rav::util::num_elements_in_array(data) == 5);

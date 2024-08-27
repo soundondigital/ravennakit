@@ -11,28 +11,28 @@
 #include <catch2/catch_all.hpp>
 #include <ravennakit/ntp/Timestamp.hpp>
 
-TEST_CASE("Timestamp full resolution", "[Timestamp]") {
+TEST_CASE("Timestamp :: Timestamp()", "[Timestamp]") {
     const rav::ntp::Timestamp timestamp {0x01234567, 0x89abcdef};
 
     REQUIRE(timestamp.integer() == 0x01234567);
     REQUIRE(timestamp.fraction() == 0x89abcdef);
 }
 
-TEST_CASE("Timestamp from compact uint16", "[Timestamp]") {
+TEST_CASE("Timestamp :: from_compact(uint16, uint16)", "[Timestamp]") {
     const auto ts = rav::ntp::Timestamp::from_compact(0x0123, 0x4567);
 
     REQUIRE(ts.integer() == 0x0123);
     REQUIRE(ts.fraction() == 0x45670000);
 }
 
-TEST_CASE("Timestamp from compact uint32", "[Timestamp]") {
+TEST_CASE("Timestamp :: from_compact(uint32)", "[Timestamp]") {
     const auto ts = rav::ntp::Timestamp::from_compact(0x01234567);
 
     REQUIRE(ts.integer() == 0x0123);
     REQUIRE(ts.fraction() == 0x45670000);
 }
 
-TEST_CASE("Timestamp equality", "[Timestamp]") {
+TEST_CASE("Timestamp :: operator==()", "[Timestamp]") {
     SECTION("Equal") {
         const rav::ntp::Timestamp ts1 {0x01234567, 0x89abcdef};
         const rav::ntp::Timestamp ts2 {0x01234567, 0x89abcdef};

@@ -23,7 +23,7 @@ std::array<uint8_t, 24> default_packet {
 };
 }
 
-TEST_CASE("RtcpReportBlockView | validate()", "[RtcpReportBlockView]") {
+TEST_CASE("RtcpReportBlockView :: validate()", "[RtcpReportBlockView]") {
     SECTION("Validation should fail when the view doesn't point to data") {
         const rav::RtcpReportBlockView report(nullptr, 0);
         REQUIRE(rav::rtp::Result::InvalidPointer == report.validate());
@@ -45,49 +45,49 @@ TEST_CASE("RtcpReportBlockView | validate()", "[RtcpReportBlockView]") {
     }
 }
 
-TEST_CASE("RtcpReportBlockView | ssrc()", "[RtcpReportBlockView]") {
+TEST_CASE("RtcpReportBlockView :: ssrc()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
     REQUIRE(report.ssrc() == 0x00010203);
 }
 
-TEST_CASE("RtcpReportBlockView | fraction_lost()", "[RtcpReportBlockView]") {
+TEST_CASE("RtcpReportBlockView :: fraction_lost()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
     REQUIRE(report.fraction_lost() == 0x04);
 }
 
-TEST_CASE("RtcpReportBlockView | number_of_packets_lost()", "[RtcpReportBlockView]") {
+TEST_CASE("RtcpReportBlockView :: number_of_packets_lost()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
     REQUIRE(report.number_of_packets_lost() == 0x00050607);
 }
 
-TEST_CASE("RtcpReportBlockView | extended_highest_sequence_number_received()", "[RtcpReportBlockView]") {
+TEST_CASE("RtcpReportBlockView :: extended_highest_sequence_number_received()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
     REQUIRE(report.extended_highest_sequence_number_received() == 0x08090a0b);
 }
 
-TEST_CASE("RtcpReportBlockView | inter_arrival_jitter()", "[RtcpReportBlockView]") {
+TEST_CASE("RtcpReportBlockView :: inter_arrival_jitter()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
     REQUIRE(report.inter_arrival_jitter() == 0x0c0d0e0f);
 }
 
-TEST_CASE("RtcpReportBlockView | last_sr_timestamp()", "[RtcpReportBlockView]") {
+TEST_CASE("RtcpReportBlockView :: last_sr_timestamp()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
     const auto ts = report.last_sr_timestamp();
     REQUIRE(ts.integer() == 0x1011);
     REQUIRE(ts.fraction() == 0x12130000);
 }
 
-TEST_CASE("RtcpReportBlockView | delay_since_last_sr()", "[RtcpReportBlockView]") {
+TEST_CASE("RtcpReportBlockView :: delay_since_last_sr()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
     REQUIRE(report.delay_since_last_sr() == 0x14151617);
 }
 
-TEST_CASE("RtcpReportBlockView | data()", "[RtcpReportBlockView]") {
+TEST_CASE("RtcpReportBlockView :: data()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
     REQUIRE(report.data() == default_packet.data());
 }
 
-TEST_CASE("RtcpReportBlockView | size()", "[RtcpReportBlockView]") {
+TEST_CASE("RtcpReportBlockView :: size()", "[RtcpReportBlockView]") {
     const rav::RtcpReportBlockView report(default_packet.data(), default_packet.size());
     REQUIRE(report.size() == default_packet.size());
 }
