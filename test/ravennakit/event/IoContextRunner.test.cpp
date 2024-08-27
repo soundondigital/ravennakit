@@ -14,6 +14,8 @@
 
 #include "ravennakit/util/chrono/Timeout.hpp"
 
+#include <thread>
+
 TEST_CASE("IoContextRunner :: run_to_completion()", "[IoContextRunner]") {
     SECTION("Run tasks to completion") {
         IoContextRunner runner;
