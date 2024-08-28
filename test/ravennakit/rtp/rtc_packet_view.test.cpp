@@ -14,7 +14,7 @@
 
 #include "ravennakit/rtp/rtcp_packet_view.hpp"
 
-TEST_CASE("rtcp_packet_view :: validate()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::validate()", "[rtcp_packet_view]") {
     std::array<uint8_t, 28> data {
         // Header
         0x82, 0xc8, 0xc8, 0x14,  // v, p, rc | packet type | length
@@ -55,7 +55,7 @@ TEST_CASE("rtcp_packet_view :: validate()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: version()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::version()", "[rtcp_packet_view]") {
     uint8_t data[] = {0b00'0'10101};
 
     const rav::rtcp_packet_view packet(data, sizeof(data));
@@ -85,7 +85,7 @@ TEST_CASE("rtcp_packet_view :: version()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: padding()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::padding()", "[rtcp_packet_view]") {
     uint8_t data[] = {0b11'0'11111};
 
     const rav::rtcp_packet_view packet(data, sizeof(data));
@@ -105,7 +105,7 @@ TEST_CASE("rtcp_packet_view :: padding()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: reception_report_count()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::reception_report_count()", "[rtcp_packet_view]") {
     uint8_t data[] = {0b11'1'00000};
     const rav::rtcp_packet_view packet(data, sizeof(data));
 
@@ -129,7 +129,7 @@ TEST_CASE("rtcp_packet_view :: reception_report_count()", "[rtcp_packet_view]") 
     }
 }
 
-TEST_CASE("rtcp_packet_view :: packet_type()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::packet_type()", "[rtcp_packet_view]") {
     uint8_t data[] = {0b11111111, 0};
     const rav::rtcp_packet_view packet(data, sizeof(data));
 
@@ -166,7 +166,7 @@ TEST_CASE("rtcp_packet_view :: packet_type()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: length()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::length()", "[rtcp_packet_view]") {
     uint8_t data[] = {0xff, 0xff, 0xab, 0xcd};
     const rav::rtcp_packet_view packet(data, sizeof(data));
 
@@ -192,7 +192,7 @@ TEST_CASE("rtcp_packet_view :: length()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: ssrc()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::ssrc()", "[rtcp_packet_view]") {
     uint8_t data[] = {0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04};
     const rav::rtcp_packet_view packet(data, sizeof(data));
 
@@ -222,7 +222,7 @@ TEST_CASE("rtcp_packet_view :: ssrc()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: to_string()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::to_string()", "[rtcp_packet_view]") {
     std::array<uint8_t, 168> data {
         // Header
         0x82, 0xc8, 0x00, 0x14,  // v, p, rc | packet type | length
@@ -241,7 +241,7 @@ TEST_CASE("rtcp_packet_view :: to_string()", "[rtcp_packet_view]") {
     std::ignore = packet.to_string();
 }
 
-TEST_CASE("rtcp_packet_view :: ntp_timestamp()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::ntp_timestamp()", "[rtcp_packet_view]") {
     std::array<uint8_t, 16> data = {
 
         // v, p, rc
@@ -279,7 +279,7 @@ TEST_CASE("rtcp_packet_view :: ntp_timestamp()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: rtp_timestamp()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::rtp_timestamp()", "[rtcp_packet_view]") {
     uint8_t data[] = {// v, p, rc
                       0b10'0'10101,
                       // packet type
@@ -313,7 +313,7 @@ TEST_CASE("rtcp_packet_view :: rtp_timestamp()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: packet_count()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::packet_count()", "[rtcp_packet_view]") {
     uint8_t data[] = {// v, p, rc
                       0b10'0'10101,
                       // packet type
@@ -349,7 +349,7 @@ TEST_CASE("rtcp_packet_view :: packet_count()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: octet_count()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::octet_count()", "[rtcp_packet_view]") {
     uint8_t data[] = {// v, p, rc
                       0b10'0'10101,
                       // packet type
@@ -387,7 +387,7 @@ TEST_CASE("rtcp_packet_view :: octet_count()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: data()", "[RtcpReportBlockView]") {
+TEST_CASE("rtcp_packet_view::data()", "[RtcpReportBlockView]") {
     constexpr std::array<uint8_t, 28> data {
         // Header
         0x82, 0xc8, 0x00, 0x14,  // v, p, rc | packet type | length
@@ -413,7 +413,7 @@ TEST_CASE("rtcp_packet_view :: data()", "[RtcpReportBlockView]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: get_report_block()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::get_report_block()", "[rtcp_packet_view]") {
     SECTION("A packet without report block should return an invalid report view") {
         constexpr std::array<uint8_t, 28> packet {
             0x80, 0xc8, 0x02, 0x03,  // v (2), p (false), rc (0), packet type (200), length (515)
@@ -588,7 +588,7 @@ TEST_CASE("rtcp_packet_view :: get_report_block()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: get_profile_specific_extension()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::get_profile_specific_extension()", "[rtcp_packet_view]") {
     SECTION("A packet with report count two and with the data should return a valid report view") {
         constexpr std::array<uint8_t, 76> packet {
             // Header
@@ -748,7 +748,7 @@ TEST_CASE("rtcp_packet_view :: get_profile_specific_extension()", "[rtcp_packet_
     }
 }
 
-TEST_CASE("rtcp_packet_view :: get_next_packet()", "[rtcp_packet_view]") {
+TEST_CASE("rtcp_packet_view::get_next_packet()", "[rtcp_packet_view]") {
     SECTION("A single packet should not return a valid next packet") {
         constexpr std::array<uint8_t, 84> data {
             // Header
@@ -862,7 +862,7 @@ TEST_CASE("rtcp_packet_view :: get_next_packet()", "[rtcp_packet_view]") {
     }
 }
 
-TEST_CASE("rtcp_packet_view :: packet_type_to_string()") {
+TEST_CASE("rtcp_packet_view::packet_type_to_string()") {
     auto expect = [](const rav::rtcp_packet_view::packet_type packet_type, const char* str) {
         return std::strcmp(rav::rtcp_packet_view::packet_type_to_string(packet_type), str) == 0;
     };

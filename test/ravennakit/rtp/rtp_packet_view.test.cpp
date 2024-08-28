@@ -14,7 +14,7 @@
 
 #include "ravennakit/rtp/rtp_packet_view.hpp"
 
-TEST_CASE("rtp_packet_view :: rtp_packet_view()", "[rtp_packet_view]") {
+TEST_CASE("rtp_packet_view::rtp_packet_view()", "[rtp_packet_view]") {
     uint8_t data[] = {
 
         // v, p, x, cc
@@ -94,7 +94,7 @@ TEST_CASE("rtp_packet_view :: rtp_packet_view()", "[rtp_packet_view]") {
     }
 }
 
-TEST_CASE("rtp_packet_view :: validate()", "[rtp_packet_view]") {
+TEST_CASE("rtp_packet_view::validate()", "[rtp_packet_view]") {
     rav::rtp_packet_view packet(nullptr, 0);
 
     SECTION("Status should be ok") {
@@ -146,7 +146,7 @@ TEST_CASE("rtp_packet_view :: validate()", "[rtp_packet_view]") {
     }
 }
 
-TEST_CASE("rtp_packet_view :: ssrc()", "[rtp_packet_view]") {
+TEST_CASE("rtp_packet_view::ssrc()", "[rtp_packet_view]") {
     const uint8_t data[] = {
         // v, p, x, cc
         0b10000010,
@@ -200,7 +200,7 @@ TEST_CASE("rtp_packet_view :: ssrc()", "[rtp_packet_view]") {
     }
 }
 
-TEST_CASE("rtp_packet_view :: get_header_extension_data()", "[rtp_packet_view]") {
+TEST_CASE("rtp_packet_view::get_header_extension_data()", "[rtp_packet_view]") {
     SECTION("Test header extension with csrc and extension") {
         const uint8_t data[] = {
             // v, p, x, cc
@@ -331,7 +331,7 @@ TEST_CASE("rtp_packet_view :: get_header_extension_data()", "[rtp_packet_view]")
     }
 }
 
-TEST_CASE("rtp_packet_view :: header_total_length()", "[rtp_packet_view]") {
+TEST_CASE("rtp_packet_view::header_total_length()", "[rtp_packet_view]") {
     SECTION("Test payload start index without csrc and without extension") {
         const uint8_t data[] = {
             // v, p, x, cc
@@ -448,7 +448,7 @@ TEST_CASE("rtp_packet_view :: header_total_length()", "[rtp_packet_view]") {
     }
 }
 
-TEST_CASE("rtp_packet_view :: payload_data()", "[rtp_packet_view]") {
+TEST_CASE("rtp_packet_view::payload_data()", "[rtp_packet_view]") {
     SECTION("Test getting payload without csrc and without extension") {
         const uint8_t data[] = {
             // v, p, x, cc

@@ -19,7 +19,7 @@ static_assert(std::is_trivially_copyable_v<rav::buffer_view<float>> == true);
 static_assert(std::is_trivially_copyable_v<rav::buffer_view<int>> == true);
 static_assert(std::is_trivially_copyable_v<rav::buffer_view<char>> == true);
 
-TEST_CASE("buffer_view :: buffer_view()", "[buffer_view]") {
+TEST_CASE("buffer_view::buffer_view()", "[buffer_view]") {
     SECTION("Test int buffer") {
         int data[] = {1, 2, 3, 4, 5};
         const rav::buffer_view buffer_view(data, rav::util::num_elements_in_array(data));
