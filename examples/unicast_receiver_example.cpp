@@ -26,7 +26,7 @@ int main(int const argc, char* argv[]) {
         return 1;
     }
 
-#if RAV_ENABLE_SPDLOG
+#ifdef RAV_ENABLE_SPDLOG
     spdlog::set_level(spdlog::level::trace);
 #endif
 
@@ -42,18 +42,18 @@ int main(int const argc, char* argv[]) {
     });
 
     if (const auto result = receiver.bind(argv[1], port); result.holds_error()) {
-        fmt::println(stderr, "Error: {}", result.what());
+        result.log_if_error();
         return 2;
     }
 
     if (const auto result = receiver.start(); result.holds_error()) {
-        fmt::println(stderr, "Error: {}", result.what());
+        result.log_if_error();
         return 3;
     }
 
     const auto signal = loop->resource<uvw::signal_handle>();
     signal->on<uvw::signal_event>([&receiver, &signal](const uvw::signal_event&, uvw::signal_handle&) {
-        receiver.stop_close_reset();
+        receiver.close().log_if_error();
         signal->close();  // Need to close ourselves, otherwise the loop will not stop.
     });
     signal->start(SIGTERM);

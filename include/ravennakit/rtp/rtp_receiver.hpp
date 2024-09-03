@@ -63,9 +63,10 @@ class rtp_receiver final: public uvw::emitter<rtp_receiver, rtp_packet_event> {
     [[nodiscard]] result stop() const;
 
     /**
-     * Stops and closes the sockets, removing all event listeners.
+     * Closes the sockets. Implies stop().
+     * @returns A result indicating success or failure.
      */
-    void stop_close_reset();
+    [[nodiscard]] result close();
 
   private:
     std::shared_ptr<uvw::loop> loop_;

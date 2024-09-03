@@ -13,15 +13,23 @@
 #include <fmt/core.h>
 
 #include "ravennakit/core/log.hpp"
+#include "ravennakit/core/rollback.hpp"
 #include "ravennakit/rtp/rtcp_packet_view.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
 
 rav::rtp_receiver::~rtp_receiver() {
-    stop_close_reset();
+    const auto result = close();
+    if (result.holds_error()) {
+        RAV_ERROR("Error: {}", result.what());
+    }
 }
 
 rav::result rav::rtp_receiver::bind(const std::string& address, const uint16_t port, const udp_flags opts) {
-    stop_close_reset();
+    const auto result = stop();
+
+    if (result.holds_error()) {
+        return result;
+    }
 
     auto rtp_socket = loop_->resource<uvw::udp_handle>();
     if (rtp_socket == nullptr) {
@@ -97,37 +105,39 @@ rav::result rav::rtp_receiver::start() const {
 }
 
 rav::result rav::rtp_receiver::stop() const {
-    result r;
+    result result;
 
     if (rtp_socket_ != nullptr) {
         const uvw::error_event rtp_error(rtp_socket_->stop());
         if (rtp_error) {
-            r = rtp_error;
+            result = rtp_error; // TODO: Use RESULT macro
         }
     }
 
     if (rtcp_socket_ != nullptr) {
         const uvw::error_event rtcp_error(rtcp_socket_->stop());
-        if (rtcp_error && r.is_ok()) {
-            r = rtcp_error;
+        if (rtcp_error && result.is_ok()) {
+            result = rtcp_error; // TODO: Use RESULT macro
         }
     }
 
-    return r;
+    return result;
 }
 
-void rav::rtp_receiver::stop_close_reset() {
+rav::result rav::rtp_receiver::close() {
+    const auto result = stop();
+
     if (rtp_socket_ != nullptr) {
-        rtp_socket_->stop();
         rtp_socket_->close();
         rtp_socket_->reset();
         rtp_socket_.reset();
     }
 
     if (rtcp_socket_ != nullptr) {
-        rtcp_socket_->stop();
         rtcp_socket_->close();
         rtcp_socket_->reset();
         rtcp_socket_.reset();
     }
+
+    return result;
 }

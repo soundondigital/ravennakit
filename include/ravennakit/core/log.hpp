@@ -44,6 +44,8 @@
 
 #else
 
+    #include <fmt/format.h>
+
     #ifdef RAV_TRACE
         #define RAV_TRACE(...) fmt::println(__VA_ARGS__)
     #endif

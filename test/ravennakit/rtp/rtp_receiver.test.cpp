@@ -20,6 +20,6 @@ TEST_CASE("rtp_receiver::rtp_receiver()", "[rtp_receiver]") {
         rav::rtp_receiver receiver(loop);
         receiver.on<rav::rtp_packet_event>([](const rav::rtp_packet_event&, rav::rtp_receiver&) {});
         REQUIRE(receiver.bind("0.0.0.0").is_ok());
-        receiver.stop_close_reset();
+        REQUIRE(receiver.close().is_ok());
     }
 }
