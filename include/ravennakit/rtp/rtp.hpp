@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <ravennakit/core/platform.hpp>
+
 namespace rav::rtp {
 
 using ssrc = uint32_t;
