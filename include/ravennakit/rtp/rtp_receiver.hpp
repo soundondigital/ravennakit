@@ -34,17 +34,17 @@ class rtp_receiver final: public uvw::emitter<rtp_receiver, rtp_packet_event, rt
     rtp_receiver() = delete;
     ~rtp_receiver() override;
 
+    /**
+     * Constructs a new RTP receiver using given loop.
+     * @param loop The event loop to use.
+     */
+    explicit rtp_receiver(const std::shared_ptr<uvw::loop>& loop);
+
     rtp_receiver(const rtp_receiver&) = delete;
     rtp_receiver& operator=(const rtp_receiver&) = delete;
 
     rtp_receiver(rtp_receiver&&) = delete;
     rtp_receiver& operator=(rtp_receiver&&) = delete;
-
-    /**
-     * Constructs a new RTP receiver using given loop.
-     * @param loop The event loop to use.
-     */
-    explicit rtp_receiver(const std::shared_ptr<uvw::loop>& loop) : loop_(loop) {}
 
     /**
      * Binds 2 UDP sockets to the given address and port. One for receiving RTP packets and one for receiving RTCP
@@ -55,7 +55,7 @@ class rtp_receiver final: public uvw::emitter<rtp_receiver, rtp_packet_event, rt
      * @param opts The options to pass to the underlying UDP sockets. By default, REUSEADDR is used.
      * @return A result indicating success or failure.
      */
-    result bind(const std::string& address, uint16_t port = 5004, udp_flags opts = udp_flags::REUSEADDR);
+    void bind(const std::string& address, uint16_t port = 5004, udp_flags opts = udp_flags::REUSEADDR) const;
 
     /**
      * Sets the multicast membership for the given multicast address and interface address.
@@ -64,7 +64,7 @@ class rtp_receiver final: public uvw::emitter<rtp_receiver, rtp_packet_event, rt
      * @param membership The membership to set.
      * @return A result indicating success or failure.
      */
-    [[nodiscard]] result set_multicast_membership(
+    void set_multicast_membership(
         const std::string& multicast_address, const std::string& interface_address,
         uvw::udp_handle::membership membership
     ) const;
@@ -72,18 +72,18 @@ class rtp_receiver final: public uvw::emitter<rtp_receiver, rtp_packet_event, rt
     /**
      * @return Starts receiving datagrams on the bound sockets.
      */
-    [[nodiscard]] result start() const;
+    void start() const;
 
     /**
      * Stops receiving datagrams on the bound sockets.
      */
-    [[nodiscard]] result stop() const;
+    void stop() const;
 
     /**
      * Closes the sockets. Implies stop().
      * @returns A result indicating success or failure.
      */
-    [[nodiscard]] result close();
+    void close() const;
 
   private:
     std::shared_ptr<uvw::loop> loop_;

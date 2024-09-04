@@ -45,33 +45,19 @@ int main(int const argc, char* argv[]) {
         fmt::println("{}", event.packet.to_string());
     });
 
-    if (const auto result = receiver.bind(argv[1], port); result.holds_error()) {
-        result.log_if_error();
-        return 2;
-    }
+    receiver.bind(argv[1], port);
 
     if (argc == 4) {
-        auto result = receiver.set_multicast_membership(argv[2], argv[3], uvw::udp_handle::membership::JOIN_GROUP);
-        if (result.holds_error()) {
-            result.log_if_error();
-            return 3;
-        }
+        receiver.set_multicast_membership(argv[2], argv[3], uvw::udp_handle::membership::JOIN_GROUP);
     } else if (argc == 3) {
-        auto result = receiver.set_multicast_membership(argv[2], "", uvw::udp_handle::membership::JOIN_GROUP);
-        if (result.holds_error()) {
-            result.log_if_error();
-            return 3;
-        }
+        receiver.set_multicast_membership(argv[2], "", uvw::udp_handle::membership::JOIN_GROUP);
     }
 
-    if (const auto result = receiver.start(); result.holds_error()) {
-        result.log_if_error();
-        return 3;
-    }
+    receiver.start();
 
     const auto signal = loop->resource<uvw::signal_handle>();
     signal->on<uvw::signal_event>([&receiver, &signal](const uvw::signal_event&, uvw::signal_handle&) {
-        receiver.close().log_if_error();
+        receiver.close();
         signal->close();  // Need to close ourselves, otherwise the loop will not stop.
     });
     signal->start(SIGTERM);
