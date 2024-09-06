@@ -65,7 +65,12 @@ void rav::rtp_receiver::bind(const std::string& address, const uint16_t port, co
         RAV_ERROR("Error: {}", err.what());
     });
 
-    UV_THROW_IF_ERROR(rtcp_socket_->bind(address, port + 1, opts));
+    const auto [ip, bound_port] = rtp_socket_->sock();
+    if (bound_port == 0 || ip.empty()) {
+        RAV_THROW_EXCEPTION("failed to bind to port");
+    }
+
+    UV_THROW_IF_ERROR(rtcp_socket_->bind(address, bound_port + 1, opts));
 
     rollback.commit();
 }
