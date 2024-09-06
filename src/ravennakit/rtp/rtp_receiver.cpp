@@ -18,22 +18,23 @@
 #include "ravennakit/rtp/rtp_packet_view.hpp"
 #include "ravennakit/uv/uv_exception.hpp"
 
-#define CATCH_LOG_UNCAUGHT_EXCEPTIONS(work)                                                                          \
-    try {                                                                                                            \
-        work                                                                                                         \
-    } catch (const rav::uv::uv_exception& e) {                                                                       \
+#define CATCH_LOG_UNCAUGHT_EXCEPTIONS                                                                                \
+    catch (const rav::uv::uv_exception& e) {                                                                         \
         RAV_CRITICAL(                                                                                                \
             "rav::uv::uv_exception caught: {} - please handle your exceptions before reaching this point.", e.what() \
         );                                                                                                           \
-    } catch (const rav::exception& e) {                                                                              \
+    }                                                                                                                \
+    catch (const rav::exception& e) {                                                                                \
         RAV_CRITICAL(                                                                                                \
             "rav::exception caught: {} - please handle your exceptions before reaching this point.", e.what()        \
         );                                                                                                           \
-    } catch (const std::exception& e) {                                                                              \
+    }                                                                                                                \
+    catch (const std::exception& e) {                                                                                \
         RAV_CRITICAL(                                                                                                \
             "std::exception caucght: {} - please handle your exceptions before reaching this point.", e.what()       \
         );                                                                                                           \
-    } catch (...) {                                                                                                  \
+    }                                                                                                                \
+    catch (...) {                                                                                                    \
         RAV_CRITICAL("unknown exception caucght - please handle your exceptions before reaching this point.");       \
     }
 
@@ -42,10 +43,11 @@ rav::rtp_receiver::rtp_receiver(const std::shared_ptr<uvw::loop>& loop) :
     rtp_socket_->on<uvw::udp_data_event>(
         [this](const uvw::udp_data_event& event, [[maybe_unused]] uvw::udp_handle& handle) {
             // This is the last point where exceptions can be caught before going back into c-land and crashing
-            CATCH_LOG_UNCAUGHT_EXCEPTIONS(
+            try {
                 const rtp_packet_view rtp_packet(reinterpret_cast<const uint8_t*>(event.data.get()), event.length);
                 publish(rtp_packet_event {rtp_packet});
-            )
+            }
+            CATCH_LOG_UNCAUGHT_EXCEPTIONS
         }
     );
 
@@ -57,10 +59,11 @@ rav::rtp_receiver::rtp_receiver(const std::shared_ptr<uvw::loop>& loop) :
     rtcp_socket_->on<uvw::udp_data_event>(
         [this](const uvw::udp_data_event& event, [[maybe_unused]] uvw::udp_handle& handle) {
             // This is the last point where exception can be caught before going back into c-land and crashing
-            CATCH_LOG_UNCAUGHT_EXCEPTIONS(
+            try {
                 const rtcp_packet_view rtcp_packet(reinterpret_cast<const uint8_t*>(event.data.get()), event.length);
                 publish(rtcp_packet_event {rtcp_packet});
-            )
+            }
+            CATCH_LOG_UNCAUGHT_EXCEPTIONS
         }
     );
 
