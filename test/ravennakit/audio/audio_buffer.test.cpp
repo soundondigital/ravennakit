@@ -9,7 +9,6 @@
  */
 
 #include <catch2/catch_all.hpp>
-
 #include <ravennakit/audio/audio_buffer.hpp>
 #include <ravennakit/core/util.hpp>
 
@@ -29,7 +28,7 @@ void check_sample_values(const rav::audio_buffer<T>& buffer, const T& fill_value
     for (size_t ch = 0; ch < buffer.num_channels(); ch++) {
         for (size_t sample = 0; sample < buffer.num_samples(); sample++) {
             // The casting is a really quick and dirty way to avoid floating point comparison issues.
-            rav::util::is_within(audio_data[ch][sample],fill_value, {});
+            rav::util::is_within(audio_data[ch][sample], fill_value, {});
         }
     }
 }
@@ -67,6 +66,7 @@ TEST_CASE("audio_buffer::audio_buffer()", "[audio_buffer]") {
         rav::audio_buffer<int> buffer(2, 5);
         REQUIRE(buffer.num_channels() == 2);
         REQUIRE(buffer.num_samples() == 5);
+        check_sample_values(buffer, 0);
     }
 
     SECTION("Prepare buffer") {
@@ -74,6 +74,7 @@ TEST_CASE("audio_buffer::audio_buffer()", "[audio_buffer]") {
         buffer.resize(2, 3);
         REQUIRE(buffer.num_channels() == 2);
         REQUIRE(buffer.num_samples() == 3);
+        check_sample_values(buffer, 0);
     }
 
     SECTION("Construct and fill with value") {
@@ -155,4 +156,60 @@ TEST_CASE("audio_buffer::clear()", "[audio_buffer]") {
     test_audio_buffer_clear_for_type<uint16_t>(32768u);
     test_audio_buffer_clear_for_type<uint32_t>(2147483648u);
     test_audio_buffer_clear_for_type<uint64_t>(9223372036854775808u);
+}
+
+TEST_CASE("audio_buffer::copy_from()", "[audio_buffer]") {
+    size_t num_channels = 2;
+    size_t num_samples = 3;
+
+    SECTION("Single channel") {
+        rav::audio_buffer<int> buffer(num_channels, num_samples);
+
+        int channel0[3] = {1, 2, 3};
+        int channel1[3] = {4, 5, 6};
+
+        buffer.copy_from(0, 0, num_samples, channel0);
+        buffer.copy_from(1, 0, num_samples, channel1);
+
+        auto* const* audio_data = buffer.get_array_of_read_pointers();
+
+        REQUIRE(audio_data[0][0] == 1);
+        REQUIRE(audio_data[0][1] == 2);
+        REQUIRE(audio_data[0][2] == 3);
+        REQUIRE(audio_data[1][0] == 4);
+        REQUIRE(audio_data[1][1] == 5);
+        REQUIRE(audio_data[1][2] == 6);
+    }
+
+    SECTION("Multiple channels") {
+        rav::audio_buffer<int> src(num_channels, num_samples);
+        auto* const* src_data = src.get_array_of_write_pointers();
+        src_data[0][0] = 1;
+        src_data[0][1] = 2;
+        src_data[0][2] = 3;
+        src_data[1][0] = 4;
+        src_data[1][1] = 5;
+        src_data[1][2] = 6;
+
+        rav::audio_buffer<int> dst(num_channels, num_samples);
+        const auto* const* dst_data = dst.get_array_of_read_pointers();
+
+        dst.copy_from(0, num_samples, src_data);
+
+        REQUIRE(dst_data[0][0] == 1);
+        REQUIRE(dst_data[0][1] == 2);
+        REQUIRE(dst_data[0][2] == 3);
+        REQUIRE(dst_data[1][0] == 4);
+        REQUIRE(dst_data[1][1] == 5);
+        REQUIRE(dst_data[1][2] == 6);
+
+        dst.copy_from(1, num_samples - 1, src_data);
+
+        REQUIRE(dst_data[0][0] == 1);
+        REQUIRE(dst_data[0][1] == 1);
+        REQUIRE(dst_data[0][2] == 2);
+        REQUIRE(dst_data[1][0] == 4);
+        REQUIRE(dst_data[1][1] == 4);
+        REQUIRE(dst_data[1][2] == 5);
+    }
 }

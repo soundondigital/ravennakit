@@ -155,6 +155,38 @@ class audio_buffer {
         }
     }
 
+    /**
+     * Copies data from all channels of src into this all channels of this buffer.
+     * @param dst_start_sample The index of the start sample in the destination channel.
+     * @param num_samples_to_copy The number of samples to copy.
+     * @param src The source data to copy from.
+     */
+    void copy_from(const size_t dst_start_sample, const size_t num_samples_to_copy, const T* const* src) {
+        for (size_t i = 0; i < num_channels(); ++i) {
+            copy_from(i, dst_start_sample, num_samples_to_copy, src[i]);
+        }
+    }
+
+    /**
+     * Copies data from src into this buffer.
+     * @param dst_channel_index The index of the destination channel.
+     * @param dst_start_sample The index of the start sample in the destination channel.
+     * @param num_samples_to_copy The number of samples to copy.
+     * @param src The source data to copy from.
+     */
+    void copy_from(
+        const size_t dst_channel_index, const size_t dst_start_sample, const size_t num_samples_to_copy, const T* src
+    ) {
+        RAV_ASSERT(dst_channel_index < num_channels());
+        RAV_ASSERT(dst_start_sample + num_samples_to_copy <= num_samples());
+
+        if (num_samples_to_copy == 0) {
+            return;
+        }
+
+        std::memcpy(channels_[dst_channel_index] + dst_start_sample, src, num_samples_to_copy * sizeof(T));
+    }
+
   private:
     /// Holds the non-interleaved audio data (each channel consecutive).
     std::vector<T> data_;

@@ -31,7 +31,7 @@ rav::rtp_receiver::rtp_receiver(const std::shared_ptr<uvw::loop>& loop) :
         }
     );
 
-    rtp_socket_->on<uvw::error_event>([this](const uvw::error_event& event, uvw::udp_handle& handle) {
+    rtp_socket_->on<uvw::error_event>([this](const uvw::error_event& event, [[maybe_unused]] uvw::udp_handle& handle) {
         RAV_ERROR("Error: {}", event.what());
         close();
     });
@@ -47,7 +47,7 @@ rav::rtp_receiver::rtp_receiver(const std::shared_ptr<uvw::loop>& loop) :
         }
     );
 
-    rtcp_socket_->on<uvw::error_event>([this](const uvw::error_event& event, uvw::udp_handle& handle) {
+    rtcp_socket_->on<uvw::error_event>([this](const uvw::error_event& event, [[maybe_unused]] uvw::udp_handle& handle) {
         RAV_ERROR("Error: {}", event.what());
         close();
     });
