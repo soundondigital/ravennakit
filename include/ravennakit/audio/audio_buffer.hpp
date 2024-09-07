@@ -41,11 +41,45 @@ class audio_buffer {
         std::fill(data_.begin(), data_.end(), value_to_fill_with);
     }
 
-    // audio_buffer(const audio_buffer& other) = delete;
-    // audio_buffer(audio_buffer&& other) noexcept = delete;
+    /**
+     * Constructs an audio buffer by copying from another buffer.
+     * @param other The other buffer to copy from.
+     */
+    audio_buffer(const audio_buffer& other) {
+        data_ = other.data_;
+        channels_.resize(other.channels_.size());
+        update_channel_pointers();
+    }
 
-    // audio_buffer& operator=(const audio_buffer& other) = delete;
-    // audio_buffer& operator=(audio_buffer&& other) noexcept = delete;
+    /**
+     * Constructs an audio buffer by moving from another buffer.
+     * @param other The other buffer to move from.
+     */
+    audio_buffer(audio_buffer&& other) noexcept {
+        std::swap(data_, other.data_);
+        std::swap(channels_, other.channels_);
+        update_channel_pointers();
+    }
+
+    /**
+     * Copies the contents from another audio buffer to this buffer.
+     * @param other The other buffer to copy from.
+     * @return A reference to this buffer.
+     */
+    audio_buffer& operator=(const audio_buffer& other) {
+        data_ = other.data_;
+        channels_.resize(other.channels_.size());
+        update_channel_pointers();
+        return *this;
+    }
+
+    audio_buffer& operator=(audio_buffer&& other)  noexcept {
+        std::swap(data_, other.data_);
+        std::swap(channels_, other.channels_);
+        update_channel_pointers();
+        other.update_channel_pointers(); // Data is swapped, so we need to update the pointers of the other buffer.
+        return *this;
+    }
 
     /**
      * Prepares the audio buffer for the given number of channels and samples. New space will be zero initialized.
@@ -64,10 +98,7 @@ class audio_buffer {
         data_.resize(num_channels * num_samples, {});
         channels_.resize(num_channels);
 
-        // Update channel pointers.
-        for (size_t i = 0; i < num_channels; ++i) {
-            channels_[i] = data_.data() + i * num_samples;
-        }
+        update_channel_pointers();
     }
 
     /**
@@ -223,6 +254,12 @@ class audio_buffer {
 
     /// Holds pointers to the beginning of each channel.
     std::vector<T*> channels_;
+
+    void update_channel_pointers() {
+        for (size_t i = 0; i < channels_.size(); ++i) {
+            channels_[i] = data_.data() + i * data_.size() / channels_.size();
+        }
+    }
 };
 
 }  // namespace rav
