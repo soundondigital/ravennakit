@@ -15,21 +15,6 @@
 
 #define RAV_THROW_EXCEPTION(msg) throw rav::exception(msg, __FILE__, __LINE__, RAV_FUNCTION)
 
-#define CATCH_LOG_UNCAUGHT_EXCEPTIONS                                                                                \
-    catch (const rav::exception& e) {                                                                                \
-        RAV_CRITICAL(                                                                                                \
-            "rav::exception caught: {} - please handle your exceptions before reaching this point.", e.what()        \
-        );                                                                                                           \
-    }                                                                                                                \
-    catch (const std::exception& e) {                                                                                \
-        RAV_CRITICAL(                                                                                                \
-            "std::exception caucght: {} - please handle your exceptions before reaching this point.", e.what()       \
-        );                                                                                                           \
-    }                                                                                                                \
-    catch (...) {                                                                                                    \
-        RAV_CRITICAL("unknown exception caucght - please handle your exceptions before reaching this point.");       \
-    }
-
 namespace rav {
 
 class exception: public std::exception {
