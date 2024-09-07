@@ -23,10 +23,10 @@ void check_sample_values(const rav::audio_buffer<T>& buffer, const T& fill_value
     auto* const* audio_data = buffer.get_array_of_read_pointers();
 
     REQUIRE(buffer.num_channels() > 0);
-    REQUIRE(buffer.num_samples() > 0);
+    REQUIRE(buffer.num_frames() > 0);
 
     for (size_t ch = 0; ch < buffer.num_channels(); ch++) {
-        for (size_t sample = 0; sample < buffer.num_samples(); sample++) {
+        for (size_t sample = 0; sample < buffer.num_frames(); sample++) {
             // The casting is a really quick and dirty way to avoid floating point comparison issues.
             rav::util::is_within(audio_data[ch][sample], fill_value, {});
         }
@@ -36,12 +36,12 @@ void check_sample_values(const rav::audio_buffer<T>& buffer, const T& fill_value
 // Helper function to create a test buffer with a given number of channels and samples. The values of the samples will
 // be an increasing sequence starting from 1.
 template<class T>
-rav::audio_buffer<T> get_test_buffer(const size_t num_channels, const size_t num_samples) {  // NOLINT
-    rav::audio_buffer<T> buffer(num_channels, num_samples);
+rav::audio_buffer<T> get_test_buffer(const size_t num_channels, const size_t num_frames) {  // NOLINT
+    rav::audio_buffer<T> buffer(num_channels, num_frames);
 
     int value = 1;
     for (size_t ch = 0; ch < num_channels; ch++) {
-        for (size_t sample = 0; sample < num_samples; sample++) {
+        for (size_t sample = 0; sample < num_frames; sample++) {
             buffer.set_sample(ch, sample, value++);
         }
     }
@@ -75,13 +75,13 @@ TEST_CASE("audio_buffer::audio_buffer()", "[audio_buffer]") {
         REQUIRE(buffer.get_array_of_read_pointers() == nullptr);
         REQUIRE(buffer.get_array_of_write_pointers() == nullptr);
         REQUIRE(buffer.num_channels() == 0);
-        REQUIRE(buffer.num_samples() == 0);
+        REQUIRE(buffer.num_frames() == 0);
     }
 
     SECTION("Initial state with some buffers") {
         rav::audio_buffer<int> buffer(2, 5);
         REQUIRE(buffer.num_channels() == 2);
-        REQUIRE(buffer.num_samples() == 5);
+        REQUIRE(buffer.num_frames() == 5);
         check_sample_values(buffer, 0);
     }
 
@@ -89,7 +89,7 @@ TEST_CASE("audio_buffer::audio_buffer()", "[audio_buffer]") {
         rav::audio_buffer<int> buffer;
         buffer.resize(2, 3);
         REQUIRE(buffer.num_channels() == 2);
-        REQUIRE(buffer.num_samples() == 3);
+        REQUIRE(buffer.num_frames() == 3);
         check_sample_values(buffer, 0);
     }
 
@@ -102,7 +102,7 @@ TEST_CASE("audio_buffer::audio_buffer()", "[audio_buffer]") {
             for (auto sample_size : sample_sizes) {
                 rav::audio_buffer buffer(channel_size, sample_size, fill_value);
                 REQUIRE(buffer.num_channels() == channel_size);
-                REQUIRE(buffer.num_samples() == sample_size);
+                REQUIRE(buffer.num_frames() == sample_size);
 
                 check_sample_values(buffer, fill_value);
             }
@@ -112,12 +112,12 @@ TEST_CASE("audio_buffer::audio_buffer()", "[audio_buffer]") {
 
 TEST_CASE("audio_buffer::set_sample()", "[audio_buffer]") {
     constexpr size_t num_channels = 3;
-    constexpr size_t num_samples = 4;
+    constexpr size_t num_frames = 4;
 
-    rav::audio_buffer<custom_sample_type> buffer(num_channels, num_samples);
+    rav::audio_buffer<custom_sample_type> buffer(num_channels, num_frames);
 
     for (size_t ch = 0; ch < num_channels; ch++) {
-        for (size_t sample = 0; sample < num_samples; sample++) {
+        for (size_t sample = 0; sample < num_frames; sample++) {
             buffer.set_sample(ch, sample, custom_sample_type {ch, sample});
         }
     }
@@ -125,7 +125,7 @@ TEST_CASE("audio_buffer::set_sample()", "[audio_buffer]") {
     auto* const* audio_data = buffer.get_array_of_read_pointers();
 
     for (size_t ch = 0; ch < num_channels; ch++) {
-        for (size_t sample = 0; sample < num_samples; sample++) {
+        for (size_t sample = 0; sample < num_frames; sample++) {
             REQUIRE(audio_data[ch][sample].channel_index == ch);
             REQUIRE(audio_data[ch][sample].sample_index == sample);
         }
@@ -135,27 +135,27 @@ TEST_CASE("audio_buffer::set_sample()", "[audio_buffer]") {
 template<class T>
 void test_audio_buffer_clear_for_type(T expected_cleared_value) {
     size_t num_channels = 3;
-    size_t num_samples = 4;
+    size_t num_frames = 4;
 
     {
-        rav::audio_buffer<T> buffer(num_channels, num_samples, 1);
+        rav::audio_buffer<T> buffer(num_channels, num_frames, 1);
         check_sample_values<T>(buffer, 1);
         buffer.clear();
         check_sample_values(buffer, expected_cleared_value);
     }
 
     {
-        rav::audio_buffer<T> buffer(num_channels, num_samples, 1);
+        rav::audio_buffer<T> buffer(num_channels, num_frames, 1);
         check_sample_values<T>(buffer, 1);
         buffer.clear(expected_cleared_value);
         check_sample_values(buffer, expected_cleared_value);
     }
 
     {
-        rav::audio_buffer<T> buffer(num_channels, num_samples, 1);
+        rav::audio_buffer<T> buffer(num_channels, num_frames, 1);
         check_sample_values<T>(buffer, 1);
         for (size_t ch = 0; ch < num_channels; ch++) {
-            buffer.clear(ch, 0, num_samples);
+            buffer.clear(ch, 0, num_frames);
         }
         check_sample_values(buffer, expected_cleared_value);
     }
@@ -176,16 +176,16 @@ TEST_CASE("audio_buffer::clear()", "[audio_buffer]") {
 
 TEST_CASE("audio_buffer::copy_from()", "[audio_buffer]") {
     size_t num_channels = 2;
-    size_t num_samples = 3;
+    size_t num_frames = 3;
 
     SECTION("Single channel") {
-        rav::audio_buffer<int> buffer(num_channels, num_samples);
+        rav::audio_buffer<int> buffer(num_channels, num_frames);
 
         int channel0[3] = {1, 2, 3};
         int channel1[3] = {4, 5, 6};
 
-        buffer.copy_from(0, 0, num_samples, channel0);
-        buffer.copy_from(1, 0, num_samples, channel1);
+        buffer.copy_from(0, 0, num_frames, channel0);
+        buffer.copy_from(1, 0, num_frames, channel1);
 
         auto* const* audio_data = buffer.get_array_of_read_pointers();
 
@@ -198,7 +198,7 @@ TEST_CASE("audio_buffer::copy_from()", "[audio_buffer]") {
     }
 
     SECTION("Multiple channels") {
-        rav::audio_buffer<int> src(num_channels, num_samples);
+        rav::audio_buffer<int> src(num_channels, num_frames);
         auto* const* src_data = src.get_array_of_write_pointers();
         src_data[0][0] = 1;
         src_data[0][1] = 2;
@@ -207,10 +207,10 @@ TEST_CASE("audio_buffer::copy_from()", "[audio_buffer]") {
         src_data[1][1] = 5;
         src_data[1][2] = 6;
 
-        rav::audio_buffer<int> dst(num_channels, num_samples);
+        rav::audio_buffer<int> dst(num_channels, num_frames);
         const auto* const* dst_data = dst.get_array_of_read_pointers();
 
-        dst.copy_from(0, num_samples, src_data);
+        dst.copy_from(0, num_frames, src_data);
 
         REQUIRE(dst_data[0][0] == 1);
         REQUIRE(dst_data[0][1] == 2);
@@ -219,7 +219,7 @@ TEST_CASE("audio_buffer::copy_from()", "[audio_buffer]") {
         REQUIRE(dst_data[1][1] == 5);
         REQUIRE(dst_data[1][2] == 6);
 
-        dst.copy_from(1, num_samples - 1, src_data);
+        dst.copy_from(1, num_frames - 1, src_data);
 
         REQUIRE(dst_data[0][0] == 1);
         REQUIRE(dst_data[0][1] == 1);
@@ -232,16 +232,16 @@ TEST_CASE("audio_buffer::copy_from()", "[audio_buffer]") {
 
 TEST_CASE("audio_buffer::copy_to()", "[audio_buffer]") {
     constexpr size_t num_channels = 2;
-    constexpr size_t num_samples = 3;
+    constexpr size_t num_frames = 3;
 
     SECTION("Single channel") {
-        auto buffer = get_test_buffer<int>(num_channels, num_samples);
+        auto buffer = get_test_buffer<int>(num_channels, num_frames);
 
-        int channel0[num_samples] = {};
-        int channel1[num_samples] = {};
+        int channel0[num_frames] = {};
+        int channel1[num_frames] = {};
 
-        buffer.copy_to(channel0, 0, 0, num_samples);
-        buffer.copy_to(channel1, 1, 0, num_samples);
+        buffer.copy_to(channel0, 0, 0, num_frames);
+        buffer.copy_to(channel1, 1, 0, num_frames);
 
         REQUIRE(channel0[0] == 1);
         REQUIRE(channel0[1] == 2);
@@ -252,13 +252,13 @@ TEST_CASE("audio_buffer::copy_to()", "[audio_buffer]") {
     }
 
     SECTION("Multiple channels") {
-        auto buffer = get_test_buffer<int>(num_channels, num_samples);
+        auto buffer = get_test_buffer<int>(num_channels, num_frames);
 
         int channel0[3] = {};
         int channel1[3] = {};
         int* channels[num_channels] = {channel0, channel1};
 
-        buffer.copy_to(channels, num_channels, num_samples);
+        buffer.copy_to(channels, num_channels, num_frames);
 
         REQUIRE(channel0[0] == 1);
         REQUIRE(channel0[1] == 2);
@@ -269,13 +269,13 @@ TEST_CASE("audio_buffer::copy_to()", "[audio_buffer]") {
     }
 
     SECTION("Single channel not all samples") {
-        auto buffer = get_test_buffer<int>(num_channels, num_samples);
+        auto buffer = get_test_buffer<int>(num_channels, num_frames);
 
-        int channel0[num_samples] = {};
-        int channel1[num_samples] = {};
+        int channel0[num_frames] = {};
+        int channel1[num_frames] = {};
 
-        buffer.copy_to(channel0 + 1, 0, 1, num_samples - 1);
-        buffer.copy_to(channel1 + 1, 1, 1, num_samples - 1);
+        buffer.copy_to(channel0 + 1, 0, 1, num_frames - 1);
+        buffer.copy_to(channel1 + 1, 1, 1, num_frames - 1);
 
         REQUIRE(channel0[0] == 0);
         REQUIRE(channel0[1] == 2);
@@ -288,9 +288,9 @@ TEST_CASE("audio_buffer::copy_to()", "[audio_buffer]") {
 
 TEST_CASE("audio_buffer::audio_buffer(copy)", "[audio_buffer]") {
     constexpr size_t num_channels = 2;
-    constexpr size_t num_samples = 3;
+    constexpr size_t num_frames = 3;
 
-    const auto buffer = get_test_buffer<int>(num_channels, num_samples);
+    const auto buffer = get_test_buffer<int>(num_channels, num_frames);
 
     const rav::audio_buffer<int> copy(buffer);  // NOLINT
 
@@ -306,9 +306,9 @@ TEST_CASE("audio_buffer::audio_buffer(copy)", "[audio_buffer]") {
 
 TEST_CASE("audio_buffer::operator=(copy)", "[audio_buffer]") {
     constexpr size_t num_channels = 2;
-    constexpr size_t num_samples = 3;
+    constexpr size_t num_frames = 3;
 
-    const auto buffer = get_test_buffer<int>(num_channels, num_samples);
+    const auto buffer = get_test_buffer<int>(num_channels, num_frames);
 
     rav::audio_buffer<int> copy = buffer;  // NOLINT
 
@@ -324,14 +324,14 @@ TEST_CASE("audio_buffer::operator=(copy)", "[audio_buffer]") {
 
 TEST_CASE("audio_buffer::audio_buffer(move)", "[audio_buffer]") {
     constexpr size_t num_channels = 2;
-    constexpr size_t num_samples = 3;
+    constexpr size_t num_frames = 3;
 
-    auto buffer = get_test_buffer<int>(num_channels, num_samples);
+    auto buffer = get_test_buffer<int>(num_channels, num_frames);
 
     auto copy = rav::audio_buffer<int>(std::move(buffer));  // NOLINT
 
     REQUIRE(buffer.num_channels() == 0);
-    REQUIRE(buffer.num_samples() == 0);
+    REQUIRE(buffer.num_frames() == 0);
 
     REQUIRE(buffer.get_array_of_read_pointers() == nullptr);
     auto copy_data = copy.get_array_of_read_pointers();
@@ -347,14 +347,14 @@ TEST_CASE("audio_buffer::audio_buffer(move)", "[audio_buffer]") {
 TEST_CASE("audio_buffer::operator=(move)", "[audio_buffer]") {
     SECTION("Basic test") {
         constexpr size_t num_channels = 2;
-        constexpr size_t num_samples = 3;
+        constexpr size_t num_frames = 3;
 
-        auto buffer = get_test_buffer<int>(num_channels, num_samples);
+        auto buffer = get_test_buffer<int>(num_channels, num_frames);
         rav::audio_buffer<int> copy;
         copy = std::move(buffer);
 
         REQUIRE(buffer.num_channels() == 0);
-        REQUIRE(buffer.num_samples() == 0);
+        REQUIRE(buffer.num_frames() == 0);
 
         REQUIRE(buffer.get_array_of_read_pointers() == nullptr);
         auto copy_data = copy.get_array_of_read_pointers();
@@ -369,14 +369,14 @@ TEST_CASE("audio_buffer::operator=(move)", "[audio_buffer]") {
 
     SECTION("Test move-swapping") {
         constexpr size_t num_channels = 2;
-        constexpr size_t num_samples = 3;
+        constexpr size_t num_frames = 3;
 
-        auto buffer = get_test_buffer<int>(num_channels, num_samples);
-        rav::audio_buffer<int> copy(num_channels, num_samples, 5);
+        auto buffer = get_test_buffer<int>(num_channels, num_frames);
+        rav::audio_buffer<int> copy(num_channels, num_frames, 5);
         copy = std::move(buffer);
 
         REQUIRE(buffer.num_channels() == num_channels);
-        REQUIRE(buffer.num_samples() == num_samples);
+        REQUIRE(buffer.num_frames() == num_frames);
 
         auto buffer_data = buffer.get_array_of_read_pointers();
 
@@ -401,11 +401,11 @@ TEST_CASE("audio_buffer::operator=(move)", "[audio_buffer]") {
 
 TEST_CASE("audio_buffer::operator==()", "[audio_buffer]") {
     SECTION("Test for equality") {
-        constexpr size_t num_samples = 3;
+        constexpr size_t num_frames = 3;
         constexpr size_t num_channels = 2;
 
-        auto lhs = get_test_buffer<int>(num_channels, num_samples);
-        auto rhs = get_test_buffer<int>(num_channels, num_samples);
+        auto lhs = get_test_buffer<int>(num_channels, num_frames);
+        auto rhs = get_test_buffer<int>(num_channels, num_frames);
 
         REQUIRE(lhs == rhs);
         REQUIRE_FALSE(lhs != rhs);
