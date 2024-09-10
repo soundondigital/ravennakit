@@ -53,9 +53,9 @@ struct single {
             return {};
         }
 
-        lock lock(this);
-        lock.position.update(tail_, capacity_, number_of_elements);
-        return lock;
+        lock write_lock(this);
+        write_lock.position.update(tail_, capacity_, number_of_elements);
+        return write_lock;
     }
 
     lock prepare_for_read(const size_t number_of_elements) {
@@ -63,9 +63,9 @@ struct single {
             return {};
         }
 
-        lock lock(this);
-        lock.position.update(head_, capacity_, number_of_elements);
-        return lock;
+        lock read_lock(this);
+        read_lock.position.update(head_, capacity_, number_of_elements);
+        return read_lock;
     }
 
     [[nodiscard]] size_t size() const {
@@ -123,9 +123,9 @@ struct spsc {
             return {};  // Not enough free space in buffer.
         }
 
-        lock lock(this);
-        lock.position.update(tail_, capacity_, number_of_elements);
-        return lock;
+        lock write_lock(this);
+        write_lock.position.update(tail_, capacity_, number_of_elements);
+        return write_lock;
     }
 
     lock prepare_for_read(const size_t number_of_elements) {
@@ -133,9 +133,9 @@ struct spsc {
             return {};  // Not enough data available.
         }
 
-        lock lock(this);
-        lock.position.update(head_, capacity_, number_of_elements);
-        return lock;
+        lock read_lock(this);
+        read_lock.position.update(head_, capacity_, number_of_elements);
+        return read_lock;
     }
 
     void commit_write(const lock& lock) {
@@ -194,9 +194,9 @@ struct mpsc {
             return {};  // Not enough free space in buffer.
         }
 
-        lock lock(this, std::move(guard));
-        lock.position.update(tail_, capacity_, number_of_elements);
-        return lock;
+        lock write_lock(this, std::move(guard));
+        write_lock.position.update(tail_, capacity_, number_of_elements);
+        return write_lock;
     }
 
     lock prepare_for_read(const size_t number_of_elements) {
@@ -204,9 +204,9 @@ struct mpsc {
             return {};  // Not enough data available.
         }
 
-        lock lock(this);
-        lock.position.update(head_, capacity_, number_of_elements);
-        return lock;
+        lock read_lock(this);
+        read_lock.position.update(head_, capacity_, number_of_elements);
+        return read_lock;
     }
 
     void commit_write(const lock& lock) {
@@ -264,9 +264,9 @@ struct spmc {
             return {};  // Not enough free space in buffer.
         }
 
-        lock lock(this);
-        lock.position.update(tail_, capacity_, number_of_elements);
-        return lock;
+        lock write_lock(this);
+        write_lock.position.update(tail_, capacity_, number_of_elements);
+        return write_lock;
     }
 
     lock prepare_for_read(const size_t number_of_elements) {
@@ -276,9 +276,9 @@ struct spmc {
             return {};  // Not enough data available.
         }
 
-        lock lock(this, std::move(guard));
-        lock.position.update(head_, capacity_, number_of_elements);
-        return lock;
+        lock read_lock(this, std::move(guard));
+        read_lock.position.update(head_, capacity_, number_of_elements);
+        return read_lock;
     }
 
     void commit_write(const lock& lock) {
@@ -338,9 +338,9 @@ struct mpmc {
             return {};  // Not enough free space in buffer.
         }
 
-        lock lock(this, std::move(guard));
-        lock.position.update(tail_, capacity_, number_of_elements);
-        return lock;
+        lock write_lock(this, std::move(guard));
+        write_lock.position.update(tail_, capacity_, number_of_elements);
+        return write_lock;
     }
 
     lock prepare_for_read(const size_t number_of_elements) {
@@ -350,9 +350,9 @@ struct mpmc {
             return {};  // Not enough data available.
         }
 
-        lock lock(this, std::move(guard));
-        lock.position.update(head_, capacity_, number_of_elements);
-        return lock;
+        lock read_lock(this, std::move(guard));
+        read_lock.position.update(head_, capacity_, number_of_elements);
+        return read_lock;
     }
 
     void commit_write(const lock& lock) {
