@@ -14,39 +14,39 @@
 #include <cstdint>
 #include <string>
 
-#include "RtcpReportBlockView.h"
-#include "Rtp.hpp"
-#include "ravennakit/containers/BufferView.hpp"
-#include "ravennakit/ntp/Timestamp.hpp"
+#include "rtcp_report_block_view.hpp"
+#include "ravennakit/containers/buffer_view.hpp"
+#include "ravennakit/ntp/timestamp.hpp"
+#include "rtp.hpp"
 
 namespace rav {
 
-class RtcpPacketView {
+class rtcp_packet_view {
   public:
-    enum class PacketType {
+    enum class packet_type {
         /// Unknown packet type
-        Unknown,
+        unknown,
         /// Sender report, for transmission and reception statistics from participants that are active senders
-        SenderReport,
+        sender_report_report,
         /// Receiver report, for reception statistics from participants that are not active senders and in combination
         /// with SR for active senders reporting on more than 31 sources
-        ReceiverReport,
+        receiver_report_report,
         /// Source description items, including CNAME
-        SourceDescriptionItems,
+        source_description_items_items,
         /// Indicates end of participation
-        Bye,
+        bye,
         /// Application-specific functions
-        App
+        app
     };
 
-    RtcpPacketView() = default;
+    rtcp_packet_view() = default;
 
     /**
      * Constructs an RTCP packet view from the given data.
      * @param data The RTCP packet data.
      * @param size_bytes The size of the RTCP packet in bytes.
      */
-    RtcpPacketView(const uint8_t* data, size_t size_bytes);
+    rtcp_packet_view(const uint8_t* data, size_t size_bytes);
 
     /**
      * Validates the RTP header data. After this method returns all other methods should return valid data and not lead
@@ -54,7 +54,7 @@ class RtcpPacketView {
      * TODO: Add more validation checks.
      * @returns The result of the validation.
      */
-    [[nodiscard]] rtp::Result validate() const;
+    [[nodiscard]] bool validate() const;
 
     /**
      * @returns The version of the RTP header.
@@ -74,7 +74,7 @@ class RtcpPacketView {
     /**
      * @return The packet type
      */
-    [[nodiscard]] PacketType packet_type() const;
+    [[nodiscard]] packet_type type() const;
 
     /**
      * @returns The reported length of this RTCP packet in 32-bit words as encoded inside the data. While the length is
@@ -91,7 +91,7 @@ class RtcpPacketView {
      * @return If the packet is a send report then this method returns the NTP timestamp, otherwise returns an empty
      * (0) timestamp.
      */
-    [[nodiscard]] ntp::Timestamp ntp_timestamp() const;
+    [[nodiscard]] ntp::timestamp ntp_timestamp() const;
 
     /**
      * @returns The RTP timestamp if this packet is a sender report, otherwise returns 0.
@@ -113,17 +113,17 @@ class RtcpPacketView {
      * @param index The index of the report block to get.
      * @return The report block.
      */
-    [[nodiscard]] RtcpReportBlockView get_report_block(size_t index) const;
+    [[nodiscard]] rtcp_report_block_view get_report_block(size_t index) const;
 
     /**
      * @returns The profile specific extension data, or an empty buffer if no extension data is present.
      */
-    [[nodiscard]] BufferView<const uint8_t> get_profile_specific_extension() const;
+    [[nodiscard]] buffer_view<const uint8_t> get_profile_specific_extension() const;
 
     /**
      * @return The next RTCP packet in the buffer, or an empty (invalid) view if no more packets are available.
      */
-    [[nodiscard]] RtcpPacketView get_next_packet() const;
+    [[nodiscard]] rtcp_packet_view get_next_packet() const;
 
     /**
      * @returns The pointer to the data, or nullptr if not pointing to any data.
@@ -144,7 +144,7 @@ class RtcpPacketView {
      * @param packet_type The type to get a string representation for.
      * @return A string representation of given packet type.
      */
-    static const char* packet_type_to_string(PacketType packet_type);
+    static const char* packet_type_to_string(packet_type packet_type);
 
   private:
     const uint8_t* data_ {};

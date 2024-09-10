@@ -66,13 +66,13 @@ endif ()
 find_package(spdlog CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
+find_package(uvw CONFIG REQUIRED)
 
-find_package(asio CONFIG REQUIRED)
-target_compile_definitions(asio INTERFACE ASIO_NO_DEPRECATED ASIO_NO_DYNAMIC_BUFFER_V1)
+##############
+# RAVENNAKIT #
+##############
 
-#######################
-# RAVENNA SDK Library #
-#######################
+option(RAV_ENABLE_SPDLOG "Enable spdlog for logging" OFF)
 
 file(GLOB_RECURSE RAVENNAKIT_HEADER_FILES include/*.hpp)
 file(GLOB_RECURSE RAVENNAKIT_SOURCE_FILES src/*.cpp)
@@ -85,32 +85,30 @@ target_link_libraries(ravennakit
         PUBLIC
         rav_recommended_warning_flags
         rav_recommended_lto_flags
-        asio::asio
         spdlog::spdlog
+        uvw::uvw
 )
 
-##############################
-# Multicast receiver example #
-##############################
-
-add_executable(multicast_receiver_example
-        examples/multicast_receiver_example.cpp
-)
-
-target_link_libraries(multicast_receiver_example
+target_compile_definitions(ravennakit
         PUBLIC
-        ravennakit
+        NOMINMAX=1
+        WIN32_LEAN_AND_MEAN
 )
 
-############################
-# Unicast receiver example #
-############################
+if (RAV_ENABLE_SPDLOG)
+    target_compile_definitions(ravennakit PUBLIC RAV_ENABLE_SPDLOG=1)
+    target_link_libraries(ravennakit PUBLIC spdlog::spdlog)
+endif()
 
-add_executable(unicast_receiver_example
-        examples/unicast_receiver_example.cpp
+####################
+# Receiver example #
+####################
+
+add_executable(rtp_receiver_example
+        examples/rtp_receiver_example.cpp
 )
 
-target_link_libraries(unicast_receiver_example
+target_link_libraries(rtp_receiver_example
         PUBLIC
         ravennakit
 )
@@ -127,7 +125,7 @@ target_link_libraries(ravennakit_tests
         PUBLIC
         rav_recommended_warning_flags
         rav_recommended_lto_flags
+        ravennakit
         PRIVATE
         Catch2::Catch2 Catch2::Catch2WithMain
-        ravennakit
 )

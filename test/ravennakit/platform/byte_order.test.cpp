@@ -8,11 +8,11 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/platform/ByteOrder.hpp"
-
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("byte_order :: swap_bytes()", "[byte_order]") {
+#include "ravennakit/platform/byte_order.hpp"
+
+TEST_CASE("byte_order::swap_bytes()", "[byte_order]") {
     constexpr uint16_t u16 = 0x1234;
     constexpr uint32_t u32 = 0x12345678;
     constexpr uint64_t u64 = 0x1234567890abcdef;
@@ -22,7 +22,7 @@ TEST_CASE("byte_order :: swap_bytes()", "[byte_order]") {
     REQUIRE(rav::byte_order::swap_bytes(u64) == 0xefcdab9078563412);
 }
 
-TEST_CASE("byte_order :: read()", "[byte_order]") {
+TEST_CASE("byte_order::read()", "[byte_order]") {
     constexpr uint8_t u16be[] = {0x12, 0x34};
     constexpr uint8_t u16le[] = {0x34, 0x12};
 
@@ -42,7 +42,7 @@ TEST_CASE("byte_order :: read()", "[byte_order]") {
     REQUIRE(rav::byte_order::read_le<uint64_t>(u64le) == 0x1234567890abcdef);
 }
 
-TEST_CASE("byte_order :: write()", "[byte_order]") {
+TEST_CASE("byte_order::write()", "[byte_order]") {
     uint8_t u16[] = {0x0, 0x0};
 
     rav::byte_order::write_be<uint16_t>(u16, 0x1234);

@@ -19,22 +19,22 @@ namespace rav {
  * @tparam Type The data type.
  */
 template<class Type>
-class BufferView {
+class buffer_view {
   public:
-    BufferView() = default;
+    buffer_view() = default;
 
-    BufferView(const BufferView& other) = default;
-    BufferView& operator=(const BufferView& other) = default;
+    buffer_view(const buffer_view& other) = default;
+    buffer_view& operator=(const buffer_view& other) = default;
 
-    BufferView(BufferView&& other) noexcept = default;
-    BufferView& operator=(BufferView&& other) noexcept = default;
+    buffer_view(buffer_view&& other) noexcept = default;
+    buffer_view& operator=(buffer_view&& other) noexcept = default;
 
     /**
      * Constructs a view pointing to given data.
      * @param data The data to refer to.
      * @param count The number of elements in the buffer.
      */
-    BufferView(Type* data, const size_t count) : data_(data), count_(count) {
+    buffer_view(Type* data, const size_t count) : data_(data), count_(count) {
         if (data_ == nullptr) {
             count_ = 0;
         }

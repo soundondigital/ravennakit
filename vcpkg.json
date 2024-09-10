@@ -5,6 +5,6 @@
     "spdlog",
     "fmt",
     "catch2",
-    "asio"
+    "uvw"
   ]
 }

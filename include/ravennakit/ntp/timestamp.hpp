@@ -19,16 +19,16 @@ namespace rav::ntp {
  * Represents NTP wallclock time which is in seconds relative to 0h UTC on 1 January 1900. The full resolution NTP
  * timestamp is divided into an integer part (4 octets) and a fractional part (4 octets).
  */
-class Timestamp {
+class timestamp {
   public:
-    Timestamp() = default;
+    timestamp() = default;
 
     /**
      * Constructs an NTP timestamp with separate integer and fraction parts.
      * @param integer The integer part of the timestamp.
      * @param fraction The fractional part of the timestamp.
      */
-    Timestamp(const uint32_t integer, const uint32_t fraction) : integer_(integer), fraction_(fraction) {}
+    timestamp(const uint32_t integer, const uint32_t fraction) : integer_(integer), fraction_(fraction) {}
 
     /**
      * @returns The integer part of the timestamp.
@@ -58,7 +58,7 @@ class Timestamp {
      * @param compact_encoded The compact encoded word.
      * @return The timestamp with compact resolution.
      */
-    static Timestamp from_compact(const uint32_t compact_encoded) {
+    static timestamp from_compact(const uint32_t compact_encoded) {
         return {(compact_encoded & 0xffff'0000) >> 16, compact_encoded << 16};
     }
 
@@ -69,15 +69,15 @@ class Timestamp {
      * @param fraction The compact fraction (highest bits).
      * @return The timestamp with compact resolution.
      */
-    static Timestamp from_compact(const uint16_t integer, const uint16_t fraction) {
+    static timestamp from_compact(const uint16_t integer, const uint16_t fraction) {
         return {integer, static_cast<uint32_t>(fraction << 16)};
     }
 
-    friend bool operator==(const Timestamp& lhs, const Timestamp& rhs) {
+    friend bool operator==(const timestamp& lhs, const timestamp& rhs) {
         return lhs.integer_ == rhs.integer_ && lhs.fraction_ == rhs.fraction_;
     }
 
-    friend bool operator!=(const Timestamp& lhs, const Timestamp& rhs) {
+    friend bool operator!=(const timestamp& lhs, const timestamp& rhs) {
         return !(lhs == rhs);
     }
 

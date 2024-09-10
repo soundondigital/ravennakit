@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
 
 namespace rav::util {
@@ -25,4 +27,17 @@ constexpr int num_elements_in_array(Type (&)[N]) noexcept {
     return N;
 }
 
-}  // namespace rsdk
+/**
+ * Tests if two values are within a certain tolerance of each other.
+ * @tparam T The type of the values to compare.
+ * @param a The first value.
+ * @param b The second value.
+ * @param tolerance The tolerance.
+ * @return True if the values are within the tolerance of each other, false otherwise.
+ */
+template<typename T>
+bool is_within(T a, T b, T tolerance) {
+    return std::fabs(a - b) <= tolerance;
+}
+
+}  // namespace rav::util

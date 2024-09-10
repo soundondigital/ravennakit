@@ -13,8 +13,7 @@
 #include <cstdint>
 #include <string>
 
-#include "Rtp.hpp"
-#include "ravennakit/containers/BufferView.hpp"
+#include "ravennakit/containers/buffer_view.hpp"
 
 namespace rav {
 
@@ -23,21 +22,21 @@ namespace rav {
  * cheap to create and use but make sure to keep the data alive while using this class.
  * RFC 3550 https://datatracker.ietf.org/doc/html/rfc3550
  */
-class RtpPacketView {
+class rtp_packet_view {
   public:
     /**
      * Constructs an RTP header from the given data.
      * @param data The RTP header data.
      * @param size_bytes The size of the RTP header data in bytes.
      */
-    RtpPacketView(const uint8_t* data, size_t size_bytes);
+    rtp_packet_view(const uint8_t* data, size_t size_bytes);
 
     /**
-     * ies the RTP header data. After this method returns all other methods should return valid data and not lead
+     * Validated the RTP header data. After this method returns all other methods should return valid data and not lead
      * to undefined behavior.
-     * @returns The result of the validation.
+     * @returns True if the RTP header data is valid, or false if not.
      */
-    [[nodiscard]] rtp::Result validate() const;
+    [[nodiscard]] bool validate() const;
 
     /**
      * @returns The version of the RTP header.
@@ -99,7 +98,7 @@ class RtpPacketView {
     /**
      * @return Returns the header extension data. Data is not endian swapped.
      */
-    [[nodiscard]] BufferView<const uint8_t> get_header_extension_data() const;
+    [[nodiscard]] buffer_view<const uint8_t> get_header_extension_data() const;
 
     /**
      * @returns Returns the start index of the payload data.
@@ -109,7 +108,7 @@ class RtpPacketView {
     /**
      * @return Returns a view to the payload data.
      */
-    [[nodiscard]] BufferView<const uint8_t> payload_data() const;
+    [[nodiscard]] buffer_view<const uint8_t> payload_data() const;
 
     /**
      * @returns A string representation of the RTP header.
