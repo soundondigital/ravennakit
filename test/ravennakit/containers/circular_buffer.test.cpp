@@ -10,7 +10,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <ravennakit/containers/circular_buffer.hpp>
-#include <ravennakit/containers/fifo.hpp>
+#include <ravennakit/containers/detail/fifo.hpp>
 #include <ravennakit/core/log.hpp>
 #include <thread>
 
@@ -18,8 +18,6 @@ namespace {
 
 template<typename T, typename F, size_t S>
 void test_circular_buffer_read_write() {
-    static_assert(S % 2 == 0, "Size S must be a multiple of 2.");
-
     std::array<T, S> src {};
 
     // Fill source data
@@ -41,6 +39,7 @@ void test_circular_buffer_read_write() {
     dst = {};
 
     // No do half write + read to test the wrap around
+    static_assert(S % 2 == 0, "Size S must be a multiple of 2.");
     REQUIRE(buffer.write(src.data(), src.size() / 2));
     REQUIRE(buffer.read(dst.data(), src.size() / 2));
 

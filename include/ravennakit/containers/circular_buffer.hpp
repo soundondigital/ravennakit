@@ -12,20 +12,22 @@
 
 #include <vector>
 
+#include "detail/fifo.hpp"
+
 namespace rav {
 
 /**
- * A classic circular buffer suitable for single thread access only.
+ * A classic circular buffer implementation.
  */
 template<class T, class F>
 class circular_buffer {
   public:
     /**
      * Constructs a queue with a given number of elements.
-     * @param num_elements The number of elements the queue can hold.
+     * @param capacity The number of elements the queue can hold.
      */
-    explicit circular_buffer(const size_t num_elements) {
-        resize(num_elements);
+    explicit circular_buffer(const size_t capacity) {
+        resize(capacity);
     }
 
     /**
