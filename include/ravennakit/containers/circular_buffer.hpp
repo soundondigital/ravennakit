@@ -30,6 +30,12 @@ class circular_buffer {
         resize(capacity);
     }
 
+    circular_buffer(const circular_buffer& other) = delete;
+    circular_buffer& operator=(const circular_buffer& other) = delete;
+
+    circular_buffer(circular_buffer&& other) noexcept = delete;
+    circular_buffer& operator=(circular_buffer&& other) noexcept = delete;
+
     /**
      * Writes data to the buffer.
      * @param src The source data to write to the buffer.

@@ -296,3 +296,27 @@ TEST_CASE("circular_buffer test basic reading writing") {
         REQUIRE(total == expected_total);
     }
 }
+
+static_assert(!std::is_move_constructible_v<rav::circular_buffer<int, rav::fifo::single>>);
+static_assert(!std::is_move_constructible_v<rav::circular_buffer<int, rav::fifo::spsc>>);
+static_assert(!std::is_move_constructible_v<rav::circular_buffer<int, rav::fifo::mpsc>>);
+static_assert(!std::is_move_constructible_v<rav::circular_buffer<int, rav::fifo::spmc>>);
+static_assert(!std::is_move_constructible_v<rav::circular_buffer<int, rav::fifo::mpmc>>);
+
+static_assert(!std::is_move_assignable_v<rav::circular_buffer<int, rav::fifo::single>>);
+static_assert(!std::is_move_assignable_v<rav::circular_buffer<int, rav::fifo::spsc>>);
+static_assert(!std::is_move_assignable_v<rav::circular_buffer<int, rav::fifo::mpsc>>);
+static_assert(!std::is_move_assignable_v<rav::circular_buffer<int, rav::fifo::spmc>>);
+static_assert(!std::is_move_assignable_v<rav::circular_buffer<int, rav::fifo::mpmc>>);
+
+static_assert(!std::is_copy_constructible_v<rav::circular_buffer<int, rav::fifo::single>>);
+static_assert(!std::is_copy_constructible_v<rav::circular_buffer<int, rav::fifo::spsc>>);
+static_assert(!std::is_copy_constructible_v<rav::circular_buffer<int, rav::fifo::mpsc>>);
+static_assert(!std::is_copy_constructible_v<rav::circular_buffer<int, rav::fifo::spmc>>);
+static_assert(!std::is_copy_constructible_v<rav::circular_buffer<int, rav::fifo::mpmc>>);
+
+static_assert(!std::is_copy_assignable_v<rav::circular_buffer<int, rav::fifo::single>>);
+static_assert(!std::is_copy_assignable_v<rav::circular_buffer<int, rav::fifo::spsc>>);
+static_assert(!std::is_copy_assignable_v<rav::circular_buffer<int, rav::fifo::mpsc>>);
+static_assert(!std::is_copy_assignable_v<rav::circular_buffer<int, rav::fifo::spmc>>);
+static_assert(!std::is_copy_assignable_v<rav::circular_buffer<int, rav::fifo::mpmc>>);
