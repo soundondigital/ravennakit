@@ -36,7 +36,7 @@ struct position {
 
 struct single {
     struct lock {
-        position position {};
+        fifo::position position {};
 
         lock() = default;
 
@@ -106,7 +106,7 @@ struct single {
 
 struct spsc {
     struct lock {
-        position position {};
+        fifo::position position {};
 
         lock() = default;
 
@@ -172,7 +172,7 @@ struct spsc {
 
 struct mpsc {
     struct lock {
-        position position;
+        fifo::position position;
     };
 
     lock prepare_for_write(size_t number_of_elements) {
@@ -188,7 +188,7 @@ struct mpsc {
 
 struct spmc {
     struct lock {
-        position position;
+        fifo::position position;
     };
 
     lock prepare_for_write(size_t number_of_elements) {
@@ -204,7 +204,7 @@ struct spmc {
 
 struct mpmc {
     struct lock {
-        position position;
+        fifo::position position;
     };
 
     lock prepare_for_write(size_t number_of_elements) {
