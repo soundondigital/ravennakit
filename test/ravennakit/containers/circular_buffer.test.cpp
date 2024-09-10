@@ -37,7 +37,6 @@ TEST_CASE("circular_buffer<int, rav::fifo::single>") {
 }
 
 TEST_CASE("circular_buffer<int, rav::sync_strategy::spsc>") {
-
     SECTION("Test basic reading writing") {
         rav::circular_buffer<int, rav::fifo::spsc> buffer(10);
         const std::array<int, 8> src = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -61,15 +60,15 @@ TEST_CASE("circular_buffer<int, rav::sync_strategy::spsc>") {
     }
 
     SECTION("Reading and writing should be without data races") {
-        constexpr int num_elements = 1'000'000;
-        int expected_total = 0;
-        int total = 0;
+        constexpr int64_t num_elements = 1'000'000;
+        int64_t expected_total = 0;
+        int64_t total = 0;
 
-        rav::circular_buffer<int, rav::fifo::spsc> buffer(10);
+        rav::circular_buffer<int64_t, rav::fifo::spsc> buffer(10);
 
         std::thread writer([&] {
-            constexpr std::array<int, 3> src = {1,2,3};
-            for (int i = 0; i < num_elements; ++i) {
+            for (int64_t i = 0; i < num_elements; ++i) {
+                const std::array<int64_t, 3> src = {i + 1, i + 2, i + 3};
                 while (!buffer.write(src.data(), src.size())) {}
 
                 for (const auto n : src) {
@@ -79,7 +78,7 @@ TEST_CASE("circular_buffer<int, rav::sync_strategy::spsc>") {
         });
 
         std::thread reader([&] {
-            std::array<int, 3> dst = {};
+            std::array<int64_t, 3> dst = {};
 
             for (int i = 0; i < num_elements; ++i) {
                 while (!buffer.read(dst.data(), dst.size())) {}

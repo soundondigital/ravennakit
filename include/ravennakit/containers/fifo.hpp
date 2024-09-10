@@ -118,8 +118,8 @@ struct spsc {
     };
 
     lock prepare_for_write(const size_t number_of_elements) {
-        if (size_.load(std::memory_order_acquire) >= capacity_) {
-            return {};  // Buffer is full.
+        if (size_.load(std::memory_order_acquire) + number_of_elements > capacity_) {
+            return {};  // Not enough free space in buffer.
         }
 
         lock lock(this);
