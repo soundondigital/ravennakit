@@ -34,9 +34,9 @@ class buffer_view {
      * @param data The data to refer to.
      * @param count The number of elements in the buffer.
      */
-    buffer_view(Type* data, const size_t count) : data_(data), count_(count) {
+    buffer_view(Type* data, const size_t count) : data_(data), size_(count) {
         if (data_ == nullptr) {
-            count_ = 0;
+            size_ = 0;
         }
     }
 
@@ -51,26 +51,26 @@ class buffer_view {
      * @returns The number of elements in the buffer.
      */
     [[nodiscard]] size_t size() const {
-        return count_;
+        return size_;
     }
 
     /**
      * @returns The size of the buffer in bytes.
      */
     [[nodiscard]] size_t size_bytes() const {
-        return count_ * sizeof(Type);
+        return size_ * sizeof(Type);
     }
 
     /**
      * @returns True if the buffer is empty.
      */
     [[nodiscard]] bool empty() const {
-        return count_ == 0;
+        return size_ == 0;
     }
 
   private:
     Type* data_ {nullptr};
-    size_t count_ {0};
+    size_t size_ {0};
 };
 
 }  // namespace rsdk

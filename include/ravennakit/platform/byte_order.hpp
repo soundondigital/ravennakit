@@ -19,7 +19,7 @@
 #if (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)) || (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__)
     #define RAV_LITTLE_ENDIAN 0
     #define RAV_BIG_ENDIAN 1
-#warning "Big endian systems have not been tested yet"
+    #warning "Big endian systems have not been tested yet"
 #else
     #define RAV_LITTLE_ENDIAN 1
     #define RAV_BIG_ENDIAN 0
@@ -37,7 +37,7 @@
     #define RAV_BYTE_SWAP_32(x) _byteswap_ulong(x)
     #define RAV_BYTE_SWAP_64(x) _byteswap_uint64(x)
 #else
-#error "Unsupported compiler"
+    #error "Unsupported compiler"
 #endif
 
 namespace rav::byte_order {
@@ -57,6 +57,32 @@ Type swap_bytes(Type value) {
         value = RAV_BYTE_SWAP_64(value);
     }
     return value;
+}
+
+/**
+ * Specialization of swap_bytes for floats.
+ * @param value The value to swap.
+ * @return The value with the bytes swapped.
+ */
+template<>
+inline float swap_bytes<float>(const float value) {
+    static_assert(sizeof(float) == sizeof(uint32_t), "Float must be 32 bits");
+    union { float f; uint32_t i; } u = { value };
+    u.i = RAV_BYTE_SWAP_32(u.i);
+    return u.f;
+}
+
+/**
+ * Specialization of swap_bytes for doubles.
+ * @param value The value to swap.
+ * @return The value with the bytes swapped.
+ */
+template<>
+inline double swap_bytes<double>(const double value) {
+    static_assert(sizeof(double) == sizeof(uint64_t), "Double must be 64 bits");
+    union { double f; uint64_t i; } u = { value };
+    u.i = RAV_BYTE_SWAP_64(u.i);
+    return u.f;
 }
 
 /**
