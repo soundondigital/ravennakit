@@ -222,18 +222,16 @@ convert(const uint8_t* src, const size_t src_size, uint8_t* dst, const size_t ds
         return true;
     }
 
-    auto src_num_samples = src_size / SrcFormat::sample_size;
-    auto dst_num_samples = dst_size / DstFormat::sample_size;
+    auto num_frames = src_size / SrcFormat::sample_size / num_channels;
 
-    if (src_num_samples != dst_num_samples) {
-        return false;  // Unequal amount of frames.
+    if (num_frames != dst_size / DstFormat::sample_size / num_channels) {
+        return false;  // Unequal amount of frames between src and dst
     }
 
     if constexpr (std::is_same_v<SrcInterleaving, interleaving::interleaved>) {
         if constexpr (std::is_same_v<DstInterleaving, interleaving::interleaved>) {
             // Interleaved src, interleaved dst
-            for (size_t i = 0; i < src_num_samples; ++i) {
-                const auto ch = i / SrcFormat::sample_size % num_channels;
+            for (size_t i = 0; i < num_frames * num_channels; ++i) {
                 const auto src_i = i * SrcFormat::sample_size;
                 const auto dst_i = i * DstFormat::sample_size;
                 convert_sample<SrcFormat, DstFormat>(src + src_i, dst + dst_i);
@@ -241,8 +239,7 @@ convert(const uint8_t* src, const size_t src_size, uint8_t* dst, const size_t ds
             return true;
         } else {
             // Interleaved src, noninterleaved dst
-            for (size_t i = 0; i < src_num_samples; ++i) {
-                const auto num_frames = src_num_samples / num_channels;
+            for (size_t i = 0; i < num_frames * num_channels; ++i) {
                 const auto ch = i / SrcFormat::sample_size % num_channels;
                 const auto src_i = i * SrcFormat::sample_size;
                 const auto dst_i = ch * num_frames + i / num_channels;
