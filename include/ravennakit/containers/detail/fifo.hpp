@@ -403,8 +403,6 @@ struct mpmc {
 
         lock() = default;
 
-        explicit lock(mpmc* owner) : owner_(owner) {}
-
         explicit lock(mpmc* owner, std::unique_lock<std::mutex>&& unique_lock) :
             owner_(owner), lock_(std::move(unique_lock)) {}
 

@@ -135,7 +135,7 @@ Type read_le(const uint8_t* data) {
  * @param value The value to write.
  */
 template<typename Type>
-void write_ne(uint8_t* dst, Type value) {
+void write_ne(uint8_t* dst, const Type value) {
     std::memcpy(dst, std::addressof(value), sizeof(Type));
 }
 
@@ -146,7 +146,7 @@ void write_ne(uint8_t* dst, Type value) {
  * @param value The value to write.
  */
 template<typename Type>
-void write_be(uint8_t* dst, Type value) {
+void write_be(uint8_t* dst, const Type value) {
     if constexpr (RAV_BIG_ENDIAN) {
         write_ne(dst, value);
     } else {
@@ -161,7 +161,7 @@ void write_be(uint8_t* dst, Type value) {
  * @param value The value to write.
  */
 template<typename Type>
-void write_le(uint8_t* dst, Type value) {
+void write_le(uint8_t* dst, const Type value) {
     if constexpr (RAV_LITTLE_ENDIAN) {
         write_ne(dst, value);
     } else {
