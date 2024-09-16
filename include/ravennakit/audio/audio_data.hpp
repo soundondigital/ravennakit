@@ -11,7 +11,6 @@
 #pragma once
 
 #include <algorithm>
-#include <catch2/catch_message.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
@@ -29,203 +28,157 @@ namespace interleaving {
 namespace byte_order {
     struct le {
         template<class T>
-        static T read(const uint8_t* data) {
-            return rav::byte_order::read_le<T>(data);
-        }
-
-        template<class T>
-        static void write(uint8_t* data, const T value) {
-            return rav::byte_order::write_le<T>(data, value);
+        static T swap(const T value) {
+#if RAV_LITTLE_ENDIAN
+            return value;
+#else
+            return rav::byte_order::swap_bytes(value);
+#endif
         }
     };
 
     struct be {
         template<class T>
-        static T read(const uint8_t* data) {
-            return rav::byte_order::read_be<T>(data);
-        }
-
-        template<class T>
-        static void write(uint8_t* data, T value) {
-            return rav::byte_order::write_be<T>(data, value);
+        static T swap(const T value) {
+#if RAV_LITTLE_ENDIAN
+            return rav::byte_order::swap_bytes(value);
+#else
+            return value;
+#endif
         }
     };
 
     struct ne {
         template<class T>
-        static T read(const uint8_t* data) {
-            return rav::byte_order::read_ne<T>(data);
-        }
-
-        template<class T>
-        static void write(uint8_t* data, T value) {
-            return rav::byte_order::write_ne<T>(data, value);
+        static T swap(const T value) {
+            return value;
         }
     };
 }  // namespace byte_order
 
 namespace format {
-    template<class ByteOrder>
     struct int8 {
         static constexpr size_t sample_size = 1;
-
-        static int8_t read(const uint8_t* data) {
-            return ByteOrder::template read<int8_t>(data);
-        }
-
-        static void write(uint8_t* data, const int8_t value) {
-            ByteOrder::template write<int8_t>(data, value);
-        }
+        using type = int8_t;
     };
 
-    template<class ByteOrder>
     struct int16 {
         static constexpr size_t sample_size = 2;
-
-        static int16_t read(const uint8_t* data) {
-            return ByteOrder::template read<int16_t>(data);
-        }
-
-        static void write(uint8_t* data, const int16_t value) {
-            ByteOrder::template write<int16_t>(data, value);
-        }
+        using type = int16_t;
     };
 
-    template<class ByteOrder>
     struct int24 {
         static constexpr size_t sample_size = 3;
+        using type = int32_t;
     };
 
-    template<class ByteOrder>
     struct int24in32 {
         static constexpr size_t sample_size = 4;
+        using type = int32_t;
     };
 
-    template<class ByteOrder>
     struct int32 {
         static constexpr size_t sample_size = 4;
-
-        static int32_t read(const uint8_t* data) {
-            return ByteOrder::template read<int32_t>(data);
-        }
-
-        static void write(uint8_t* data, const int32_t value) {
-            ByteOrder::template write<int32_t>(data, value);
-        }
+        using type = int32_t;
     };
 
-    template<class ByteOrder>
     struct int64 {
         static constexpr size_t sample_size = 8;
-
-        static int64_t read(const uint8_t* data) {
-            return ByteOrder::template read<int64_t>(data);
-        }
-
-        static void write(uint8_t* data, const int64_t value) {
-            ByteOrder::template write<int64_t>(data, value);
-        }
+        using type = int64_t;
     };
 
-    template<class ByteOrder>
     struct uint8 {
         static constexpr size_t sample_size = 1;
-
-        static uint8_t read(const uint8_t* data) {
-            return ByteOrder::template read<uint8_t>(data);
-        }
-
-        static void write(uint8_t* data, const uint8_t value) {
-            ByteOrder::template write<uint8_t>(data, value);
-        }
+        using type = uint8_t;
     };
 
-    template<class ByteOrder>
     struct uint16 {
         static constexpr size_t sample_size = 2;
-
-        static uint16 read(const uint8_t* data) {
-            return ByteOrder::template read<uint16>(data);
-        }
-
-        static void write(uint8_t* data, const uint16_t value) {
-            ByteOrder::template write<uint16_t>(data, value);
-        }
+        using type = uint16_t;
     };
 
-    template<class ByteOrder>
     struct uint24 {
         static constexpr size_t sample_size = 3;
+        using type = uint32_t;
     };
 
-    template<class ByteOrder>
     struct uint24in32 {
         static constexpr size_t sample_size = 4;
+        using type = uint32_t;
     };
 
-    template<class ByteOrder>
     struct uint32 {
         static constexpr size_t sample_size = 4;
-
-        static uint32 read(const uint8_t* data) {
-            return ByteOrder::template read<uint32>(data);
-        }
-
-        static void write(uint8_t* data, const uint32_t value) {
-            ByteOrder::template write<uint32_t>(data, value);
-        }
+        using type = uint32_t;
     };
 
-    template<class ByteOrder>
     struct uint64 {
         static constexpr size_t sample_size = 8;
-
-        static uint64 read(const uint8_t* data) {
-            return ByteOrder::template read<uint64>(data);
-        }
-
-        static void write(uint8_t* data, const uint64_t value) {
-            ByteOrder::template write<uint64_t>(data, value);
-        }
+        using type = uint64_t;
     };
 
-    template<class ByteOrder>
     struct f32 {
         static constexpr size_t sample_size = 4;
-
-        static float read(const uint8_t* data) {
-            return ByteOrder::template read<float>(data);
-        }
-
-        static void write(uint8_t* data, const float value) {
-            ByteOrder::template write<float>(data, value);
-        }
+        using type = float;
     };
 
-    template<class ByteOrder>
     struct f64 {
         static constexpr size_t sample_size = 8;
-
-        static double read(const uint8_t* data) {
-            return ByteOrder::template read<double>(data);
-        }
-
-        static void write(uint8_t* data, const double value) {
-            ByteOrder::template write<double>(data, value);
-        }
+        using type = double;
     };
 }  // namespace format
 
+template<class Format, class ByteOrder>
+typename Format::type read_sample(const uint8_t* data) {
+    static_assert(
+        Format::sample_size <= sizeof(typename Format::type), "sample_size is larger than the size of the value"
+    );
+    typename Format::type value;
+    std::memcpy(std::addressof(value), data, Format::sample_size);
+    return ByteOrder::swap(value);
+}
+
+template<class Format, class ByteOrder>
+void write_sample(uint8_t* data, typename Format::type value) {
+    static_assert(
+        Format::sample_size <= sizeof(typename Format::type), "sample_size is larger than the size of the value"
+    );
+    value = ByteOrder::swap(value);
+    std::memcpy(data, std::addressof(value), Format::sample_size);
+}
+
 template<class SrcFormat, class DstFormat>
-static void convert_sample(const uint8_t* src, uint8_t* dst) {
+static typename DstFormat::type convert_sample_value(typename SrcFormat::type src) {
     if constexpr (std::is_same_v<SrcFormat, DstFormat>) {
+        return src;
+    } else if (sizeof(typename SrcFormat::type) <= sizeof(typename DstFormat::type)) {
+        if constexpr ((std::is_signed_v<typename SrcFormat::type> && std::is_signed_v<typename DstFormat::type>) || (!std::is_signed_v<typename SrcFormat::type> && !std::is_signed_v<typename DstFormat::type>)) {
+            return src;
+        }
+    } else if (sizeof(typename SrcFormat::type) == sizeof(typename DstFormat::type)) {
+        return static_cast<typename DstFormat::type>(src);
+    }
+
+    RAV_ASSERT_FALSE("Not implemented");
+}
+
+template<class SrcFormat, class SrcByteOrder, class DstFormat, class DstByteOrder>
+static void convert_sample(const uint8_t* src, uint8_t* dst) {
+    if constexpr (std::is_same_v<SrcFormat, DstFormat> && std::is_same_v<SrcByteOrder, DstByteOrder>) {
         std::memcpy(dst, src, SrcFormat::sample_size);
+    } else if (std::is_same_v<SrcFormat, DstFormat>) {
+        // Only byte order differs
+        write_sample<DstFormat, DstByteOrder>(dst, read_sample<SrcFormat, SrcByteOrder>(src));
     } else {
-        DstFormat::write(dst, SrcFormat::read(src));
+        const auto src_sample = read_sample<SrcFormat, SrcByteOrder>(src);
+        auto dst_sample = convert_sample_value<SrcFormat, DstFormat>(src_sample);
+        write_sample<DstFormat, DstByteOrder>(dst, dst_sample);
     }
 }
 
-template<class SrcFormat, class SrcInterleaving, class DstFormat, class DstInterleaving>
+template<
+    class SrcFormat, class SrcByteOrder, class SrcInterleaving, class DstFormat, class DstByteOrder,
+    class DstInterleaving>
 static bool
 convert(const uint8_t* src, const size_t src_size, uint8_t* dst, const size_t dst_size, const size_t num_channels) {
     if (src_size % SrcFormat::sample_size != 0) {
@@ -236,8 +189,8 @@ convert(const uint8_t* src, const size_t src_size, uint8_t* dst, const size_t ds
         return false;  // dst_size is not a multiple of sample size
     }
 
-    // Shortcut for when no conversion has to be done
-    if constexpr (std::is_same_v<SrcFormat, DstFormat> && std::is_same_v<SrcInterleaving, DstInterleaving>) {
+    // Shortcut for when no conversion is needed
+    if constexpr (std::is_same_v<SrcFormat, DstFormat> && std::is_same_v<SrcByteOrder, DstByteOrder> && std::is_same_v<SrcInterleaving, DstInterleaving>) {
         if (src_size == 0 || src_size != dst_size) {
             return false;
         }
@@ -257,18 +210,16 @@ convert(const uint8_t* src, const size_t src_size, uint8_t* dst, const size_t ds
             for (size_t i = 0; i < num_frames * num_channels; ++i) {
                 const auto src_i = i * SrcFormat::sample_size;
                 const auto dst_i = i * DstFormat::sample_size;
-                convert_sample<SrcFormat, DstFormat>(src + src_i, dst + dst_i);
+                convert_sample<SrcFormat, SrcByteOrder, DstFormat, DstByteOrder>(src + src_i, dst + dst_i);
             }
-            return true;
         } else {
             // Interleaved src, noninterleaved dst
             for (size_t i = 0; i < num_frames * num_channels; ++i) {
                 const auto ch = i % num_channels;
                 const auto src_i = i * SrcFormat::sample_size;
                 const auto dst_i = (ch * num_frames + i / num_channels) * DstFormat::sample_size;
-                convert_sample<SrcFormat, DstFormat>(src + src_i, dst + dst_i);
+                convert_sample<SrcFormat, SrcByteOrder, DstFormat, DstByteOrder>(src + src_i, dst + dst_i);
             }
-            return true;
         }
     } else {
         if constexpr (std::is_same_v<DstInterleaving, interleaving::interleaved>) {
@@ -277,22 +228,20 @@ convert(const uint8_t* src, const size_t src_size, uint8_t* dst, const size_t ds
                 const auto ch = i % num_frames;
                 const auto src_i = (ch * num_frames + i / num_channels) * SrcFormat::sample_size;
                 const auto dst_i = i * DstFormat::sample_size;
-                convert_sample<SrcFormat, DstFormat>(src + src_i, dst + dst_i);
+                convert_sample<SrcFormat, SrcByteOrder, DstFormat, DstByteOrder>(src + src_i, dst + dst_i);
             }
-            return true;
         } else {
             // Noninterleaved src, noninterleaved dst
             for (size_t i = 0; i < num_frames * num_channels; ++i) {
                 const auto ch = i % num_frames;
                 const auto src_i = (ch * num_frames + i / num_channels) * SrcFormat::sample_size;
                 const auto dst_i = (ch * num_frames + i / num_channels) * DstFormat::sample_size;
-                convert_sample<SrcFormat, DstFormat>(src + src_i, dst + dst_i);
+                convert_sample<SrcFormat, SrcByteOrder, DstFormat, DstByteOrder>(src + src_i, dst + dst_i);
             }
-            return true;
         }
     }
 
-    return false;
+    return true;
 }
 
 }  // namespace rav::audio_data

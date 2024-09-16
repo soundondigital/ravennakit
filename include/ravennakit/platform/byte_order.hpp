@@ -67,7 +67,12 @@ Type swap_bytes(Type value) {
 template<>
 inline float swap_bytes<float>(const float value) {
     static_assert(sizeof(float) == sizeof(uint32_t), "Float must be 32 bits");
-    union { float f; uint32_t i; } u = { value };
+
+    union {
+        float f;
+        uint32_t i;
+    } u = {value};
+
     u.i = RAV_BYTE_SWAP_32(u.i);
     return u.f;
 }
@@ -80,7 +85,12 @@ inline float swap_bytes<float>(const float value) {
 template<>
 inline double swap_bytes<double>(const double value) {
     static_assert(sizeof(double) == sizeof(uint64_t), "Double must be 64 bits");
-    union { double f; uint64_t i; } u = { value };
+
+    union {
+        double f;
+        uint64_t i;
+    } u = {value};
+
     u.i = RAV_BYTE_SWAP_64(u.i);
     return u.f;
 }
