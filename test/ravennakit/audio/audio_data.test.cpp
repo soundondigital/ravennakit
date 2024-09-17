@@ -414,7 +414,7 @@ TEST_CASE("audio_data | specific conversions", "[audio_data]") {
     }
 
     SECTION("int24 to double") {
-        SECTION("Convert int24 to float be to be") {
+        SECTION("Convert int24 to double be to be") {
             constexpr std::array<uint8_t, 9> src {0x80, 0x00, 0x0, 0x7f, 0xff, 0xff, 0x0, 0x0, 0x0};  // Min, max, zero
             std::array<uint8_t, 24> dst {};
 

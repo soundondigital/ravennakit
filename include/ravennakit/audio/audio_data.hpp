@@ -19,6 +19,7 @@
 #include "ravennakit/platform/byte_order.hpp"
 
 namespace rav::audio_data {
+
 namespace interleaving {
     struct interleaved {};
 
@@ -116,8 +117,8 @@ namespace detail {
         );
         typename Format::type value;
         std::memcpy(std::addressof(value), data, Format::sample_size);
-        auto swapped = ByteOrder::swap(value);
-        auto shifted = swapped >> (sizeof(value) - Format::sample_size) * 8;
+        const auto swapped = ByteOrder::swap(value);
+        const auto shifted = swapped >> (sizeof(value) - Format::sample_size) * 8;
         return static_cast<typename Format::type>(shifted);
     }
 
@@ -141,7 +142,7 @@ namespace detail {
     static void convert_sample(const uint8_t* src, uint8_t* dst) {
         if constexpr (std::is_same_v<SrcFormat, DstFormat> && std::is_same_v<SrcByteOrder, DstByteOrder>) {
             std::memcpy(dst, src, SrcFormat::sample_size);
-        } else if (std::is_same_v<SrcFormat, DstFormat>) {
+        } else if constexpr (std::is_same_v<SrcFormat, DstFormat>) {
             // Only byte order differs
             write_sample<DstFormat, DstByteOrder>(
                 dst, static_cast<typename DstFormat::type>(read_sample<SrcFormat, SrcByteOrder>(src))
@@ -192,7 +193,7 @@ namespace detail {
                 }
             }
 
-            write_sample<DstFormat, DstByteOrder>(dst, DstFormat::convert(src_sample));
+            RAV_ASSERT_FALSE("Conversion not implemented");
         }
     }
 }  // namespace detail
