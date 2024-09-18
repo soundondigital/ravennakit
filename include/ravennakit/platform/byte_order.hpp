@@ -43,6 +43,23 @@
 namespace rav::byte_order {
 
 /**
+ * Swaps given amount of bytes in the given data, in place.
+ * @param data The data to swap.
+ * @param size The size of the data (in bytes).
+ */
+inline void swap_bytes(uint8_t* data, const size_t size) {
+    // Check for null data pointer or zero size
+    if (data == nullptr || size == 0) {
+        return;
+    }
+
+    // Swap the bytes
+    for (size_t i = 0; i < size / 2; ++i) {
+        std::swap(data[i], data[size - i - 1]);
+    }
+}
+
+/**
  * @tparam Type The type of the value to swap.
  * @param value The value to swap.
  * @return The value with the bytes swapped.
@@ -55,6 +72,8 @@ Type swap_bytes(Type value) {
         value = static_cast<Type>(RAV_BYTE_SWAP_32(static_cast<uint32_t>(value)));
     } else if constexpr (sizeof(Type) == 8) {
         value = static_cast<Type>(RAV_BYTE_SWAP_64(static_cast<uint64_t>(value)));
+    } else {
+        swap_bytes(reinterpret_cast<uint8_t*>(&value), sizeof(value));
     }
     return value;
 }
@@ -93,23 +112,6 @@ inline double swap_bytes<double>(const double value) {
 
     u.i = RAV_BYTE_SWAP_64(u.i);
     return u.f;
-}
-
-/**
- * Swaps given amount of bytes in the given data, in place.
- * @param data The data to swap.
- * @param size The size of the data (in bytes).
- */
-inline void swap_bytes(uint8_t* data, const size_t size) {
-    // Check for null data pointer or zero size
-    if (data == nullptr || size == 0) {
-        return;
-    }
-
-    // Swap the bytes
-    for (size_t i = 0; i < size / 2; ++i) {
-        std::swap(data[i], data[size - i - 1]);
-    }
 }
 
 /**
