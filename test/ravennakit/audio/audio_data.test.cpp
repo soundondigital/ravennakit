@@ -226,6 +226,21 @@ TEST_CASE("audio_data | sample conversions", "[audio_data]") {
     }
 }
 
+// MARK: - int24_t
+
+TEST_CASE("audio_data | int24_t", "[audio_data]") {
+    SECTION("int32 to int24") {
+        const detail::int24_t min(-8388608);
+        REQUIRE(static_cast<int32_t>(min) == -8388608);
+
+        const detail::int24_t max(8388607);
+        REQUIRE(static_cast<int32_t>(max) == 8388607);
+
+        const detail::int24_t zero(0);
+        REQUIRE(static_cast<int32_t>(zero) == 0);
+    }
+}
+
 // MARK: - Specific conversions
 
 TEST_CASE("audio_data | uint8 to int8", "[audio_data]") {
@@ -702,5 +717,73 @@ TEST_CASE("audio_data | float to int16", "[audio_data]") {
         REQUIRE(rav::byte_order::read_be<int16_t>(dst.data() + 0) == -32767);
         REQUIRE(rav::byte_order::read_be<int16_t>(dst.data() + 2) == 32767);
         REQUIRE(rav::byte_order::read_be<int16_t>(dst.data() + 4) == 0);
+    }
+}
+
+TEST_CASE("audio_data | float to int24", "[audio_data]") {
+    SECTION("Convert float to int24 be to be") {
+        std::array<uint8_t, 12> src {};
+
+        // Min, max, zero
+        rav::byte_order::write_be<float>(src.data(), -1.f);
+        rav::byte_order::write_be<float>(src.data() + 4, 1.f);
+        rav::byte_order::write_be<float>(src.data() + 8, 0.f);
+
+        std::array<uint8_t, 9> dst {};
+
+        auto result = rav::audio_data::convert<
+            format::f32, byte_order::be, interleaving::interleaved, format::int24, byte_order::be,
+            interleaving::interleaved>(src.data(), src.size(), dst.data(), dst.size(), 1);
+
+        REQUIRE(result);
+        REQUIRE(dst == std::array<uint8_t, 9>{
+            0x80, 0x0, 0x1,
+            0x7f, 0xff, 0xff,
+            0x0, 0x0, 0x0,
+        });
+    }
+
+    SECTION("Convert float to int24 be to le") {
+        std::array<uint8_t, 12> src {};
+
+        // Min, max, zero
+        rav::byte_order::write_be<float>(src.data(), -1.f);
+        rav::byte_order::write_be<float>(src.data() + 4, 1.f);
+        rav::byte_order::write_be<float>(src.data() + 8, 0.f);
+
+        std::array<uint8_t, 9> dst {};
+
+        auto result = rav::audio_data::convert<
+            format::f32, byte_order::be, interleaving::interleaved, format::int24, byte_order::le,
+            interleaving::interleaved>(src.data(), src.size(), dst.data(), dst.size(), 1);
+
+        REQUIRE(result);
+        REQUIRE(dst == std::array<uint8_t, 9>{
+            0x1, 0x0, 0x80,
+            0xff, 0xff, 0x7f,
+            0x0, 0x0, 0x0,
+        });
+    }
+
+    SECTION("Convert float to int24 le to be") {
+        std::array<uint8_t, 12> src {};
+
+        // Min, max, zero
+        rav::byte_order::write_le<float>(src.data(), -1.f);
+        rav::byte_order::write_le<float>(src.data() + 4, 1.f);
+        rav::byte_order::write_le<float>(src.data() + 8, 0.f);
+
+        std::array<uint8_t, 9> dst {};
+
+        auto result = rav::audio_data::convert<
+            format::f32, byte_order::le, interleaving::interleaved, format::int24, byte_order::be,
+            interleaving::interleaved>(src.data(), src.size(), dst.data(), dst.size(), 1);
+
+        REQUIRE(result);
+        REQUIRE(dst == std::array<uint8_t, 9>{
+            0x80, 0x0, 0x1,
+            0x7f, 0xff, 0xff,
+            0x0, 0x0, 0x0,
+        });
     }
 }

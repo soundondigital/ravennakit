@@ -138,6 +138,42 @@ namespace format {
 }  // namespace format
 
 namespace detail {
+    class int24_t {
+      public:
+        int24_t() = default;
+        ~int24_t() = default;
+
+        explicit int24_t(const float value) : int24_t(static_cast<int32_t>(value)) {}
+
+        explicit int24_t(const double value) : int24_t(static_cast<int32_t>(value)) {}
+
+        explicit int24_t(const int32_t value) {
+            std::memcpy(data, std::addressof(value), 3);
+        }
+
+        int24_t(const int24_t& other) = default;
+        int24_t(int24_t&& other) noexcept = default;
+        int24_t& operator=(const int24_t& other) = default;
+        int24_t& operator=(int24_t&& other) noexcept = default;
+
+        explicit operator int32_t() const {
+            int32_t value {};
+            std::memcpy(std::addressof(value), data, 3);
+
+            // If the value is negative, sign-extend it
+            if (value << 8 < 0) {
+                return value * -1;
+            }
+
+            return value;
+        }
+
+      private:
+        uint8_t data[3] {};
+    };
+
+    static_assert(sizeof(int24_t) == 3);
+
     template<class SrcFormat, class SrcByteOrder, class DstFormat, class DstByteOrder>
     static void convert_sample(const uint8_t* src, uint8_t* dst) {
         if constexpr (std::is_same_v<SrcFormat, DstFormat> && std::is_same_v<SrcByteOrder, DstByteOrder>) {
@@ -190,6 +226,18 @@ namespace detail {
                 } else {
                     RAV_ASSERT_FALSE("Conversion not available");
                 }
+            } else if constexpr (std::is_same_v<SrcFormat, format::f32>) {
+                if constexpr (std::is_same_v<DstFormat, format::int16>) {
+                    const auto scaled = *reinterpret_cast<const float*>(&src_sample) * 32767.0f;
+                    DstByteOrder::write(dst, DstFormat::size, static_cast<int16_t>(scaled));
+                } else if constexpr (std::is_same_v<DstFormat, format::int24>) {
+                    const auto scaled = *reinterpret_cast<const float*>(&src_sample) * 8388607.f;
+                    DstByteOrder::write(dst, DstFormat::size, static_cast<int24_t>(scaled));
+                } else {
+                    RAV_ASSERT_FALSE("Conversion not available");
+                }
+            } else if constexpr (std::is_same_v<SrcFormat, format::f64>) {
+                RAV_ASSERT_FALSE("Conversion not available");
             } else {
                 RAV_ASSERT_FALSE("Conversion not available");
             }
