@@ -154,74 +154,74 @@ namespace byte_order {
 
 /**
  * Converts a sample from one format to another.
- * @tparam SrcFormat The source sample format. One of the structs in the format namespace.
+ * @tparam SrcType The source sample format. One of the structs in the format namespace.
  * @tparam SrcByteOrder The source byte order. One of the structs in the byte_order namespace.
- * @tparam DstFormat The destination sample format. One of the structs in the format namespace.
+ * @tparam DstType The destination sample format. One of the structs in the format namespace.
  * @tparam DstByteOrder The destination byte order. One of the structs in the byte_order namespace.
  * @param src The source data.
  * @param dst The destination data.
  */
-template<class SrcFormat, class SrcByteOrder, class DstFormat, class DstByteOrder>
+template<class SrcType, class SrcByteOrder, class DstType, class DstByteOrder>
 static void convert_sample(const uint8_t* src, uint8_t* dst) {
-    if constexpr (std::is_same_v<SrcFormat, DstFormat> && std::is_same_v<SrcByteOrder, DstByteOrder>) {
-        std::memcpy(dst, src, sizeof(SrcFormat));
-    } else if constexpr (std::is_same_v<SrcFormat, DstFormat>) {
+    if constexpr (std::is_same_v<SrcType, DstType> && std::is_same_v<SrcByteOrder, DstByteOrder>) {
+        std::memcpy(dst, src, sizeof(SrcType));
+    } else if constexpr (std::is_same_v<SrcType, DstType>) {
         // Only byte order differs
-        DstByteOrder::write(dst, sizeof(DstFormat), SrcByteOrder::read(src, sizeof(SrcFormat)));
+        DstByteOrder::write(dst, sizeof(DstType), SrcByteOrder::read(src, sizeof(SrcType)));
     } else {
-        const auto src_sample = SrcByteOrder::read(src, sizeof(SrcFormat));
+        const auto src_sample = SrcByteOrder::read(src, sizeof(SrcType));
 
-        if constexpr (std::is_same_v<SrcFormat, uint8_t>) {
-            if constexpr (std::is_same_v<DstFormat, int8_t>) {
-                DstByteOrder::write(dst, sizeof(DstFormat), src_sample - 0x80);
+        if constexpr (std::is_same_v<SrcType, uint8_t>) {
+            if constexpr (std::is_same_v<DstType, int8_t>) {
+                DstByteOrder::write(dst, sizeof(DstType), src_sample - 0x80);
             } else {
                 RAV_ASSERT_FALSE("Conversion not available");
             }
-        } else if constexpr (std::is_same_v<SrcFormat, int8_t>) {
-            if constexpr (std::is_same_v<DstFormat, int16_t>) {
-                DstByteOrder::write(dst, sizeof(DstFormat), src_sample << 8);
+        } else if constexpr (std::is_same_v<SrcType, int8_t>) {
+            if constexpr (std::is_same_v<DstType, int16_t>) {
+                DstByteOrder::write(dst, sizeof(DstType), src_sample << 8);
             } else {
                 RAV_ASSERT_FALSE("Conversion not available");
             }
-        } else if constexpr (std::is_same_v<SrcFormat, int16_t>) {
-            if constexpr (std::is_same_v<DstFormat, int24_t>) {
-                DstByteOrder::write(dst, sizeof(DstFormat), src_sample << 8);
-            } else if constexpr (std::is_same_v<DstFormat, int32_t>) {
-                DstByteOrder::write(dst, sizeof(DstFormat), src_sample << 16);
-            } else if constexpr (std::is_same_v<DstFormat, float>) {
+        } else if constexpr (std::is_same_v<SrcType, int16_t>) {
+            if constexpr (std::is_same_v<DstType, int24_t>) {
+                DstByteOrder::write(dst, sizeof(DstType), src_sample << 8);
+            } else if constexpr (std::is_same_v<DstType, int32_t>) {
+                DstByteOrder::write(dst, sizeof(DstType), src_sample << 16);
+            } else if constexpr (std::is_same_v<DstType, float>) {
                 const bool is_negative = static_cast<int64_t>(src_sample) << 48 < 0;
                 auto f = static_cast<float>(src_sample) * 0.000030517578125f * (is_negative ? -1 : 1);
-                DstByteOrder::write(dst, sizeof(DstFormat), f);
-            } else if constexpr (std::is_same_v<DstFormat, double>) {
+                DstByteOrder::write(dst, sizeof(DstType), f);
+            } else if constexpr (std::is_same_v<DstType, double>) {
                 const bool is_negative = static_cast<int64_t>(src_sample) << 48 < 0;
                 auto f = static_cast<double>(src_sample) * 0.000030517578125f * (is_negative ? -1 : 1);
-                DstByteOrder::write(dst, sizeof(DstFormat), f);
+                DstByteOrder::write(dst, sizeof(DstType), f);
             } else {
                 RAV_ASSERT_FALSE("Conversion not available");
             }
-        } else if constexpr (std::is_same_v<SrcFormat, int24_t>) {
-            if constexpr (std::is_same_v<DstFormat, float>) {
+        } else if constexpr (std::is_same_v<SrcType, int24_t>) {
+            if constexpr (std::is_same_v<DstType, float>) {
                 const bool is_negative = static_cast<int64_t>(src_sample) << 40 < 0;
                 auto f = static_cast<float>(src_sample) * 0.00000011920928955078125f * (is_negative ? -1 : 1);
-                DstByteOrder::write(dst, sizeof(DstFormat), f);
-            } else if constexpr (std::is_same_v<DstFormat, double>) {
+                DstByteOrder::write(dst, sizeof(DstType), f);
+            } else if constexpr (std::is_same_v<DstType, double>) {
                 const bool is_negative = static_cast<int64_t>(src_sample) << 40 < 0;
                 auto f = static_cast<double>(src_sample) * 0.00000011920928955078125f * (is_negative ? -1 : 1);
-                DstByteOrder::write(dst, sizeof(DstFormat), f);
+                DstByteOrder::write(dst, sizeof(DstType), f);
             } else {
                 RAV_ASSERT_FALSE("Conversion not available");
             }
-        } else if constexpr (std::is_same_v<SrcFormat, float>) {
-            if constexpr (std::is_same_v<DstFormat, int16_t>) {
+        } else if constexpr (std::is_same_v<SrcType, float>) {
+            if constexpr (std::is_same_v<DstType, int16_t>) {
                 const auto scaled = *reinterpret_cast<const float*>(&src_sample) * 32767.0f;
-                DstByteOrder::write(dst, sizeof(DstFormat), static_cast<int16_t>(scaled));
-            } else if constexpr (std::is_same_v<DstFormat, int24_t>) {
+                DstByteOrder::write(dst, sizeof(DstType), static_cast<int16_t>(scaled));
+            } else if constexpr (std::is_same_v<DstType, int24_t>) {
                 const auto scaled = *reinterpret_cast<const float*>(&src_sample) * 8388607.f;
-                DstByteOrder::write(dst, sizeof(DstFormat), static_cast<int24_t>(scaled));
+                DstByteOrder::write(dst, sizeof(DstType), static_cast<int24_t>(scaled));
             } else {
                 RAV_ASSERT_FALSE("Conversion not available");
             }
-        } else if constexpr (std::is_same_v<SrcFormat, double>) {
+        } else if constexpr (std::is_same_v<SrcType, double>) {
             RAV_ASSERT_FALSE("Conversion not available");
         } else {
             RAV_ASSERT_FALSE("Conversion not available");
@@ -231,10 +231,10 @@ static void convert_sample(const uint8_t* src, uint8_t* dst) {
 
 /**
  * Converts audio data from one format to another and converts interleaving and byte order.
- * @tparam SrcFormat The source sample format. One of the structs in the format namespace.
+ * @tparam SrcType The source sample format. One of the structs in the format namespace.
  * @tparam SrcByteOrder The source byte order. One of the structs in the byte_order namespace.
  * @tparam SrcInterleaving The source interleaving. One of the structs in the interleaving namespace.
- * @tparam DstFormat The destination sample format. One of the structs in the format namespace.
+ * @tparam DstType The destination sample format. One of the structs in the format namespace.
  * @tparam DstByteOrder The destination byte order. One of the structs in the byte_order namespace.
  * @tparam DstInterleaving The destination interleaving. One of the structs in the interleaving namespace.
  * @param src The source data.
@@ -245,26 +245,25 @@ static void convert_sample(const uint8_t* src, uint8_t* dst) {
  * @return True if the conversion was successful, false otherwise.
  */
 template<
-    class SrcFormat, class SrcByteOrder, class SrcInterleaving, class DstFormat, class DstByteOrder,
-    class DstInterleaving>
+    class SrcType, class SrcByteOrder, class SrcInterleaving, class DstType, class DstByteOrder, class DstInterleaving>
 static bool
 convert(const uint8_t* src, const size_t src_size, uint8_t* dst, const size_t dst_size, const size_t num_channels) {
-    if (src_size % sizeof(SrcFormat) != 0) {
+    if (src_size % sizeof(SrcType) != 0) {
         return false;  // src_size is not a multiple of sample size
     }
 
-    if (dst_size % sizeof(DstFormat) != 0) {
+    if (dst_size % sizeof(DstType) != 0) {
         return false;  // dst_size is not a multiple of sample size
     }
 
     // Shortcut for when no conversion is needed
-    if constexpr (std::is_same_v<SrcFormat, DstFormat> && std::is_same_v<SrcByteOrder, DstByteOrder> && std::is_same_v<SrcInterleaving, DstInterleaving>) {
+    if constexpr (std::is_same_v<SrcType, DstType> && std::is_same_v<SrcByteOrder, DstByteOrder> && std::is_same_v<SrcInterleaving, DstInterleaving>) {
         if (src_size == 0 || src_size != dst_size) {
             return false;
         }
         std::copy_n(src, src_size, dst);
         return true;
-    } else if (std::is_same_v<SrcFormat, DstFormat> && std::is_same_v<SrcInterleaving, DstInterleaving>) {
+    } else if (std::is_same_v<SrcType, DstType> && std::is_same_v<SrcInterleaving, DstInterleaving>) {
         RAV_ASSERT(src_size == dst_size);
 
         std::memcpy(dst, src, src_size);
@@ -273,16 +272,16 @@ convert(const uint8_t* src, const size_t src_size, uint8_t* dst, const size_t ds
             return true;  // No need for swapping
         }
 
-        for (size_t i = 0; i < dst_size; i += sizeof(SrcFormat)) {
-            rav::byte_order::swap_bytes(dst + i, sizeof(SrcFormat));
+        for (size_t i = 0; i < dst_size; i += sizeof(SrcType)) {
+            rav::byte_order::swap_bytes(dst + i, sizeof(SrcType));
         }
 
         return true;
     }
 
-    auto num_frames = src_size / sizeof(SrcFormat) / num_channels;
+    auto num_frames = src_size / sizeof(SrcType) / num_channels;
 
-    if (num_frames != dst_size / sizeof(DstFormat) / num_channels) {
+    if (num_frames != dst_size / sizeof(DstType) / num_channels) {
         return false;  // Unequal amount of frames between src and dst
     }
 
@@ -290,17 +289,17 @@ convert(const uint8_t* src, const size_t src_size, uint8_t* dst, const size_t ds
         if constexpr (std::is_same_v<DstInterleaving, interleaving::interleaved>) {
             // Interleaved src, interleaved dst
             for (size_t i = 0; i < num_frames * num_channels; ++i) {
-                const auto src_i = i * sizeof(SrcFormat);
-                const auto dst_i = i * sizeof(DstFormat);
-                convert_sample<SrcFormat, SrcByteOrder, DstFormat, DstByteOrder>(src + src_i, dst + dst_i);
+                const auto src_i = i * sizeof(SrcType);
+                const auto dst_i = i * sizeof(DstType);
+                convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(src + src_i, dst + dst_i);
             }
         } else {
             // Interleaved src, noninterleaved dst
             for (size_t i = 0; i < num_frames * num_channels; ++i) {
                 const auto ch = i % num_channels;
-                const auto src_i = i * sizeof(SrcFormat);
-                const auto dst_i = (ch * num_frames + i / num_channels) * sizeof(DstFormat);
-                convert_sample<SrcFormat, SrcByteOrder, DstFormat, DstByteOrder>(src + src_i, dst + dst_i);
+                const auto src_i = i * sizeof(SrcType);
+                const auto dst_i = (ch * num_frames + i / num_channels) * sizeof(DstType);
+                convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(src + src_i, dst + dst_i);
             }
         }
     } else {
@@ -308,17 +307,17 @@ convert(const uint8_t* src, const size_t src_size, uint8_t* dst, const size_t ds
             // Noninterleaved src, interleaved dst
             for (size_t i = 0; i < num_frames * num_channels; ++i) {
                 const auto ch = i % num_frames;
-                const auto src_i = (ch * num_frames + i / num_channels) * sizeof(SrcFormat);
-                const auto dst_i = i * sizeof(DstFormat);
-                convert_sample<SrcFormat, SrcByteOrder, DstFormat, DstByteOrder>(src + src_i, dst + dst_i);
+                const auto src_i = (ch * num_frames + i / num_channels) * sizeof(SrcType);
+                const auto dst_i = i * sizeof(DstType);
+                convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(src + src_i, dst + dst_i);
             }
         } else {
             // Noninterleaved src, noninterleaved dst
             for (size_t i = 0; i < num_frames * num_channels; ++i) {
                 const auto ch = i % num_frames;
-                const auto src_i = (ch * num_frames + i / num_channels) * sizeof(SrcFormat);
-                const auto dst_i = (ch * num_frames + i / num_channels) * sizeof(DstFormat);
-                convert_sample<SrcFormat, SrcByteOrder, DstFormat, DstByteOrder>(src + src_i, dst + dst_i);
+                const auto src_i = (ch * num_frames + i / num_channels) * sizeof(SrcType);
+                const auto dst_i = (ch * num_frames + i / num_channels) * sizeof(DstType);
+                convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(src + src_i, dst + dst_i);
             }
         }
     }
