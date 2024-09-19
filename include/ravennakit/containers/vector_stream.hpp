@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <vector>
 
 #include "ravennakit/platform/byte_order.hpp"
 
