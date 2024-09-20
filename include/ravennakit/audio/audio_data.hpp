@@ -212,7 +212,7 @@ static void convert_sample(const SrcType* src, DstType* dst) {
             }
         } else if constexpr (std::is_same_v<SrcType, float>) {
             if constexpr (std::is_same_v<DstType, int16_t>) {
-                const auto scaled = *reinterpret_cast<const float*>(&src_sample) * 32767.0f;
+                const auto scaled = *reinterpret_cast<const float*>(&src_sample) * 32767.f;
                 DstByteOrder::write(dst, sizeof(DstType), static_cast<int16_t>(scaled));
             } else if constexpr (std::is_same_v<DstType, int24_t>) {
                 const auto scaled = *reinterpret_cast<const float*>(&src_sample) * 8388607.f;
@@ -221,7 +221,15 @@ static void convert_sample(const SrcType* src, DstType* dst) {
                 RAV_ASSERT_FALSE("Conversion not available");
             }
         } else if constexpr (std::is_same_v<SrcType, double>) {
-            RAV_ASSERT_FALSE("Conversion not available");
+            if constexpr (std::is_same_v<DstType, int16_t>) {
+                const auto scaled = *reinterpret_cast<const double*>(&src_sample) * 32767.0;
+                DstByteOrder::write(dst, sizeof(DstType), static_cast<int16_t>(scaled));
+            } else if constexpr (std::is_same_v<DstType, int24_t>) {
+                const auto scaled = *reinterpret_cast<const double*>(&src_sample) * 8388607.0;
+                DstByteOrder::write(dst, sizeof(DstType), static_cast<int24_t>(scaled));
+            } else {
+                RAV_ASSERT_FALSE("Conversion not available");
+            }
         } else {
             RAV_ASSERT_FALSE("Conversion not available");
         }

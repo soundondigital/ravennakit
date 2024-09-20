@@ -751,6 +751,106 @@ TEST_CASE("audio_data | float to int24 ", "[audio_data]") {
     }
 }
 
+TEST_CASE("audio_data | double to int16", "[audio_data]") {
+    SECTION("Convert double to int16 be to be") {
+        rav::vector_stream<double> src;
+        src.push_back_be({-1.f, 1.f, 0.f});
+        rav::vector_stream<int16_t> dst(3);
+
+        auto result = rav::audio_data::convert<
+            double, byte_order::be, interleaving::interleaved, int16_t, byte_order::be, interleaving::interleaved>(
+            src.data(), src.size(), dst.data(), dst.size(), 1
+        );
+
+        REQUIRE(result);
+        REQUIRE(dst.read_be() == -32767);
+        REQUIRE(dst.read_be() == 32767);
+        REQUIRE(dst.read_be() == 0);
+    }
+
+    SECTION("Convert double to int16 be to le") {
+        rav::vector_stream<double> src;
+        src.push_back_be({-1.f, 1.f, 0.f});
+        rav::vector_stream<int16_t> dst(3);
+
+        auto result = rav::audio_data::convert<
+            double, byte_order::be, interleaving::interleaved, int16_t, byte_order::le, interleaving::interleaved>(
+            src.data(), src.size(), dst.data(), dst.size(), 1
+        );
+
+        REQUIRE(result);
+        REQUIRE(dst.read_le() == -32767);
+        REQUIRE(dst.read_le() == 32767);
+        REQUIRE(dst.read_le() == 0);
+    }
+
+    SECTION("Convert double to int16 le to be") {
+        rav::vector_stream<double> src;
+        src.push_back_le({-1.f, 1.f, 0.f});
+        rav::vector_stream<int16_t> dst(3);
+
+        auto result = rav::audio_data::convert<
+            double, byte_order::le, interleaving::interleaved, int16_t, byte_order::be, interleaving::interleaved>(
+            src.data(), src.size(), dst.data(), dst.size(), 1
+        );
+
+        REQUIRE(result);
+        REQUIRE(dst.read_be() == -32767);
+        REQUIRE(dst.read_be() == 32767);
+        REQUIRE(dst.read_be() == 0);
+    }
+}
+
+TEST_CASE("audio_data | double to int24 ", "[audio_data]") {
+    SECTION("Convert double to int24 be to be") {
+        rav::vector_stream<double> src;
+        src.push_back_be({-1.f, 1.f, 0.f});
+        rav::vector_stream<rav::int24_t> dst(3);
+
+        auto result = rav::audio_data::convert<
+            double, byte_order::be, interleaving::interleaved, rav::int24_t, byte_order::be, interleaving::interleaved>(
+            src.data(), src.size(), dst.data(), dst.size(), 1
+        );
+
+        REQUIRE(result);
+        REQUIRE(dst.read_be() == -8388607);
+        REQUIRE(dst.read_be() == 8388607);
+        REQUIRE(dst.read_be() == 0);
+    }
+
+    SECTION("Convert double to int24 be to le") {
+        rav::vector_stream<double> src;
+        src.push_back_be({-1.f, 1.f, 0.f});
+        rav::vector_stream<rav::int24_t> dst(3);
+
+        auto result = rav::audio_data::convert<
+            double, byte_order::be, interleaving::interleaved, rav::int24_t, byte_order::le, interleaving::interleaved>(
+            src.data(), src.size(), dst.data(), dst.size(), 1
+        );
+
+        REQUIRE(result);
+        REQUIRE(dst.read_le() == -8388607);
+        REQUIRE(dst.read_le() == 8388607);
+        REQUIRE(dst.read_le() == 0);
+    }
+
+    SECTION("Convert double to int24 le to be") {
+        rav::vector_stream<double> src;
+        src.push_back_le({-1.f, 1.f, 0.f});
+        rav::vector_stream<rav::int24_t> dst(3);
+
+        auto result = rav::audio_data::convert<
+            double, byte_order::le, interleaving::interleaved, rav::int24_t, byte_order::be, interleaving::interleaved>(
+            src.data(), src.size(), dst.data(), dst.size(), 1
+        );
+
+        REQUIRE(result);
+        REQUIRE(dst.read_be() == -8388607);
+        REQUIRE(dst.read_be() == 8388607);
+        REQUIRE(dst.read_be() == 0);
+    }
+}
+
 // MARK: - Channel buffer conversions
 
 TEST_CASE("audio_data | channel buffer conversions contiguous to channels", "[audio_data]") {
