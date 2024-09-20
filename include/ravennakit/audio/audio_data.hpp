@@ -230,10 +230,10 @@ static void convert_sample(const SrcType* src, DstType* dst) {
 
 /**
  * Converts audio data from one format to another and converts interleaving and byte order.
- * @tparam SrcType The source sample format. One of the structs in the format namespace.
+ * @tparam SrcType The source sample format.
  * @tparam SrcByteOrder The source byte order. One of the structs in the byte_order namespace.
  * @tparam SrcInterleaving The source interleaving. One of the structs in the interleaving namespace.
- * @tparam DstType The destination sample format. One of the structs in the format namespace.
+ * @tparam DstType The destination sample format.
  * @tparam DstByteOrder The destination byte order. One of the structs in the byte_order namespace.
  * @tparam DstInterleaving The destination interleaving. One of the structs in the interleaving namespace.
  * @param src The source data.
@@ -293,7 +293,7 @@ convert(const SrcType* src, const size_t src_size, DstType* dst, const size_t ds
                 convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(src + i, dst + dst_i);
             }
         }
-    } else {
+    } else if constexpr (std::is_same_v<SrcInterleaving, interleaving::noninterleaved>) {
         if constexpr (std::is_same_v<DstInterleaving, interleaving::interleaved>) {
             // Noninterleaved src, interleaved dst
             for (size_t i = 0; i < num_frames * num_channels; ++i) {
@@ -304,12 +304,101 @@ convert(const SrcType* src, const size_t src_size, DstType* dst, const size_t ds
         } else {
             // Noninterleaved src, noninterleaved dst
             for (size_t i = 0; i < num_frames * num_channels; ++i) {
-                const auto ch = i % num_frames;
-                const auto src_i = ch * num_frames + i / num_channels;
-                const auto dst_i = ch * num_frames + i / num_channels;
-                convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(src + src_i, dst + dst_i);
+                convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(src + i, dst + i);
             }
         }
+    } else {
+        RAV_ASSERT_FALSE("Invalid interleaving");
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Converts audio data from one format to another and converts interleaving and byte order.
+ * @tparam SrcType The source sample format.
+ * @tparam SrcByteOrder The source byte order. One of the structs in the byte_order namespace.
+ * @tparam SrcInterleaving The source interleaving. One of the structs in the interleaving namespace.
+ * @tparam DstType The destination sample format.
+ * @tparam DstByteOrder The destination byte order. One of the structs in the byte_order namespace.
+ * @param src The source data.
+ * @param src_size The size of the source data.
+ * @param num_channels The number of channels in the audio data.
+ * @param dst The destination data.
+ * @param dst_start_frame The starting frame in the destination data.
+ * @return True if the conversion was successful, false otherwise.
+ */
+template<class SrcType, class SrcByteOrder, class SrcInterleaving, class DstType, class DstByteOrder>
+static bool convert(
+    const SrcType* src, const size_t src_size, const size_t num_channels, DstType* const* dst,
+    const size_t dst_start_frame = 0
+) {
+    const auto num_frames = src_size / num_channels;
+    if (num_frames == 0) {
+        return false;
+    }
+
+    if constexpr (std::is_same_v<SrcInterleaving, interleaving::interleaved>) {
+        // interleaved to non-interleaved
+        for (size_t i = 0; i < num_frames * num_channels; ++i) {
+            const auto ch = i % num_channels;
+            const auto frame = i / num_channels;
+            convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(src + i, dst[ch] + frame + dst_start_frame);
+        }
+    } else if constexpr (std::is_same_v<SrcInterleaving, interleaving::noninterleaved>) {
+        // interleaved to interleaved (channels)
+        for (size_t i = 0; i < num_frames * num_channels; ++i) {
+            const auto ch = i / num_frames;
+            const auto frame = i % num_frames;
+            convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(src + i, dst[ch] + frame + dst_start_frame);
+        }
+    } else {
+        RAV_ASSERT_FALSE("Invalid interleaving");
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Converts audio data from one format to another and converts interleaving and byte order.
+ * @tparam SrcType The source sample format.
+ * @tparam SrcByteOrder The source byte order. One of the structs in the byte_order namespace.
+ * @tparam DstType The destination sample format.
+ * @tparam DstByteOrder The destination byte order. One of the structs in the byte_order namespace.
+ * @tparam DstInterleaving The destination interleaving. One of the structs in the interleaving namespace.
+ * @param src The source data.
+ * @param num_frames The number of frames in the audio data.
+ * @param num_channels The number of channels in the audio data.
+ * @param src_start_frame The starting frame in the source data.
+ * @param dst The destination data.
+ * @return True if the conversion was successful, false otherwise.
+ */
+template<class SrcType, class SrcByteOrder, class DstType, class DstByteOrder, class DstInterleaving>
+static bool convert(
+    const SrcType* const* src, const size_t num_frames, const size_t num_channels, const size_t src_start_frame,
+    DstType* dst
+) {
+    if constexpr (std::is_same_v<DstInterleaving, interleaving::interleaved>) {
+        for (size_t frame = 0; frame < num_frames; ++frame) {
+            for (size_t ch = 0; ch < num_channels; ++ch) {
+                convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(
+                    src[ch] + frame + src_start_frame, dst + frame * num_channels + ch
+                );
+            }
+        }
+    } else if constexpr (std::is_same_v<DstInterleaving, interleaving::noninterleaved>) {
+        for (size_t frame = 0; frame < num_frames; ++frame) {
+            for (size_t ch = 0; ch < num_channels; ++ch) {
+                convert_sample<SrcType, SrcByteOrder, DstType, DstByteOrder>(
+                    src[ch] + frame + src_start_frame, dst + num_frames * ch + frame
+                );
+            }
+        }
+    } else {
+        RAV_ASSERT_FALSE("Invalid interleaving");
+        return false;
     }
 
     return true;
