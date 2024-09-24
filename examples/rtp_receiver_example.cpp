@@ -11,10 +11,10 @@
 #include <fmt/core.h>
 
 #include <CLI/CLI.hpp>
-#include <Tracy/tracy.hpp>
 #include <uvw.hpp>
 
 #include "portaudio.h"
+#include "ravennakit/util/tracy.hpp"
 #include "ravennakit/audio/circular_audio_buffer.hpp"
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
@@ -32,6 +32,8 @@ static int audio_callback(
     [[maybe_unused]] const PaStreamCallbackTimeInfo* time_info, [[maybe_unused]] PaStreamCallbackFlags status,
     void* user_data
 ) {
+    ZoneScoped;
+
     if (num_frames != k_block_size) {
         RAV_ERROR("Unexpected number of frames: {}", num_frames);
     }

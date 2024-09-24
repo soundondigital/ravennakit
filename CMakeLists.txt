@@ -66,9 +66,13 @@ endif ()
 option(TRACY_ENABLE "Enable Tracy as profiler" OFF)
 if (TRACY_ENABLE)
     message(STATUS "Tracy enabled")
+    add_library(tracy INTERFACE)
+
     if (APPLE)
-        include_directories(/opt/homebrew/include)
-        link_directories(/opt/homebrew/lib)
+        target_include_directories(tracy INTERFACE /opt/homebrew/include)
+        target_link_directories(tracy INTERFACE /opt/homebrew/lib)
+        target_link_libraries(tracy INTERFACE TracyClient)
+        target_compile_definitions(tracy INTERFACE TRACY_ENABLE=1)
     endif ()
 else ()
     message(STATUS "Tracy disabled")
@@ -136,8 +140,7 @@ target_link_libraries(rtp_receiver_example
 )
 
 if (TRACY_ENABLE)
-    target_link_libraries(rtp_receiver_example PUBLIC TracyClient)
-    target_compile_definitions(rtp_receiver_example PRIVATE TRACY_ENABLE=1)
+    target_link_libraries(rtp_receiver_example PUBLIC tracy)
 endif ()
 
 ##############
