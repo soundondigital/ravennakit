@@ -16,7 +16,7 @@
 namespace rav::util::chrono {
 
 /**
- * Simple timeout class which can be probed for expiration.
+ * Simple timeout class which blocks the current thread until the timeout expires.
  */
 template<class Rep, class Period>
 class timeout {
