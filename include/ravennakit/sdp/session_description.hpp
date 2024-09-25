@@ -34,7 +34,7 @@ class session_description {
      * In general, the origin serves as a globally unique identifier for this version of the session description, and
      * the subfields excepting the version, taken together identify the session irrespective of any modifications.
      */
-    struct origin {
+    struct origin_field {
         /// The user's login on the originating host, or "-" if the originating host does not support the concept of
         /// user IDs.
         std::string username;
@@ -61,13 +61,13 @@ class session_description {
          * @return A result indicating success or failure. When parsing fails, the error message will contain a
          * description of the error.
          */
-        static parse_result<origin> parse(const std::string& line);
+        static parse_result<origin_field> parse(const std::string& line);
     };
 
     /**
      * A type representing the connection information (c=*) of an SDP session description.
      */
-    struct connection {
+    struct connection_info_field {
         /// Specifies the type of network.
         netw_type network_type {netw_type::undefined};
         /// Specifies the type of address.
@@ -85,13 +85,20 @@ class session_description {
          * @return A pair containing the parse result and the connection info. When parsing fails, the connection info
          * will be a default-constructed object.
          */
-        static parse_result<connection> parse(const std::string& line);
+        static parse_result<connection_info_field> parse(const std::string& line);
     };
 
-    struct address {
-        std::string ip_address;
-        std::optional<int> ttl;
-        std::optional<int> number_of_addresses;
+    /**
+     * A type representing the time field (t=*) of an SDP session description.
+     * Defined as seconds since January 1, 1900, UTC.
+     */
+    struct time_active_field {
+        /// The start time of the session.
+        int64_t start_time {};
+        /// The stop time of the session.
+        int64_t stop_time {};
+
+        static parse_result<time_active_field> parse(const std::string& line);
     };
 
     /**
@@ -110,12 +117,12 @@ class session_description {
     /**
      * @returns The origin of the SDP session description.
      */
-    [[nodiscard]] const origin& get_origin() const;
+    [[nodiscard]] const origin_field& origin() const;
 
     /**
      * @return The connection information of the SDP session description.
      */
-    [[nodiscard]] std::optional<connection> get_connection() const;
+    [[nodiscard]] std::optional<connection_info_field> connection_info() const;
 
     /**
      * @returns The session name of the SDP session description.
@@ -123,15 +130,16 @@ class session_description {
     [[nodiscard]] std::string session_name() const;
 
     /**
-     * @returns The connection information of the SDP session description.
+     * @return The time field of the SDP session description.
      */
-    [[nodiscard]] std::optional<connection> connection_info() const;
+    [[nodiscard]] time_active_field time_active() const;
 
   private:
     int version_ {};
-    origin origin_;
+    origin_field origin_;
     std::string session_name_;
-    std::optional<connection> connection_info_;
+    std::optional<connection_info_field> connection_info_;
+    time_active_field time_active_;
 
     static parse_result<int> parse_version(std::string_view line);
 };
