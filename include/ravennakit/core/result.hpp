@@ -24,21 +24,6 @@ template<class T, class E>
 class result {
   public:
     /**
-     * Convenience function to convert a result of one type to another.
-     * @tparam OtherT The value type of the other result.
-     * @tparam OtherE The error type of the other result.
-     * @param other The other result.
-     */
-    template<class OtherT, class OtherE>
-    explicit result(result<OtherT, OtherE> other) {
-        if (other.is_ok()) {
-            value_ = std::variant<T, E> {std::in_place_index<0>, std::move(other.move_ok())};
-        } else {
-            value_ = std::variant<T, E> {std::in_place_index<1>, std::move(other.get_err())};
-        }
-    }
-
-    /**
      * Creates an ok result with given value.
      * @param value The value.
      * @return The result.
@@ -105,21 +90,6 @@ class result {
 template<class E>
 class result<void, E> {
   public:
-    /**
-     * Convenience function to convert a result of one type to another.
-     * @tparam OtherT The value type of the other result.
-     * @tparam OtherE The error type of the other result.
-     * @param other The other result.
-     */
-    template<class OtherT, class OtherE>
-    explicit result(result<OtherT, OtherE> other) {
-        if (other.is_ok()) {
-            error_ = std::nullopt;
-        } else {
-            error_ = std::move(other.get_err());
-        }
-    }
-
     /**
      * Creates an ok result with given value.
      * @return The result.

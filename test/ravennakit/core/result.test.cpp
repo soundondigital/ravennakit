@@ -56,25 +56,4 @@ TEST_CASE("result", "[result]") {
         REQUIRE(result.is_err());
         REQUIRE(result.get_err() == "BlahBlahBlah");
     }
-
-    SECTION("Test auto conversion 1") {
-        auto r1 = rav::result<int, const char*>::ok(42);
-        rav::result<int, std::string> r2(r1);
-        REQUIRE(r2.is_ok());
-        REQUIRE(r2.get_ok() == 42);
-    }
-
-    SECTION("Test auto conversion 2") {
-        auto r1 = rav::result<int, const char*>::err("This is an error");
-        rav::result<int, std::string> r2(r1);
-        REQUIRE_FALSE(r2.is_ok());
-        REQUIRE(r2.get_err() == "This is an error");
-    }
-
-    SECTION("Test auto conversion 3") {
-        auto r1 = rav::result<int, const char*>::ok(42);
-        rav::result<float, std::string> r2(r1);
-        REQUIRE(r2.is_ok());
-        REQUIRE(rav::util::is_within(r2.get_ok(), 42.f, 0.001f));
-    }
 }
