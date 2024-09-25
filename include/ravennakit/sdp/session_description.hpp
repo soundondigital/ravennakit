@@ -94,10 +94,15 @@ class session_description {
      */
     struct time_active_field {
         /// The start time of the session.
-        int64_t start_time {};
+        int64_t start_time {-1};
         /// The stop time of the session.
-        int64_t stop_time {};
+        int64_t stop_time {-1};
 
+        /**
+         * Parses a time field from a string.
+         * @param line The string to parse.
+         * @return A pair containing the parse result and the time field. When parsing fails, the time field is a
+         */
         static parse_result<time_active_field> parse(const std::string& line);
     };
 

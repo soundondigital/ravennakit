@@ -207,6 +207,14 @@ rav::session_description::parse(const std::string& sdp_text) {
                 sd.connection_info_ = result.move_ok();
                 break;
             }
+            case 't': {
+                auto result = time_active_field::parse(line);
+                if (result.is_err()) {
+                    return parse_result<session_description>::err(result.get_err());
+                }
+                sd.time_active_ = result.move_ok();
+                break;
+            }
             default:
                 continue;
         }
