@@ -107,6 +107,33 @@ class session_description {
     };
 
     /**
+     * A type representing a media description (m=*) of an SDP session description.
+     */
+    struct media_description {
+        /// The media type of the media description (i.e. audio, video, text, application, message).
+        std::string media_type;
+        /// The port number of the media description.
+        uint16_t port {};
+        /// Number of ports
+        uint16_t number_of_ports {};
+        /// The protocol of the media description.
+        std::string protocol;
+        /// The formats of the media description.
+        std::vector<std::string> formats;
+        /// The connection information of the media description.
+        std::optional<connection_info_field> connection_info;
+
+        /**
+         * Parses a media description from a string (i.e. the line starting with m=*). Does not parse the connection
+         * into or attributes.
+         * @param line The string to parse.
+         * @returns A result indicating success or failure. When parsing fails, the error message will contain a
+         * description of the error.
+         */
+        static parse_result<media_description> parse(const std::string& line);
+    };
+
+    /**
      * Parses an SDP session description from a string.
      * @param sdp_text The SDP text to parse.
      * @return A pair containing the parse result and the session description. When parsing fails, the session
@@ -139,12 +166,21 @@ class session_description {
      */
     [[nodiscard]] time_active_field time_active() const;
 
+    /**
+     * @returns The media descriptions of the SDP session description.
+     */
+    [[nodiscard]] const std::vector<media_description>& media_descriptions() const;
+
   private:
+    /// Type to specify which section of the SDP we are parsing
+    enum class section { session_description, media_description };
+
     int version_ {};
     origin_field origin_;
     std::string session_name_;
     std::optional<connection_info_field> connection_info_;
     time_active_field time_active_;
+    std::vector<media_description> media_descriptions_;
 
     static parse_result<int> parse_version(std::string_view line);
 };

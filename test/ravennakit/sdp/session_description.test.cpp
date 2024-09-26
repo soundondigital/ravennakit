@@ -12,79 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-namespace {
-
-constexpr auto k_anubis_sdp =
-    "v=0\r\n"
-    "o=- 13 0 IN IP4 192.168.15.52\r\n"
-    "s=Anubis_610120_13\r\n"
-    "c=IN IP4 239.1.15.52/15\r\n"
-    "t=0 0\r\n"
-    "a=clock-domain:PTPv2 0\r\n"
-    "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n"
-    "a=mediaclk:direct=0\r\n"
-    "m=audio 5004 RTP/AVP 98\r\n"
-    "c=IN IP4 239.1.15.52/15\r\n"
-    "a=rtpmap:98 L16/48000/2\r\n"
-    "a=source-filter: incl IN IP4 239.1.15.52 192.168.15.52\r\n"
-    "a=clock-domain:PTPv2 0\r\n"
-    "a=sync-time:0\r\n"
-    "a=framecount:48\r\n"
-    "a=palign:0\r\n"
-    "a=ptime:1\r\n"
-    "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n"
-    "a=mediaclk:direct=0\r\n"
-    "a=recvonly\r\n"
-    "a=midi-pre2:50040 0,0;0,1\r\n";
-
-}
-
 TEST_CASE("session_description", "[session_description]") {
-    SECTION("Test Anubis description") {
-        auto result = rav::session_description::parse(k_anubis_sdp);
-        REQUIRE(result.is_ok());
-
-        SECTION("Parse a description from an Anubis") {
-            REQUIRE(result.get_ok().version() == 0);
-        }
-
-        SECTION("Test version") {
-            constexpr auto sdp =
-                "v=1\r\n"
-                "o=- 13 0 IN IP4 192.168.15.52\r\n"
-                "s=Anubis_610120_13\r\n";
-            REQUIRE(rav::session_description::parse(sdp).is_err());
-        }
-
-        SECTION("Test origin") {
-            const auto& origin = result.get_ok().origin();
-            REQUIRE(origin.username == "-");
-            REQUIRE(origin.session_id == "13");
-            REQUIRE(origin.session_version == 0);
-            REQUIRE(origin.network_type == rav::session_description::netw_type::internet);
-            REQUIRE(origin.address_type == rav::session_description::addr_type::ipv4);
-            REQUIRE(origin.unicast_address == "192.168.15.52");
-        }
-
-        SECTION("Test connection") {
-            const auto& connection = result.get_ok().connection_info();
-            REQUIRE(connection.has_value());
-            REQUIRE(connection->network_type == rav::session_description::netw_type::internet);
-            REQUIRE(connection->address_type == rav::session_description::addr_type::ipv4);
-            REQUIRE(connection->address == "239.1.15.52");
-        }
-
-        SECTION("Test session name") {
-            REQUIRE(result.get_ok().session_name() == "Anubis_610120_13");
-        }
-
-        SECTION("Test time") {
-            auto time = result.get_ok().time_active();
-            REQUIRE(time.start_time == 0);
-            REQUIRE(time.stop_time == 0);
-        }
-    }
-
     SECTION("Test crlf delimited string") {
         constexpr auto crlf =
             "v=0\r\n"
@@ -103,6 +31,93 @@ TEST_CASE("session_description", "[session_description]") {
         auto result = rav::session_description::parse(n);
         REQUIRE(result.is_ok());
         REQUIRE(result.get_ok().version() == 0);
+    }
+}
+
+TEST_CASE("session_description | description from anubis", "[session_description]") {
+    constexpr auto k_anubis_sdp =
+        "v=0\r\n"
+        "o=- 13 0 IN IP4 192.168.15.52\r\n"
+        "s=Anubis_610120_13\r\n"
+        "c=IN IP4 239.1.15.52/15\r\n"
+        "t=0 0\r\n"
+        "a=clock-domain:PTPv2 0\r\n"
+        "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n"
+        "a=mediaclk:direct=0\r\n"
+        "m=audio 5004 RTP/AVP 98\r\n"
+        "c=IN IP4 239.1.15.52/15\r\n"
+        "a=rtpmap:98 L16/48000/2\r\n"
+        "a=source-filter: incl IN IP4 239.1.15.52 192.168.15.52\r\n"
+        "a=clock-domain:PTPv2 0\r\n"
+        "a=sync-time:0\r\n"
+        "a=framecount:48\r\n"
+        "a=palign:0\r\n"
+        "a=ptime:1\r\n"
+        "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n"
+        "a=mediaclk:direct=0\r\n"
+        "a=recvonly\r\n"
+        "a=midi-pre2:50040 0,0;0,1\r\n";
+
+    auto result = rav::session_description::parse(k_anubis_sdp);
+    REQUIRE(result.is_ok());
+
+    SECTION("Parse a description from an Anubis") {
+        REQUIRE(result.get_ok().version() == 0);
+    }
+
+    SECTION("Test version") {
+        constexpr auto sdp =
+            "v=1\r\n"
+            "o=- 13 0 IN IP4 192.168.15.52\r\n"
+            "s=Anubis_610120_13\r\n";
+        REQUIRE(rav::session_description::parse(sdp).is_err());
+    }
+
+    SECTION("Test origin") {
+        const auto& origin = result.get_ok().origin();
+        REQUIRE(origin.username == "-");
+        REQUIRE(origin.session_id == "13");
+        REQUIRE(origin.session_version == 0);
+        REQUIRE(origin.network_type == rav::session_description::netw_type::internet);
+        REQUIRE(origin.address_type == rav::session_description::addr_type::ipv4);
+        REQUIRE(origin.unicast_address == "192.168.15.52");
+    }
+
+    SECTION("Test connection") {
+        const auto& connection = result.get_ok().connection_info();
+        REQUIRE(connection.has_value());
+        REQUIRE(connection->network_type == rav::session_description::netw_type::internet);
+        REQUIRE(connection->address_type == rav::session_description::addr_type::ipv4);
+        REQUIRE(connection->address == "239.1.15.52");
+    }
+
+    SECTION("Test session name") {
+        REQUIRE(result.get_ok().session_name() == "Anubis_610120_13");
+    }
+
+    SECTION("Test time") {
+        auto time = result.get_ok().time_active();
+        REQUIRE(time.start_time == 0);
+        REQUIRE(time.stop_time == 0);
+    }
+
+    SECTION("Test media") {
+        const auto& descriptions = result.get_ok().media_descriptions();
+        REQUIRE(descriptions.size() == 1);
+        const auto& media = descriptions[0];
+        REQUIRE(media.media_type == "audio");
+        REQUIRE(media.port == 5004);
+        REQUIRE(media.number_of_ports == 1);
+        REQUIRE(media.protocol == "RTP/AVP");
+        REQUIRE(media.formats.size() == 1);
+        REQUIRE(media.formats[0] == "98");
+        REQUIRE(media.connection_info.has_value());
+        const auto& conn = media.connection_info.value();
+        REQUIRE(conn.network_type == rav::session_description::netw_type::internet);
+        REQUIRE(conn.address_type == rav::session_description::addr_type::ipv4);
+        REQUIRE(conn.address == "239.1.15.52");
+        REQUIRE(conn.ttl.has_value() == true);
+        REQUIRE(*conn.ttl == 15);
     }
 }
 
@@ -192,5 +207,33 @@ TEST_CASE("session_description | time_field", "[session_description]") {
     SECTION("Test invalid time field") {
         auto result = rav::session_description::time_active_field::parse("t=");
         REQUIRE(result.is_err());
+    }
+}
+
+TEST_CASE("session_description | media_description", "[session_description]") {
+    SECTION("Test media field") {
+        auto result = rav::session_description::media_description::parse("m=audio 5004 RTP/AVP 98");
+        REQUIRE(result.is_ok());
+        const auto media = result.move_ok();
+        REQUIRE(media.media_type == "audio");
+        REQUIRE(media.port == 5004);
+        REQUIRE(media.number_of_ports == 1);
+        REQUIRE(media.protocol == "RTP/AVP");
+        REQUIRE(media.formats.size() == 1);
+        REQUIRE(media.formats[0] == "98");
+    }
+
+    SECTION("Test media field with multiple formats") {
+        auto result = rav::session_description::media_description::parse("m=audio 5004/2 RTP/AVP 98 99 100");
+        REQUIRE(result.is_ok());
+        const auto media = result.move_ok();
+        REQUIRE(media.media_type == "audio");
+        REQUIRE(media.port == 5004);
+        REQUIRE(media.number_of_ports == 2);
+        REQUIRE(media.protocol == "RTP/AVP");
+        REQUIRE(media.formats.size() == 3);
+        REQUIRE(media.formats[0] == "98");
+        REQUIRE(media.formats[1] == "99");
+        REQUIRE(media.formats[2] == "100");
     }
 }

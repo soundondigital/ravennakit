@@ -155,6 +155,57 @@ rav::session_description::time_active_field::parse(const std::string& line) {
     return parse_result<time_active_field>::ok(time);
 }
 
+rav::session_description::parse_result<rav::session_description::media_description>
+rav::session_description::media_description::parse(const std::string& line) {
+    if (!starts_with(line, "m=")) {
+        return parse_result<media_description>::err("media: expecting 'm='");
+    }
+
+    media_description media;
+
+    const auto parts = split_string(line.substr(2), ' ');
+
+    if (parts.size() < 4) {
+        return parse_result<media_description>::err("media: expecting at least 4 parts");
+    }
+
+    media.media_type = parts[0];
+
+    const auto port_parts = split_string(parts[1], '/');
+
+    if (port_parts.size() > 2) {
+        return parse_result<media_description>::err("media: unexpected number of parts in port");
+    }
+
+    // Port
+    if (!port_parts.empty()) {
+        if (const auto port = rav::from_string_strict<uint16_t>(port_parts[0]); port.has_value()) {
+            media.port = *port;
+        } else {
+            return parse_result<media_description>::err("media: failed to parse port as integer");
+        }
+    }
+
+    // Number of ports
+    if (port_parts.size() == 1) {
+        media.number_of_ports = 1;
+    } else if (port_parts.size() == 2) {
+        if (const auto num_ports = rav::from_string_strict<uint16_t>(port_parts[1]); num_ports.has_value()) {
+            media.number_of_ports = *num_ports;
+        } else {
+            return parse_result<media_description>::err("media: failed to parse number of ports as integer");
+        }
+    }
+
+    media.protocol = parts[2];
+
+    for (size_t i = 3; i < parts.size(); ++i) {
+        media.formats.push_back(parts[i]);
+    }
+
+    return parse_result<media_description>::ok(std::move(media));
+}
+
 rav::session_description::parse_result<rav::session_description>
 rav::session_description::parse(const std::string& sdp_text) {
     session_description sd;
@@ -204,7 +255,11 @@ rav::session_description::parse(const std::string& sdp_text) {
                 if (result.is_err()) {
                     return parse_result<session_description>::err(result.get_err());
                 }
-                sd.connection_info_ = result.move_ok();
+                if (!sd.media_descriptions_.empty()) {
+                    sd.media_descriptions_.back().connection_info = result.move_ok();
+                } else {
+                    sd.connection_info_ = result.move_ok();
+                }
                 break;
             }
             case 't': {
@@ -213,6 +268,14 @@ rav::session_description::parse(const std::string& sdp_text) {
                     return parse_result<session_description>::err(result.get_err());
                 }
                 sd.time_active_ = result.move_ok();
+                break;
+            }
+            case 'm': {
+                auto result = media_description::parse(line);
+                if (result.is_err()) {
+                    return parse_result<session_description>::err(result.get_err());
+                }
+                sd.media_descriptions_.push_back(result.move_ok());
                 break;
             }
             default:
@@ -241,6 +304,10 @@ std::string rav::session_description::session_name() const {
 
 rav::session_description::time_active_field rav::session_description::time_active() const {
     return time_active_;
+}
+
+const std::vector<rav::session_description::media_description>& rav::session_description::media_descriptions() const {
+    return media_descriptions_;
 }
 
 rav::session_description::parse_result<int> rav::session_description::parse_version(const std::string_view line) {
