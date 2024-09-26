@@ -13,6 +13,13 @@
 #include "ravennakit/core/assert.hpp"
 #include "ravennakit/core/log.hpp"
 
+namespace {
+constexpr auto k_sdp_ptime = "ptime";
+constexpr auto k_sdp_inet = "IN";
+constexpr auto k_sdp_ipv4 = "IP4";
+constexpr auto k_sdp_ipv6 = "IP6";
+}  // namespace
+
 rav::session_description::parse_result<rav::session_description::origin_field>
 rav::session_description::origin_field::parse(const std::string& line) {
     if (!starts_with(line, "o=")) {
@@ -29,21 +36,21 @@ rav::session_description::origin_field::parse(const std::string& line) {
     o.username = parts[0];
     o.session_id = parts[1];
 
-    if (const auto v = rav::from_string_strict<int>(parts[2]); v.has_value()) {
+    if (const auto v = rav::ston<int>(parts[2]); v.has_value()) {
         o.session_version = *v;
     } else {
         return parse_result<origin_field>::err("origin: failed to parse version as integer");
     }
 
-    if (parts[3] == "IN") {
+    if (parts[3] == k_sdp_inet) {
         o.network_type = netw_type::internet;
     } else {
         return parse_result<origin_field>::err("origin: invalid network type");
     }
 
-    if (parts[4] == "IP4") {
+    if (parts[4] == k_sdp_ipv4) {
         o.address_type = addr_type::ipv4;
-    } else if (parts[4] == "IP6") {
+    } else if (parts[4] == k_sdp_ipv6) {
         o.address_type = addr_type::ipv6;
     } else {
         return parse_result<origin_field>::err("origin: invalid address type");
@@ -91,14 +98,14 @@ rav::session_description::connection_info_field::parse(const std::string& line) 
 
     if (address_parts.size() == 2) {
         if (info.address_type == addr_type::ipv4) {
-            info.ttl = rav::from_string_strict<int>(address_parts[1]);
+            info.ttl = rav::ston<int>(address_parts[1]);
             if (!info.ttl.has_value()) {
                 return parse_result<connection_info_field>::err(
                     "connection: failed to parse number of addresses as integer"
                 );
             }
         } else if (info.address_type == addr_type::ipv6) {
-            info.number_of_addresses = rav::from_string_strict<int>(address_parts[1]);
+            info.number_of_addresses = rav::ston<int>(address_parts[1]);
             if (!info.number_of_addresses.has_value()) {
                 return parse_result<connection_info_field>::err(
                     "connection: failed to parse number of addresses as integer"
@@ -109,8 +116,8 @@ rav::session_description::connection_info_field::parse(const std::string& line) 
         if (info.address_type == addr_type::ipv6) {
             return parse_result<connection_info_field>::err("connection: invalid address, ttl not allowed for ipv6");
         }
-        info.ttl = rav::from_string_strict<int>(address_parts[1]);
-        info.number_of_addresses = rav::from_string_strict<int>(address_parts[2]);
+        info.ttl = rav::ston<int>(address_parts[1]);
+        info.number_of_addresses = rav::ston<int>(address_parts[2]);
         if (!info.ttl.has_value()) {
             return parse_result<connection_info_field>::err("connection: failed to parse ttl as integer");
         }
@@ -139,12 +146,12 @@ rav::session_description::time_active_field::parse(const std::string& line) {
         return parse_result<time_active_field>::err("time: expecting 2 parts");
     }
 
-    const auto start_time = rav::from_string_strict<int64_t>(parts[0]);
+    const auto start_time = rav::ston<int64_t>(parts[0]);
     if (!start_time.has_value()) {
         return parse_result<time_active_field>::err("time: failed to parse start time as integer");
     }
 
-    const auto stop_time = rav::from_string_strict<int64_t>(parts[1]);
+    const auto stop_time = rav::ston<int64_t>(parts[1]);
     if (!stop_time.has_value()) {
         return parse_result<time_active_field>::err("time: failed to parse stop time as integer");
     }
@@ -179,7 +186,7 @@ rav::session_description::media_description::parse(const std::string& line) {
 
     // Port
     if (!port_parts.empty()) {
-        if (const auto port = rav::from_string_strict<uint16_t>(port_parts[0]); port.has_value()) {
+        if (const auto port = rav::ston<uint16_t>(port_parts[0]); port.has_value()) {
             media.port = *port;
         } else {
             return parse_result<media_description>::err("media: failed to parse port as integer");
@@ -190,7 +197,7 @@ rav::session_description::media_description::parse(const std::string& line) {
     if (port_parts.size() == 1) {
         media.number_of_ports = 1;
     } else if (port_parts.size() == 2) {
-        if (const auto num_ports = rav::from_string_strict<uint16_t>(port_parts[1]); num_ports.has_value()) {
+        if (const auto num_ports = rav::ston<uint16_t>(port_parts[1]); num_ports.has_value()) {
             media.number_of_ports = *num_ports;
         } else {
             return parse_result<media_description>::err("media: failed to parse number of ports as integer");
@@ -206,7 +213,12 @@ rav::session_description::media_description::parse(const std::string& line) {
     return parse_result<media_description>::ok(std::move(media));
 }
 
-rav::session_description::parse_result<void> rav::session_description::attribute_fields::parse_add(const std::string& line) {
+void rav::session_description::attribute_fields::add(std::string key, std::string value) {
+    attributes_.push_back({std::move(key), std::move(value)});
+}
+
+rav::session_description::parse_result<void>
+rav::session_description::attribute_fields::parse_add(const std::string& line) {
     if (!starts_with(line, "a=")) {
         return parse_result<void>::err("attribute: expecting 'a='");
     }
@@ -243,6 +255,15 @@ bool rav::session_description::attribute_fields::has_attribute(const std::string
         }
     }
     return false;
+}
+
+std::optional<double> rav::session_description::attribute_fields::ptime() const {
+    if (const auto value = get(k_sdp_ptime); value.has_value()) {
+        if (const auto ptime = rav::stod(*value); ptime.has_value()) {
+            return *ptime;
+        }
+    }
+    return std::nullopt;
 }
 
 rav::session_description::parse_result<rav::session_description>
@@ -372,7 +393,7 @@ rav::session_description::parse_result<int> rav::session_description::parse_vers
         return parse_result<int>::err("expecting line to start with 'v='");
     }
 
-    if (const auto v = rav::from_string_strict<int>(line.substr(2)); v.has_value()) {
+    if (const auto v = rav::ston<int>(line.substr(2)); v.has_value()) {
         if (*v != 0) {
             return parse_result<int>::err("invalid version");
         }

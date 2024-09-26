@@ -101,7 +101,7 @@ class session_description {
         /**
          * Parses a time field from a string.
          * @param line The string to parse.
-         * @return A pair containing the parse result and the time field. When parsing fails, the time field is a
+         * @return A pair containing the parse result and the time field.
          */
         static parse_result<time_active_field> parse(const std::string& line);
     };
@@ -119,7 +119,14 @@ class session_description {
         };
 
         /**
-         * Parses an attribute from a string, and adds it to the attributes.
+         * Adds an attribute to the attributes.
+         * @param key The key of the attribute.
+         * @param value The value of the attribute.
+         */
+        void add(std::string key, std::string value);
+
+        /**
+         * Parses an attribute from a string, and adds it to the attributes. Expects the line to start with "a=".
          * @param line The string to parse.
          * @return A pair containing the parse result and the attribute.
          */
@@ -139,7 +146,13 @@ class session_description {
          */
         [[nodiscard]] bool has_attribute(const std::string& key) const;
 
-    private:
+        /**
+         * @returns The value of the "ptime" attribute, or an empty optional if the attribute does not exist or the
+         * value is invalid.
+         */
+        [[nodiscard]] std::optional<double> ptime() const;
+
+      private:
         std::vector<attribute> attributes_;
     };
 

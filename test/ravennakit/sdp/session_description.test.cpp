@@ -12,6 +12,8 @@
 
 #include <catch2/catch_all.hpp>
 
+#include "ravennakit/core/util.hpp"
+
 TEST_CASE("session_description", "[session_description]") {
     SECTION("Test crlf delimited string") {
         constexpr auto crlf =
@@ -275,5 +277,28 @@ TEST_CASE("session_description | attributes", "[session_description]") {
         REQUIRE(attributes.get("mediaclk") == "direct=0");
         REQUIRE(attributes.get("ts-refclk") == "ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0");
         REQUIRE_FALSE(attributes.has_attribute("nonexistent"));
+    }
+
+    SECTION("Get ptime as double") {
+        rav::session_description::attribute_fields attributes;
+        attributes.add("ptime", "1");
+        auto ptime = attributes.ptime();
+        REQUIRE(ptime.has_value());
+        REQUIRE(rav::util::is_within(1.0, *ptime, 0.000001));
+    }
+
+    SECTION("Get ptime as double") {
+        rav::session_description::attribute_fields attributes;
+        attributes.add("ptime", "aaa");
+        auto ptime = attributes.ptime();
+        REQUIRE_FALSE(ptime.has_value());
+    }
+
+    SECTION("Get ptime as double") {
+        rav::session_description::attribute_fields attributes;
+        attributes.add("ptime", "-0.3333387");
+        auto ptime = attributes.ptime();
+        REQUIRE(ptime.has_value());
+        REQUIRE(rav::util::is_within(-0.3333387, *ptime, 0.000001));
     }
 }

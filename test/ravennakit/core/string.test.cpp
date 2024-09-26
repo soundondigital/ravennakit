@@ -12,6 +12,8 @@
 
 #include <catch2/catch_all.hpp>
 
+#include "ravennakit/core/util.hpp"
+
 TEST_CASE("string | up_to_first_occurrence_of", "[string]") {
     constexpr std::string_view haystack("one test two test three test");
 
@@ -161,80 +163,80 @@ TEST_CASE("string | string_contains", "[string]") {
 
 TEST_CASE("string | from_string_strict", "[string]") {
     SECTION("An integer should be successfully parsed") {
-        auto result = rav::from_string_strict<int>("1");
+        auto result = rav::ston<int>("1", true);
         REQUIRE(result.has_value());
         REQUIRE(*result == 1);
     }
 
     SECTION("A string with non valid characters should not return a result") {
-        auto result = rav::from_string_strict<int>("1 ");
+        auto result = rav::ston<int>("1 ", true);
         REQUIRE_FALSE(result.has_value());
     }
 
     SECTION("A string with non valid characters should not return a result") {
-        auto result = rav::from_string_strict<int>(" 1 ");
+        auto result = rav::ston<int>(" 1 ", true);
         REQUIRE_FALSE(result.has_value());
     }
 
     SECTION("A string with non valid characters should not return a result") {
-        auto result = rav::from_string_strict<int>(" 1");
+        auto result = rav::ston<int>(" 1", true);
         REQUIRE_FALSE(result.has_value());
     }
 
     SECTION("A string with non valid characters should not return a result") {
-        auto result = rav::from_string_strict<int>("1A");
+        auto result = rav::ston<int>("1A", true);
         REQUIRE_FALSE(result.has_value());
     }
 
     SECTION("A maximum value should be returned") {
-        auto result = rav::from_string_strict<int>(std::to_string(std::numeric_limits<int>::max()));
+        auto result = rav::ston<int>(std::to_string(std::numeric_limits<int>::max()), true);
         REQUIRE(result.has_value());
         REQUIRE(*result == std::numeric_limits<int>::max());
     }
 
     SECTION("A too big value should return no value") {
-        auto result = rav::from_string_strict<int>(std::to_string(std::numeric_limits<int>::max()) + "1");
+        auto result = rav::ston<int>(std::to_string(std::numeric_limits<int>::max()) + "1", true);
         REQUIRE_FALSE(result.has_value());
     }
 }
 
 TEST_CASE("string | from_string", "[string]") {
     SECTION("An integer should be successfully parsed") {
-        auto result = rav::from_string<int>("1");
+        auto result = rav::ston<int>("1");
         REQUIRE(result.has_value());
         REQUIRE(*result == 1);
     }
 
     SECTION("A string with non valid characters should still return a result") {
-        auto result = rav::from_string<int>("1 ");
+        auto result = rav::ston<int>("1 ");
         REQUIRE(result.has_value());
         REQUIRE(*result == 1);
     }
 
     SECTION("A string with non valid characters should still return a result") {
-        auto result = rav::from_string<int>("1A");
+        auto result = rav::ston<int>("1A");
         REQUIRE(result.has_value());
         REQUIRE(*result == 1);
     }
 
     SECTION("A string starting with non valid characters should not return a result") {
-        auto result = rav::from_string<int>(" 1 ");
+        auto result = rav::ston<int>(" 1 ");
         REQUIRE_FALSE(result.has_value());
     }
 
     SECTION("A string starting with non valid characters should not return a result") {
-        auto result = rav::from_string<int>(" 1");
+        auto result = rav::ston<int>(" 1");
         REQUIRE_FALSE(result.has_value());
     }
 
     SECTION("A maximum value should be returned") {
-        auto result = rav::from_string<int>(std::to_string(std::numeric_limits<int>::max()));
+        auto result = rav::ston<int>(std::to_string(std::numeric_limits<int>::max()));
         REQUIRE(result.has_value());
         REQUIRE(*result == std::numeric_limits<int>::max());
     }
 
     SECTION("A too big value should return no value") {
-        auto result = rav::from_string<int>(std::to_string(std::numeric_limits<int>::max()) + "1");
+        auto result = rav::ston<int>(std::to_string(std::numeric_limits<int>::max()) + "1");
         REQUIRE_FALSE(result.has_value());
     }
 }
@@ -312,5 +314,38 @@ TEST_CASE("string | split_string", "[string]") {
         auto result = rav::split_string(text, ' ');
         REQUIRE(result.size() == 1);
         REQUIRE(result[0] == "line1");
+    }
+}
+
+TEST_CASE("string | stod", "[string]") {
+    SECTION("1.0") {
+        const auto v = rav::stod("1.0");
+        REQUIRE(v.has_value());
+        REQUIRE(rav::util::is_within(*v, 1.0, 0.000001));
+    }
+
+    SECTION(" 1.0") {
+        const auto v = rav::stod(" 1.0");
+        REQUIRE(v.has_value());
+        REQUIRE(rav::util::is_within(*v, 1.0, 0.000001));
+    }
+
+    SECTION(" 1.0abc") {
+        const auto v = rav::stod(" 1.0abc");
+        REQUIRE(v.has_value());
+        REQUIRE(rav::util::is_within(*v, 1.0, 0.000001));
+    }
+
+    SECTION(" 1.0 abc") {
+        const auto v = rav::stod(" 1.0 abc");
+        REQUIRE(v.has_value());
+        REQUIRE(rav::util::is_within(*v, 1.0, 0.000001));
+    }
+
+    SECTION("Some error cases") {
+        REQUIRE_FALSE(rav::stod("").has_value());
+        REQUIRE_FALSE(rav::stod("abc").has_value());
+        REQUIRE_FALSE(rav::stod(" abc 1.0").has_value());
+        REQUIRE_FALSE(rav::stod(" abc1.0").has_value());
     }
 }
