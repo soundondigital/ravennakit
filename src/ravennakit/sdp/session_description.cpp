@@ -49,7 +49,7 @@ rav::session_description::parse_result<key_value> get_attribute_key_value(const 
 }  // namespace
 
 rav::session_description::parse_result<rav::session_description::origin_field>
-rav::session_description::origin_field::parse(const std::string& line) {
+rav::session_description::origin_field::parse_new(const std::string& line) {
     if (!starts_with(line, "o=")) {
         return result<origin_field, const char*>::err("origin: expecting 'o='");
     }
@@ -90,7 +90,7 @@ rav::session_description::origin_field::parse(const std::string& line) {
 }
 
 rav::result<rav::session_description::connection_info_field, const char*>
-rav::session_description::connection_info_field::parse(const std::string& line) {
+rav::session_description::connection_info_field::parse_new(const std::string& line) {
     if (!starts_with(line, "c=")) {
         return result<connection_info_field, const char*>::err("connection: expecting 'c='");
     }
@@ -161,7 +161,7 @@ rav::session_description::connection_info_field::parse(const std::string& line) 
 }
 
 rav::session_description::parse_result<rav::session_description::time_active_field>
-rav::session_description::time_active_field::parse(const std::string& line) {
+rav::session_description::time_active_field::parse_new(const std::string& line) {
     if (!starts_with(line, "t=")) {
         return parse_result<time_active_field>::err("time: expecting 't='");
     }
@@ -256,7 +256,7 @@ rav::session_description::media_description::parse_attribute(const std::string& 
     auto [key, value] = result.move_ok();
 
     if (key == k_sdp_rtp_map) {
-        auto format_result = format::parse(value);
+        auto format_result = format::parse_new(value);
         if (format_result.is_err()) {
             return parse_result<void>::err(format_result.get_err());
         }
@@ -283,6 +283,14 @@ rav::session_description::media_description::parse_attribute(const std::string& 
         } else {
             return parse_result<void>::err("media: failed to parse ptime as double");
         }
+    } else if (key == "sendrecv") {
+        media_direction_ = media_direction::sendrecv;
+    } else if (key == "sendonly") {
+        media_direction_ = media_direction::sendonly;
+    } else if (key == "recvonly") {
+        media_direction_ = media_direction::recvonly;
+    } else if (key == "inactive") {
+        media_direction_ = media_direction::inactive;
     } else {
         RAV_WARNING("Ignoring unknown attribute: {}", key);
     }
@@ -323,8 +331,13 @@ std::optional<double> rav::session_description::media_description::ptime() const
     return ptime_;
 }
 
+std::optional<rav::session_description::media_direction>
+rav::session_description::media_description::direction() const {
+    return media_direction_;
+}
+
 rav::session_description::parse_result<rav::session_description::format>
-rav::session_description::format::parse(const std::string& line) {
+rav::session_description::format::parse_new(const std::string& line) {
     const auto parts = split_string(line, ' ');
     if (parts.size() != 2) {
         return parse_result<format>::err("rtpmap: expecting exactly 2 parts");
@@ -399,7 +412,7 @@ rav::session_description::parse_new(const std::string& sdp_text) {
                 break;
             }
             case 'o': {
-                auto result = origin_field::parse(line);
+                auto result = origin_field::parse_new(line);
                 if (result.is_err()) {
                     return parse_result<session_description>::err(result.get_err());
                 }
@@ -411,7 +424,7 @@ rav::session_description::parse_new(const std::string& sdp_text) {
                 break;
             }
             case 'c': {
-                auto result = connection_info_field::parse(line);
+                auto result = connection_info_field::parse_new(line);
                 if (result.is_err()) {
                     return parse_result<session_description>::err(result.get_err());
                 }
@@ -423,7 +436,7 @@ rav::session_description::parse_new(const std::string& sdp_text) {
                 break;
             }
             case 't': {
-                auto result = time_active_field::parse(line);
+                auto result = time_active_field::parse_new(line);
                 if (result.is_err()) {
                     return parse_result<session_description>::err(result.get_err());
                 }
@@ -484,6 +497,13 @@ const std::vector<rav::session_description::media_description>& rav::session_des
     return media_descriptions_;
 }
 
+rav::session_description::media_direction rav::session_description::direction() const {
+    if (media_direction_.has_value()) {
+        return *media_direction_;
+    }
+    return media_direction::sendrecv;
+}
+
 rav::session_description::parse_result<int> rav::session_description::parse_version(const std::string_view line) {
     if (!starts_with(line, "v=")) {
         return parse_result<int>::err("expecting line to start with 'v='");
@@ -500,5 +520,24 @@ rav::session_description::parse_result<int> rav::session_description::parse_vers
 }
 
 rav::session_description::parse_result<void> rav::session_description::parse_attribute(const std::string& line) {
+    auto result = get_attribute_key_value(line);
+    if (result.is_err()) {
+        return parse_result<void>::err(result.get_err());
+    }
+
+    auto [key, value] = result.move_ok();
+
+    if (key == "sendrecv") {
+        media_direction_ = media_direction::sendrecv;
+    } else if (key == "sendonly") {
+        media_direction_ = media_direction::sendonly;
+    } else if (key == "recvonly") {
+        media_direction_ = media_direction::recvonly;
+    } else if (key == "inactive") {
+        media_direction_ = media_direction::inactive;
+    } else {
+        RAV_WARNING("Ignoring unknown attribute: {}", key);
+    }
+
     return parse_result<void>::ok();
 }

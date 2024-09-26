@@ -25,6 +25,7 @@ class session_description {
   public:
     enum class netw_type { undefined, internet };
     enum class addr_type { undefined, ipv4, ipv6 };
+    enum class media_direction { sendrecv, sendonly, recvonly, inactive };
 
     /// A type alias for a parse result.
     template<class T>
@@ -62,7 +63,7 @@ class session_description {
          * @return A result indicating success or failure. When parsing fails, the error message will contain a
          * description of the error.
          */
-        static parse_result<origin_field> parse(const std::string& line);
+        static parse_result<origin_field> parse_new(const std::string& line);
     };
 
     /**
@@ -86,7 +87,7 @@ class session_description {
          * @return A pair containing the parse result and the connection info. When parsing fails, the connection info
          * will be a default-constructed object.
          */
-        static parse_result<connection_info_field> parse(const std::string& line);
+        static parse_result<connection_info_field> parse_new(const std::string& line);
     };
 
     /**
@@ -104,7 +105,7 @@ class session_description {
          * @param line The string to parse.
          * @return A pair containing the parse result and the time field.
          */
-        static parse_result<time_active_field> parse(const std::string& line);
+        static parse_result<time_active_field> parse_new(const std::string& line);
     };
 
     /**
@@ -116,7 +117,7 @@ class session_description {
         int32_t clock_rate {};
         int32_t channels {};
 
-        static parse_result<format> parse(const std::string& line);
+        static parse_result<format> parse_new(const std::string& line);
     };
 
     /**
@@ -182,21 +183,20 @@ class session_description {
          */
         [[nodiscard]] std::optional<double> ptime() const;
 
+        /**
+         * @return The direction of the media description.
+         */
+        [[nodiscard]] std::optional<media_direction> direction() const;
+
       private:
-        /// The media type of the media description (i.e. audio, video, text, application, message).
         std::string media_type_;
-        /// The port number of the media description.
         uint16_t port_ {};
-        /// Number of ports
         uint16_t number_of_ports_ {};
-        /// The protocol of the media description.
         std::string protocol_;
-        /// The formats of the media description.
         std::vector<format> formats_;
-        /// The connection information of the media description.
         std::vector<connection_info_field> connection_infos_;
-        /// Packet time in milliseconds
         std::optional<double> ptime_;
+        std::optional<media_direction> media_direction_;
     };
 
     /**
@@ -237,6 +237,12 @@ class session_description {
      */
     [[nodiscard]] const std::vector<media_description>& media_descriptions() const;
 
+    /**
+     * @return The direction of the media description. If the direction is not specified, the return value is sendrecv
+     * which is the default as specified in RFC 8866 section 6.7).
+     */
+    [[nodiscard]] media_direction direction() const;
+
   private:
     /// Type to specify which section of the SDP we are parsing
     enum class section { session_description, media_description };
@@ -247,6 +253,7 @@ class session_description {
     std::optional<connection_info_field> connection_info_;
     time_active_field time_active_;
     std::vector<media_description> media_descriptions_;
+    std::optional<media_direction> media_direction_;
 
     static parse_result<int> parse_version(std::string_view line);
     parse_result<void> parse_attribute(const std::string& line);

@@ -129,11 +129,15 @@ TEST_CASE("session_description | description from anubis", "[session_description
         REQUIRE(*conn.ttl == 15);
         REQUIRE(static_cast<int64_t>(media.ptime().value()) == 1);
     }
+
+    SECTION("Media direction") {
+        REQUIRE(result.get_ok().direction() == rav::session_description::media_direction::sendrecv);
+    }
 }
 
 TEST_CASE("session_description | origin_field", "[session_description]") {
     SECTION("Parse origin line") {
-        auto result = rav::session_description::origin_field::parse("o=- 13 0 IN IP4 192.168.15.52");
+        auto result = rav::session_description::origin_field::parse_new("o=- 13 0 IN IP4 192.168.15.52");
         REQUIRE(result.is_ok());
         auto origin = result.move_ok();
         REQUIRE(origin.username == "-");
@@ -147,7 +151,7 @@ TEST_CASE("session_description | origin_field", "[session_description]") {
 
 TEST_CASE("session_description | connection_info_field", "[session_description]") {
     SECTION("Parse connection line") {
-        auto result = rav::session_description::connection_info_field::parse("c=IN IP4 239.1.15.52");
+        auto result = rav::session_description::connection_info_field::parse_new("c=IN IP4 239.1.15.52");
         REQUIRE(result.is_ok());
         auto connection = result.move_ok();
         REQUIRE(connection.network_type == rav::session_description::netw_type::internet);
@@ -158,7 +162,7 @@ TEST_CASE("session_description | connection_info_field", "[session_description]"
     }
 
     SECTION("Parse connection line with ttl") {
-        auto result = rav::session_description::connection_info_field::parse("c=IN IP4 239.1.15.52/15");
+        auto result = rav::session_description::connection_info_field::parse_new("c=IN IP4 239.1.15.52/15");
         REQUIRE(result.is_ok());
         auto connection = result.move_ok();
         REQUIRE(connection.network_type == rav::session_description::netw_type::internet);
@@ -170,7 +174,7 @@ TEST_CASE("session_description | connection_info_field", "[session_description]"
     }
 
     SECTION("Parse connection line with ttl and number of addresses") {
-        auto result = rav::session_description::connection_info_field::parse("c=IN IP4 239.1.15.52/15/3");
+        auto result = rav::session_description::connection_info_field::parse_new("c=IN IP4 239.1.15.52/15/3");
         REQUIRE(result.is_ok());
         auto connection = result.move_ok();
         REQUIRE(connection.network_type == rav::session_description::netw_type::internet);
@@ -183,7 +187,7 @@ TEST_CASE("session_description | connection_info_field", "[session_description]"
     }
 
     SECTION("Parse ipv6 connection line with number of addresses") {
-        auto result = rav::session_description::connection_info_field::parse("c=IN IP6 ff00::db8:0:101/3");
+        auto result = rav::session_description::connection_info_field::parse_new("c=IN IP6 ff00::db8:0:101/3");
         REQUIRE(result.is_ok());
         auto connection = result.move_ok();
         REQUIRE(connection.network_type == rav::session_description::netw_type::internet);
@@ -195,14 +199,14 @@ TEST_CASE("session_description | connection_info_field", "[session_description]"
     }
 
     SECTION("Parse ipv6 connection line with ttl and number of addresses") {
-        auto result = rav::session_description::connection_info_field::parse("c=IN IP6 ff00::db8:0:101/127/3");
+        auto result = rav::session_description::connection_info_field::parse_new("c=IN IP6 ff00::db8:0:101/127/3");
         REQUIRE(result.is_err());
     }
 }
 
 TEST_CASE("session_description | time_field", "[session_description]") {
     SECTION("Test time field") {
-        auto result = rav::session_description::time_active_field::parse("t=123456789 987654321");
+        auto result = rav::session_description::time_active_field::parse_new("t=123456789 987654321");
         REQUIRE(result.is_ok());
         const auto time = result.move_ok();
         REQUIRE(time.start_time == 123456789);
@@ -210,12 +214,12 @@ TEST_CASE("session_description | time_field", "[session_description]") {
     }
 
     SECTION("Test invalid time field") {
-        auto result = rav::session_description::time_active_field::parse("t=123456789 ");
+        auto result = rav::session_description::time_active_field::parse_new("t=123456789 ");
         REQUIRE(result.is_err());
     }
 
     SECTION("Test invalid time field") {
-        auto result = rav::session_description::time_active_field::parse("t=");
+        auto result = rav::session_description::time_active_field::parse_new("t=");
         REQUIRE(result.is_err());
     }
 }
@@ -280,5 +284,15 @@ TEST_CASE("session_description | media_description", "[session_description]") {
         REQUIRE(format3.encoding_name == "L24");
         REQUIRE(format3.clock_rate == 44100);
         REQUIRE(format3.channels == 1);
+    }
+
+    SECTION("Test media field direction") {
+        auto result = rav::session_description::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
+        REQUIRE(result.is_ok());
+        auto media = result.move_ok();
+        REQUIRE_FALSE(media.direction().has_value());
+        media.parse_attribute("a=recvonly");
+        REQUIRE(media.direction().has_value());
+        REQUIRE(*media.direction() == rav::session_description::media_direction::recvonly);
     }
 }
