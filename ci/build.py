@@ -41,6 +41,7 @@ def build_macos(args, build_config: Config):
     cmake.option('CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY', 'Apple Development')
     cmake.option('CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM', args.macos_development_team)
     cmake.option('BUILD_NUMBER', args.build_number)
+    cmake.option('RAV_ENABLE_SPDLOG', 'ON')
 
     cmake.configure()
     cmake.build()
@@ -67,6 +68,7 @@ def build_windows(args, arch, build_config: Config):
     cmake.option('VCPKG_OVERLAY_TRIPLETS', 'triplets')
     cmake.option('VCPKG_TARGET_TRIPLET', 'windows-' + arch)
     cmake.option('BUILD_NUMBER', args.build_number)
+    cmake.option('RAV_ENABLE_SPDLOG', 'ON')
 
     cmake.configure()
     cmake.build()
@@ -91,6 +93,7 @@ def build_linux(args, arch, build_config: Config):
     cmake.option('CMAKE_TOOLCHAIN_FILE', 'submodules/vcpkg/scripts/buildsystems/vcpkg.cmake')
     cmake.option('VCPKG_TARGET_TRIPLET', arch + '-linux')
     cmake.option('BUILD_NUMBER', args.build_number)
+    cmake.option('RAV_ENABLE_SPDLOG', 'ON')
 
     cmake.configure()
     cmake.build()
