@@ -11,10 +11,12 @@
 #pragma once
 
 #include <charconv>
+#include <cstring>
+#include <optional>
 #include <string>
 #include <string_view>
-#include <optional>
-#include <cstring>
+
+#include "string.hpp"
 
 namespace rav {
 
@@ -58,7 +60,7 @@ class string_parser {
      * @param include_delimiter Whether to include the delimiter in the returned string.
      * @return The read string, or an empty optional if the string is exhausted.
      */
-    std::optional<std::string_view> read_string(const char delimiter, const bool include_delimiter = false) {
+    std::optional<std::string_view> read_string_until(const char delimiter, const bool include_delimiter = false) {
         if (str_.empty()) {
             return std::nullopt;
         }
@@ -81,7 +83,7 @@ class string_parser {
      * @param include_delimiter Whether to include the delimiter in the returned string.
      * @return The read string.
      */
-    std::optional<std::string_view> read_string(const char* delimiter, const bool include_delimiter = false) {
+    std::optional<std::string_view> read_string_until(const char* delimiter, const bool include_delimiter = false) {
         if (str_.empty()) {
             return std::nullopt;
         }
@@ -180,6 +182,40 @@ class string_parser {
         } catch (...) {
             return std::nullopt;
         }
+    }
+
+    /**
+     * Skips the given sequence of characters from the beginning of the string.
+     * @param chars The characters to skip.
+     * @return The number of characters skipped.
+     */
+    size_t skip(const char* chars) {
+        const auto pos = str_.find_first_not_of(chars);
+        if (pos == std::string_view::npos) {
+            const auto size = str_.size();
+            str_ = {};
+            return size;
+        }
+
+        str_.remove_prefix(pos);
+        return pos;
+    }
+
+    /**
+     * Skips the given character from the beginning of the string.
+     * @param chr The character to skip.
+     * @return The number of characters skipped.
+     */
+    size_t skip(const char chr) {
+        const auto pos = str_.find_first_not_of(chr);
+        if (pos == std::string_view::npos) {
+            const auto size = str_.size();
+            str_ = {};
+            return size;
+        }
+
+        str_.remove_prefix(pos);
+        return pos;
     }
 
   private:
