@@ -117,7 +117,7 @@ class audio_buffer {
      * @return A pointer to the beginning of the channel.
      */
     T* operator[](size_t channel_index) {
-        RAV_ASSERT(channel_index < num_channels());
+        RAV_ASSERT(channel_index < num_channels(), "Channel index out of bounds");
         return channels_[channel_index];
     }
 
@@ -127,7 +127,7 @@ class audio_buffer {
      * @return A pointer to the beginning of the channel.
      */
     const T* operator[](size_t channel_index) const {
-        RAV_ASSERT(channel_index < num_channels());
+        RAV_ASSERT(channel_index < num_channels(), "Channel index out of bounds");
         return channels_[channel_index];
     }
 
@@ -187,8 +187,8 @@ class audio_buffer {
      * @param value The value to set.
      */
     void set_sample(size_t channel_index, size_t sample_index, T value) {
-        RAV_ASSERT(channel_index < num_channels());
-        RAV_ASSERT(sample_index < num_frames());
+        RAV_ASSERT(channel_index < num_channels(), "Channel index out of bounds");
+        RAV_ASSERT(sample_index < num_frames(), "Sample index out of bounds");
         channels_[channel_index][sample_index] = value;
     }
 
@@ -214,8 +214,8 @@ class audio_buffer {
      * @param num_samples_to_clear The number of samples to clear.
      */
     void clear(const size_t channel_index, const size_t start_sample, const size_t num_samples_to_clear) {
-        RAV_ASSERT(channel_index < num_channels());
-        RAV_ASSERT(start_sample + num_samples_to_clear <= num_frames());
+        RAV_ASSERT(channel_index < num_channels(), "Channel index out of bounds");
+        RAV_ASSERT(start_sample + num_samples_to_clear <= num_frames(), "Sample index out of bounds");
         clear_audio_data(
             channels_[channel_index] + start_sample, channels_[channel_index] + start_sample + num_samples_to_clear
         );
@@ -233,7 +233,7 @@ class audio_buffer {
         const size_t dst_start_frame, const size_t num_frames_to_copy, const T* const* src,
         const size_t src_num_channels, const size_t src_start_frame = 0
     ) {
-        RAV_ASSERT(src_num_channels == num_channels());
+        RAV_ASSERT(src_num_channels == num_channels(), "Number of channels mismatch");
         for (size_t i = 0; i < std::min(src_num_channels, num_channels()); ++i) {
             copy_from(i, dst_start_frame, num_frames_to_copy, src[i] + src_start_frame);
         }
@@ -249,8 +249,8 @@ class audio_buffer {
     void copy_from(
         const size_t dst_channel_index, const size_t dst_start_sample, const size_t num_samples_to_copy, const T* src
     ) {
-        RAV_ASSERT(dst_channel_index < num_channels());
-        RAV_ASSERT(dst_start_sample + num_samples_to_copy <= num_frames());
+        RAV_ASSERT(dst_channel_index < num_channels(), "Channel index out of bounds");
+        RAV_ASSERT(dst_start_sample + num_samples_to_copy <= num_frames(), "Sample index out of bounds");
 
         if (num_samples_to_copy == 0) {
             return;
@@ -271,7 +271,7 @@ class audio_buffer {
         const size_t src_start_frame, const size_t num_frames, T* const* dst, const size_t dst_num_channels,
         const size_t dst_start_frame = 0
     ) {
-        RAV_ASSERT(dst_num_channels == num_channels());
+        RAV_ASSERT(dst_num_channels == num_channels(), "Number of channels mismatch");
         for (size_t i = 0; i < std::min(num_channels(), dst_num_channels); ++i) {
             copy_to(i, src_start_frame, num_frames, dst[i] + dst_start_frame);
         }
@@ -286,8 +286,8 @@ class audio_buffer {
      */
     void
     copy_to(const size_t src_channel_index, const size_t src_start_sample, const size_t num_samples_to_copy, T* dst) {
-        RAV_ASSERT(src_channel_index < num_channels());
-        RAV_ASSERT(src_start_sample + num_samples_to_copy <= num_frames());
+        RAV_ASSERT(src_channel_index < num_channels(), "Channel index out of bounds");
+        RAV_ASSERT(src_start_sample + num_samples_to_copy <= num_frames(), "Sample index out of bounds");
 
         if (num_samples_to_copy == 0) {
             return;

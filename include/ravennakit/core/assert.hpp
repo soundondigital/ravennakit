@@ -12,5 +12,5 @@
 
 #include <cassert>
 
-#define RAV_ASSERT(condition) assert(condition)
-#define RAV_ASSERT_FALSE(message) assert(message && (false))
+#define RAV_ASSERT(condition, message) assert(condition && message)
+#define RAV_ASSERT_FALSE(message) assert(message && false)

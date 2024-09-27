@@ -62,7 +62,7 @@ namespace byte_order {
          */
         template<class DstType, class T>
         static void write(DstType* data, const size_t size, T value) {
-            RAV_ASSERT(size <= sizeof(value));
+            RAV_ASSERT(size <= sizeof(value), "size should be smaller or equal to the size of the type");
             if constexpr (big_endian) {
                 value = rav::byte_order::swap_bytes(value);
             }
@@ -102,7 +102,7 @@ namespace byte_order {
          */
         template<class DstType, class T>
         static void write(DstType* data, const size_t size, T value) {
-            RAV_ASSERT(size <= sizeof(value));
+            RAV_ASSERT(size <= sizeof(value), "size should be smaller or equal to the size of the type");
             if constexpr (little_endian) {
                 value = rav::byte_order::swap_bytes(value);
                 std::memcpy(data, reinterpret_cast<uint8_t*>(std::addressof(value)) + (sizeof(value) - size), size);
@@ -141,7 +141,7 @@ namespace byte_order {
          */
         template<class DstType, class T>
         static void write(DstType* data, const size_t size, T value) {
-            RAV_ASSERT(size <= sizeof(value));
+            RAV_ASSERT(size <= sizeof(value), "size should be smaller or equal to the size of the type");
             if constexpr (little_endian) {
                 std::memcpy(data, std::addressof(value), size);
             } else {
@@ -263,7 +263,7 @@ convert(const SrcType* src, const size_t src_size, DstType* dst, const size_t ds
         std::copy_n(src, src_size, dst);
         return true;
     } else if constexpr (std::is_same_v<SrcType, DstType> && std::is_same_v<SrcInterleaving, DstInterleaving>) {
-        RAV_ASSERT(src_size == dst_size);
+        RAV_ASSERT(src_size == dst_size, "size should be smaller or equal to the size of the type");
         std::copy_n(src, src_size, dst);
         if constexpr (SrcByteOrder::is_little_endian == DstByteOrder::is_little_endian) {
             return true;  // No need for swapping
@@ -336,8 +336,8 @@ static bool convert(
     const SrcType* src, const size_t num_frames, const size_t num_channels, DstType* const* dst,
     const size_t src_start_frame = 0, const size_t dst_start_frame = 0
 ) {
-    RAV_ASSERT(src != nullptr);
-    RAV_ASSERT(dst != nullptr);
+    RAV_ASSERT(src != nullptr, "src shouldn't be nullptr");
+    RAV_ASSERT(dst != nullptr, "dst shouldn't be nullptr");
 
     if constexpr (std::is_same_v<SrcInterleaving, interleaving::interleaved>) {
         // interleaved to non-interleaved
@@ -385,8 +385,8 @@ static bool convert(
     const SrcType* const* src, const size_t num_frames, const size_t num_channels, DstType* dst,
     const size_t src_start_frame, const size_t dst_start_frame = 0
 ) {
-    RAV_ASSERT(src != nullptr);
-    RAV_ASSERT(dst != nullptr);
+    RAV_ASSERT(src != nullptr, "src shouldn't be nullptr");
+    RAV_ASSERT(dst != nullptr, "dst shouldn't be nullptr");
 
     if constexpr (std::is_same_v<DstInterleaving, interleaving::interleaved>) {
         // non-interleaved to interleaved

@@ -420,9 +420,7 @@ rav::sdp::media_description::parse_result<void> rav::sdp::media_description::par
             return parse_result<void>::err("media: failed to parse clock-deviation denominator value");
         }
         clock_deviation_ = fraction<uint32_t> {*num, *denom};
-    }
-
-    else {
+    } else {
         RAV_WARNING("Ignoring unknown attribute on media: {}", *key);
     }
 

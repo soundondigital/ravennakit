@@ -106,8 +106,8 @@ class circular_audio_buffer {
      */
     template<class SrcType, class SrcByteOrder, class SrcInterleaving>
     bool write_from_data(const SrcType* data, const size_t num_frames) {
-        RAV_ASSERT(buffer_.num_channels() > 0);
-        RAV_ASSERT(data != nullptr);
+        RAV_ASSERT(buffer_.num_channels() > 0, "Buffer must have channels");
+        RAV_ASSERT(data != nullptr, "Data must not be null");
         auto num_channels = buffer_.num_channels();
 
         if (auto write = fifo_.prepare_for_write(num_frames)) {
@@ -140,8 +140,8 @@ class circular_audio_buffer {
      */
     template<class DstType, class DstByteOrder, class DstInterleaving>
     bool read_to_data(DstType* data, const size_t num_frames) {
-        RAV_ASSERT(buffer_.num_channels() > 0);
-        RAV_ASSERT(data != nullptr);
+        RAV_ASSERT(buffer_.num_channels() > 0, "Buffer must have channels");
+        RAV_ASSERT(data != nullptr, "Data must not be null");
         auto num_channels = buffer_.num_channels();
 
         if (auto read = fifo_.prepare_for_read(num_frames)) {
