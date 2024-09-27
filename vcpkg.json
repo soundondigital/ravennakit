@@ -7,6 +7,7 @@
     "catch2",
     "uvw",
     "portaudio",
-    "cli11"
+    "cli11",
+    "asio"
   ]
 }

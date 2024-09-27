@@ -89,6 +89,7 @@ find_package(Catch2 CONFIG REQUIRED)
 find_package(uvw CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(portaudio CONFIG REQUIRED)
+find_package(asio CONFIG REQUIRED)
 
 ##############
 # RAVENNAKIT #
@@ -109,6 +110,7 @@ target_link_libraries(ravennakit
         rav_recommended_lto_flags
         spdlog::spdlog
         uvw::uvw
+        asio::asio
 )
 
 target_compile_definitions(ravennakit
