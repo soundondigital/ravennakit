@@ -8,6 +8,8 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
+#include "ravennakit/asio/io_context_runner.hpp"
+
 #include <fmt/core.h>
 #include <portaudio.h>
 
@@ -97,9 +99,9 @@ int main(int const argc, char* argv[]) {
         exit(0);
     }
 
-    asio::io_context io_context;
+    io_context_runner io_context_runner;
 
-    rav::rtp_receiver receiver(io_context);
+    rav::rtp_receiver receiver(io_context_runner.io_context());
     receiver.on<rav::rtp_packet_event>([&audio_context](
                                            const rav::rtp_packet_event& event, [[maybe_unused]] rav::rtp_receiver& recv
                                        ) {
@@ -175,12 +177,12 @@ int main(int const argc, char* argv[]) {
         exit(1);
     }
 
-    asio::signal_set signals(io_context, SIGINT, SIGTERM);
-    signals.async_wait([&io_context](const std::error_code&, int) {
-        io_context.stop();
+    asio::signal_set signals(io_context_runner.io_context(), SIGINT, SIGTERM);
+    signals.async_wait([&io_context_runner](const std::error_code&, int) {
+        io_context_runner.io_context().stop();
     });
 
-    io_context.run();
+    io_context_runner.run();
 
     if (auto error = Pa_StopStream(stream); error != paNoError) {
         RAV_ERROR("PortAudio failed to stop stream! Error: {}", Pa_GetErrorText(error));

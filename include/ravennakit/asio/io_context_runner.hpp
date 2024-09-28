@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "ravennakit/core/platform.hpp"
+
 #include <asio.hpp>
 #include <iostream>
 
@@ -82,7 +84,7 @@ class io_context_runner {
   private:
     const size_t num_threads_ = std::thread::hardware_concurrency();
     asio::io_context io_context_ {};
-    asio::executor_work_guard<asio::io_context::executor_type> work_guard_{asio::make_work_guard(io_context_)};
+    asio::executor_work_guard<asio::io_context::executor_type> work_guard_ {asio::make_work_guard(io_context_)};
     std::vector<std::thread> threads_ {};
 
     /**
@@ -94,7 +96,14 @@ class io_context_runner {
         io_context_.restart();
 
         for (size_t i = 0; i < num_threads_; i++) {
-            threads_.emplace_back([this] {
+            threads_.emplace_back([this, i] {
+#if RAV_MACOS
+                {
+                    const std::string thread_name = "io_context_runner " + std::to_string(i);
+                    pthread_setname_np(thread_name.c_str());
+                }
+#endif
+
                 try {
                     io_context_.run();
                 } catch (const std::exception& e) {

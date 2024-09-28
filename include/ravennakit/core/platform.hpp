@@ -10,6 +10,9 @@
 
 #pragma once
 
+#include <cstdint>
+#include <string> // For size_t
+
 #if defined(_WIN32) || defined(_WIN64)
     #define RAV_WINDOWS 1
     #define RAV_OPERATING_SYSTEM_NAME "Windows"
