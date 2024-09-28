@@ -64,7 +64,7 @@ PointerAlignment: Left
 ReferenceAlignment: Left
 ReflowComments: true
 SeparateDefinitionBlocks: Always
-SortIncludes: CaseSensitive
+SortIncludes: Never
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false

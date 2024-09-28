@@ -86,10 +86,10 @@ endif ()
 find_package(spdlog CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
-find_package(uvw CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(portaudio CONFIG REQUIRED)
 find_package(asio CONFIG REQUIRED)
+target_compile_definitions(asio INTERFACE ASIO_NO_DEPRECATED ASIO_NO_DYNAMIC_BUFFER_V1)
 
 ##############
 # RAVENNAKIT #
@@ -109,7 +109,6 @@ target_link_libraries(ravennakit
         rav_recommended_warning_flags
         rav_recommended_lto_flags
         spdlog::spdlog
-        uvw::uvw
         asio::asio
 )
 

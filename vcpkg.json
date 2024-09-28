@@ -5,7 +5,6 @@
     "spdlog",
     "fmt",
     "catch2",
-    "uvw",
     "portaudio",
     "cli11",
     "asio"
