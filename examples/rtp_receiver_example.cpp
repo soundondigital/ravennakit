@@ -8,7 +8,6 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-
 #include <fmt/core.h>
 #include <portaudio.h>
 
@@ -181,11 +180,11 @@ int main(int const argc, char* argv[]) {
     }
 
     asio::signal_set signals(io_context_runner.io_context(), SIGINT, SIGTERM);
-    signals.async_wait([&io_context_runner](const std::error_code&, int) {
-        io_context_runner.io_context().stop();
+    signals.async_wait([&receiver](const std::error_code&, int) {
+        receiver.stop();
     });
 
-    io_context_runner.run();
+    io_context_runner.run_to_completion();
 
     if (auto error = Pa_StopStream(stream); error != paNoError) {
         RAV_ERROR("PortAudio failed to stop stream! Error: {}", Pa_GetErrorText(error));
