@@ -95,6 +95,8 @@ class io_context_runner {
         threads_.clear();
         io_context_.restart();
 
+        threads_.reserve(num_threads_);
+
         for (size_t i = 0; i < num_threads_; i++) {
             threads_.emplace_back([this, i] {
 #if RAV_MACOS

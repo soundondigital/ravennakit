@@ -89,7 +89,7 @@ find_package(Catch2 CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(portaudio CONFIG REQUIRED)
 find_package(asio CONFIG REQUIRED)
-target_compile_definitions(asio INTERFACE ASIO_NO_DEPRECATED ASIO_NO_DYNAMIC_BUFFER_V1 ASIO_NO_TS_EXECUTORS)
+target_compile_definitions(asio INTERFACE ASIO_NO_DEPRECATED ASIO_NO_DYNAMIC_BUFFER_V1)
 
 ##############
 # RAVENNAKIT #

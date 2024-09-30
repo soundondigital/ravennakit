@@ -104,6 +104,9 @@ int main(int const argc, char* argv[]) {
     io_context_runner io_context_runner;
 
     rav::rtp_receiver receiver(io_context_runner.io_context());
+
+    asio::signal_set signals(io_context_runner.io_context(), SIGINT, SIGTERM);
+
     receiver.on<rav::rtp_packet_event>([&audio_context](
                                            const rav::rtp_packet_event& event, [[maybe_unused]] rav::rtp_receiver& recv
                                        ) {
@@ -179,7 +182,6 @@ int main(int const argc, char* argv[]) {
         exit(1);
     }
 
-    asio::signal_set signals(io_context_runner.io_context(), SIGINT, SIGTERM);
     signals.async_wait([&receiver](const std::error_code&, int) {
         receiver.stop();
     });
