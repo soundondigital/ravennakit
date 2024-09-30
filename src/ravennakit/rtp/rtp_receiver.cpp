@@ -15,7 +15,8 @@
 
 #include <fmt/core.h>
 
-rav::rtp_receiver::rtp_receiver(asio::io_context& io_context) : rtp_socket_(io_context), rtcp_socket_(io_context) {}
+rav::rtp_receiver::rtp_receiver(asio::io_context& io_context) :
+    strand_(io_context), rtp_socket_(io_context), rtcp_socket_(io_context) {}
 
 rav::rtp_receiver::~rtp_receiver() {
     try {
@@ -72,7 +73,7 @@ void rav::rtp_receiver::stop() {
 void rav::rtp_receiver::receive_rtp() {
     rtp_socket_.async_receive_from(
         asio::buffer(rtp_data_), rtp_endpoint_,
-        [this](const std::error_code& ec, const std::size_t length) {
+        asio::bind_executor(strand_, [this](const std::error_code& ec, const std::size_t length) {
             if (!ec) {
                 const rtp_packet_view rtp_packet(rtp_data_.data(), length);
                 publish(rtp_packet_event {rtp_packet});
@@ -80,14 +81,14 @@ void rav::rtp_receiver::receive_rtp() {
             } else {
                 RAV_ERROR("RTP receiver error: {}", ec.message());
             }
-        }
+        })
     );
 }
 
 void rav::rtp_receiver::receive_rtcp() {
     rtcp_socket_.async_receive_from(
         asio::buffer(rtcp_data_), rtcp_endpoint_,
-        [this](const std::error_code& ec, const std::size_t length) {
+        asio::bind_executor(strand_, [this](const std::error_code& ec, const std::size_t length) {
             if (!ec) {
                 const rtcp_packet_view rtcp_packet(rtcp_data_.data(), length);
                 publish(rtcp_packet_event {rtcp_packet});
@@ -95,6 +96,6 @@ void rav::rtp_receiver::receive_rtcp() {
             } else {
                 RAV_ERROR("RTCP receiver error: {}", ec.message());
             }
-        }
+        })
     );
 }

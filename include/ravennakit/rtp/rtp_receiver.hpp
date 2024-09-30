@@ -74,6 +74,7 @@ class rtp_receiver final: public event_publisher<rtp_receiver, rtp_packet_event,
     void stop();
 
   private:
+    asio::io_context::strand strand_;
     asio::ip::udp::socket rtp_socket_;
     asio::ip::udp::socket rtcp_socket_;
     asio::ip::udp::endpoint rtp_endpoint_;
