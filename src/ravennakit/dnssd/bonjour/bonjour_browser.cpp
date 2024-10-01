@@ -252,8 +252,7 @@ void rav::dnssd::bonjour_browser::thread() {
                 try {
                     DNSSD_THROW_IF_ERROR(DNSServiceProcessResult(shared_connection_.service_ref()));
                 } catch (const std::exception& e) {
-                    RAV_ERROR("Exception: {}", e.what());
-                    // TODO: Report error
+                    emit(events::browse_error {e});
                 }
             } else {
                 RAV_DEBUG("Main loop (FD_ISSET == false)");

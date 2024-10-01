@@ -6,16 +6,15 @@
 #include <string>
 #include <vector>
 
-static bool parseTxtRecord(rav::dnssd::txt_record& txtRecord, const std::string& stringValue) {
-    if (stringValue.empty())
+static bool parse_txt_record(rav::dnssd::txt_record& txt_record, const std::string& string_value) {
+    if (string_value.empty())
         return false;
 
-    size_t pos = stringValue.find('=');
-
+    const size_t pos = string_value.find('=');
     if (pos != std::string::npos)
-        txtRecord[stringValue.substr(0, pos)] = stringValue.substr(pos + 1);
+        txt_record[string_value.substr(0, pos)] = string_value.substr(pos + 1);
     else
-        txtRecord[stringValue.substr(0, pos)] = "";
+        txt_record[string_value.substr(0, pos)] = "";
 
     return true;
 }
@@ -35,34 +34,30 @@ int main(int const argc, char* argv[]) {
     }
 
     // Parse port number
-    int portNumber = 0;
+    int port_number = 0;
     try {
-        portNumber = std::stoi(args[1]);
+        port_number = std::stoi(args[1]);
     } catch (const std::exception& e) {
         std::cout << "Invalid port number: " << e.what() << std::endl;
         return -1;
     }
 
     // Parse remaining arguments as TxtRecord
-    rav::dnssd::txt_record txtRecord;
+    rav::dnssd::txt_record txt_record;
     for (auto it = args.begin() + 2; it != args.end(); ++it) {
-        parseTxtRecord(txtRecord, *it);
+        parse_txt_record(txt_record, *it);
     }
 
     rav::dnssd::bonjour_advertiser advertiser;
 
     advertiser.on<rav::dnssd::events::advertiser_error>([](const rav::dnssd::events::advertiser_error& event,
                                                            rav::dnssd::dnssd_advertiser&) {
-        RAV_ERROR("Error: {}", event.error_message);
+        RAV_CRITICAL("Exception caught: {}", event.exception.what());
     });
 
-    auto result = advertiser.register_service(
-        args[0], "001122334455@SomeName", nullptr, static_cast<uint16_t>(portNumber), txtRecord
+    advertiser.register_service(
+        args[0], "001122334455@SomeName", nullptr, static_cast<uint16_t>(port_number), txt_record
     );
-    if (result.has_error()) {
-        std::cout << "Error: " << result.description() << std::endl;
-        return -1;
-    }
 
     std::cout << "Enter key=value to update the TXT record, or q to exit..." << std::endl;
 
@@ -73,13 +68,13 @@ int main(int const argc, char* argv[]) {
             break;
         }
 
-        if (parseTxtRecord(txtRecord, cmd)) {
+        if (parse_txt_record(txt_record, cmd)) {
             std::cout << "Updated txt record: " << std::endl;
-            for (auto& pair : txtRecord) {
+            for (auto& pair : txt_record) {
                 std::cout << pair.first << "=" << pair.second << std::endl;
             }
 
-            advertiser.update_txt_record(txtRecord);
+            advertiser.update_txt_record(txt_record);
         }
     }
 

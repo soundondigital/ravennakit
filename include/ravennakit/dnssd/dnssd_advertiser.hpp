@@ -15,8 +15,8 @@ namespace events {
      * Event for when a service was discovered.
      */
     struct advertiser_error {
-        /// The error message.
-        const char* error_message;
+        /// The exception
+        const std::exception& exception;
     };
 }  // namespace events
 
@@ -26,7 +26,7 @@ namespace events {
 class dnssd_advertiser: public event_emitter<dnssd_advertiser, events::advertiser_error> {
   public:
     explicit dnssd_advertiser() = default;
-    virtual ~dnssd_advertiser() = default;
+    ~dnssd_advertiser() override = default;
 
     /**
      * Registers a service with given arguments.
@@ -41,7 +41,7 @@ class dnssd_advertiser: public event_emitter<dnssd_advertiser, events::advertise
      * @param port The port of the service.
      * on the computer name which in most cases makes sense to do.
      * @param txt_record A TXT record to add to the service, consisting of a couple of keys and values.
-     * @return An Result indicating success or failure.
+     * @throws When an error occurs during registration.
      */
     virtual void register_service(
         const std::string& reg_type, const char* name, const char* domain, uint16_t port, const txt_record& txt_record
@@ -50,7 +50,7 @@ class dnssd_advertiser: public event_emitter<dnssd_advertiser, events::advertise
     /**
      * Updates the TXT record of this service. The given TXT record will replace the previous one.
      * @param txt_record The new TXT record.
-     * @return A Result indicating success or failure.
+     * @throws When an error occurs during updating.
      */
     virtual void update_txt_record(const txt_record& txt_record) = 0;
 

@@ -70,7 +70,7 @@ namespace events {
      */
     struct browse_error {
         /// The error that occurred.
-        const char* error_message;
+        const std::exception& exception;
     };
 }  // namespace events
 
