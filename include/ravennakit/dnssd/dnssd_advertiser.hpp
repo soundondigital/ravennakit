@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <memory>
 
 #include "service_description.hpp"
 #include "ravennakit/core/event_emitter.hpp"

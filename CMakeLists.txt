@@ -123,6 +123,21 @@ if (RAV_ENABLE_SPDLOG)
     target_link_libraries(ravennakit PUBLIC spdlog::spdlog)
 endif()
 
+if (WIN32)
+    target_include_directories(ravennakit PUBLIC "C:/Program Files/Bonjour SDK/Include")
+
+    # Link dnssd.lib depending on architecture
+    if (MSVC_CXX_ARCHITECTURE_ID MATCHES "64")
+        target_link_libraries(ravennakit PUBLIC "C:/Program Files/Bonjour SDK/Lib/x64/dnssd.lib")
+    elseif (MSVC_CXX_ARCHITECTURE_ID MATCHES "86")
+        target_link_libraries(ravennakit PUBLIC "C:/Program Files/Bonjour SDK/Lib/Win32/dnssd.lib")
+    else ()
+        message(FATAL_ERROR "Unknown MSVC architecture or non CXX language [${MSVC_CXX_ARCHITECTURE_ID}]")
+    endif ()
+
+    target_link_libraries(ravennakit PUBLIC ws2_32)
+endif ()
+
 ########################
 # RTP Receiver example #
 ########################

@@ -16,7 +16,7 @@ std::unique_ptr<rav::dnssd::dnssd_browser> rav::dnssd::dnssd_browser::create() {
 #if RAV_APPLE
     return std::make_unique<bonjour_browser>();
 #elif RAV_WINDOWS
-    if (bonjour_browser::is_bonjour_service_running()) {
+    if (dnssd::is_bonjour_service_running()) {
         return std::make_unique<bonjour_browser>();
     } else {
         return {};

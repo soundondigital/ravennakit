@@ -4,6 +4,7 @@
 #include "ravennakit/core/event_emitter.hpp"
 
 #include <functional>
+#include <memory>
 
 namespace rav::dnssd {
 

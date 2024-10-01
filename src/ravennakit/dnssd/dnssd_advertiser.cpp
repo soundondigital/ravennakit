@@ -17,8 +17,8 @@ std::unique_ptr<rav::dnssd::dnssd_advertiser> rav::dnssd::dnssd_advertiser::crea
 #if RAV_APPLE
     return std::make_unique<bonjour_advertiser>();
 #elif RAV_WINDOWS
-    if (bonjour_browser::is_bonjour_service_running()) {
-        return std::make_unique<bonjour_browser>();
+    if (dnssd::is_bonjour_service_running()) {
+        return std::make_unique<bonjour_advertiser>();
     } else {
         return {};
     }
