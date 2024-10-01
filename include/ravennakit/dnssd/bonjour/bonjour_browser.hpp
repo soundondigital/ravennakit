@@ -2,6 +2,8 @@
 
 #include "bonjour.hpp"
 
+#include <asio.hpp>
+
 #if RAV_HAS_APPLE_DNSSD
 
 #include "bonjour_scoped_dns_service_ref.hpp"
@@ -102,7 +104,7 @@ class bonjour_browser: public dnssd_browser {
         service_description description_;
     };
 
-    explicit bonjour_browser();
+    explicit bonjour_browser(asio::io_context& io_context);
     ~bonjour_browser() override;
 
     void browse_for(const std::string& service) override;
@@ -110,16 +112,15 @@ class bonjour_browser: public dnssd_browser {
     /**
      * @return Returns the SharedConnection this instance is using for communicating with the mdns responder.
      */
-    const bonjour_shared_connection& connection() const noexcept {
+    [[nodiscard]] const bonjour_shared_connection& connection() const noexcept {
         return shared_connection_;
     }
 
   private:
+    std::unique_ptr<asio::posix::stream_descriptor> ready_descriptor_;
     bonjour_shared_connection shared_connection_;
     std::map<std::string, bonjour_scoped_dns_service_ref> browsers_;
     std::map<std::string, service> services_;
-    std::atomic<bool> keep_going_ = {true};
-    std::thread thread_;
     std::recursive_mutex lock_;
 
     /**
@@ -142,7 +143,7 @@ class bonjour_browser: public dnssd_browser {
         DNSServiceErrorType error_code, const char* name, const char* type, const char* domain, void* context
     );
 
-    void thread();
+    void process_result();
 };
 
 }  // namespace rav::dnssd

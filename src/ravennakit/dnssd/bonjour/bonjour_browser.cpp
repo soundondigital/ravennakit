@@ -140,7 +140,17 @@ const rav::dnssd::service_description& rav::dnssd::bonjour_browser::service::des
     return description_;
 }
 
-rav::dnssd::bonjour_browser::bonjour_browser() : thread_(std::thread(&bonjour_browser::thread, this)) {}
+rav::dnssd::bonjour_browser::bonjour_browser(asio::io_context& io_context) {
+    const int fd = DNSServiceRefSockFD(shared_connection_.service_ref());
+
+    if (fd < 0) {
+        RAV_THROW_EXCEPTION("Invalid file descriptor");
+    }
+
+    ready_descriptor_ = std::make_unique<asio::posix::stream_descriptor>(asio::make_strand(io_context), fd);
+
+    process_result();
+}
 
 void rav::dnssd::bonjour_browser::browse_reply(
     [[maybe_unused]] DNSServiceRef browse_service_ref, DNSServiceFlags flags, uint32_t interface_index,
@@ -188,9 +198,9 @@ void rav::dnssd::bonjour_browser::browse_for(const std::string& service) {
     std::lock_guard guard(lock_);
 
     // Initialize with the shared connection to pass it to DNSServiceBrowse
-    DNSServiceRef browsingServiceRef = shared_connection_.service_ref();
+    DNSServiceRef shared_service_ref = shared_connection_.service_ref();
 
-    if (browsingServiceRef == nullptr) {
+    if (shared_service_ref == nullptr) {
         RAV_THROW_EXCEPTION("DNSSD Service not running");
     }
 
@@ -200,69 +210,32 @@ void rav::dnssd::bonjour_browser::browse_for(const std::string& service) {
     }
 
     DNSSD_THROW_IF_ERROR(DNSServiceBrowse(
-        &browsingServiceRef, kDNSServiceFlagsShareConnection, kDNSServiceInterfaceIndexAny, service.c_str(), nullptr,
+        &shared_service_ref, kDNSServiceFlagsShareConnection, kDNSServiceInterfaceIndexAny, service.c_str(), nullptr,
         browse_reply, this
     ));
 
-    browsers_.insert({service, bonjour_scoped_dns_service_ref(browsingServiceRef)});
+    browsers_.insert({service, bonjour_scoped_dns_service_ref(shared_service_ref)});
     // From here the serviceRef is under RAII inside the ScopedDnsServiceRef class
 }
 
-void rav::dnssd::bonjour_browser::thread() {
-    RAV_DEBUG("Start bonjour browser thread");
-
-    struct timeval tv = {};
-    tv.tv_sec = 0;
-    tv.tv_usec = 500000;
-
-    const int fd = DNSServiceRefSockFD(shared_connection_.service_ref());
-
-    if (fd < 0) {
-        RAV_THROW_EXCEPTION("Invalid file descriptor");
-    }
-
-    while (keep_going_.load()) {
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        FD_SET(fd, &readfds);
-        const int nfds = fd + 1;
-
-        const int r = select(nfds, &readfds, nullptr, nullptr, &tv);
-
-        if (r < 0) {
-            RAV_THROW_EXCEPTION("Select error: " + std::to_string(r));
-        } else if (r == 0) {
-            // Timeout
-        } else {
-            if (FD_ISSET(fd, &readfds)) {
-                if (keep_going_.load() == false)
-                    return;
-
-                // Locking here will make sure that all callbacks are synchronised because they are called in
-                // response to DNSServiceProcessResult.
-                std::lock_guard guard(lock_);
-
-                RAV_DEBUG("Main loop (FD_ISSET == true)");
-                try {
-                    DNSSD_THROW_IF_ERROR(DNSServiceProcessResult(shared_connection_.service_ref()));
-                } catch (const std::exception& e) {
-                    emit(events::browse_error {e});
-                }
-            } else {
-                RAV_DEBUG("Main loop (FD_ISSET == false)");
+void rav::dnssd::bonjour_browser::process_result() {
+    ready_descriptor_->async_wait(asio::posix::stream_descriptor::wait_read, [this](const asio::error_code& ec) {
+        try {
+            if (ec) {
+                RAV_THROW_EXCEPTION(ec.message());
             }
+            DNSSD_THROW_IF_ERROR(DNSServiceProcessResult(shared_connection_.service_ref()));
+        } catch (const std::exception& e) {
+            emit(events::browse_error {e});
         }
-    }
-
-    RAV_DEBUG("Stop bonjour browser thread");
+        process_result();  // Do another round
+    });
 }
 
 rav::dnssd::bonjour_browser::~bonjour_browser() {
-    keep_going_ = false;
-
-    std::lock_guard guard(lock_);
-    if (thread_.joinable())
-        thread_.join();
+    if (ready_descriptor_) {
+        ready_descriptor_->cancel();
+    }
 }
 
 #endif

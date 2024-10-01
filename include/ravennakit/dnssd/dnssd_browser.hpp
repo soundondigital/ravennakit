@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <memory>
+#include <asio/io_context.hpp>
 
 namespace rav::dnssd {
 
@@ -96,7 +97,7 @@ class dnssd_browser:
      * Creates the most appropriate dnssd_browser implementation for the platform.
      * @return The created dnssd_browser instance, or nullptr if no implementation is available.
      */
-    static std::unique_ptr<dnssd_browser> create();
+    static std::unique_ptr<dnssd_browser> create(asio::io_context& io_context);
 };
 
 }  // namespace rav::dnssd
