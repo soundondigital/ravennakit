@@ -11,33 +11,40 @@
 #pragma once
 
 #include <cstdint>
-#include <string> // For size_t
+#include <string>  // For size_t
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
     #define RAV_WINDOWS 1
-    #define RAV_OPERATING_SYSTEM_NAME "Windows"
-#elif defined(__ANDROID__)
-    #define RAV_ANDROID 1
-    #define RAV_OPERATING_SYSTEM_NAME "Android"
-#elif defined(LINUX) || defined(__linux__)
-    #define RAV_LINUX 1
-    #define RAV_OPERATING_SYSTEM_NAME "Linux"
+
+    #ifdef _WIN64
+        #define RAV_WINDOWS_64BIT 1
+    #else
+        #define RAV_WINDOWS_32BIT 1
+    #endif
 #elif __APPLE__
     #define RAV_APPLE 1
     #include <TargetConditionals.h>
-    #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
-        #define RAV_IOS 1
-        #define RAV_OPERATING_SYSTEM_NAME "iOS"
-    #else
+    #if TARGET_IPHONE_SIMULATOR // iOS, tvOS, or watchOS Simulator
+        #define RAV_SIMULATOR 1
+    #elif TARGET_OS_MACCATALYST // Mac's Catalyst (ports iOS API into Mac, like UIKit).
+        #define RAV_MACCATALYST 1
+    #elif TARGET_OS_IPHONE // iOS, tvOS, or watchOS device
+        #define RAV_IPHONE 1
+    #elif TARGET_OS_MAC // Apple desktop OS
         #define RAV_MACOS 1
-        #define RAV_OPERATING_SYSTEM_NAME "macOS"
+    #else
+        #error "Unknown Apple platform"
     #endif
-#elif defined(__FreeBSD__) || (__OpenBSD__)
+#elif __ANDROID__
+    #define RAV_ANDROID 1
+#elif __linux__
+    #define RAV_LINUX 1
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
     #define RAV_BSD 1
-    #define RAV_OPERATING_SYSTEM_NAME "BSD"
+#elif __unix__
+    #define RAV_UNIX 1
 #elif defined(_POSIX_VERSION)
     #define RAV_POSIX 1
-    #define RAV_OPERATING_SYSTEM_NAME "Posix"
 #else
     #error "Unknown platform!"
 #endif
@@ -47,5 +54,3 @@
         #error "Please define NOMINMAX as compile constant in your build system."
     #endif
 #endif
-
-static_assert(sizeof(size_t) == sizeof(uint64_t), "size_t must be 64-bit");

@@ -1,3 +1,4 @@
+#include "ravennakit/core/log.hpp"
 #include "ravennakit/dnssd/bonjour/bonjour_browser.hpp"
 
 #include <iostream>
@@ -19,34 +20,32 @@ int main(const int argc, char* argv[]) {
 
     browser->on<rav::dnssd::events::service_discovered>([](const rav::dnssd::events::service_discovered& event,
                                                            rav::dnssd::dnssd_browser&) {
-        std::cout << "Service discovered: " << event.service_description.description() << std::endl;
+        RAV_INFO("Service discovered: {}", event.service_description.description());
     });
 
     browser->on<rav::dnssd::events::service_removed>([](const rav::dnssd::events::service_removed& event,
                                                         rav::dnssd::dnssd_browser&) {
-        std::cout << "Service removed: " << event.service_description.description() << std::endl;
+        RAV_INFO("Service removed: {}", event.service_description.description());
     });
 
     browser->on<rav::dnssd::events::service_resolved>([](const rav::dnssd::events::service_resolved& event,
                                                          rav::dnssd::dnssd_browser&) {
-        std::cout << "Service resolved: " << event.service_description.description() << std::endl;
+        RAV_INFO("Service resolved: {}", event.service_description.description());
     });
 
     browser->on<rav::dnssd::events::address_added>([](const rav::dnssd::events::address_added& event,
                                                       rav::dnssd::dnssd_browser&) {
-        std::cout << "Address added (" << event.address << "): " << event.service_description.description()
-                  << std::endl;
+        RAV_INFO("Address added ({}): {}", event.address, event.service_description.description());
     });
 
     browser->on<rav::dnssd::events::address_removed>([](const rav::dnssd::events::address_removed& event,
                                                         rav::dnssd::dnssd_browser&) {
-        std::cout << "Address removed (" << event.address << "): " << event.service_description.description()
-                  << std::endl;
+        RAV_INFO("Address removed ({}): {}", event.address, event.service_description.description());
     });
 
     browser->on<rav::dnssd::events::browse_error>([](const rav::dnssd::events::browse_error& event,
                                                      rav::dnssd::dnssd_browser&) {
-        std::cout << "Error: " << event.error.description() << std::endl;
+        RAV_INFO("Error: {}", event.error.description());
     });
 
     auto const result = browser->browse_for(argv[1]);

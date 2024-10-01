@@ -2,8 +2,152 @@
 
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/dnssd/bonjour/bonjour_scoped_dns_service_ref.hpp"
+#include "ravennakit/dnssd/bonjour/bonjour_txt_record.hpp"
 
 #include <mutex>
+
+static void DNSSD_API resolveCallBack(
+    DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t interfaceIndex, DNSServiceErrorType errorCode,
+    const char* fullname, const char* hosttarget,
+    uint16_t port,  // In network byte order
+    uint16_t txtLen, const unsigned char* txtRecord, void* context
+) {
+    auto* service = static_cast<rav::dnssd::bonjour_browser::service*>(context);
+    service->resolve_callback(
+        sdRef, flags, interfaceIndex, errorCode, fullname, hosttarget, ntohs(port), txtLen, txtRecord
+    );
+}
+
+static void DNSSD_API getAddrInfoCallBack(
+    DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t interfaceIndex, DNSServiceErrorType errorCode,
+    const char* fullname, const struct sockaddr* address, uint32_t ttl, void* context
+) {
+    auto* service = static_cast<rav::dnssd::bonjour_browser::service*>(context);
+    service->get_addr_info_callback(sdRef, flags, interfaceIndex, errorCode, fullname, address, ttl);
+}
+
+rav::dnssd::bonjour_browser::service::service(
+    const char* fullname, const char* name, const char* type, const char* domain, rav::dnssd::bonjour_browser& owner
+) :
+    owner_(owner) {
+    description_.fullname = fullname;
+    description_.name = name;
+    description_.type = type;
+    description_.domain = domain;
+}
+
+void rav::dnssd::bonjour_browser::service::resolve_on_interface(uint32_t index) {
+    if (resolvers_.find(index) != resolvers_.end()) {
+        // Already resolving on this interface
+        return;
+    }
+
+    description_.interfaces.insert({index, {}});
+
+    DNSServiceRef resolveServiceRef = owner_.connection().service_ref();
+
+    if (owner_.report_if_error(result(DNSServiceResolve(
+            &resolveServiceRef, kDNSServiceFlagsShareConnection, index, description_.name.c_str(),
+            description_.type.c_str(), description_.domain.c_str(), ::resolveCallBack, this
+        )))) {
+        return;
+    }
+
+    resolvers_.insert({index, bonjour_scoped_dns_service_ref(resolveServiceRef)});
+}
+
+void rav::dnssd::bonjour_browser::service::resolve_callback(
+    [[maybe_unused]] DNSServiceRef serviceRef, [[maybe_unused]] DNSServiceFlags flags, uint32_t interface_index,
+    DNSServiceErrorType error_code, [[maybe_unused]] const char* fullname, const char* host_target, uint16_t port,
+    uint16_t txt_len, const unsigned char* txt_record
+) {
+    if (owner_.report_if_error(result(error_code))) {
+        return;
+    }
+
+    description_.host = host_target;
+    description_.port = port;
+    description_.txt = bonjour_txt_record::get_txt_record_from_raw_bytes(txt_record, txt_len);
+
+    owner_.emit(events::service_resolved {description_, interface_index});
+
+    DNSServiceRef getAddrInfoServiceRef = owner_.connection().service_ref();
+
+    if (owner_.report_if_error(result(DNSServiceGetAddrInfo(
+            &getAddrInfoServiceRef, kDNSServiceFlagsShareConnection | kDNSServiceFlagsTimeout, interface_index,
+            kDNSServiceProtocol_IPv4 | kDNSServiceProtocol_IPv6, host_target, ::getAddrInfoCallBack, this
+        )))) {
+        return;
+    }
+
+    get_addrs_.insert({interface_index, bonjour_scoped_dns_service_ref(getAddrInfoServiceRef)});
+}
+
+void rav::dnssd::bonjour_browser::service::get_addr_info_callback(
+    [[maybe_unused]] DNSServiceRef sd_ref, [[maybe_unused]] DNSServiceFlags flags, uint32_t interface_index,
+    DNSServiceErrorType error_code, [[maybe_unused]] const char* hostname, const struct sockaddr* address,
+    [[maybe_unused]] uint32_t ttl
+) {
+    if (error_code == kDNSServiceErr_Timeout) {
+        get_addrs_.erase(interface_index);
+        return;
+    }
+
+    if (owner_.report_if_error(result(error_code))) {
+        return;
+    }
+
+    char ip_addr[INET6_ADDRSTRLEN] = {};
+
+    const void* ip_addr_data = nullptr;
+
+    if (address->sa_family == AF_INET) {
+        ip_addr_data = &reinterpret_cast<const sockaddr_in*>(address)->sin_addr;
+    } else if (address->sa_family == AF_INET6) {
+        ip_addr_data = &reinterpret_cast<const sockaddr_in6*>(address)->sin6_addr;
+    } else {
+        return;  // Don't know how to handle this case
+    }
+
+    // Winsock version requires the const cast because Microsoft.
+    inet_ntop(address->sa_family, const_cast<void*>(ip_addr_data), ip_addr, INET6_ADDRSTRLEN);
+
+    const auto found_interface = description_.interfaces.find(interface_index);
+    if (found_interface != description_.interfaces.end()) {
+        const auto result = found_interface->second.insert(ip_addr);
+        owner_.emit(events::address_added {description_, *result.first, interface_index});
+    } else {
+        (void)owner_.report_if_error(
+            result(std::string("Interface with id \"") + std::to_string(interface_index) + "\" not found")
+        );
+    }
+}
+
+size_t rav::dnssd::bonjour_browser::service::remove_interface(uint32_t index) {
+    auto foundInterface = description_.interfaces.find(index);
+    if (foundInterface == description_.interfaces.end()) {
+        (void
+        )owner_.report_if_error(result(std::string("interface with index \"") + std::to_string(index) + "\" not found")
+        );
+        return description_.interfaces.empty();
+    }
+
+    if (description_.interfaces.size() > 1) {
+        for (auto& addr : foundInterface->second) {
+            owner_.emit(events::address_removed {description_, addr, index});
+        }
+    }
+
+    description_.interfaces.erase(foundInterface);
+    resolvers_.erase(index);
+    get_addrs_.erase(index);
+
+    return description_.interfaces.size();
+}
+
+const rav::dnssd::service_description& rav::dnssd::bonjour_browser::service::description() const noexcept {
+    return description_;
+}
 
 static void DNSSD_API browseReply2(
     DNSServiceRef browseServiceRef, DNSServiceFlags flags, uint32_t interfaceIndex, DNSServiceErrorType errorCode,
@@ -35,12 +179,12 @@ void rav::dnssd::bonjour_browser::browse_reply(
         // Insert a new service if not already present
         auto s = services_.find(fullname);
         if (s == services_.end()) {
-            s = services_.insert({fullname, bonjour_service(fullname, name, type, domain, *this)}).first;
+            s = services_.insert({fullname, service(fullname, name, type, domain, *this)}).first;
 
             // if (onServiceDiscoveredCallback)
-                // onServiceDiscoveredCallback(s->second.description());
+            // onServiceDiscoveredCallback(s->second.description());
 
-            emit(events::service_discovered{s->second.description()});
+            emit(events::service_discovered {s->second.description()});
         }
 
         s->second.resolve_on_interface(interface_index);
@@ -52,10 +196,7 @@ void rav::dnssd::bonjour_browser::browse_reply(
 
         if (foundService->second.remove_interface(interface_index) == 0) {
             // We just removed the last interface
-
-            // TODO: Implement
-            // if (onServiceRemovedCallback)
-                // onServiceRemovedCallback(foundService->second.description());
+            emit(events::service_removed {foundService->second.description()});
 
             // Remove the BrowseResult (as there are not interfaces left)
             services_.erase(foundService);
@@ -63,11 +204,9 @@ void rav::dnssd::bonjour_browser::browse_reply(
     }
 }
 
-bool rav::dnssd::bonjour_browser::report_if_error(const rav::dnssd::result& result) const noexcept {
+bool rav::dnssd::bonjour_browser::report_if_error(const rav::dnssd::result& result) noexcept {
     if (result.has_error()) {
-        // TODO: Implement
-        // if (onBrowseErrorCallback)
-            // onBrowseErrorCallback(result);
+        emit(events::browse_error {result});
         return true;
     }
     return false;
@@ -125,8 +264,7 @@ void rav::dnssd::bonjour_browser::thread() {
 
         const int r = select(nfds, &readfds, nullptr, nullptr, &tv);
 
-        if (r < 0)
-        {
+        if (r < 0) {
             if (report_if_error(result("Select error: " + std::to_string(r)))) {
                 RAV_DEBUG("! Result (code={})", r);
                 break;

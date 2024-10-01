@@ -8,13 +8,14 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
+#include "ravennakit/core/platform.hpp"
 #include "ravennakit/dnssd/dnssd_browser.hpp"
+#include "ravennakit/dnssd/bonjour/bonjour_browser.hpp"
 
 std::unique_ptr<rav::dnssd::dnssd_browser> rav::dnssd::dnssd_browser::create() {
-#if RAV_MACOS
-    return std::make_unique<dnssd_browser_macos>();
-#elif RAV_IOS
-    return std::make_unique<dnssd_browser_ios>();
-#endif
+#if RAV_APPLE || RAV_WINDOWS
+    return std::make_unique<bonjour_browser>();
+#else
     return {};
+#endif
 }
