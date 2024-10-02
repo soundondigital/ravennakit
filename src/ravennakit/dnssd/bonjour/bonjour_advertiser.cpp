@@ -42,7 +42,7 @@ rav::util::id rav::dnssd::bonjour_advertiser::register_service(
 
     auto scoped_service_ref = bonjour_scoped_dns_service_ref(service_ref);
     const auto id = id_generator_.next();
-    registered_services_.push_back(registered_service {id, std::move(scoped_service_ref), reg_type, name});
+    registered_services_.push_back(registered_service {id, std::move(scoped_service_ref)});
     return id;
 }
 

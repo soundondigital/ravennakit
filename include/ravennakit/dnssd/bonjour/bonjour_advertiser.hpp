@@ -36,8 +36,6 @@ class bonjour_advertiser: public dnssd_advertiser {
     struct registered_service {
         util::id id;
         bonjour_scoped_dns_service_ref service_ref;
-        std::string reg_type;
-        std::string name;
     };
 
     bonjour_shared_connection shared_connection_;
