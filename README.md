@@ -16,6 +16,12 @@ https://datatracker.ietf.org/doc/html/rfc3551
 RFC 3190: RTP Payload Format for 12-bit DAT Audio and 20- and 24-bit Linear Sampled Audio
 https://datatracker.ietf.org/doc/html/rfc3190
 
+RFC 8866: SDP: Session Description Protocol
+https://datatracker.ietf.org/doc/html/rfc8866
+
+RCC 4570: Session Description Protocol (SDP) Source Filters
+https://datatracker.ietf.org/doc/html/rfc4570
+
 ## CMake options
 
 | CMake option                    | Description                                          |
