@@ -12,6 +12,7 @@
 
 #include "ravennakit/core/assert.hpp"
 #include "ravennakit/core/log.hpp"
+#include "ravennakit/platform/windows/socket_event.hpp"
 
 #if RAV_HAS_APPLE_DNSSD
 
@@ -33,16 +34,20 @@ void rav::dnssd::process_results_thread::start(DNSServiceRef service_ref) {
 }
 
 void rav::dnssd::process_results_thread::stop() {
-#if RAV_POSIX
     using namespace std::chrono_literals;
 
     if (future_.valid()) {
         std::lock_guard guard(lock_);
 
+#if RAV_POSIX
         constexpr char x = 'x';
         if (pipe_.write(&x, 1) != 1) {
             RAV_ERROR("Failed to signal thread to stop");
         }
+#else
+        event_.signal();
+#endif
+
         const auto status = future_.wait_for(1000ms);
         if (status == std::future_status::ready) {
             RAV_TRACE("Thread stopped");
@@ -54,7 +59,6 @@ void rav::dnssd::process_results_thread::stop() {
 
         future_ = {};
     }
-#endif
 }
 
 bool rav::dnssd::process_results_thread::is_running() {
@@ -71,11 +75,12 @@ std::lock_guard<std::mutex> rav::dnssd::process_results_thread::lock() {
 }
 
 void rav::dnssd::process_results_thread::run(DNSServiceRef service_ref, const int service_fd) {
-#if RAV_POSIX
+    RAV_TRACE("Start DNS-SD processing thread");
+
+    #if RAV_POSIX
+
     const auto signal_fd = pipe_.read_fd();
     const auto max_fd = std::max(service_fd_, signal_fd);
-
-    RAV_TRACE("Start DNS-SD processing thread");
 
     constexpr auto max_attempts = 10;
     auto failed_attempts = 0;
@@ -123,8 +128,40 @@ void rav::dnssd::process_results_thread::run(DNSServiceRef service_ref, const in
         }
     }
 
+    #elif RAV_WINDOWS
+
+    windows::socket_event socket_event;
+    socket_event.associate(service_fd);
+
+    while (true) {
+        HANDLE events[2];
+        events[0] = socket_event.get();
+        events[1] = event_.get();
+
+        DWORD result = WSAWaitForMultipleEvents(2, events, FALSE, WSA_INFINITE, FALSE);
+
+        if (result == WSA_WAIT_EVENT_0) {
+            // Handle the socket event
+            socket_event.reset_event();
+            // Locking here will make sure that all callbacks are synchronised because they are called in
+            // response to DNSServiceProcessResult.
+            std::lock_guard guard(lock_);
+            DNSSD_LOG_IF_ERROR(DNSServiceProcessResult(service_ref));
+        } else if (result == WSA_WAIT_EVENT_0 + 1) {
+            RAV_TRACE("Received signal to stop, exiting thread.");
+            break;  // Stop the thread.
+        } else if (result == WSA_WAIT_FAILED) {
+            RAV_ERROR("WSAWaitForMultipleEvents failed: {}", WSAGetLastError());
+            break;
+        } else {
+            RAV_ERROR("WSAWaitForMultipleEvents returned unexpected result: {}", result);
+            break;
+        }
+    }
+
+    #endif
+
     RAV_TRACE("Stop DNS-SD processing thread");
-#endif
 }
 
 #endif

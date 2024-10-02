@@ -12,6 +12,7 @@
 
 #include "bonjour.hpp"
 #include "ravennakit/platform/posix/pipe.hpp"
+#include "ravennakit/platform/windows/event.hpp"
 
 #include <future>
 #include <thread>
@@ -51,6 +52,8 @@ class process_results_thread {
     int service_fd_ {};
 #if RAV_POSIX
     posix::pipe pipe_;
+#elif RAV_WINDOWS
+    windows::event event_;
 #endif
     std::mutex lock_;
     std::future<void> future_;
