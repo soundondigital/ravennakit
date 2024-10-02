@@ -55,7 +55,7 @@ static int audio_callback(
 }
 
 int main(int const argc, char* argv[]) {
-#ifdef RAV_ENABLE_SPDLOG
+#if RAV_ENABLE_SPDLOG
     spdlog::set_level(spdlog::level::trace);
 #endif
 
