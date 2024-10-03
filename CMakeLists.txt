@@ -130,6 +130,10 @@ target_compile_definitions(ravennakit
         RAV_ENABLE_SPDLOG=$<BOOL:${RAV_ENABLE_SPDLOG}>
 )
 
+if (TRACY_ENABLE)
+    target_link_libraries(ravennakit PUBLIC tracy)
+endif ()
+
 if (WIN32)
     target_include_directories(ravennakit PUBLIC "C:/Program Files/Bonjour SDK/Include")
 

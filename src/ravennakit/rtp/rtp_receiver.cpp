@@ -12,6 +12,7 @@
 #include "ravennakit/rtp/rtcp_packet_view.hpp"
 #include "ravennakit/rtp/rtp_receiver.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
+#include "ravennakit/util/tracy.hpp"
 
 #include <fmt/core.h>
 
@@ -52,6 +53,8 @@ void rav::rtp_receiver::join_multicast_group(
 }
 
 void rav::rtp_receiver::start() {
+    ZoneScoped;
+
     if (is_running_) {
         RAV_WARNING("RTP receiver is already running");
         return;
@@ -70,9 +73,11 @@ void rav::rtp_receiver::stop() {
 }
 
 void rav::rtp_receiver::receive_rtp() {
+    ZoneScoped;
     rtp_socket_.async_receive_from(
         asio::buffer(rtp_data_), rtp_endpoint_,
         [this](const std::error_code& ec, const std::size_t length) {
+            ZoneScoped;
             if (!ec) {
                 const rtp_packet_view rtp_packet(rtp_data_.data(), length);
                 emit(rtp_packet_event {rtp_packet});
