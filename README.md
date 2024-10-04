@@ -39,6 +39,9 @@ https://datatracker.ietf.org/doc/html/rfc4570
 RFC 2326: Real Time Streaming Protocol (RTSP)  
 https://datatracker.ietf.org/doc/html/rfc2326
 
+RFC 2068: Hypertext Transfer Protocol -- HTTP/1.1
+https://datatracker.ietf.org/doc/html/rfc2068
+
 ## Quick commands
 
 ### Send audio as RTP stream example command

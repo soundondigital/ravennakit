@@ -21,7 +21,7 @@ constexpr auto k_default_timeout_seconds_seconds = std::chrono::seconds(5);
 
 TEST_CASE("io_context_runner | run_to_completion()", "[io_context_runner]") {
     SECTION("Run tasks to completion") {
-        io_context_runner runner;
+        rav::io_context_runner runner;
         size_t expected_total = 0;
         std::atomic<size_t> total = 0;
 
@@ -38,7 +38,7 @@ TEST_CASE("io_context_runner | run_to_completion()", "[io_context_runner]") {
     }
 
     SECTION("Run tasks to completion a 2nd time") {
-        io_context_runner runner;
+        rav::io_context_runner runner;
         size_t expected_total = 0;
         std::atomic<size_t> total = 0;
 
@@ -69,7 +69,7 @@ TEST_CASE("io_context_runner | run_to_completion()", "[io_context_runner]") {
     }
 
     SECTION("Scheduling task after run_to_completion() will not execute them") {
-        io_context_runner runner;
+        rav::io_context_runner runner;
         std::atomic<size_t> total = 0;
 
         runner.run_to_completion();
@@ -86,7 +86,7 @@ TEST_CASE("io_context_runner | run_to_completion()", "[io_context_runner]") {
 
 TEST_CASE("io_context_runner | run_to_completion_async()", "[io_context_runner]") {
     SECTION("Run tasks to completion asynchronously") {
-        io_context_runner runner;
+        rav::io_context_runner runner;
         size_t expected_total = 0;
         std::atomic<size_t> total = 0;
 
@@ -114,7 +114,7 @@ TEST_CASE("io_context_runner | run_to_completion_async()", "[io_context_runner]"
     }
 
     SECTION("Run tasks to completion asynchronously a 2nd time") {
-        io_context_runner runner;
+        rav::io_context_runner runner;
         size_t expected_total = 0;
         std::atomic<size_t> total = 0;
 
@@ -169,7 +169,7 @@ TEST_CASE("io_context_runner | run_to_completion_async()", "[io_context_runner]"
 
 TEST_CASE("io_context_runner | run()", "[io_context_runner]") {
     SECTION("When calling run, the io_context should not stop when no work is posted") {
-        io_context_runner runner;
+        rav::io_context_runner runner;
         std::atomic post_run_called = false;
 
         std::thread runner_thread([&runner] {
@@ -201,7 +201,7 @@ TEST_CASE("io_context_runner | run()", "[io_context_runner]") {
 
 TEST_CASE("io_context_runner | run_async()", "[io_context_runner]") {
     SECTION("When calling run_async, the io_context should not stop when no work is posted") {
-        io_context_runner runner;
+        rav::io_context_runner runner;
         std::atomic post_run_called = false;
 
         runner.run_async();

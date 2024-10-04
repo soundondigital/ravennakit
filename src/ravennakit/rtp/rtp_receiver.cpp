@@ -73,7 +73,6 @@ void rav::rtp_receiver::stop() {
 }
 
 void rav::rtp_receiver::receive_rtp() {
-    ZoneScoped;
     rtp_socket_.async_receive_from(
         asio::buffer(rtp_data_), rtp_endpoint_,
         [this](const std::error_code& ec, const std::size_t length) {

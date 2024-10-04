@@ -15,6 +15,7 @@
 #include <asio.hpp>
 #include <iostream>
 
+namespace rav {
 class io_context_runner {
   public:
     io_context_runner() = default;
@@ -117,3 +118,5 @@ class io_context_runner {
         }
     }
 };
+
+}  // namespace rav
