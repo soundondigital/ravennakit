@@ -31,40 +31,26 @@ class io_context_runner {
     }
 
     /**
-     * Runs the runner until stop() is called.
-     */
-    void run() {
-        start();
-        io_context_.run();
-    }
-
-    /**
      * Runs the runner until stop() is called, returning immediately.
      */
-    void run_async() {
+    void run() {
+        stop();
+        work_guard_ = std::make_unique<asio::executor_work_guard<asio::io_context::executor_type>>(
+            asio::make_work_guard(io_context_)
+        );
         start();
     }
 
     /**
-     * Runs all tasks to completion, returning when all tasks are done.
+     * Runs all tasks to completion, returning immediately. Call stop to wait for all tasks to finish.
      */
     void run_to_completion() {
-        start();
-        work_guard_.reset();
-        io_context_.run();
         stop();
-    }
-
-    /**
-     * Runs all tasks to completion, returning immediately.
-     */
-    void run_to_completion_async() {
         start();
-        work_guard_.reset();
     }
 
     /**
-     * Stops the runner and joins all threads.
+     * Stops the runner and waits for all threads to finish.
      */
     void stop() {
         io_context_.stop();
@@ -73,6 +59,7 @@ class io_context_runner {
         }
         threads_.clear();
         work_guard_.reset();
+        io_context_.restart();
     }
 
     /**
@@ -84,8 +71,9 @@ class io_context_runner {
 
   private:
     const size_t num_threads_ = std::thread::hardware_concurrency();
+    bool running_ = false;
     asio::io_context io_context_ {};
-    asio::executor_work_guard<asio::io_context::executor_type> work_guard_ {asio::make_work_guard(io_context_)};
+    std::unique_ptr<asio::executor_work_guard<asio::io_context::executor_type>> work_guard_;
     std::vector<std::thread> threads_ {};
 
     /**
@@ -94,8 +82,6 @@ class io_context_runner {
      */
     void start() {
         threads_.clear();
-        io_context_.restart();
-
         threads_.reserve(num_threads_);
 
         for (size_t i = 0; i < num_threads_; i++) {
@@ -116,6 +102,8 @@ class io_context_runner {
                 }
             });
         }
+
+        running_ = true;
     }
 };
 
