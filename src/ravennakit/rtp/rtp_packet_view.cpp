@@ -10,7 +10,7 @@
 
 #include <fmt/core.h>
 
-#include "ravennakit/platform/byte_order.hpp"
+#include "ravennakit/core/byte_order.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
 
 namespace {

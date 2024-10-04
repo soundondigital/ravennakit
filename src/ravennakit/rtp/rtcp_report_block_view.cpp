@@ -9,7 +9,7 @@
  */
 
 #include "ravennakit/rtp/rtcp_report_block_view.hpp"
-#include "ravennakit/platform/byte_order.hpp"
+#include "ravennakit/core/byte_order.hpp"
 
 #include <array>
 

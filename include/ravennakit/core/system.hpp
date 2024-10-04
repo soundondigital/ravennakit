@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "ravennakit/platform/byte_order.hpp"
+#include "ravennakit/core/byte_order.hpp"
 
 #include <cstdint>
 

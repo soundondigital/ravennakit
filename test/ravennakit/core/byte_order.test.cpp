@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/platform/byte_order.hpp"
+#include "ravennakit/core/byte_order.hpp"
 
 #include <catch2/catch_all.hpp>
 

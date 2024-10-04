@@ -15,6 +15,10 @@ set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 set(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING[variant=Release] "YES")
 set(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING[variant=RelWithDebInfo] "YES")
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE INTERNAL "")
+endif ()
+
 option(WITH_ADDRESS_SANITIZER "Enable Address Sanitizer" OFF)
 if (WITH_ADDRESS_SANITIZER)
     message("-- -DWITH_ADDRESS_SANITIZER=ON argument was specified: Enabling Clang's Address Sanitizer")
@@ -28,6 +32,13 @@ if (WITH_THREAD_SANITIZER)
     add_compile_options(-fsanitize=thread -g)
     link_libraries(-fsanitize=thread)
 endif ()
+
+###########
+# Options #
+###########
+
+option(RAV_ENABLE_SPDLOG "Enable spdlog for logging" OFF)
+option(TRACY_ENABLE "Enable Tracy as profiler" OFF)
 
 ################
 # _WIN32_WINNT #
@@ -63,7 +74,6 @@ endif ()
 # Tracy #
 #########
 
-option(TRACY_ENABLE "Enable Tracy as profiler" OFF)
 if (TRACY_ENABLE)
     message(STATUS "Tracy enabled")
     add_library(tracy INTERFACE)
@@ -78,12 +88,14 @@ else ()
     message(STATUS "Tracy disabled")
 endif ()
 
-
 #########
 # VCPKG #
 #########
 
-find_package(spdlog CONFIG REQUIRED)
+if (RAV_ENABLE_SPDLOG)
+    find_package(spdlog CONFIG REQUIRED)
+endif ()
+
 find_package(fmt CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
@@ -94,8 +106,6 @@ target_compile_definitions(asio INTERFACE ASIO_NO_DEPRECATED ASIO_NO_DYNAMIC_BUF
 ##############
 # RAVENNAKIT #
 ##############
-
-option(RAV_ENABLE_SPDLOG "Enable spdlog for logging" OFF)
 
 file(GLOB_RECURSE RAVENNAKIT_HEADER_FILES include/*.hpp)
 file(GLOB_RECURSE RAVENNAKIT_SOURCE_FILES src/*.cpp)
@@ -108,20 +118,36 @@ target_link_libraries(ravennakit
         PUBLIC
         rav_recommended_warning_flags
         rav_recommended_lto_flags
-        spdlog::spdlog
         asio::asio
+        fmt::fmt
+        $<$<BOOL:${RAV_ENABLE_SPDLOG}>:spdlog::spdlog>
 )
 
 target_compile_definitions(ravennakit
         PUBLIC
         NOMINMAX=1
         WIN32_LEAN_AND_MEAN
+        RAV_ENABLE_SPDLOG=$<BOOL:${RAV_ENABLE_SPDLOG}>
 )
 
-if (RAV_ENABLE_SPDLOG)
-    target_compile_definitions(ravennakit PUBLIC RAV_ENABLE_SPDLOG=1)
-    target_link_libraries(ravennakit PUBLIC spdlog::spdlog)
-endif()
+if (TRACY_ENABLE)
+    target_link_libraries(ravennakit PUBLIC tracy)
+endif ()
+
+if (WIN32)
+    target_include_directories(ravennakit PUBLIC "C:/Program Files/Bonjour SDK/Include")
+
+    # Link dnssd.lib depending on architecture
+    if (MSVC_CXX_ARCHITECTURE_ID MATCHES "64")
+        target_link_libraries(ravennakit PUBLIC "C:/Program Files/Bonjour SDK/Lib/x64/dnssd.lib")
+    elseif (MSVC_CXX_ARCHITECTURE_ID MATCHES "86")
+        target_link_libraries(ravennakit PUBLIC "C:/Program Files/Bonjour SDK/Lib/Win32/dnssd.lib")
+    else ()
+        message(FATAL_ERROR "Unknown MSVC architecture or non CXX language [${MSVC_CXX_ARCHITECTURE_ID}]")
+    endif ()
+
+    target_link_libraries(ravennakit PUBLIC ws2_32)
+endif ()
 
 ########################
 # RTP Receiver example #
@@ -143,6 +169,50 @@ target_link_libraries(rtp_receiver_example
 
 if (TRACY_ENABLE)
     target_link_libraries(rtp_receiver_example PUBLIC tracy)
+endif ()
+
+#################
+# DNSSD Browser #
+#################
+
+add_executable(dnssd_browser
+        examples/dnssd_browser.cpp
+)
+
+target_link_libraries(dnssd_browser
+        PUBLIC
+        rav_recommended_warning_flags
+        rav_recommended_lto_flags
+        PRIVATE
+        ravennakit
+        portaudio_static
+        CLI11::CLI11
+)
+
+if (TRACY_ENABLE)
+    target_link_libraries(dnssd_browser PUBLIC tracy)
+endif ()
+
+####################
+# DNSSD Advertiser #
+####################
+
+add_executable(dnssd_advertiser
+        examples/dnssd_advertiser.cpp
+)
+
+target_link_libraries(dnssd_advertiser
+        PUBLIC
+        rav_recommended_warning_flags
+        rav_recommended_lto_flags
+        PRIVATE
+        ravennakit
+        portaudio_static
+        CLI11::CLI11
+)
+
+if (TRACY_ENABLE)
+    target_link_libraries(dnssd_advertiser PUBLIC tracy)
 endif ()
 
 ##############

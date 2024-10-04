@@ -11,6 +11,7 @@
 #pragma once
 
 #if defined(TRACY_ENABLE) && TRACY_ENABLE
+    #define TracyFunction __PRETTY_FUNCTION__
     #include <tracy/Tracy.hpp>
 #else
     #define ZoneScoped

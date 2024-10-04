@@ -14,7 +14,7 @@
 #include <cstring>
 #include <vector>
 
-#include "ravennakit/platform/byte_order.hpp"
+#include "ravennakit/core/byte_order.hpp"
 #include "ravennakit/core/assert.hpp"
 
 namespace rav {

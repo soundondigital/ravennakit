@@ -15,19 +15,19 @@
 namespace rav {
 
 /**
- * A class that can publish events to listeners. Per event type one listener can be registered.
+ * A class that can emit events to listeners. Per event type one listener can be registered.
  * Inherit from this class, and call the `on` method to register a listener for a specific event type.
  * @tparam Subclass The type of the subclass.
- * @tparam Event
+ * @tparam Event List of supported event types.
  */
 template<class Subclass, class... Event>
-class event_publisher {
+class event_emitter {
   public:
     template<class Type>
     using listener = std::function<void(Type&, Subclass&)>;
 
-    virtual ~event_publisher() {
-        static_assert(std::is_base_of_v<event_publisher, Subclass>);
+    virtual ~event_emitter() {
+        static_assert(std::is_base_of_v<event_emitter, Subclass>);
     }
 
     /**
@@ -68,14 +68,14 @@ class event_publisher {
 
 protected:
     /**
-     * Publishes an event to the registered listener, calling the listener registered for the event type.
+     * Emits an event to the registered listener, calling the listener registered for the event type.
      * @tparam Type The type of the event.
      * @param event The event to publish.
      */
     template<class Type>
-    void publish(Type event) {
-        if (auto& listener = handler<Type>(); listener) {
-            listener(event, *static_cast<Subclass*>(this));
+    void emit(Type event) {
+        if (auto& l = handler<Type>(); l) {
+            l(event, *static_cast<Subclass*>(this));
         }
     }
 

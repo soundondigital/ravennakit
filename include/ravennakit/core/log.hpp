@@ -10,7 +10,11 @@
 
 #pragma once
 
-#ifdef RAV_ENABLE_SPDLOG
+#ifndef RAV_ENABLE_SPDLOG
+    #define RAV_ENABLE_SPDLOG 0
+#endif
+
+#if RAV_ENABLE_SPDLOG
 
     #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 

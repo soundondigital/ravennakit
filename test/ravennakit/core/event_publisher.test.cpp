@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/core/event_publisher.hpp"
+#include "ravennakit/core/event_emitter.hpp"
 
 #include <catch2/catch_all.hpp>
 
@@ -24,11 +24,11 @@ struct int_event {
     int number;
 };
 
-class publisher final: public rav::event_publisher<publisher, str_event, int_event> {
+class publisher final: public rav::event_emitter<publisher, str_event, int_event> {
   public:
     template<class Type>
     void publish_event(const Type& event) {
-        publish(event);
+        emit(event);
     }
 };
 

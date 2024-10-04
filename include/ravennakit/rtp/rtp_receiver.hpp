@@ -12,7 +12,7 @@
 
 #include "rtcp_packet_view.hpp"
 #include "rtp_packet_view.hpp"
-#include "ravennakit/core/event_publisher.hpp"
+#include "ravennakit/core/event_emitter.hpp"
 
 #include <asio.hpp>
 
@@ -26,7 +26,7 @@ struct rtcp_packet_event {
     rtcp_packet_view packet;
 };
 
-class rtp_receiver final: public event_publisher<rtp_receiver, rtp_packet_event, rtcp_packet_event> {
+class rtp_receiver final: public event_emitter<rtp_receiver, rtp_packet_event, rtcp_packet_event> {
   public:
     rtp_receiver() = delete;
     ~rtp_receiver() override;

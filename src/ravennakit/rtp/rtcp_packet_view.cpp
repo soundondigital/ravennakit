@@ -12,7 +12,7 @@
 
 #include <fmt/core.h>
 
-#include "ravennakit/platform/byte_order.hpp"
+#include "ravennakit/core/byte_order.hpp"
 
 namespace {
 constexpr size_t kHeaderLength = 8;

@@ -15,12 +15,8 @@
 #include "exception.hpp"
 #include "log.hpp"
 
-// #define RAV_LOG_ON_ASSERT 1
-// #define RAV_THROW_EXCEPTION_ON_ASSERT 1
-// #define RAV_ABORT_ON_ASSERT 1
-
 #ifndef RAV_LOG_ON_ASSERT
-    #define RAV_LOG_ON_ASSERT 0
+    #define RAV_LOG_ON_ASSERT 1 // Enabled by default
 #endif
 
 #ifndef RAV_THROW_EXCEPTION_ON_ASSERT
