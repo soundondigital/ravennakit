@@ -18,7 +18,7 @@
 
 TEST_CASE("tcp_server", "[tcp_server]") {
     constexpr int k_num_threads = 8;
-    rav::io_context_runner runner(1);
+    rav::io_context_runner runner(k_num_threads);
 
     SECTION("Any port") {
         rav::tcp_server server(runner.io_context(), asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 0));
@@ -35,7 +35,12 @@ TEST_CASE("tcp_server | run multi threaded server", "[tcp_server]") {
     constexpr int k_num_threads = 8;
     rav::io_context_runner runner(k_num_threads);
 
-    runner.run();
+    runner.start();
+
+    for (int i = 0; i < 10; i++) {
+        rav::tcp_server server(runner.io_context(), asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 0));
+        server.stop();
+    }
 
     rav::tcp_server server(runner.io_context(), asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 0));
     server.stop();

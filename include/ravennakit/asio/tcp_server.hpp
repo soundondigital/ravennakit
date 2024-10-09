@@ -32,24 +32,20 @@ class tcp_server {
         return acceptor_.local_endpoint().port();
     }
 
+    asio::any_io_executor get_executor() {
+        return acceptor_.get_executor();
+    }
+
     void stop() {
-
-        std::unique_lock lock(mutex_);
-        asio::post(acceptor_.get_executor(), [this, lock = std::move(lock)] mutable {
-            // acceptor_.cancel();
+        if (acceptor_.is_open()) {
+            acceptor_.cancel();
             acceptor_.close();
-
-            asio::post(acceptor_.get_executor(), [lock = std::move(lock)] {});
-        });
-
-        // Wait for the task above to finish
-        std::lock_guard guard(mutex_);
+        }
     }
 
   private:
     asio::ip::tcp::acceptor acceptor_;
     std::mutex mutex_;
-
 
     void async_accept() {
         acceptor_.async_accept([this](const std::error_code ec, asio::ip::tcp::socket socket) {

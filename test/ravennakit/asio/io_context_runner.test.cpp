@@ -33,7 +33,7 @@ TEST_CASE("io_context_runner | run_to_completion_async()", "[io_context_runner]"
             });
         }
 
-        runner.run();
+        runner.start();
 
         const rav::util::chrono::timeout timeout(k_default_timeout_seconds_seconds);
         while (total != expected_total) {
@@ -49,7 +49,7 @@ TEST_CASE("io_context_runner | run_to_completion_async()", "[io_context_runner]"
         REQUIRE(expected_total == total);
     }
 
-    SECTION("Run tasks to completion asynchronously two times") {
+    SECTION("A runner cannot run a 2nd time") {
         rav::io_context_runner runner;
         size_t expected_total = 0;
         std::atomic<size_t> total = 0;
@@ -61,7 +61,7 @@ TEST_CASE("io_context_runner | run_to_completion_async()", "[io_context_runner]"
             });
         }
 
-        runner.run();
+        runner.start();
 
         const rav::util::chrono::timeout timeout(k_default_timeout_seconds_seconds);
         while (total != expected_total) {
@@ -74,32 +74,7 @@ TEST_CASE("io_context_runner | run_to_completion_async()", "[io_context_runner]"
 
         runner.stop();
 
-        REQUIRE(expected_total == total);
-
-        expected_total = 0;
-        total = 0;
-
-        for (size_t i = 0; i < 10000; i++) {
-            expected_total += i;
-            asio::post(runner.io_context(), [&total, i] {
-                total.fetch_add(i);
-            });
-        }
-
-        runner.run();
-
-        const rav::util::chrono::timeout timeout2(k_default_timeout_seconds_seconds);
-        while (total != expected_total) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            if (timeout2.expired()) {
-                FAIL("Timeout expired");
-                break;
-            }
-        }
-
-        runner.stop();
-
-        REQUIRE(expected_total == total);
+        REQUIRE_THROWS(runner.start());
     }
 }
 
@@ -108,7 +83,7 @@ TEST_CASE("io_context_runner | run_async()", "[io_context_runner]") {
         rav::io_context_runner runner;
         std::atomic post_run_called = false;
 
-        runner.run();
+        runner.start();
 
         // Give io_context some time to idle
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
