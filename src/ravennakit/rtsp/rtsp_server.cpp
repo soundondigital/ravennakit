@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "rtsp_server.hpp"
+#include "ravennakit/rtsp/rtsp_server.hpp"
 
-namespace rav {
-} // rav
+rav::rtsp_server::rtsp_server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint) :
+    acceptor_(io_context, endpoint) {}
