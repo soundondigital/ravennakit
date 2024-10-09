@@ -12,7 +12,8 @@
 
 #include "ravennakit/core/log.hpp"
 
-#include <asio/ip/tcp.hpp>
+#include <asio.hpp>
+#include <set>
 
 namespace rav {
 
@@ -25,20 +26,12 @@ class rtsp_server {
     }
 
   private:
-    asio::ip::tcp::acceptor acceptor_;
+    class connection;
 
-    void async_accept() {
-        acceptor_.async_accept([this](const std::error_code ec, asio::ip::tcp::socket socket) {
-            if (!ec) {
-                RAV_TRACE("Accepting connection from: {}", socket.remote_endpoint().address().to_string());
-            } else {
-                if (ec != asio::error::operation_aborted) {
-                    RAV_ERROR("Error accepting connection: {}", ec.message());
-                }
-            }
-            async_accept();
-        });
-    }
+    asio::ip::tcp::acceptor acceptor_;
+    std::set<std::shared_ptr<connection>> connections_;
+
+    void async_accept();
 };
 
 }  // namespace rav
