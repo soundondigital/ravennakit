@@ -11,9 +11,8 @@ definitions:
         script:
           - git submodule update --recursive --init
           - brew install pkg-config
-          - export PYTHONPATH="${PYTHONPATH}:$BITBUCKET_CLONE_DIR"
           - python3 -m pip install pygit2 boto3
-          - python3 -u ci/build.py --path-to-build build-macos --build-number $BITBUCKET_BUILD_NUMBER
+          - python3 -u build.py --path-to-build build-macos --build-number $BITBUCKET_BUILD_NUMBER
     - step: &build-linux
         runs-on:
           - 'self.hosted'
@@ -24,9 +23,8 @@ definitions:
           - git submodule update --recursive --init
           - apt-get update -y
           - apt-get -y install build-essential cmake ninja-build pkg-config python3-pip
-          - export PYTHONPATH="${PYTHONPATH}:$BITBUCKET_CLONE_DIR"
           - python3 -m pip install pygit2 boto3
-          - python3 -u ci/build.py --path-to-build build-linux --build-number $BITBUCKET_BUILD_NUMBER
+          - python3 -u build.py --path-to-build build-linux --build-number $BITBUCKET_BUILD_NUMBER
     - step: &build-windows
         runs-on:
           - 'self.hosted'
@@ -34,9 +32,8 @@ definitions:
         name: 'Build for Windows'
         script:
           - git submodule update --recursive --init
-          - $env:PYTHONPATH = "$env:PYTHONPATH;$env:BITBUCKET_CLONE_DIR"
           - python -m pip install pygit2 boto3
-          - python -u ci/build.py --path-to-build build-windows --build-number "$env:BITBUCKET_BUILD_NUMBER"
+          - python -u build.py --path-to-build build-windows --build-number "$env:BITBUCKET_BUILD_NUMBER"
     - step: &deploy-to-production
         runs-on:
           - 'self.hosted'

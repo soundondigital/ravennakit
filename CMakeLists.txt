@@ -38,6 +38,7 @@ endif ()
 ###########
 
 option(RAV_ENABLE_SPDLOG "Enable spdlog for logging" OFF)
+option(RAV_ABORT_ON_ASSERT "Abort the program when an assertion is hit" OFF)
 option(TRACY_ENABLE "Enable Tracy as profiler" OFF)
 
 ################
@@ -128,6 +129,7 @@ target_compile_definitions(ravennakit
         NOMINMAX=1
         WIN32_LEAN_AND_MEAN
         RAV_ENABLE_SPDLOG=$<BOOL:${RAV_ENABLE_SPDLOG}>
+        RAV_ABORT_ON_ASSERT=$<BOOL:${RAV_ABORT_ON_ASSERT}>
 )
 
 if (TRACY_ENABLE)
