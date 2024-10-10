@@ -23,7 +23,8 @@
 namespace rav {
 
 /**
- * A handy utility class for parsing strings.
+ * A handy utility class for parsing strings. It works like a stream, where it maintains a position in the string and
+ * subsequent calls will read from that position.
  */
 class string_parser {
   public:

@@ -32,8 +32,8 @@ class session_description {
     /**
      * Parses an SDP session description from a string.
      * @param sdp_text The SDP text to parse.
-     * @return A pair containing the parse result and the session description. When parsing fails, the session
-     * description is a default-constructed object.
+     * @return A result indicating whether the parsing was successful or not. The error will be a message explaining
+     * what went wrong.
      */
     static parse_result<session_description> parse_new(const std::string& sdp_text);
 
@@ -108,4 +108,4 @@ class session_description {
     parse_result<void> parse_attribute(std::string_view line);
 };
 
-}  // namespace rav
+}  // namespace rav::sdp
