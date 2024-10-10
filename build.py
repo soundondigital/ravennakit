@@ -116,10 +116,14 @@ def build(args):
     test_report_folder.mkdir(parents=True, exist_ok=True)
 
     def run_test(test_target, report_name):
-        subprocess.run([test_target, '--reporter',
-                        f'JUnit::out={test_report_folder}/{report_name}.xml', '--reporter',
-                        'console::out=-::colour-mode=ansi'],
-                       check=True)
+        cmd = [test_target, '--reporter',
+               f'JUnit::out={test_report_folder}/{report_name}.xml', '--reporter',
+               'console::out=-::colour-mode=ansi']
+        subprocess.run(cmd, check=True)
+
+        if platform.system() == 'Darwin' and platform.processor() == 'arm':
+            print('Run Intel test using rosetta')
+            subprocess.run(['arch', '--x86_64'] + cmd, check=True)
 
     if platform.system() == 'Darwin':
         path_to_build = build_macos(args, build_config, 'macos_universal')
