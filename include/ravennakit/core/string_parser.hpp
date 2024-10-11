@@ -257,7 +257,6 @@ class string_parser {
 
   private:
     std::string_view str_;
-    // size_t pos_ {0};
 };
 
 }  // namespace rav

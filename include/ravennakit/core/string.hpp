@@ -285,4 +285,23 @@ inline std::vector<std::string> split_string(const std::string& string, const ch
     return split_string(string, delimiter_string);
 }
 
+/**
+ * Replaces all sequences of to_replace with replacement.
+ * @param original The original string,
+ * @param to_replace The sequence to replace.
+ * @param replacement The replacement.
+ * @return Modified string, or original string if sequence was not found.
+ */
+inline std::string string_replace(const std::string& original, const std::string& to_replace, const std::string& replacement) {
+    std::string modified = original;
+    size_t pos = 0;
+
+    while ((pos = modified.find(to_replace, pos)) != std::string::npos) {
+        modified.replace(pos, to_replace.length(), replacement);
+        pos += replacement.length();  // Move past the replacement to avoid infinite loop
+    }
+
+    return modified;
+}
+
 }  // namespace rav

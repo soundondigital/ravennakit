@@ -7,6 +7,7 @@
     "catch2",
     "portaudio",
     "cli11",
-    "asio"
+    "asio",
+    "tl-expected"
   ]
 }

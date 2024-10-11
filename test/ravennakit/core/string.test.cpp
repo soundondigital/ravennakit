@@ -349,3 +349,30 @@ TEST_CASE("string | stod", "[string]") {
         REQUIRE_FALSE(rav::stod(" abc1.0").has_value());
     }
 }
+
+TEST_CASE("string | string_replace", "[string]") {
+    SECTION("Replace single char") {
+        std::string original("abcdef");
+        REQUIRE(rav::string_replace(original, "c", "!") == "ab!def");
+    }
+
+    SECTION("Replace sequence") {
+        std::string original("abcdef");
+        REQUIRE(rav::string_replace(original, "abc", "12") == "12def");
+    }
+
+    SECTION("Replace invalid") {
+        std::string original("abcdef");
+        REQUIRE(rav::string_replace(original, "ghi", "12") == "abcdef");
+    }
+
+    SECTION("Replace multiple sequences") {
+        std::string original("abcdefabcdef");
+        REQUIRE(rav::string_replace(original, "abc", "12") == "12def12def");
+    }
+
+    SECTION("Replace multiple sequences") {
+        std::string original("abcdef\r\n");
+        REQUIRE(rav::string_replace(original, "\r\n", "\n") == "abcdef\n");
+    }
+}
