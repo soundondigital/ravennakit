@@ -12,7 +12,7 @@ definitions:
           - git submodule update --recursive --init
           - brew install pkg-config
           - python3 -m pip install pygit2 boto3
-          - python3 -u build.py --path-to-build build-macos --build-number $BITBUCKET_BUILD_NUMBER
+          - python3 -u build.py --path-to-build build-macos --build-number $BITBUCKET_BUILD_NUMBER --asan --tsan
     - step: &build-linux
         runs-on:
           - 'self.hosted'

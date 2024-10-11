@@ -116,6 +116,8 @@ def build(args):
     test_report_folder.mkdir(parents=True, exist_ok=True)
 
     def run_test(test_target, report_name):
+        print(f'Running test {report_name} ({test_target})')
+
         cmd = [test_target, '--reporter',
                f'JUnit::out={test_report_folder}/{report_name}.xml', '--reporter',
                'console::out=-::colour-mode=ansi']
@@ -129,11 +131,13 @@ def build(args):
         path_to_build = build_macos(args, build_config, 'macos_universal')
         run_test(path_to_build / build_config.value / ravennakit_tests_target, 'macos_universal')
 
-        path_to_build = build_macos(args, build_config, 'macos_universal_spdlog_asan', spdlog=True, asan=True)
-        run_test(path_to_build / build_config.value / ravennakit_tests_target, 'macos_universal_spdlog_asan')
+        if args.asan:
+            path_to_build = build_macos(args, build_config, 'macos_universal_spdlog_asan', spdlog=True, asan=True)
+            run_test(path_to_build / build_config.value / ravennakit_tests_target, 'macos_universal_spdlog_asan')
 
-        path_to_build = build_macos(args, build_config, 'macos_universal_spdlog_tsan', spdlog=True, tsan=True)
-        run_test(path_to_build / build_config.value / ravennakit_tests_target, 'macos_universal_spdlog_tsan')
+        if args.tsan:
+            path_to_build = build_macos(args, build_config, 'macos_universal_spdlog_tsan', spdlog=True, tsan=True)
+            run_test(path_to_build / build_config.value / ravennakit_tests_target, 'macos_universal_spdlog_tsan')
 
     elif platform.system() == 'Windows':
         path_to_build_x64 = build_windows(args, 'x64', build_config)
@@ -144,6 +148,7 @@ def build(args):
         run_test(path_to_build_x64 / f'{ravennakit_tests_target}', 'linux_x64')
 
         # TODO: path_to_build_arm64 = build_linux(args, 'arm64', build_config)
+
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -175,6 +180,14 @@ def main():
                         help="Specify the secret for uploading to spaces")
 
     if platform.system() == 'Darwin':
+        parser.add_argument("--asan",
+                            help="Build and run with address sanitizer (separately)",
+                            action="store_true")
+
+        parser.add_argument("--tsan",
+                            help="Build and run with thread sanitizer (separately)",
+                            action="store_true")
+
         parser.add_argument("--notarize",
                             help="Notarize packages",
                             action="store_true")
