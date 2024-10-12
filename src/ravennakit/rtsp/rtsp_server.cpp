@@ -12,6 +12,7 @@
 
 #include "ravennakit/rtsp/rtsp_request.hpp"
 #include "ravennakit/rtsp/rtsp_request_parser.hpp"
+#include "ravennakit/util/exclusive_access_guard.hpp"
 
 class rav::rtsp_server::connection: public std::enable_shared_from_this<connection> {
   public:
