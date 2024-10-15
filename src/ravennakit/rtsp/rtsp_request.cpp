@@ -12,40 +12,29 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("rtsp_request", "[rtsp_request]") {
-    SECTION("Get header") {
-        rav::rtsp_request request;
-        request.headers.push_back(rav::rtsp_headers::header{"Content-Length", "123"});
-        request.headers.push_back({"Content-Type", "application/sdp"});
+void rav::rtsp_request::reset() {
+    method.clear();
+    uri.clear();
+    rtsp_version_major = {};
+    rtsp_version_minor = {};
+    headers.clear();
+    data.clear();
+}
 
-        if (const std::string* content_length = request.headers.get_header_value("Content-Length"); content_length) {
-            REQUIRE(*content_length == "123");
-        } else {
-            FAIL("Content-Length header not found");
-        }
+std::string rav::rtsp_request::encode() {
+    std::string out;
+    encode_append(out);
+    return out;
+}
 
-        if (const std::string* content_type = request.headers.get_header_value("Content-Type"); content_type) {
-            REQUIRE(*content_type == "application/sdp");
-        } else {
-            FAIL("Content-Type header not found");
-        }
-
-        REQUIRE(request.headers.get_header_value("Content-Size") == nullptr);
+void rav::rtsp_request::encode_append(std::string& out) {
+    fmt::format_to(
+        std::back_inserter(out), "{} {} RTSP/{}.{}\r\n", method, uri, rtsp_version_major, rtsp_version_minor
+    );
+    if (!data.empty()) {
+        headers.emplace_back({"Content-Length", std::to_string(data.size())});
     }
-
-    SECTION("Get content length") {
-        rav::rtsp_request request;
-        request.headers.push_back({"Content-Length", "123"});
-
-        if (auto content_length = request.headers.get_content_length(); content_length) {
-            REQUIRE(*content_length == 123);
-        } else {
-            FAIL("Content-Length header not found");
-        }
-    }
-
-    SECTION("Get content length while there is no Content-Length header") {
-        rav::rtsp_request request;
-        REQUIRE(request.headers.get_content_length() == std::nullopt);
-    }
+    headers.encode_append(out);
+    out += "\r\n";
+    out += data;
 }

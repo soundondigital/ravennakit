@@ -31,14 +31,18 @@ struct rtsp_request {
     /**
      * Resets the request to its initial state.
      */
-    void reset() {
-        method.clear();
-        uri.clear();
-        rtsp_version_major = {};
-        rtsp_version_minor = {};
-        headers.clear();
-        data.clear();
-    }
+    void reset();
+
+    /**
+     * @return The encoded request as a string.
+     */
+    std::string encode();
+
+    /**
+     * Encoded the request into a string.
+     * @param out The output string to append to.
+     */
+    void encode_append(std::string& out);
 };
 
 }  // namespace rav

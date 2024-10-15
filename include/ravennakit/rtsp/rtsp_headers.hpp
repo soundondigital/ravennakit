@@ -14,6 +14,7 @@
 
 #include <string>
 #include <vector>
+#include <fmt/format.h>
 
 namespace rav {
 
@@ -153,6 +154,16 @@ class rtsp_headers {
      */
     header& back() {
         return headers_.back();
+    }
+
+    /**
+     * Encodes the current headers in a series of key: value\r\n lines.
+     * @param output The string to append to.
+     */
+    void encode_append(std::string& output) const {
+        for (const auto& header : headers_) {
+            fmt::format_to(std::back_inserter(output), "{}: {}\r\n", header.name, header.value);
+        }
     }
 
   private:
