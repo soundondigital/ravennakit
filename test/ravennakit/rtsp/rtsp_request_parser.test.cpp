@@ -15,7 +15,7 @@
 namespace {
 
 /**
- * Returns a vector with copies of original, one with the original and one with \r\n replaced with \n.
+ * Returns a vector with a copy of the original, and a copy with \r\n replaced with \n.
  * @param original The original string.
  * @return Vector of strings.
  */

@@ -73,6 +73,18 @@ class rtsp_headers {
     }
 
     /**
+     * Finds a header by name and returns its value. If header is not found, an empty string will be returned.
+     * @param name The name of the header.
+     * @return The value of the header if found, otherwise an empty string.
+     */
+    std::string operator[](const char* name) const {
+        if (const std::string* value = get_header_value(name); value) {
+            return *value;
+        }
+        return "";
+    }
+
+    /**
      * @return The headers.
      */
     [[nodiscard]] const std::vector<header>& headers() const {

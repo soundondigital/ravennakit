@@ -11,18 +11,17 @@
 #pragma once
 
 #include "rtsp_headers.hpp"
-#include "ravennakit/core/string_parser.hpp"
 
 #include <string>
 
 namespace rav {
 
 /**
- * Structure that represents an RTSP request.
+ * Structure that represents an RTSP response.
  */
-struct rtsp_request {
-    std::string method;
-    std::string uri;
+struct rtsp_response {
+    int status_code{};
+    std::string reason_phrase;
     int rtsp_version_major{};
     int rtsp_version_minor{};
     rtsp_headers headers;
@@ -32,8 +31,8 @@ struct rtsp_request {
      * Resets the request to its initial state.
      */
     void reset() {
-        method.clear();
-        uri.clear();
+        status_code = {};
+        reason_phrase.clear();
         rtsp_version_major = {};
         rtsp_version_minor = {};
         headers.clear();
@@ -41,4 +40,4 @@ struct rtsp_request {
     }
 };
 
-}  // namespace rav
+}

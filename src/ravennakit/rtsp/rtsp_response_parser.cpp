@@ -8,37 +8,10 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/rtsp/rtsp_request_parser.hpp"
+#include "ravennakit/rtsp/rtsp_response_parser.hpp"
 
-rav::rtsp_request_parser::result rav::rtsp_request_parser::consume(const char c) {
+rav::rtsp_parser_base::result rav::rtsp_response_parser::consume(const char c) {
     switch (state_) {
-        case state::method_start:
-            if (!is_char(c) || is_ctl(c) || is_tspecial(c)) {
-                return result::bad_method;
-            }
-            state_ = state::method;
-            request_.method.push_back(c);
-            return result::indeterminate;
-        case state::method:
-            if (c == ' ') {
-                state_ = state::uri;
-                return result::indeterminate;
-            }
-            if (!is_char(c) || is_ctl(c) || is_tspecial(c)) {
-                return result::bad_method;
-            }
-            request_.method.push_back(c);
-            return result::indeterminate;
-        case state::uri:
-            if (c == ' ') {
-                state_ = state::rtsp_r;
-                return result::indeterminate;
-            }
-            if (is_ctl(c)) {
-                return result::bad_uri;
-            }
-            request_.uri.push_back(c);
-            return result::indeterminate;
         case state::rtsp_r:
             if (c != 'R') {
                 return result::bad_protocol;
@@ -67,38 +40,75 @@ rav::rtsp_request_parser::result rav::rtsp_request_parser::consume(const char c)
             if (c != '/') {
                 return result::bad_protocol;
             }
-            state_ = state::version_major;
+            state_ = state::rtsp_1;
             return result::indeterminate;
-        case state::version_major:
+        case state::rtsp_1:
             if (c != '1') {
                 return result::bad_version;
             }
-            request_.rtsp_version_major = 1;
-            state_ = state::version_dot;
+            response_.rtsp_version_major = 1;
+            state_ = state::rtsp_dot;
             return result::indeterminate;
-        case state::version_dot:
+        case state::rtsp_dot:
             if (c != '.') {
                 return result::bad_version;
             }
-            state_ = state::version_minor;
+            state_ = state::rtsp_0;
             return result::indeterminate;
-        case state::version_minor:
+        case state::rtsp_0:
             if (c != '0') {
                 return result::bad_version;
             }
-            request_.rtsp_version_minor = 0;
-            state_ = state::expecting_newline_1;
+            response_.rtsp_version_minor = 0;
+            state_ = state::rtsp_space;
             return result::indeterminate;
-        case state::expecting_newline_1:
+        case state::rtsp_space:
+            if (c != ' ') {
+                return result::bad_version;
+            }
+            state_ = state::status_code_0;
+            return result::indeterminate;
+        case state::status_code_0:
+            if (!is_digit(c)) {
+                return result::bad_status_code;
+            }
+            response_.status_code += (c - '0') * 100;
+            state_ = state::status_code_1;
+            return result::indeterminate;
+        case state::status_code_1:
+            if (!is_digit(c)) {
+                return result::bad_status_code;
+            }
+            response_.status_code += (c - '0') * 10;
+            state_ = state::status_code_2;
+            return result::indeterminate;
+        case state::status_code_2:
+            if (!is_digit(c)) {
+                return result::bad_status_code;
+            }
+            response_.status_code += c - '0';
+            state_ = state::status_code_space;
+            return result::indeterminate;
+        case state::status_code_space:
+            if (c != ' ') {
+                return result::bad_status_code;
+            }
+            state_ = state::reason_phrase;
+            return result::indeterminate;
+        case state::reason_phrase:
+            if (c == '\r') {
+                state_ = state::reason_phrase;
+                return result::indeterminate;
+            }
             if (c == '\n') {
                 state_ = state::header_start;
                 return result::indeterminate;
             }
-            if (c == '\r') {
-                state_ = state::expecting_newline_1;
-                return result::indeterminate;
+            if (!is_char(c) && !is_ctl(c) && !is_tspecial(c)) {
+                return result::bad_reason_phrase;
             }
-            return result::bad_header;
+            response_.reason_phrase.push_back(c);
+            return result::indeterminate;
         case state::header_start:
             if (c == ' ' || c == '\t') {
                 // Folded header
@@ -116,7 +126,7 @@ rav::rtsp_request_parser::result rav::rtsp_request_parser::consume(const char c)
                 return result::bad_header;
             }
             state_ = state::header_name;
-            request_.headers.emplace_back().name.push_back(c);
+            response_.headers.emplace_back().name.push_back(c);
             return result::indeterminate;
         case state::header_name:
             if (c == ':') {
@@ -126,7 +136,7 @@ rav::rtsp_request_parser::result rav::rtsp_request_parser::consume(const char c)
             if (!is_char(c) || is_ctl(c) || is_tspecial(c)) {
                 return result::bad_header;
             }
-            request_.headers.back().name.push_back(c);
+            response_.headers.back().name.push_back(c);
             return result::indeterminate;
         case state::space_before_header_value:
             if (c == ' ') {
@@ -145,7 +155,7 @@ rav::rtsp_request_parser::result rav::rtsp_request_parser::consume(const char c)
             if (is_ctl(c)) {
                 return result::bad_header;
             }
-            request_.headers.back().value.push_back(c);
+            response_.headers.back().value.push_back(c);
             return result::indeterminate;
     }
 
