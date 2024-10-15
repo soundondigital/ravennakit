@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "platform.hpp"
+
 #ifndef RAV_ENABLE_SPDLOG
     #define RAV_ENABLE_SPDLOG 0
 #endif
@@ -17,6 +19,10 @@
 #if RAV_ENABLE_SPDLOG
 
     #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+
+#if RAV_MACOS
+    #define SPDLOG_FUNCTION __PRETTY_FUNCTION__
+#endif
 
     #include <spdlog/spdlog.h>
 

@@ -17,25 +17,24 @@
 
 namespace {
 
-bool violates_exclusive_access() {
+void violates_exclusive_access() {
     std::atomic counter {0};
     const rav::exclusive_access_guard exclusive_access_guard1(counter);
+    RAV_ASSERT_EXCLUSIVE_ACCESS(counter);
     const rav::exclusive_access_guard exclusive_access_guard2(counter);
-    return exclusive_access_guard1.violated() || exclusive_access_guard2.violated();
 }
 
-bool exclusive_access() {
+void exclusive_access() {
     static std::atomic counter {0};
     const rav::exclusive_access_guard exclusive_access_guard(counter);
     std::this_thread::sleep_for(std::chrono::milliseconds(1));  // Introduce a delay to increase the chance
-    return exclusive_access_guard.violated();
 }
 
 }  // namespace
 
 TEST_CASE("exclusive_access_guard", "[exclusive_access_guard]") {
     SECTION("Exclusive access violation") {
-        REQUIRE(violates_exclusive_access());
+        REQUIRE_THROWS(violates_exclusive_access());
     }
 
     SECTION("Trigger exclusive access violation by running two threads") {
@@ -43,7 +42,9 @@ TEST_CASE("exclusive_access_guard", "[exclusive_access_guard]") {
 
         auto function = [&keep_going]() {
             while (keep_going) {
-                if (exclusive_access()) {
+                try {
+                    exclusive_access();
+                } catch (const std::runtime_error&) {
                     keep_going = false;
                     return true;
                 }

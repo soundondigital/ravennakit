@@ -12,12 +12,17 @@
 
 #include <exception>
 #include <string>
+#include "platform.hpp"
 
 /**
  * Define the function name macro if it is not already defined.
  */
 #ifndef RAV_FUNCTION
-    #define RAV_FUNCTION static_cast<const char*>(__FUNCTION__)
+    #if RAV_MACOS
+        #define RAV_FUNCTION __PRETTY_FUNCTION__
+    #else
+        #define RAV_FUNCTION static_cast<const char*>(__FUNCTION__)
+    #endif
 #endif
 
 #define RAV_THROW_EXCEPTION(msg) throw rav::exception(msg, __FILE__, __LINE__, RAV_FUNCTION)
