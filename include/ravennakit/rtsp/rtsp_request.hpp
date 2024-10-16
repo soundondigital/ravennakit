@@ -36,13 +36,14 @@ struct rtsp_request {
     /**
      * @return The encoded request as a string.
      */
-    std::string encode();
+    std::string encode(const char* newline = "\r\n");
 
     /**
      * Encoded the request into a string.
      * @param out The output string to append to.
+     * @param newline
      */
-    void encode_append(std::string& out);
+    void encode_append(std::string& out, const char* newline = "\r\n");
 };
 
 }  // namespace rav

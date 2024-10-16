@@ -24,7 +24,7 @@ class rtsp_client {
 
   private:
     asio::ip::tcp::socket socket_;
-    std::string input_data_ = std::string(2048, '\0');
+    std::string input_data_;
     rtsp_response response_;
     rtsp_response_parser response_parser_ {response_};
 

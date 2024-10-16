@@ -21,20 +21,20 @@ void rav::rtsp_request::reset() {
     data.clear();
 }
 
-std::string rav::rtsp_request::encode() {
+std::string rav::rtsp_request::encode(const char* newline) {
     std::string out;
-    encode_append(out);
+    encode_append(out, newline);
     return out;
 }
 
-void rav::rtsp_request::encode_append(std::string& out) {
+void rav::rtsp_request::encode_append(std::string& out, const char* newline) {
     fmt::format_to(
-        std::back_inserter(out), "{} {} RTSP/{}.{}\r\n", method, uri, rtsp_version_major, rtsp_version_minor
+        std::back_inserter(out), "{} {} RTSP/{}.{}{}", method, uri, rtsp_version_major, rtsp_version_minor, newline
     );
     if (!data.empty()) {
         headers.emplace_back({"Content-Length", std::to_string(data.size())});
     }
     headers.encode_append(out);
-    out += "\r\n";
+    out += newline;
     out += data;
 }
