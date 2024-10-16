@@ -91,12 +91,12 @@ rav::rtsp_parser::result rav::rtsp_parser::parse(string_stream& input) {
             constexpr auto rtsp_response_prefix = std::string_view("RTSP/");
 
             if (starts_with(start_line_, rtsp_response_prefix)) {
-                if (const auto result = handle_response(); result != result::good) {
-                    return result;
+                if (const auto r = handle_response(); r != result::good) {
+                    return r;
                 }
             } else {
-                if (const auto result = handle_request(); result != result::good) {
-                    return result;
+                if (const auto r = handle_request(); r != result::good) {
+                    return r;
                 }
             }
 

@@ -37,9 +37,9 @@ class rtsp_headers {
      * @return The value of the header if found, otherwise nullptr.
      */
     [[nodiscard]] const header* find_header(const std::string& name) const {
-        for (auto& header : headers_) {
-            if (string_compare_case_insensitive(header.name, name)) {
-                return &header;
+        for (auto& h : headers_) {
+            if (string_compare_case_insensitive(h.name, name)) {
+                return &h;
             }
         }
         return nullptr;
@@ -49,8 +49,8 @@ class rtsp_headers {
      * @returns Tries to find the Content-Length header and returns its value as integer.
      */
     [[nodiscard]] std::optional<size_t> get_content_length() const {
-        if (const auto* header = find_header("content-length"); header) {
-            return rav::ston<size_t>(header->value);
+        if (const auto* h = find_header("content-length"); h) {
+            return rav::ston<size_t>(h->value);
         }
         return std::nullopt;
     }
@@ -79,8 +79,8 @@ class rtsp_headers {
      * @return The value of the header if found, otherwise an empty string.
      */
     std::string operator[](const char* name) const {
-        if (const auto* header = find_header(name); header) {
-            return header->value;
+        if (const auto* h = find_header(name); h) {
+            return h->value;
         }
         return "";
     }
@@ -119,9 +119,9 @@ class rtsp_headers {
      * @param value The value of the header.
      */
     void set(const char* name, const char* value) {
-        for (auto& header : headers_) {
-            if (header.name == name) {
-                header.value = value;
+        for (auto& h : headers_) {
+            if (h.name == name) {
+                h.value = value;
                 return;
             }
         }
@@ -130,16 +130,16 @@ class rtsp_headers {
 
     /**
      * Adds given header to the end.
-     * @param header The header to add.
+     * @param new_header The header to add.
      */
-    void push_back(header header) {
+    void push_back(header new_header) {
         for (auto& h : headers_) {
-            if (string_compare_case_insensitive(h.name, header.name)) {
-                h.value = std::move(header.value);
+            if (string_compare_case_insensitive(h.name, new_header.name)) {
+                h.value = std::move(new_header.value);
                 return;
             }
         }
-        headers_.push_back(std::move(header));
+        headers_.push_back(std::move(new_header));
     }
 
     /**
@@ -152,17 +152,17 @@ class rtsp_headers {
 
     /**
      * Adds given header at the end of the array.
-     * @param header The header to add.
+     * @param new_header The header to add.
      * @return The newly added header.
      */
-    header& emplace_back(header&& header) {
+    header& emplace_back(header&& new_header) {
         for (auto& h : headers_) {
-            if (string_compare_case_insensitive(h.name, header.name)) {
-                h.value = std::move(header.value);
+            if (string_compare_case_insensitive(h.name, new_header.name)) {
+                h.value = std::move(new_header.value);
                 return h;
             }
         }
-        return headers_.emplace_back(std::move(header));
+        return headers_.emplace_back(std::move(new_header));
     }
 
     /**
@@ -179,11 +179,11 @@ class rtsp_headers {
      * @param skip_content_length If true, a Content-Length header will be skipped, if it exists.
      */
     void encode_append(std::string& output, const bool skip_content_length) const {
-        for (const auto& header : headers_) {
-            if (skip_content_length && string_compare_case_insensitive(header.name, "content-length")) {
+        for (const auto& h : headers_) {
+            if (skip_content_length && string_compare_case_insensitive(h.name, "content-length")) {
                 continue;
             }
-            fmt::format_to(std::back_inserter(output), "{}: {}\r\n", header.name, header.value);
+            fmt::format_to(std::back_inserter(output), "{}: {}\r\n", h.name, h.value);
         }
     }
 
@@ -194,8 +194,8 @@ class rtsp_headers {
      */
     [[nodiscard]] std::string to_string() const {
         std::string out;
-        for (const auto& header : headers_) {
-            fmt::format_to(std::back_inserter(out), "{}: {}\n", header.name, header.value);
+        for (const auto& h : headers_) {
+            fmt::format_to(std::back_inserter(out), "{}: {}\n", h.name, h.value);
         }
         return out;
     }
