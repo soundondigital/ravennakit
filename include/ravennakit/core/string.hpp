@@ -22,11 +22,11 @@ namespace rav {
 /**
  * Tests whether given text starts with a certain string.
  * @param text The text to test.
- * @param start
- * @return
+ * @param starts_with The string to test for.
+ * @return True if text starts with starts_with, false otherwise.
  */
-inline bool starts_with(const std::string_view text, const std::string_view start) {
-    return text.rfind(start, 0) == 0;
+inline bool starts_with(const std::string_view text, const std::string_view starts_with) {
+    return text.rfind(starts_with, 0) == 0;
 }
 
 /**

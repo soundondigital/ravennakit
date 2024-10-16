@@ -1,0 +1,200 @@
+/*
+ * Owllab License Agreement
+ *
+ * This software is provided by Owllab and may not be used, copied, modified,
+ * merged, published, distributed, sublicensed, or sold without a valid and
+ * explicit agreement with Owllab.
+ *
+ * Copyright (c) 2024 Owllab. All rights reserved.
+ */
+
+#include "ravennakit/rtsp/rtsp_parser.hpp"
+
+rav::rtsp_parser::result rav::rtsp_parser::parse(string_stream& input) {
+    while (!input.empty()) {
+        if (state_ == state::start) {
+            const auto start_line = input.read_until_newline();
+            if (!start_line) {
+                return result::indeterminate;
+            }
+            if (start_line->empty()) {
+                return result::unexpected_blank_line;
+            }
+            start_line_ = *start_line;
+
+            state_ = state::headers;
+        }
+
+        if (state_ == state::headers) {
+            for (int i = 0; i < RAV_LOOP_UPPER_BOUND; ++i) {
+                const auto header_line = input.read_until_newline();
+                if (!header_line) {
+                    return result::indeterminate;
+                }
+
+                // End of headers
+                if (header_line->empty()) {
+                    state_ = state::data;
+                    break;
+                }
+
+                // Folded headers
+                if (starts_with(*header_line, " ") || starts_with(*header_line, "\t")) {
+                    if (headers_.empty()) {
+                        return result::bad_header;
+                    }
+                    if (headers_.back().name.empty()) {
+                        return result::bad_header;
+                    }
+                    headers_.back().value += header_line->substr(1);
+                    continue; // Next header line
+                }
+
+                rtsp_headers::header h;
+                string_parser header_parser(*header_line);
+
+                // Header name
+                if (auto name = header_parser.read_until(':')) {
+                    h.name = *name;
+                } else {
+                    return result::bad_header;
+                }
+
+                if (!header_parser.skip(' ')) {
+                    return result::bad_header;
+                }
+
+                // Header value
+                if (auto value = header_parser.read_until_end()) {
+                    h.value = *value;
+                } else {
+                    return result::bad_header;
+                }
+
+                headers_.emplace_back(std::move(h));
+            }
+        }
+
+        if (state_ == state::data) {
+            if (const auto length = headers_.get_content_length()) {
+                if (length > 0) {
+                    if (length > input.size()) {
+                        return result::indeterminate;
+                    }
+                    data_ = input.read(*length);
+                }
+            }
+            state_ = state::complete;
+        }
+
+        if (state_ == state::complete) {
+            constexpr auto rtsp_response_prefix = std::string_view("RTSP/");
+
+            if (starts_with(start_line_, rtsp_response_prefix)) {
+                if (const auto result = handle_response(); result != result::good) {
+                    return result;
+                }
+            } else {
+                if (const auto result = handle_request(); result != result::good) {
+                    return result;
+                }
+            }
+
+            state_ = state::start;
+        }
+    }
+
+    return result::good;
+}
+
+void rav::rtsp_parser::reset() noexcept {
+    event_emitter::reset();
+    state_ = state::start;
+    start_line_.clear();
+    headers_.clear();
+    data_.clear();
+    request_.reset();
+    response_.reset();
+}
+
+rav::rtsp_parser::result rav::rtsp_parser::handle_response() {
+    string_parser parser(start_line_);
+    parser.skip("RTSP/");
+    const auto version_major = parser.read_int<int32_t>();
+    if (!version_major) {
+        return result::bad_version;
+    }
+    if (!parser.skip('.')) {
+        return result::bad_version;
+    }
+    const auto version_minor = parser.read_int<int32_t>();
+    if (!version_minor) {
+        return result::bad_version;
+    }
+    if (!parser.skip(' ')) {
+        return result::bad_status_code;
+    }
+    const auto status_code = parser.read_int<int32_t>();
+    if (!status_code) {
+        return result::bad_status_code;
+    }
+    if (!parser.skip(' ')) {
+        return result::bad_reason_phrase;
+    }
+    const auto reason_phrase = parser.read_until_end();
+    if (!reason_phrase) {
+        return result::bad_reason_phrase;
+    }
+
+    // Assemble response
+    response_.rtsp_version_major = *version_major;
+    response_.rtsp_version_minor = *version_minor;
+    response_.status_code = *status_code;
+    response_.reason_phrase = *reason_phrase;
+
+    std::swap(response_.headers, headers_);
+    std::swap(response_.data, data_);
+
+    emit(response_);
+
+    return result::good;
+}
+
+rav::rtsp_parser::result rav::rtsp_parser::handle_request() {
+    string_parser parser(start_line_);
+    const auto method = parser.read_until(' ');
+    if (!method) {
+        return result::bad_method;
+    }
+    const auto uri = parser.read_until(' ');
+    if (!uri) {
+        return result::bad_uri;
+    }
+    if (!parser.skip("RTSP/")) {
+        return result::bad_protocol;
+    }
+    const auto version_major = parser.read_int<int32_t>();
+    if (!version_major) {
+        return result::bad_version;
+    }
+    if (!parser.skip('.')) {
+        return result::bad_version;
+    }
+    const auto version_minor = parser.read_int<int32_t>();
+    if (!version_minor) {
+        return result::bad_version;
+    }
+
+    // Assemble request
+    request_.method = *method;
+    request_.uri = *uri;
+    request_.rtsp_version_major = *version_major;
+    request_.rtsp_version_minor = *version_minor;
+
+    std::swap(request_.headers, headers_);
+    std::swap(request_.data, data_);
+
+    emit(request_);
+
+    return result::good;
+}

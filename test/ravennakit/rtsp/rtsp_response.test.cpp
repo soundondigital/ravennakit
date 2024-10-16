@@ -42,8 +42,13 @@ TEST_CASE("rtsp_response | encode", "[rtsp_response]") {
     res.headers.push_back({"Accept", "application/sdp"});
     res.data = "Hello, World!";
 
-    auto encoded = res.encode();
     REQUIRE(
-        encoded == "RTSP/1.0 200 OK\r\nCSeq: 1\r\nAccept: application/sdp\r\nContent-Length: 13\r\n\r\nHello, World!"
+        res.encode() == "RTSP/1.0 200 OK\r\nCSeq: 1\r\nAccept: application/sdp\r\ncontent-length: 13\r\n\r\nHello, World!"
+    );
+
+    res.headers.push_back({"Content-Length", "555"});
+
+    REQUIRE(
+         res.encode() == "RTSP/1.0 200 OK\r\nCSeq: 1\r\nAccept: application/sdp\r\ncontent-length: 13\r\n\r\nHello, World!"
     );
 }

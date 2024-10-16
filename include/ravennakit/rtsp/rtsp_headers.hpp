@@ -48,9 +48,9 @@ class rtsp_headers {
     /**
      * @returns Tries to find the Content-Length header and returns its value as integer.
      */
-    [[nodiscard]] std::optional<long> get_content_length() const {
+    [[nodiscard]] std::optional<size_t> get_content_length() const {
         if (const auto* header = find_header("content-length"); header) {
-            return rav::ston<long>(header->value);
+            return rav::ston<size_t>(header->value);
         }
         return std::nullopt;
     }
@@ -174,10 +174,15 @@ class rtsp_headers {
 
     /**
      * Encodes the current headers in a series of key: value\r\n lines.
+     * If there is a Content-Length header, it will be skipped.
      * @param output The string to append to.
+     * @param skip_content_length If true, a Content-Length header will be skipped, if it exists.
      */
-    void encode_append(std::string& output) const {
+    void encode_append(std::string& output, const bool skip_content_length) const {
         for (const auto& header : headers_) {
+            if (skip_content_length && string_compare_case_insensitive(header.name, "content-length")) {
+                continue;
+            }
             fmt::format_to(std::back_inserter(output), "{}: {}\r\n", header.name, header.value);
         }
     }

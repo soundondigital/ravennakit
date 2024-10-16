@@ -79,6 +79,6 @@ TEST_CASE("rtsp_request | encode", "[rtsp_request]") {
 
     auto encoded = req.encode();
     REQUIRE(
-        encoded == "OPTIONS * RTSP/1.0\r\nCSeq: 1\r\nAccept: application/sdp\r\nContent-Length: 13\r\n\r\nHello, World!"
+        encoded == "OPTIONS * RTSP/1.0\r\nCSeq: 1\r\nAccept: application/sdp\r\ncontent-length: 13\r\n\r\nHello, World!"
     );
 }

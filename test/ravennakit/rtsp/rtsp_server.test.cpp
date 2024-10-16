@@ -14,7 +14,7 @@
 #include <catch2/catch_all.hpp>
 
 namespace {
-constexpr int k_num_threads = 8;
+// constexpr int k_num_threads = 8;
 }
 
 TEST_CASE("rtsp_server", "[rtsp_server]") {

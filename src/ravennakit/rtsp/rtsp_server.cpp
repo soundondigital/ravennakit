@@ -11,7 +11,6 @@
 #include "ravennakit/rtsp/rtsp_server.hpp"
 
 #include "ravennakit/rtsp/rtsp_request.hpp"
-#include "ravennakit/rtsp/rtsp_request_parser.hpp"
 #include "ravennakit/util/exclusive_access_guard.hpp"
 
 class rav::rtsp_server::connection: public std::enable_shared_from_this<connection> {
@@ -24,50 +23,51 @@ class rav::rtsp_server::connection: public std::enable_shared_from_this<connecti
     asio::ip::tcp::socket socket_;
     std::string input_data_ {};
     rtsp_request request_;
-    rtsp_request_parser request_parser_ {request_};
 
     void do_read() {
         auto self(shared_from_this());
         socket_.async_read_some(
             asio::buffer(input_data_),
-            [this, self](const std::error_code ec, const std::size_t bytes_transferred) {
+            [self](const std::error_code ec, const std::size_t bytes_transferred) {
                 if (ec) {
                     RAV_ERROR("Read error: {}", ec.message());
                     // TODO: Close the connection?
                     return;
                 }
 
-                RAV_ASSERT(bytes_transferred <= input_data_.size(), "Invalid number of bytes transferred");
+                std::ignore = bytes_transferred;
 
-                RAV_ASSERT(
-                    bytes_transferred == input_data_.size(),
-                    "Assuming bytes_transferred == input_data_.size(). If not true, passing the end iterator on the next line is incorrect."
-                );
-
-                auto input_begin = input_data_.begin();
-                const auto input_end = input_data_.end();
-
-                while (true) {
-                    auto [result, begin] = request_parser_.parse(input_begin, input_end);
-
-                    if (result == rtsp_request_parser::result::good) {
-                        // TODO: We got a full request. Call some subscriber or something.
-                        request_parser_.reset();
-                    } else if (result != rtsp_request_parser::result::indeterminate) {
-                        // TODO: Send back 400 Bad Request and terminate the connection
-                        RAV_ERROR("Error: invalid header");
-                        return;
-                    }
-
-                    if (begin < input_end) {
-                        input_begin = begin;
-                        continue;  // There is still data available to read, do another round.
-                    }
-
-                    break;  // Done reading
-                }
-
-                do_read();
+                // RAV_ASSERT(bytes_transferred <= input_data_.size(), "Invalid number of bytes transferred");
+                //
+                // RAV_ASSERT(
+                //     bytes_transferred == input_data_.size(),
+                //     "Assuming bytes_transferred == input_data_.size(). If not true, passing the end iterator on the next line is incorrect."
+                // );
+                //
+                // auto input_begin = input_data_.begin();
+                // const auto input_end = input_data_.end();
+                //
+                // while (true) {
+                //     auto [result, begin] = request_parser_.parse(input_begin, input_end);
+                //
+                //     if (result == rtsp_request_parser::result::good) {
+                //         // TODO: We got a full request. Call some subscriber or something.
+                //         request_parser_.reset();
+                //     } else if (result != rtsp_request_parser::result::indeterminate) {
+                //         // TODO: Send back 400 Bad Request and terminate the connection
+                //         RAV_ERROR("Error: invalid header");
+                //         return;
+                //     }
+                //
+                //     if (begin < input_end) {
+                //         input_begin = begin;
+                //         continue;  // There is still data available to read, do another round.
+                //     }
+                //
+                //     break;  // Done reading
+                // }
+                //
+                // do_read();
             }
         );
     }
@@ -81,9 +81,9 @@ rav::rtsp_server::rtsp_server(asio::io_context& io_context, const asio::ip::tcp:
 void rav::rtsp_server::async_close() {
     std::promise<void> promise;
     auto future = promise.get_future();
-    asio::post(acceptor_.get_executor(), [this, promise = std::move(promise)]() mutable {
+    asio::post(acceptor_.get_executor(), [this, p = std::move(promise)]() mutable {
         acceptor_.close();
-        promise.set_value();
+        p.set_value();
     });
     future.wait();
 }

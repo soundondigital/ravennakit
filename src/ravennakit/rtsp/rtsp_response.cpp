@@ -10,21 +10,21 @@
 
 #include "ravennakit/rtsp/rtsp_response.hpp"
 
-std::string rav::rtsp_response::encode(const char* newline) {
+std::string rav::rtsp_response::encode(const char* newline) const {
     std::string out;
     encode_append(out, newline);
     return out;
 }
 
-void rav::rtsp_response::encode_append(std::string& out, const char* newline) {
+void rav::rtsp_response::encode_append(std::string& out, const char* newline) const {
     fmt::format_to(
         std::back_inserter(out), "RTSP/{}.{} {} {}{}", rtsp_version_major, rtsp_version_minor, status_code,
         reason_phrase, newline
     );
+    headers.encode_append(out, true);
     if (!data.empty()) {
-        headers.emplace_back({"Content-Length", std::to_string(data.size())});
+        fmt::format_to(std::back_inserter(out), "content-length: {}{}", data.size(), newline);
     }
-    headers.encode_append(out);
     out += newline;
     out += data;
 }

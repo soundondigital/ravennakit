@@ -52,7 +52,7 @@ class event_emitter {
     /**
      * Disconnects all listeners.
      */
-    void reset() noexcept {
+    virtual void reset() noexcept {
         (reset<Event>(), ...);
     }
 

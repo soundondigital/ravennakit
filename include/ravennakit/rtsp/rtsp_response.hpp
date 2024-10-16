@@ -39,8 +39,8 @@ struct rtsp_response {
         data.clear();
     }
 
-    std::string encode(const char* newline = "\r\n");
-    void encode_append(std::string& out, const char* newline = "\r\n");
+    std::string encode(const char* newline = "\r\n") const;
+    void encode_append(std::string& out, const char* newline = "\r\n") const;
 };
 
 }

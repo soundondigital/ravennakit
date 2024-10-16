@@ -26,6 +26,12 @@ class string_stream {
     string_stream() = default;
 
     /**
+     * Constructs a string_stream with the given data.
+     * @param data The initial data.
+     */
+    explicit string_stream(std::string data) : data_(std::move(data)), write_position_(data_.size()) {}
+
+    /**
      * Prepares space in the buffer for writing. The returned buffer_view is valid until the next call to prepare or
      * commit. The buffer will be resized if necessary to accommodate the requested size. After writing to the prepared
      * space, call commit to finalize the operation.
@@ -114,6 +120,16 @@ class string_stream {
             substr.remove_suffix(1);  // Remove CR from CRLF
         }
         return substr;
+    }
+
+    /**
+     * Tests if the next available data starts with the given prefix, without consuming any data.
+     * @param prefix The prefix to test.
+     * @return True if the next available data starts with the prefix.
+     */
+    [[nodiscard]] bool starts_with(const std::string_view prefix) const {
+        return size() >= prefix.size()
+            && std::equal(prefix.begin(), prefix.end(), data_.begin() + static_cast<long>(read_position_));
     }
 
     /**

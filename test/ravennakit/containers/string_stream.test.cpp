@@ -76,3 +76,19 @@ TEST_CASE("string_stream | read until newline", "[string_stream]") {
         REQUIRE(!line4);
     }
 }
+
+TEST_CASE("string_stream | reset", "[string_stream]") {
+    rav::string_stream stream;
+    stream.write("test");
+    REQUIRE(stream.size() == 4);
+    stream.reset();
+    REQUIRE(stream.empty());
+}
+
+TEST_CASE("string_stream | starts with", "[string_stream]") {
+    rav::string_stream stream;
+    stream.write("Hello World");
+    REQUIRE(stream.starts_with("Hello"));
+    REQUIRE(stream.starts_with("Hello World"));
+    REQUIRE(!stream.starts_with("Hello World!"));
+}
