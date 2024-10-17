@@ -25,7 +25,8 @@ class rtsp_server {
         return acceptor_.local_endpoint().port();
     }
 
-    void async_close();
+    void close();
+    void cancel();
 
   private:
     class connection;

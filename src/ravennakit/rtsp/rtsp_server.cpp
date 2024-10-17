@@ -41,7 +41,8 @@ class rav::rtsp_server::connection: public std::enable_shared_from_this<connecti
                 //
                 // RAV_ASSERT(
                 //     bytes_transferred == input_data_.size(),
-                //     "Assuming bytes_transferred == input_data_.size(). If not true, passing the end iterator on the next line is incorrect."
+                //     "Assuming bytes_transferred == input_data_.size(). If not true, passing the end iterator on the
+                //     next line is incorrect."
                 // );
                 //
                 // auto input_begin = input_data_.begin();
@@ -78,14 +79,12 @@ rav::rtsp_server::rtsp_server(asio::io_context& io_context, const asio::ip::tcp:
     async_accept();
 }
 
-void rav::rtsp_server::async_close() {
-    std::promise<void> promise;
-    auto future = promise.get_future();
-    asio::post(acceptor_.get_executor(), [this, p = std::move(promise)]() mutable {
-        acceptor_.close();
-        p.set_value();
-    });
-    future.wait();
+void rav::rtsp_server::close() {
+    acceptor_.close();
+}
+
+void rav::rtsp_server::cancel() {
+    acceptor_.cancel();
 }
 
 void rav::rtsp_server::async_accept() {
@@ -94,18 +93,19 @@ void rav::rtsp_server::async_accept() {
         // are serialized.
         asio::make_strand(acceptor_.get_executor()),
         [this](const std::error_code ec, asio::ip::tcp::socket socket) {
+            if (ec) {
+                if (ec != asio::error::operation_aborted) {
+                    RAV_ERROR("Error accepting connection: {}", ec.message());
+                }
+                return;
+            }
+
             if (!acceptor_.is_open()) {
                 return;
             }
 
-            if (!ec) {
-                RAV_TRACE("Accepting connection from: {}", socket.remote_endpoint().address().to_string());
-                connections_.insert(std::make_shared<connection>(std::move(socket)));
-            } else {
-                if (ec != asio::error::operation_aborted) {
-                    RAV_ERROR("Error accepting connection: {}", ec.message());
-                }
-            }
+            RAV_TRACE("Accepting connection from: {}", socket.remote_endpoint().address().to_string());
+            connections_.insert(std::make_shared<connection>(std::move(socket)));
 
             async_accept();
         }

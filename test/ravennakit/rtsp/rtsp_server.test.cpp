@@ -13,37 +13,64 @@
 
 #include <catch2/catch_all.hpp>
 
-namespace {
-// constexpr int k_num_threads = 8;
-}
-
 TEST_CASE("rtsp_server", "[rtsp_server]") {
-    // SECTION("Port") {
-    //     rav::io_context_runner runner(k_num_threads);
-    //
-    //     SECTION("Any port") {
-    //         rav::rtsp_server server(runner.io_context(), asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 0));
-    //         REQUIRE(server.port() != 0);
-    //         server.async_close();
-    //     }
-    //
-    //     SECTION("Specific port") {
-    //         rav::rtsp_server server(runner.io_context(), asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 555));
-    //         REQUIRE(server.port() == 555);
-    //         server.async_close();
-    //     }
-    //
-    //     runner.join();
-    // }
-    //
-    // SECTION("Create and destroy") {
-    //     rav::io_context_runner runner(k_num_threads);
-    //
-    //     for (int i = 0; i < 10; i++) {
-    //         rav::rtsp_server server(runner.io_context(), asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 0));
-    //         server.async_close();
-    //     }
-    //
-    //     runner.join();
-    // }
+    SECTION("Port") {
+        asio::io_context io_context;
+        std::vector<std::thread> threads;
+
+        for (auto i = 0; i < 10; i++) {
+            threads.emplace_back([&io_context] {
+                io_context.run();
+            });
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        SECTION("Any port") {
+            rav::rtsp_server server(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 0));
+            REQUIRE(server.port() != 0);
+            server.close();
+        }
+
+        SECTION("Specific port") {
+            rav::rtsp_server server(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 555));
+            REQUIRE(server.port() == 555);
+            server.close();
+        }
+
+        for (auto& thread : threads) {
+            thread.join();
+        }
+    }
+
+    SECTION("Create and destroy using io_context_runner") {
+        rav::io_context_runner runner(8);
+
+        for (int i = 0; i < 10; i++) {
+            rav::rtsp_server server(runner.io_context(), asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 0));
+            server.close();
+        }
+
+        runner.join();
+    }
+
+    SECTION("Create and destroy using io_context") {
+        asio::io_context io_context;
+        std::vector<std::thread> threads;
+
+        for (auto i = 0; i < 8; i++) {
+            threads.emplace_back([&io_context] {
+                io_context.run();
+            });
+        }
+
+        for (int i = 0; i < 10; i++) {
+            rav::rtsp_server server(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 0));
+            server.close();
+        }
+
+        for (auto& thread : threads) {
+            thread.join();
+        }
+    }
 }
