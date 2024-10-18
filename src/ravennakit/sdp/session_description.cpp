@@ -150,6 +150,10 @@ const std::optional<rav::sdp::ravenna_clock_domain>& rav::sdp::session_descripti
     return clock_domain_;
 }
 
+const std::vector<rav::sdp::source_filter>& rav::sdp::session_description::source_filters() const {
+    return source_filters_;
+}
+
 rav::sdp::session_description::parse_result<int>
 rav::sdp::session_description::parse_version(const std::string_view line) {
     if (!starts_with(line, "v=")) {
@@ -211,6 +215,16 @@ rav::sdp::session_description::parse_attribute(const std::string_view line) {
                 return parse_result<void>::err(clock_domain.get_err());
             }
             clock_domain_ = clock_domain.move_ok();
+        }
+    } else if (key == source_filter::k_attribute_name) {
+        if (const auto value = parser.read_until_end()) {
+            auto filter = source_filter::parse_new(*value);
+            if (filter.is_err()) {
+                return parse_result<void>::err(filter.get_err());
+            }
+            source_filters_.push_back(filter.move_ok());
+        } else {
+            return parse_result<void>::err("media: failed to parse source-filter value");
         }
     } else {
         RAV_WARNING("Ignoring unknown attribute on session: {}", *key);

@@ -148,6 +148,18 @@ TEST_CASE("session_description | description from anubis", "[session_description
             REQUIRE(media_clock.offset().value() == 0);
             REQUIRE_FALSE(media_clock.rate().has_value());
         }
+
+        SECTION("Test source-filter on media") {
+            const auto& filters = media.source_filters();
+            REQUIRE(filters.size() == 1);
+            const auto& filter = filters[0];
+            REQUIRE(filter.mode() == rav::sdp::source_filter::filter_mode::include);
+            REQUIRE(filter.network_type() == rav::sdp::netw_type::internet);
+            REQUIRE(filter.address_type() == rav::sdp::addr_type::ipv4);
+            REQUIRE(filter.dest_address() == "239.1.15.52");
+            REQUIRE(filter.src_list().size() == 1);
+            REQUIRE(filter.src_list()[0] == "192.168.15.52");
+        }
     }
 
     SECTION("Media direction") {
@@ -299,4 +311,65 @@ TEST_CASE("session_description | description from AES67 spec 2", "[session_descr
     REQUIRE(media_clock.mode() == rav::sdp::media_clock_source::clock_mode::direct);
     REQUIRE(media_clock.offset().value() == 2216659908);
     REQUIRE_FALSE(media_clock.rate().has_value());
+}
+
+TEST_CASE("session_description | source filters", "[session_description]") {
+    constexpr auto k_anubis_sdp =
+        "v=0\r\n"
+        "o=- 13 0 IN IP4 192.168.15.52\r\n"
+        "s=Anubis_610120_13\r\n"
+        "c=IN IP4 239.1.15.52/15\r\n"
+        "t=0 0\r\n"
+        "a=clock-domain:PTPv2 0\r\n"
+        "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n"
+        "a=mediaclk:direct=0\r\n"
+        "a=source-filter: incl IN IP4 239.1.15.52 192.168.15.52\r\n"
+        "m=audio 5004 RTP/AVP 98\r\n"
+        "c=IN IP4 239.1.15.52/15\r\n"
+        "a=rtpmap:98 L16/48000/2\r\n"
+        "a=clock-domain:PTPv2 0\r\n"
+        "a=sync-time:0\r\n"
+        "a=framecount:48\r\n"
+        "a=source-filter: incl IN IP4 239.1.15.52 192.168.15.52\r\n"
+        "a=palign:0\r\n"
+        "a=ptime:1\r\n"
+        "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n"
+        "a=mediaclk:direct=0\r\n"
+        "a=recvonly\r\n"
+        "a=midi-pre2:50040 0,0;0,1\r\n";
+
+    auto result = rav::sdp::session_description::parse_new(k_anubis_sdp);
+    REQUIRE(result.is_ok());
+
+    SECTION("Session level source filter") {
+        const auto& filters = result.get_ok().source_filters();
+        REQUIRE(filters.size() == 1);
+        const auto& filter = filters[0];
+        REQUIRE(filter.mode() == rav::sdp::source_filter::filter_mode::include);
+        REQUIRE(filter.network_type() == rav::sdp::netw_type::internet);
+        REQUIRE(filter.address_type() == rav::sdp::addr_type::ipv4);
+        REQUIRE(filter.dest_address() == "239.1.15.52");
+        const auto& src_list = filter.src_list();
+        REQUIRE(src_list.size() == 1);
+        REQUIRE(src_list[0] == "192.168.15.52");
+    }
+
+    SECTION("Test media") {
+        const auto& descriptions = result.get_ok().media_descriptions();
+        REQUIRE(descriptions.size() == 1);
+
+        const auto& media = descriptions[0];
+
+        SECTION("Test source-filter on media") {
+            const auto& filters = media.source_filters();
+            REQUIRE(filters.size() == 1);
+            const auto& filter = filters[0];
+            REQUIRE(filter.mode() == rav::sdp::source_filter::filter_mode::include);
+            REQUIRE(filter.network_type() == rav::sdp::netw_type::internet);
+            REQUIRE(filter.address_type() == rav::sdp::addr_type::ipv4);
+            REQUIRE(filter.dest_address() == "239.1.15.52");
+            REQUIRE(filter.src_list().size() == 1);
+            REQUIRE(filter.src_list()[0] == "192.168.15.52");
+        }
+    }
 }
