@@ -20,17 +20,17 @@ class rav::rtsp_server::connection: public std::enable_shared_from_this<connecti
   public:
     explicit connection(asio::ip::tcp::socket socket) : socket_(std::move(socket)) {
         parser_.on<rtsp_response>([this](const rtsp_response& response, rtsp_parser&) {
-            ZoneScoped;
+            TRACY_ZONE_SCOPED;
             RAV_INFO("{}\n{}", response.to_debug_string(), rav::string_replace(response.data, "\r\n", "\n"));
         });
         parser_.on<rtsp_request>([this](const rtsp_request& request, rtsp_parser&) {
-            ZoneScoped;
+            TRACY_ZONE_SCOPED;
             RAV_INFO("{}\n{}", request.to_debug_string(), rav::string_replace(request.data, "\r\n", "\n"));
         });
     }
 
     void start() {
-        ZoneScoped;
+        TRACY_ZONE_SCOPED;
         async_read_some();  // Start reading chain
     }
 
@@ -40,14 +40,14 @@ class rav::rtsp_server::connection: public std::enable_shared_from_this<connecti
     rtsp_parser parser_;
 
     void async_read_some() {
-        ZoneScoped;
+        TRACY_ZONE_SCOPED;
 
         auto self(shared_from_this());
         auto buffer = input_stream_.prepare(512);
         socket_.async_read_some(
             asio::buffer(buffer.data(), buffer.size_bytes()),
             [this, self](const std::error_code ec, const std::size_t bytes_transferred) {
-                ZoneScoped;
+                TRACY_ZONE_SCOPED;
 
                 if (ec) {
                     RAV_ERROR("Read error: {}", ec.message());
@@ -76,23 +76,23 @@ rav::rtsp_server::rtsp_server(asio::io_context& io_context, const asio::ip::tcp:
 }
 
 void rav::rtsp_server::close() {
-    ZoneScoped;
+    TRACY_ZONE_SCOPED;
     acceptor_.close();
 }
 
 void rav::rtsp_server::cancel() {
-    ZoneScoped;
+    TRACY_ZONE_SCOPED;
     acceptor_.cancel();
 }
 
 void rav::rtsp_server::async_accept() {
-    ZoneScoped;
+    TRACY_ZONE_SCOPED;
     acceptor_.async_accept(
         // Accepting through the strand -should- bind new sockets to this strand as well so that all operations on the
         // socket are serialized with the acceptor's strand.
         asio::make_strand(acceptor_.get_executor()),
         [this](const std::error_code ec, asio::ip::tcp::socket socket) {
-            ZoneScoped;
+            TRACY_ZONE_SCOPED;
             if (ec) {
                 if (ec != asio::error::operation_aborted) {
                     RAV_ERROR("Error accepting connection: {}", ec.message());

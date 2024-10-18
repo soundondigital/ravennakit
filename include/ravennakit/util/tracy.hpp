@@ -19,6 +19,8 @@ START_IGNORE_WARNINGS
     #include <tracy/Tracy.hpp>
 END_IGNORE_WARNINGS
 
+    #define TRACY_ZONE_SCOPED ZoneScoped  // NOLINT(bugprone-reserved-identifier)
+
 #else
-    #define ZoneScoped
+    #define TRACY_ZONE_SCOPED
 #endif
