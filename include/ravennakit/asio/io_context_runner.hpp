@@ -93,7 +93,7 @@ class io_context_runner {
 
         for (size_t i = 0; i < num_threads_; i++) {
             threads_.emplace_back([this, i] {
-                ZoneScoped;
+                TRACY_ZONE_SCOPED;
 
 #if RAV_MACOS
                 {

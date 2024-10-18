@@ -53,7 +53,7 @@ void rav::rtp_receiver::join_multicast_group(
 }
 
 void rav::rtp_receiver::start() {
-    ZoneScoped;
+    TRACY_ZONE_SCOPED;
 
     if (is_running_) {
         RAV_WARNING("RTP receiver is already running");
@@ -76,7 +76,7 @@ void rav::rtp_receiver::receive_rtp() {
     rtp_socket_.async_receive_from(
         asio::buffer(rtp_data_), rtp_endpoint_,
         [this](const std::error_code& ec, const std::size_t length) {
-            ZoneScoped;
+            TRACY_ZONE_SCOPED;
             if (!ec) {
                 const rtp_packet_view rtp_packet(rtp_data_.data(), length);
                 emit(rtp_packet_event {rtp_packet});

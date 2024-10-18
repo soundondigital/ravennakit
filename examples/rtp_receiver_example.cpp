@@ -35,7 +35,7 @@ static int audio_callback(
     [[maybe_unused]] const PaStreamCallbackTimeInfo* time_info, [[maybe_unused]] PaStreamCallbackFlags status,
     void* user_data
 ) {
-    ZoneScoped;
+    TRACY_ZONE_SCOPED;
 
     if (num_frames != k_block_size) {
         RAV_ERROR("Unexpected number of frames: {}", num_frames);
