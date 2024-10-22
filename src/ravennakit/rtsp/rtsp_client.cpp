@@ -45,8 +45,8 @@ void rav::rtsp_client::describe(const std::string& path) {
         request.headers["Accept"] = "application/sdp";
         const auto encoded = request.encode();
         RAV_TRACE("Sending request: {}", request.to_debug_string());
-        const bool should_trigger_async_write = output_stream_.exhausted();
-        output_stream_.write(encoded);
+        const bool should_trigger_async_write = output_buffer_.exhausted();
+        output_buffer_.write(encoded);
         if (should_trigger_async_write) {
             async_write();
         }
@@ -68,8 +68,8 @@ void rav::rtsp_client::setup(const std::string& path) {
 
         const auto encoded = request.encode();
         RAV_TRACE("Sending request: {}", request.to_debug_string());
-        const bool should_trigger_async_write = output_stream_.exhausted();
-        output_stream_.write(encoded);
+        const bool should_trigger_async_write = output_buffer_.exhausted();
+        output_buffer_.write(encoded);
         if (should_trigger_async_write) {
             async_write();
         }
@@ -90,8 +90,8 @@ void rav::rtsp_client::play(const std::string& path) {
 
         const auto encoded = request.encode();
         RAV_TRACE("Sending request: {}", request.to_debug_string());
-        const bool should_trigger_async_write = output_stream_.exhausted();
-        output_stream_.write(encoded);
+        const bool should_trigger_async_write = output_buffer_.exhausted();
+        output_buffer_.write(encoded);
         if (should_trigger_async_write) {
             async_write();
         }
@@ -116,18 +116,18 @@ void rav::rtsp_client::async_connect(const asio::ip::tcp::endpoint& endpoint) {
 }
 
 void rav::rtsp_client::async_write() {
-    if (output_stream_.exhausted()) {
+    if (output_buffer_.exhausted()) {
         return;
     }
     asio::async_write(
-        socket_, asio::buffer(output_stream_.data()),
+        socket_, asio::buffer(output_buffer_.data()),
         [this](const asio::error_code ec, std::size_t length) {
             if (ec) {
                 RAV_ERROR("Write error: {}", ec.message());
                 return;
             }
-            output_stream_.consume(length);
-            if (!output_stream_.exhausted()) {
+            output_buffer_.consume(length);
+            if (!output_buffer_.exhausted()) {
                 async_write();  // Schedule another write
             }
         }
@@ -135,7 +135,7 @@ void rav::rtsp_client::async_write() {
 }
 
 void rav::rtsp_client::async_read_some() {
-    auto buffer = input_stream_.prepare(512);
+    auto buffer = input_buffer_.prepare(512);
     socket_.async_read_some(
         asio::buffer(buffer.data(), buffer.size_bytes()),
         [this](const asio::error_code ec, const std::size_t length) mutable {
@@ -145,9 +145,9 @@ void rav::rtsp_client::async_read_some() {
                 return;
             }
 
-            input_stream_.commit(length);
+            input_buffer_.commit(length);
 
-            auto result = parser_.parse(input_stream_);
+            auto result = parser_.parse(input_buffer_);
             if (!(result == rtsp_parser::result::good || result == rtsp_parser::result::indeterminate)) {
                 RAV_ERROR("Parsing error: {}", static_cast<int>(result));
                 return;

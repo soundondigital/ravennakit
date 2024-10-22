@@ -17,7 +17,7 @@ TEST_CASE("rtsp_parser | parse responses in multiple chunks", "[rtsp_parser]") {
         "v=0\r\no=- 123456 1 IN IP4 192.168.0.1\r\ns=Sample Media Stream\r\nc=IN IP4 192.168.0.1\r\nt=0 0\r\nm=audio 8000 RTP/AVP 0\r\na=rtpmap:0 PCMU/8000\r\nm=video 9000 RTP/AVP 96\r\na=rtpmap:96 H264/90000"
     );
 
-    rav::string_stream input;
+    rav::string_buffer input;
     rav::rtsp_parser parser;
 
     int response_count = 0;
@@ -74,7 +74,7 @@ TEST_CASE("rtsp_parser | Parse ok response without data", "[rtsp_parser]") {
         "RTSP/1.0 200 OK\r\nCSeq: 3\r\nTransport: RTP/AVP;unicast;client_port=8000-8001;server_port=9000-9001\r\nSession: 12345678\r\nContent-Length: 0\r\n\r\n"
     );
 
-    rav::string_stream input(response_text);
+    rav::string_buffer input(response_text);
     input.write(rav::string_replace(response_text, "\r\n", "\n"));
 
     int response_count = 0;
@@ -103,7 +103,7 @@ TEST_CASE("rtsp_parser | Parse ok response with data", "[rtsp_parser]") {
         "RTSP/1.0 200 OK\r\nCSeq: 3\r\nTransport: RTP/AVP;unicast;client_port=8000-8001;server_port=9000-9001\r\nSession: 12345678\r\nContent-Length: 18\r\n\r\nrtsp_response_data"
     );
 
-    rav::string_stream input(response_text);
+    rav::string_buffer input(response_text);
     input.write(rav::string_replace(response_text, "\r\n", "\n"));
 
     int response_count = 0;
@@ -132,7 +132,7 @@ TEST_CASE("rtsp_parser | Parse response from Anubis", "[rtsp_parser]") {
     const std::string data(
         "v=0\r\no=- 13 0 IN IP4 192.168.15.52\r\ns=Anubis Combo LR\r\nc=IN IP4 239.1.15.52/15\r\nt=0 0\r\na=clock-domain:PTPv2 0\r\na=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\na=mediaclk:direct=0\r\nm=audio 5004 RTP/AVP 98\r\nc=IN IP4 239.1.15.52/15\r\na=rtpmap:98 L16/48000/2\r\na=source-filter: incl IN IP4 239.1.15.52 192.168.15.52\r\na=clock-domain:PTPv2 0\r\na=sync-time:0\r\na=framecount:48\r\na=palign:0\r\na=ptime:1\r\na=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\na=mediaclk:direct=0\r\na=recvonly\r\na=midi-pre2:50040 0,0;0,1\r\n"
     );
-    rav::string_stream input(
+    rav::string_buffer input(
         "RTSP/1.0 200 OK\r\ncontent-length: 516\r\ncontent-type: application/sdp; charset=utf-8\r\n\r\n"
     );
     input.write(data);
@@ -160,7 +160,7 @@ TEST_CASE("rtsp_parser | Parse response from Anubis", "[rtsp_parser]") {
 TEST_CASE("rtsp_parser | Parse some requests", "[rtsp_parser]") {
     SECTION("Parse without headers and without data") {
         constexpr auto txt = "DESCRIBE rtsp://server.example.com/fizzle/foo RTSP/1.0\r\n\r\n";
-        rav::string_stream input(txt);
+        rav::string_buffer input(txt);
         input.write(rav::string_replace(txt, "\r\n", "\n"));
 
         int request_count = 0;
@@ -183,7 +183,7 @@ TEST_CASE("rtsp_parser | Parse some requests", "[rtsp_parser]") {
     SECTION("Parse with headers and without data") {
         constexpr auto txt =
             "DESCRIBE rtsp://server.example.com/fizzle/foo RTSP/1.0\r\nCSeq: 312\r\nAccept: application/sdp, application/rtsl, application/mheg\r\n\r\n";
-        rav::string_stream input(txt);
+        rav::string_buffer input(txt);
         input.write(rav::string_replace(txt, "\r\n", "\n"));
 
         int request_count = 0;
@@ -208,7 +208,7 @@ TEST_CASE("rtsp_parser | Parse some requests", "[rtsp_parser]") {
     SECTION("Parse with headers and with data") {
         constexpr auto txt =
             "DESCRIBE rtsp://server.example.com/fizzle/foo RTSP/1.0\r\nContent-Length: 28\r\n\r\nthis_is_the_part_called_data";
-        rav::string_stream input(txt);
+        rav::string_buffer input(txt);
         input.write(rav::string_replace(txt, "\r\n", "\n"));
 
         int request_count = 0;
@@ -239,7 +239,7 @@ TEST_CASE("rtsp_parser | Parse some requests", "[rtsp_parser]") {
         auto tab_folded =
             "DESCRIBE rtsp://server.example.com/fizzle/foo RTSP/1.0\r\nCSeq: 312\r\nAccept: application/sdp, \r\n\tapplication/rtsl, application/mheg\r\n\r\n";
 
-        rav::string_stream input;
+        rav::string_buffer input;
         input.write(space_folded);
         input.write(rav::string_replace(space_folded, "\r\n", "\n"));
         input.write(tab_folded);
@@ -280,7 +280,7 @@ TEST_CASE("rtsp_parser | Parse some requests in chunks", "[rtsp_parser]") {
         request_count++;
     });
 
-    rav::string_stream input("DESCRIBE rtsp://server.example.com/fizzle/foo RTSP/1.0\r\nContent");
+    rav::string_buffer input("DESCRIBE rtsp://server.example.com/fizzle/foo RTSP/1.0\r\nContent");
     REQUIRE(parser.parse(input) == rav::rtsp_parser::result::indeterminate);
 
     input.write("-Length: 28\r\n\r\n");
@@ -316,7 +316,7 @@ TEST_CASE("rtsp_parser | Parse Anubis ANNOUNCE request", "[rtsp_parser]") {
         "v=0\r\no=- 13 0 IN IP4 192.168.15.52\r\ns=Anubis Combo LR\r\nc=IN IP4 239.1.15.52/15\r\nt=0 0\r\na=clock-domain:PTPv2 0\r\na=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\na=mediaclk:direct=0\r\nm=audio 5004 RTP/AVP 98\r\nc=IN IP4 239.1.15.52/15\r\na=rtpmap:98 L16/48000/2\r\na=source-filter: incl IN IP4 239.1.15.52 192.168.15.52\r\na=clock-domain:PTPv2 0\r\na=sync-time:0\r\na=framecount:48\r\na=palign:0\r\na=ptime:1\r\na=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\na=mediaclk:direct=0\r\na=recvonly\r\na=midi-pre2:50040 0,0;0,1\r\n"
     );
 
-    rav::string_stream input("ANNOUNCE  RTSP/1.0\r\nconnection: Keep-Alive\r\ncontent-length: 516\r\n\r\n");
+    rav::string_buffer input("ANNOUNCE  RTSP/1.0\r\nconnection: Keep-Alive\r\ncontent-length: 516\r\n\r\n");
     input.write(sdp);
 
     int request_count = 0;
@@ -343,7 +343,7 @@ TEST_CASE("rtsp_parser | Parse Anubis DESCRIBE response and ANNOUNCE request", "
         "v=0\r\no=- 13 0 IN IP4 192.168.16.51\r\ns=Anubis Combo LR\r\nc=IN IP4 239.1.15.52/15\r\nt=0 0\r\na=clock-domain:PTPv2 0\r\na=ts-refclk:ptp=IEEE1588-2008:30-D6-59-FF-FE-01-DB-72:0\r\na=mediaclk:direct=0\r\nm=audio 5004 RTP/AVP 98\r\nc=IN IP4 239.1.15.52/15\r\na=rtpmap:98 L16/48000/2\r\na=source-filter: incl IN IP4 239.1.15.52 192.168.16.51\r\na=clock-domain:PTPv2 0\r\na=sync-time:0\r\na=framecount:48\r\na=palign:0\r\na=ptime:1\r\na=ts-refclk:ptp=IEEE1588-2008:30-D6-59-FF-FE-01-DB-72:0\r\na=mediaclk:direct=0\r\na=recvonly\r\na=midi-pre2:50040 0,0;0,1\r\n"
     );
 
-    rav::string_stream input;
+    rav::string_buffer input;
     input.write("RTSP/1.0 200 OK\r\ncontent-type: application/sdp; charset=utf-8\r\ncontent-length: 516\r\n\r\n");
     input.write(sdp);
     input.write("ANNOUNCE  RTSP/1.0\r\nconnection: Keep-Alive\r\ncontent-length: 516\r\n\r\n");

@@ -8,14 +8,14 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/containers/string_stream.hpp"
+#include "ravennakit/containers/string_buffer.hpp"
 #include "ravennakit/rtsp/rtsp_client.hpp"
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("string_stream | prepare and commit, read and consume", "[string_stream]") {
+TEST_CASE("string_buffer | prepare and commit, read and consume", "[string_buffer]") {
     constexpr std::string_view test_data = "0123456789";
-    rav::string_stream stream;
+    rav::string_buffer stream;
 
     // Prepare and commit
     REQUIRE(stream.remaining() == 0);
@@ -37,9 +37,9 @@ TEST_CASE("string_stream | prepare and commit, read and consume", "[string_strea
     REQUIRE(stream.exhausted());
 }
 
-TEST_CASE("string_stream | read until newline", "[string_stream]") {
+TEST_CASE("string_buffer | read until newline", "[string_buffer]") {
     SECTION("LF") {
-        rav::string_stream stream;
+        rav::string_buffer stream;
         stream.write("Hello\nWorld\n\n");
         auto line1 = stream.read_until_newline();
         REQUIRE(line1);
@@ -58,7 +58,7 @@ TEST_CASE("string_stream | read until newline", "[string_stream]") {
     }
 
     SECTION("CRLF") {
-        rav::string_stream stream;
+        rav::string_buffer stream;
         stream.write("Hello\r\nWorld\r\n\r\n");
         auto line1 = stream.read_until_newline();
         REQUIRE(line1);
@@ -77,16 +77,16 @@ TEST_CASE("string_stream | read until newline", "[string_stream]") {
     }
 }
 
-TEST_CASE("string_stream | reset", "[string_stream]") {
-    rav::string_stream stream;
+TEST_CASE("string_buffer | reset", "[string_buffer]") {
+    rav::string_buffer stream;
     stream.write("test");
     REQUIRE(stream.remaining() == 4);
     stream.clear();
     REQUIRE(stream.exhausted());
 }
 
-TEST_CASE("string_stream | starts with", "[string_stream]") {
-    rav::string_stream stream;
+TEST_CASE("string_buffer | starts with", "[string_buffer]") {
+    rav::string_buffer stream;
     stream.write("Hello World");
     REQUIRE(stream.starts_with("Hello"));
     REQUIRE(stream.starts_with("Hello World"));

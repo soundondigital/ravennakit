@@ -10,7 +10,7 @@
 
 #include "ravennakit/rtsp/rtsp_server.hpp"
 
-#include "ravennakit/containers/string_stream.hpp"
+#include "ravennakit/containers/string_buffer.hpp"
 #include "ravennakit/rtsp/rtsp_parser.hpp"
 #include "ravennakit/rtsp/rtsp_request.hpp"
 #include "ravennakit/util/exclusive_access_guard.hpp"
@@ -36,7 +36,7 @@ class rav::rtsp_server::connection: public std::enable_shared_from_this<connecti
 
   private:
     asio::ip::tcp::socket socket_;
-    string_stream input_stream_;
+    string_buffer input_stream_;
     rtsp_parser parser_;
 
     void async_read_some() {

@@ -12,7 +12,7 @@
 
 #include "rtsp_request.hpp"
 #include "rtsp_response.hpp"
-#include "ravennakit/containers/string_stream.hpp"
+#include "ravennakit/containers/string_buffer.hpp"
 #include "ravennakit/core/event_emitter.hpp"
 
 namespace rav {
@@ -47,7 +47,7 @@ class rtsp_parser final: public event_emitter<rtsp_parser, rtsp_request, rtsp_re
      * @param input The input to parse.
      * @return The result of the parsing.
      */
-    result parse(string_stream& input);
+    result parse(string_buffer& input);
 
     /**
      * Resets the state to initial state. This also removes event subscribers.

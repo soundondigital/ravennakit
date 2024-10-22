@@ -21,15 +21,15 @@ namespace rav {
 /**
  * Contains a std::string and provides different facilities for working with it as a stream.
  */
-class string_stream {
+class string_buffer {
   public:
-    string_stream() = default;
+    string_buffer() = default;
 
     /**
      * Constructs a string_stream with the given data.
      * @param data The initial data.
      */
-    explicit string_stream(std::string data) : data_(std::move(data)), write_position_(data_.size()) {}
+    explicit string_buffer(std::string data) : data_(std::move(data)), write_position_(data_.size()) {}
 
     /**
      * Prepares space in the buffer for writing. The returned buffer_view is valid until the next call to prepare or
@@ -64,7 +64,7 @@ class string_stream {
      * @return True if there is no data available to read.
      */
     [[nodiscard]] bool exhausted() const {
-        return read_position_ == write_position_;
+        return read_position_ >= data_.size() || read_position_ == write_position_;
     }
 
     /**

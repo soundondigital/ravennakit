@@ -10,7 +10,7 @@
 
 #include "ravennakit/rtsp/rtsp_parser.hpp"
 
-rav::rtsp_parser::result rav::rtsp_parser::parse(string_stream& input) {
+rav::rtsp_parser::result rav::rtsp_parser::parse(string_buffer& input) {
     while (!input.exhausted()) {
         if (state_ == state::start) {
             const auto start_line = input.read_until_newline();

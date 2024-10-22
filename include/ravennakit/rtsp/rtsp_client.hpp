@@ -11,7 +11,7 @@
 #pragma once
 
 #include "rtsp_parser.hpp"
-#include "ravennakit/containers/string_stream.hpp"
+#include "ravennakit/containers/string_buffer.hpp"
 
 #include <asio.hpp>
 
@@ -64,8 +64,8 @@ class rtsp_client final: public event_emitter<rtsp_client, rtsp::connect_event, 
 
   private:
     asio::ip::tcp::socket socket_;
-    string_stream input_stream_;
-    string_stream output_stream_;
+    string_buffer input_buffer_;
+    string_buffer output_buffer_;
     rtsp_parser parser_;
 
     void async_connect(const asio::ip::tcp::endpoint& endpoint);
