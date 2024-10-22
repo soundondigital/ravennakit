@@ -12,7 +12,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <memory>
 
 #include "ravennakit/core/exception.hpp"
 
@@ -127,6 +126,36 @@ inline double swap_bytes<double>(const double value) {
 }
 
 /**
+ * Swaps the bytes of the given value if the system is little-endian.
+ * @tparam Type The type of the value to swap.
+ * @param value The value to swap.
+ * @return The value with the bytes swapped.
+ */
+template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
+Type swap_if_le(const Type value) {
+    if constexpr (little_endian) {
+        return swap_bytes(value);
+    } else {
+        return value;
+    }
+}
+
+/**
+ * Swaps the bytes of the given value if the system is big-endian.
+ * @tparam Type The type of the value to swap.
+ * @param value The value to swap.
+ * @return The value with the bytes swapped.
+ */
+template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
+Type swap_if_be(const Type value) {
+    if constexpr (big_endian) {
+        return swap_bytes(value);
+    } else {
+        return value;
+    }
+}
+
+/**
  * Reads a value from the given data in native byte order (not to be confused with network-endian).
  * @tparam Type The type of the value to read.
  * @param data The data which holds the encoded value.
@@ -147,11 +176,7 @@ Type read_ne(const uint8_t* data) {
  */
 template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
 Type read_be(const uint8_t* data) {
-    if constexpr (big_endian) {
-        return read_ne<Type>(data);
-    } else {
-        return swap_bytes(read_ne<Type>(data));
-    }
+    return swap_if_le(read_ne<Type>(data));
 }
 
 /**
@@ -162,11 +187,7 @@ Type read_be(const uint8_t* data) {
  */
 template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
 Type read_le(const uint8_t* data) {
-    if constexpr (little_endian) {
-        return read_ne<Type>(data);
-    } else {
-        return swap_bytes(read_ne<Type>(data));
-    }
+    return swap_if_be(read_ne<Type>(data));
 }
 
 /**
@@ -188,11 +209,7 @@ void write_ne(uint8_t* dst, const Type value) {
  */
 template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
 void write_be(uint8_t* dst, const Type value) {
-    if constexpr (big_endian) {
-        write_ne(dst, value);
-    } else {
-        write_ne(dst, swap_bytes(value));
-    }
+    write_ne(dst, swap_if_le(value));
 }
 
 /**
@@ -203,11 +220,7 @@ void write_be(uint8_t* dst, const Type value) {
  */
 template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
 void write_le(uint8_t* dst, const Type value) {
-    if constexpr (little_endian) {
-        write_ne(dst, value);
-    } else {
-        write_ne(dst, swap_bytes(value));
-    }
+    write_ne(dst, swap_if_be(value));
 }
 
 /**

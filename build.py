@@ -204,7 +204,7 @@ def main():
 
         parser.add_argument("--macos-deployment-target",
                             help="Specify the minimum macOS deployment target (macOS only)",
-                            default="10.13")
+                            default="10.15")  # Catalina
 
         parser.add_argument("--macos-developer-id-application",
                             help="Specify the developer id application identity (macOS only)",

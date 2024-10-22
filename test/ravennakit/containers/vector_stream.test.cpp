@@ -100,7 +100,7 @@ TEST_CASE("vector_stream", "[vector_stream]") {
     SECTION("reset") {
         stream.push_back_be(0x12345678);
         stream.reset();
-        REQUIRE(stream.size() == 0);
+        REQUIRE(stream.size() == 0); // NOLINT
         REQUIRE(stream.empty());
     }
 }
