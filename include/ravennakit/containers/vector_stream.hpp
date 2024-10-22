@@ -64,11 +64,7 @@ class vector_stream {
      * @param value The value to write.
      */
     void push_back_be(T value) {
-#if RAV_LITTLE_ENDIAN
-        push_back(byte_order::swap_bytes(value));
-#else
-        push_back(value);
-#endif
+        push_back(byte_order::swap_if_le(value));
     }
 
     /**
@@ -89,11 +85,7 @@ class vector_stream {
      * @return True if the value was written successfully, false otherwise.
      */
     void push_back_le(T value) {
-#if RAV_BIG_ENDIAN
-        push_back(byte_order::swap_bytes(value));
-#else
-        push_back(value);
-#endif
+        push_back(byte_order::swap_if_be(value));
     }
 
     /**
@@ -125,11 +117,7 @@ class vector_stream {
      * @return The value read from the stream, or a default-constructed value if the read failed.
      */
     T read_be() {
-#if RAV_LITTLE_ENDIAN
-        return byte_order::swap_bytes(read());
-#else
-        return read();
-#endif
+        return byte_order::swap_if_le(read());
     }
 
     /**
@@ -138,11 +126,7 @@ class vector_stream {
      * @return The value read from the stream, or a default-constructed value if the read failed.
      */
     T read_le() {
-#if RAV_BIG_ENDIAN
-        return byte_order::swap_bytes(read());
-#else
-        return read();
-#endif
+        return byte_order::swap_if_be(read());
     }
 
     /**
@@ -182,6 +166,9 @@ class vector_stream {
      */
     void resize(size_t size) {
         data_.resize(size);
+        if (read_position_ > size) {
+            read_position_ = size;
+        }
     }
 
     /**
