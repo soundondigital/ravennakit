@@ -40,12 +40,12 @@ std::optional<size_t> rav::byte_stream::size() const {
 }
 
 bool rav::byte_stream::exhausted() const {
-    return read_position_ >= data_.size() || read_position_ == write_position_;
+    return read_position_ >= data_.size();
 }
 
 size_t rav::byte_stream::write(const uint8_t* buffer, const size_t size) {
     if (write_position_ + size > data_.size()) {
-        data_.resize(write_position_ + size);
+        data_.resize(write_position_ + size, 0);
     }
 
     std::memcpy(data_.data() + write_position_, buffer, size);

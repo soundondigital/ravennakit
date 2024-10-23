@@ -11,11 +11,12 @@
 #pragma once
 
 #include <cstdint>
+#include "ravennakit/core/byte_order.hpp"
 
 namespace rav {
 
 class output_stream {
-public:
+  public:
     output_stream() = default;
     virtual ~output_stream() = default;
 
@@ -40,10 +41,59 @@ public:
     [[nodiscard]] virtual size_t get_write_position() const = 0;
 
     /**
-    * Flushes the stream, ensuring that all data is written to the underlying storage. Not all streams support this
-    * operation.
-    */
+     * Flushes the stream, ensuring that all data is written to the underlying storage. Not all streams support this
+     * operation.
+     */
     virtual void flush() = 0;
+
+    /**
+     * Writes a value to the stream in native byte order (not to be confused with network-endian).
+     * @tparam Type The type of the value to write.
+     * @param value The value to write.
+     */
+    template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
+    size_t write_ne(const Type value) {
+        return write(reinterpret_cast<const uint8_t*>(std::addressof(value)), sizeof(Type));
+    }
+
+    /**
+     * Writes a big-endian value to the stream.
+     * @tparam Type The type of the value to write.
+     * @param value The value to write.
+     */
+    template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
+    void write_be(const Type value) {
+        write_ne(swap_if_le(value));
+    }
+
+    /**
+     * Writes a little-endian value to the stream.
+     * @tparam Type The type of the value to write.
+     * @param value The value to write.
+     */
+    template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
+    void write_le(const Type value) {
+        write_ne(byte_order::swap_if_be(value));
+    }
+
+    /**
+     * Writes a string to the stream.
+     * @param str The string to write.
+     */
+    size_t write_string(const std::string& str) {
+        return write(reinterpret_cast<const uint8_t*>(str.data()), str.size());
+    }
+
+    /**
+     * Writes a c-string to the stream, up to and including the null character.
+     * If the string doesn't have a null character, and max_size is bigger than the amount of characters then the
+     * behaviour is undefined (and probably will lead to invalid memory access).
+     * @param str The string to write.
+     * @param max_size The max size to write.
+     */
+    size_t write_string(const char* str, const size_t max_size = std::numeric_limits<size_t>::max()) {
+        return write(reinterpret_cast<const uint8_t*>(str), std::min(std::strlen(str) + 1, max_size));
+    }
 };
 
-}
+}  // namespace rav
