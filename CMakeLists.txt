@@ -6,6 +6,25 @@ project(ravennakit VERSION ${GIT_VERSION_MAJOR}.${GIT_VERSION_MINOR}.${GIT_VERSI
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/helper_targets.cmake)
 
+###########
+# Options #
+###########
+
+option(RAV_ENABLE_SPDLOG "Enable spdlog for logging" OFF)
+option(RAV_ABORT_ON_ASSERT "Abort the program when an assertion is hit" OFF)
+option(TRACY_ENABLE "Enable Tracy as profiler" OFF)
+option(WITH_ADDRESS_SANITIZER "Enable Address Sanitizer" OFF)
+option(WITH_THREAD_SANITIZER "Enable Thread Sanitizer" OFF)
+option(BUILD_EXAMPLES "Build the examples" ON)
+
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
+    set(BUILD_EXAMPLES OFF)
+endif ()
+
+##########################
+# Compiler configuration #
+##########################
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -19,31 +38,16 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE INTERNAL "")
 endif ()
 
-option(WITH_ADDRESS_SANITIZER "Enable Address Sanitizer" OFF)
 if (WITH_ADDRESS_SANITIZER)
     message("-- -DWITH_ADDRESS_SANITIZER=ON argument was specified: Enabling Clang's Address Sanitizer")
     add_compile_options(-fsanitize=address,undefined -g)
     link_libraries(-fsanitize=address,undefined)
 endif ()
 
-option(WITH_THREAD_SANITIZER "Enable Thread Sanitizer" OFF)
 if (WITH_THREAD_SANITIZER)
     message("-- -DWITH_THREAD_SANITIZER=ON argument was specified: Enabling Clang's Thread Sanitizer")
     add_compile_options(-fsanitize=thread -g)
     link_libraries(-fsanitize=thread)
-endif ()
-
-###########
-# Options #
-###########
-
-option(RAV_ENABLE_SPDLOG "Enable spdlog for logging" OFF)
-option(RAV_ABORT_ON_ASSERT "Abort the program when an assertion is hit" OFF)
-option(TRACY_ENABLE "Enable Tracy as profiler" OFF)
-option(BUILD_EXAMPLES "Build the examples" ON)
-
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
-    set(BUILD_EXAMPLES OFF)
 endif ()
 
 ################
