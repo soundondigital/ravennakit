@@ -11,6 +11,8 @@
 #include "ravennakit/audio/formats/wav_audio_format.hpp"
 #include "ravennakit/core/exception.hpp"
 
+#include <utility>
+
 namespace {}
 
 void rav::wav_audio_format::fmt_chunk::parse(input_stream& istream, const uint32_t chunk_size) {
