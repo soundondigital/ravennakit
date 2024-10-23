@@ -266,7 +266,7 @@ class string_parser {
      * @return The number of characters skipped.
      */
     uint64_t skip_n(const char chr, const size_t count) {
-        uint64_t i = 0;
+        size_t i = 0;
         for (; i < std::min(count, str_.size()); ++i) {
             if (str_[i] != chr) {
                 break;

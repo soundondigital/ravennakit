@@ -64,7 +64,7 @@ class file {
      * @throws std::filesystem::filesystem_error if the file does not exist.
      * @return The size of the file in bytes.
      */
-    [[nodiscard]] size_t size() const {
+    [[nodiscard]] std::uintmax_t size() const {
         return std::filesystem::file_size(path_);
     }
 

@@ -177,9 +177,16 @@ def build(args):
     if platform.system() == 'Darwin':
         if args.android:
             path_to_build = build_android(args, 'arm64-v8a', build_config, 'android_arm64')
-            # path_to_build = build_android(args, 'armeabi-v7a', build_config, 'android_arm')
+            path_to_build = build_android(args, 'arm64-v8a', build_config, 'android_arm64_spdlog', spdlog=True)
+
             path_to_build = build_android(args, 'x86_64', build_config, 'android_x64')
-            # path_to_build = build_android(args, 'x86', build_config, 'android_x86')
+            path_to_build = build_android(args, 'x86_64', build_config, 'android_x64_spdlog', spdlog=True)
+
+            path_to_build = build_android(args, 'armeabi-v7a', build_config, 'android_arm')
+            path_to_build = build_android(args, 'armeabi-v7a', build_config, 'android_arm_spdlog', spdlog=True)
+
+            path_to_build = build_android(args, 'x86', build_config, 'android_x86')
+            path_to_build = build_android(args, 'x86', build_config, 'android_x86_spdlog', spdlog=True)
         else:
             path_to_build = build_macos(args, build_config, 'macos_universal')
             run_test(path_to_build / build_config.value / ravennakit_tests_target, 'macos_universal')
