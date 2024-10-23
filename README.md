@@ -16,7 +16,28 @@ To build and run this project you will need to install the following external de
 - macOS: Xcode 12 or higher
 - macOS: Homebrew
 
-## Install dependencies
+## Dependencies
+
+This project requires the following dependencies:
+
+- [spdlog](https://github.com/gabime/spdlog) (MIT License)
+- [fmt](https://github.com/fmtlib/fmt) (MIT License)
+- [asio](https://github.com/chriskohlhoff/asio) (Boost Software License)
+- [tl-expected](https://github.com/TartanLlama/expected) (CC0 1.0 Universal)
+
+Optional:
+- [tracy-profiler](https://github.com/wolfpld/tracy) (BSD 3-Clause License)
+
+Unit tests:
+- [Catch2](https://github.com/catchorg/Catch2) (Boost Software License)
+
+Example:
+- [portaudio](https://github.com/PortAudio/portaudio) (MIT License)
+- [cli11](https://github.com/CLIUtils/CLI11) (BSD 3-Clause License)
+
+All dependencies, except for Tracy, are managed by vcpkg.
+
+## Prepare the build environment
 
 ### macOS
 
@@ -42,7 +63,7 @@ git submodule update --init --recursive
 
 In the root you'll find a script called build.py. This script builds the project in all supported configurations and runs the unit test. This script is considered the single source of truth on how to build, pack and distribute the library and is supposed to be called by a CI script.
 
-Command for all platforms:
+For all platforms, using sensible defaults:
 ```
 python3 -u build.py
 ```
