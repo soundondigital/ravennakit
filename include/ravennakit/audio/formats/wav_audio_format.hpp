@@ -20,32 +20,76 @@ namespace rav::wav_audio_format {
 
 enum class format_code : uint16_t { pcm = 0x1, ieee_float = 0x3, alaw = 0x4, mulaw = 0x7, extensible = 0xfffe };
 
+/**
+ * A struct representing the fmt chunk of a WAVE file.
+ */
 struct fmt_chunk {
     struct extension {
-        uint16_t cb_size {};                      // The size of the extension (in bytes).
-        uint16_t valid_bits_per_sample {0xfffe};  // Number of valid bits per sample.
-        uint32_t channel_mask {};                 // Speaker position mask.
-        std::array<uint8_t, 16> sub_format {};    // GUID, including the data format code.
+        /// The size of the extension (in bytes).
+        uint16_t cb_size {};
+        /// Number of valid bits per sample.
+        uint16_t valid_bits_per_sample {0xfffe};
+        /// Speaker position mask.
+        uint32_t channel_mask {};
+        /// GUID, including the data format code.
+        std::array<uint8_t, 16> sub_format {};
     };
 
-    format_code audio_format {};         // A number indicating the WAVE format category of the file.
-    uint16_t num_channels {};            // The number of channels represented in the waveform data.
-    uint32_t sample_rate {};             // The sampling rate (in samples per second).
-    uint32_t avg_bytes_per_sec {};       // The average number of bytes per second.
-    uint16_t block_align {};             // The block alignment (in bytes) of the waveform data.
-    uint16_t bits_per_sample {};         // Bits per sample.
-    std::optional<extension> extension;  // Extension.
+    /// A number indicating the WAVE format category of the file.
+    format_code format {};
+    /// The number of channels represented in the waveform data.
+    uint16_t num_channels {};
+    /// The sampling rate (in samples per second).
+    uint32_t sample_rate {};
+    /// The average number of bytes per second.
+    uint32_t avg_bytes_per_sec {};
+    /// The block alignment (in bytes) of the waveform data.
+    uint16_t block_align {};
+    /// Bits per sample.
+    uint16_t bits_per_sample {};
+    /// Extension.
+    std::optional<extension> extension;
 
+    /**
+     * Reads the fmt chunk from the input stream.
+     * @param istream The input stream to read from.
+     * @param chunk_size The size of the fmt chunk.
+     */
     void read(input_stream& istream, uint32_t chunk_size);
-    void write(output_stream& ostream) const;
+
+    /**
+     * Writes the fmt chunk to the output stream.
+     * @param ostream The output stream to write to.
+     * @return The number of bytes written.
+     */
+    size_t write(output_stream& ostream) const;
 };
 
+/**
+ * A struct representing the data chunk of a WAVE file.
+ */
 struct data_chunk {
+    /// The beginning of the audio data in the file, relative to the beginning of the file. Might be 0 if the position
+    /// is not yet known. Will be updated when the data is read or written.
     size_t data_begin {};
+
+    /// The size of the audio data in bytes. Will be updated when data is read or written.
     size_t data_size {};
 
+    /**
+     * Reads the data chunk from the input stream.
+     * @param istream The input stream to read from.
+     * @param chunk_size The size of the data chunk.
+     */
     void read(input_stream& istream, uint32_t chunk_size);
-    void write(output_stream& ostream) const;
+
+    /**
+     * Writes the data chunk to the output stream.
+     * @param ostream The output stream to write to.
+     * @param data_written The number of bytes of audio data written into the stream so far.
+     * @return The number of bytes written (excluding the size of the data).
+     */
+    size_t write(output_stream& ostream, size_t data_written);
 };
 
 /**
@@ -55,9 +99,22 @@ class reader {
   public:
     explicit reader(input_stream& istream);
 
+    /**
+     * Reads audio data from the input stream.
+     * @param buffer The buffer to read data into.
+     * @param size The number of bytes to read.
+     * @return The number of bytes read.
+     */
     size_t read_audio_data(uint8_t* buffer, size_t size) const;
 
+    /**
+     * @return The sample rate of the audio data.
+     */
     [[nodiscard]] double sample_rate() const;
+
+    /**
+     * @return The number of channels in the audio data.
+     */
     [[nodiscard]] size_t num_channels() const;
 
   private:
@@ -72,15 +129,32 @@ class reader {
  */
 class writer {
   public:
-    explicit writer(output_stream& ostream, double sample_rate, size_t num_channels, size_t bits_per_sample);
+    explicit
+    writer(output_stream& ostream, format_code format, double sample_rate, size_t num_channels, size_t bits_per_sample);
+    ~writer();
+
+    /**
+     * Writes audio data to the output stream.
+     * @param buffer The buffer to write data from.
+     * @param size The number of bytes to write.
+     * @return The number of bytes written.
+     */
     size_t write_audio_data(const uint8_t* buffer, size_t size);
+
+    /**
+     * Finalizes the WAVE file by writing the header and flushing the output stream.
+     */
+    void finalize();
 
   private:
     output_stream& ostream_;
     fmt_chunk fmt_chunk_;
     data_chunk data_chunk_;
+    size_t audio_data_written_ {};
+    size_t fmt_chunk_size_ {};
+    size_t data_chunk_size_ {};
 
-    void write_header() const;
+    void write_header();
 };
 
 }  // namespace rav::wav_audio_format

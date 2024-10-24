@@ -9,6 +9,8 @@
  */
 
 #include "ravennakit/audio/formats/wav_audio_format.hpp"
+
+#include "ravennakit/core/assert.hpp"
 #include "ravennakit/core/exception.hpp"
 #include "ravennakit/core/todo.hpp"
 
@@ -17,7 +19,7 @@
 namespace {}
 
 void rav::wav_audio_format::fmt_chunk::read(input_stream& istream, const uint32_t chunk_size) {
-    audio_format = istream.read_le<format_code>().value();
+    format = istream.read_le<format_code>().value();
     num_channels = istream.read_le<uint16_t>().value();
     sample_rate = istream.read_le<uint32_t>().value();
     avg_bytes_per_sec = istream.read_le<uint32_t>().value();
@@ -41,14 +43,15 @@ void rav::wav_audio_format::fmt_chunk::read(input_stream& istream, const uint32_
     }
 }
 
-void rav::wav_audio_format::fmt_chunk::write(output_stream& ostream) const {
-    ostream.write_string("fmt ");
+size_t rav::wav_audio_format::fmt_chunk::write(output_stream& ostream) const {
+    const auto start_pos = ostream.get_write_position();
+    ostream.write_cstring("fmt ", 4);
     if (extension.has_value()) {
         ostream.write_le<uint32_t>(40);
     } else {
         ostream.write_le<uint32_t>(16);
     }
-    ostream.write_le(audio_format);
+    ostream.write_le(format);
     ostream.write_le(num_channels);
     ostream.write_le(sample_rate);
     ostream.write_le(avg_bytes_per_sec);
@@ -60,6 +63,8 @@ void rav::wav_audio_format::fmt_chunk::write(output_stream& ostream) const {
         ostream.write_le(extension->channel_mask);
         ostream.write_le(extension->sub_format);
     }
+    const auto written = ostream.get_write_position() - start_pos;
+    return written;
 }
 
 void rav::wav_audio_format::data_chunk::read(input_stream& istream, const uint32_t chunk_size) {
@@ -68,9 +73,14 @@ void rav::wav_audio_format::data_chunk::read(input_stream& istream, const uint32
     istream.skip(chunk_size);
 }
 
-void rav::wav_audio_format::data_chunk::write(output_stream& ostream) const {
-    ostream.write_string("fmt ");
+size_t rav::wav_audio_format::data_chunk::write(output_stream& ostream, const size_t data_written) {
+    const auto start_pos = ostream.get_write_position();
+    data_size = data_written;
+    ostream.write_cstring("data", 4);
     ostream.write_le<uint32_t>(static_cast<uint32_t>(data_size));
+    data_begin = ostream.get_write_position();
+    const auto s = data_begin - start_pos;
+    return s;
 }
 
 rav::wav_audio_format::reader::reader(rav::input_stream& istream) : istream_(istream) {
@@ -150,25 +160,50 @@ size_t rav::wav_audio_format::reader::num_channels() const {
 }
 
 rav::wav_audio_format::writer::writer(
-    output_stream& ostream, const double sample_rate, const size_t num_channels, const size_t bits_per_sample
+    output_stream& ostream, const format_code format, const double sample_rate, const size_t num_channels,
+    const size_t bits_per_sample
 ) :
     ostream_(ostream) {
+    fmt_chunk_.format = format;
     fmt_chunk_.sample_rate = static_cast<uint32_t>(sample_rate);
     fmt_chunk_.num_channels = static_cast<uint16_t>(num_channels);
+    fmt_chunk_.avg_bytes_per_sec =
+        static_cast<uint32_t>(fmt_chunk_.sample_rate * fmt_chunk_.num_channels * bits_per_sample / 8);
+    fmt_chunk_.block_align = static_cast<uint16_t>(fmt_chunk_.num_channels * bits_per_sample / 8);
     fmt_chunk_.bits_per_sample = static_cast<uint16_t>(bits_per_sample);
+
+    write_header();
 }
 
-size_t rav::wav_audio_format::writer::write_audio_data(const uint8_t* buffer, size_t size) {
-    std::ignore = buffer;
-    std::ignore = size;
-    TODO("Implement");
+rav::wav_audio_format::writer::~writer() {
+    finalize();
 }
 
-void rav::wav_audio_format::writer::write_header() const {
+size_t rav::wav_audio_format::writer::write_audio_data(const uint8_t* buffer, const size_t size) {
+    const auto written = ostream_.write(buffer, size);
+    audio_data_written_ += written;
+    return written;
+}
+
+void rav::wav_audio_format::writer::finalize() {
+    write_header();
+    ostream_.flush();
+}
+
+void rav::wav_audio_format::writer::write_header() {
+    const auto pos = ostream_.get_write_position();
     ostream_.set_write_position(0);
-    ostream_.write_string(" RIFF");
-    ostream_.write_le<uint32_t>(0);  // Placeholder for RIFF size
-    ostream_.write_string("WAVE");
-    fmt_chunk_.write(ostream_);
-    data_chunk_.write(ostream_);
+
+    ostream_.write_cstring("RIFF", 4);
+    // The riff size will only be correct after calling write_header() once before.
+    const auto riff_size = fmt_chunk_size_ + data_chunk_size_ + audio_data_written_ + 4;  // +4 for "WAVE"
+    RAV_ASSERT(riff_size < std::numeric_limits<uint32_t>::max(), "WAV file too large");
+    ostream_.write_le<uint32_t>(static_cast<uint32_t>(riff_size));
+    ostream_.write_cstring("WAVE", 4);
+    fmt_chunk_size_ = fmt_chunk_.write(ostream_);
+    data_chunk_size_ = data_chunk_.write(ostream_, audio_data_written_);
+
+    if (pos > 0) {
+        ostream_.set_write_position(pos);
+    }
 }

@@ -17,6 +17,9 @@
 
 namespace rav {
 
+/**
+ * An abstract class representing an output stream, providing all kinds of write operations.
+ */
 class output_stream {
   public:
     output_stream() = default;
@@ -93,7 +96,7 @@ class output_stream {
      * @param str The string to write.
      * @param max_size The max size to write.
      */
-    size_t write_string(const char* str, const size_t max_size = std::numeric_limits<size_t>::max()) {
+    size_t write_cstring(const char* str, const size_t max_size = std::numeric_limits<size_t>::max()) {
         return write(reinterpret_cast<const uint8_t*>(str), std::min(std::strlen(str) + 1, max_size));
     }
 };
