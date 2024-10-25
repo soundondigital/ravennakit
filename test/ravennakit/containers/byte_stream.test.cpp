@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/containers/byte_stream.hpp"
+#include "ravennakit/streams/byte_stream.hpp"
 
 #include <catch2/catch_all.hpp>
 

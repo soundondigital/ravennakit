@@ -17,7 +17,7 @@
 #include "ravennakit/asio/io_context_runner.hpp"
 #include "ravennakit/audio/circular_audio_buffer.hpp"
 #include "ravennakit/audio/formats/wav_audio_format.hpp"
-#include "ravennakit/containers/file_output_stream.hpp"
+#include "ravennakit/streams/file_output_stream.hpp"
 #include "ravennakit/core/file.hpp"
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/core/system.hpp"

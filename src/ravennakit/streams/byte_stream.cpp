@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/containers/byte_stream.hpp"
+#include "ravennakit/streams/byte_stream.hpp"
 
 rav::byte_stream::byte_stream(std::vector<uint8_t> data) : data_(std::move(data)), write_position_(data_.size()) {}
 

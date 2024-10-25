@@ -102,11 +102,7 @@ int main(int const argc, char* argv[]) {
                 // Schedule the updates on the io_context thread because the advertiser is not thread-safe.
                 asio::post(io_context, [=, &advertiser] {
                     advertiser->update_txt_record(service_id2, txt_record);
-                    RAV_INFO("Updated txt record:");
-
-                    for (auto& pair : txt_record) {
-                        RAV_INFO("{}={}", pair.first, pair.second);
-                    }
+                    RAV_INFO("Updated txt record");
                 });
             }
         } catch (const std::exception& e) {
