@@ -21,6 +21,10 @@ namespace rtsp {
     struct connect_event {};
 }  // namespace rtsp
 
+/**
+ * Client for connecting to an RTSP server. Given io_context must be single-threaded to implicitly support
+ * thread-safety.
+ */
 class rtsp_client final: public event_emitter<rtsp_client, rtsp::connect_event, rtsp_response, rtsp_request> {
   public:
     explicit rtsp_client(asio::io_context& io_context);
