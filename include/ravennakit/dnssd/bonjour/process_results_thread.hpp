@@ -23,6 +23,8 @@ namespace rav::dnssd {
 
 /**
  * Class which processes the results of a DNSServiceRef in a separate thread.
+ * Note: at the moment this class is not used because the browser and advertiser classes process the results on an asio
+ * io_context.
  */
 class process_results_thread {
   public:
@@ -52,11 +54,11 @@ class process_results_thread {
 
   private:
     int service_fd_ {};
-#if RAV_POSIX
+    #if RAV_POSIX
     posix::pipe pipe_;
-#elif RAV_WINDOWS
+    #elif RAV_WINDOWS
     windows::event event_;
-#endif
+    #endif
     std::mutex lock_;
     std::future<void> future_;
 

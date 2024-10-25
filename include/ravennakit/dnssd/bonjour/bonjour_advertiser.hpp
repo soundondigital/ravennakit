@@ -7,6 +7,7 @@
 
 #include <map>
 #include <mutex>
+#include <asio/ip/tcp.hpp>
 
 #if RAV_HAS_APPLE_DNSSD
 
@@ -21,7 +22,13 @@ namespace rav::dnssd {
  */
 class bonjour_advertiser: public dnssd_advertiser {
   public:
-    explicit bonjour_advertiser();
+    /**
+     * Constructs a Bonjour advertiser.
+     * Given io_context is used to process the results of the Bonjour service.
+     * It is assumed that the io_context is run by a single thread.
+     * @param io_context The context to use for the processing results.
+     */
+    explicit bonjour_advertiser(asio::io_context& io_context);
     ~bonjour_advertiser() override;
 
     util::id register_service(
@@ -39,9 +46,12 @@ class bonjour_advertiser: public dnssd_advertiser {
     };
 
     bonjour_shared_connection shared_connection_;
-    process_results_thread process_results_thread_;
+    asio::ip::tcp::socket service_socket_;
     util::id::generator id_generator_;
     std::vector<registered_service> registered_services_;
+    size_t process_results_failed_attempts_ = 0;
+
+    void async_process_results();
 
     static void DNSSD_API register_service_callback(
         DNSServiceRef service_ref, DNSServiceFlags flags, DNSServiceErrorType error_code, const char* service_name,

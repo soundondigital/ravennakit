@@ -1,6 +1,8 @@
 #include "ravennakit/core/rollback.hpp"
 #include "ravennakit/dnssd/bonjour/bonjour.hpp"
 
+#include <asio/dispatch.hpp>
+
 #if RAV_HAS_APPLE_DNSSD
 
     #include "ravennakit/dnssd/bonjour/bonjour_advertiser.hpp"
@@ -10,20 +12,26 @@
     #include <iostream>
     #include <thread>
 
-rav::dnssd::bonjour_advertiser::bonjour_advertiser() {
-    process_results_thread_.start(shared_connection_.service_ref());
+rav::dnssd::bonjour_advertiser::bonjour_advertiser(asio::io_context& io_context) : service_socket_(io_context) {
+    const int service_fd = DNSServiceRefSockFD(shared_connection_.service_ref());
+
+    if (service_fd < 0) {
+        RAV_THROW_EXCEPTION("Invalid file descriptor");
+    }
+
+    service_socket_.assign(asio::ip::tcp::v6(), service_fd);  // Not sure about v6
+    async_process_results();
 }
 
 rav::dnssd::bonjour_advertiser::~bonjour_advertiser() {
-    process_results_thread_.stop();
+    service_socket_.cancel();
+    service_socket_.release();  // Release the socket to avoid closing it in the destructor
 }
 
 rav::util::id rav::dnssd::bonjour_advertiser::register_service(
     const std::string& reg_type, const char* name, const char* domain, uint16_t port, const txt_record& txt_record,
     const bool auto_rename
 ) {
-    const auto guard = process_results_thread_.lock();
-
     DNSServiceRef service_ref = shared_connection_.service_ref();
     const auto record = bonjour_txt_record(txt_record);
 
@@ -47,8 +55,6 @@ rav::util::id rav::dnssd::bonjour_advertiser::register_service(
 }
 
 void rav::dnssd::bonjour_advertiser::unregister_service(util::id id) {
-    const auto guard = process_results_thread_.lock();
-
     registered_services_.erase(
         std::remove_if(
             registered_services_.begin(), registered_services_.end(),
@@ -58,6 +64,34 @@ void rav::dnssd::bonjour_advertiser::unregister_service(util::id id) {
         ),
         registered_services_.end()
     );
+}
+
+void rav::dnssd::bonjour_advertiser::async_process_results() {
+    service_socket_.async_wait(asio::ip::tcp::socket::wait_read, [this](const asio::error_code& ec) {
+        if (ec) {
+            if (ec != asio::error::operation_aborted) {
+                RAV_ERROR("Error in async_wait_for_results: {}", ec.message());
+            }
+            return;
+        }
+
+        const auto result = DNSServiceProcessResult(shared_connection_.service_ref());
+
+        if (result != kDNSServiceErr_NoError) {
+            RAV_ERROR("DNSServiceError: {}", dns_service_error_to_string(result));
+            emit(events::advertiser_error {fmt::format("Process result error: {}", dns_service_error_to_string(result))}
+            );
+            if (++process_results_failed_attempts_ > 10) {
+                RAV_ERROR("Too many failed attempts to process results, stopping");
+                emit(events::advertiser_error {"Too many failed attempts to process results, stopping"});
+                return;
+            }
+        } else {
+            process_results_failed_attempts_ = 0;
+        }
+
+        async_process_results();
+    });
 }
 
 void rav::dnssd::bonjour_advertiser::register_service_callback(
@@ -89,8 +123,6 @@ rav::dnssd::bonjour_advertiser::find_registered_service(const util::id id) {
 }
 
 void rav::dnssd::bonjour_advertiser::update_txt_record(const util::id id, const txt_record& txt_record) {
-    const auto guard = process_results_thread_.lock();
-
     const auto* const service = find_registered_service(id);
     if (service == nullptr) {
         RAV_THROW_EXCEPTION("Service not found");

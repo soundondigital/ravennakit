@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <asio/post.hpp>
 
 static bool parse_txt_record(rav::dnssd::txt_record& txt_record, const std::string& string_value) {
     if (string_value.empty())
@@ -52,7 +53,9 @@ int main(int const argc, char* argv[]) {
         parse_txt_record(txt_record, *it);
     }
 
-    const auto advertiser = rav::dnssd::dnssd_advertiser::create();
+    asio::io_context io_context;
+
+    const auto advertiser = rav::dnssd::dnssd_advertiser::create(io_context);
 
     if (advertiser == nullptr) {
         RAV_ERROR("Error: no dnssd advertiser implementation available for this platform");
@@ -77,6 +80,10 @@ int main(int const argc, char* argv[]) {
         args[0], "Second test service", nullptr, static_cast<uint16_t>(port_number), txt_record, true
     );
 
+    std::thread io_context_thread([&io_context] {
+        io_context.run();
+    });
+
     RAV_INFO("Enter key=value to update the TXT record, or q to exit...");
 
     std::string cmd;
@@ -90,21 +97,25 @@ int main(int const argc, char* argv[]) {
             advertiser->unregister_service(service_id2);
             continue;
         }
-
         try {
             if (parse_txt_record(txt_record, cmd)) {
-                advertiser->update_txt_record(service_id2, txt_record);
+                // Schedule the updates on the io_context thread because the advertiser is not thread-safe.
+                asio::post(io_context, [=, &advertiser] {
+                    advertiser->update_txt_record(service_id2, txt_record);
+                    RAV_INFO("Updated txt record:");
 
-                RAV_INFO("Updated txt record:");
-
-                for (auto& pair : txt_record) {
-                    RAV_INFO("{}={}", pair.first, pair.second);
-                }
+                    for (auto& pair : txt_record) {
+                        RAV_INFO("{}={}", pair.first, pair.second);
+                    }
+                });
             }
         } catch (const std::exception& e) {
             RAV_ERROR("Failed to update txt record: {}", e.what());
         }
     }
+
+    io_context.stop();
+    io_context_thread.join();
 
     std::cout << "Exit" << std::endl;
 

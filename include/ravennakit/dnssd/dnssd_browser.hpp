@@ -3,6 +3,8 @@
 #include "service_description.hpp"
 #include "ravennakit/core/event_emitter.hpp"
 
+#include <asio.hpp>
+
 #include <functional>
 #include <memory>
 
@@ -85,7 +87,8 @@ class dnssd_browser:
     ~dnssd_browser() override = default;
 
     /**
-     * Starts browsing for a service
+     * Starts browsing for a service.
+     * This function is not thread safe.
      * @param service_type The service type (i.e. _http._tcp.).
      * @return Returns a result indicating success or failure.
      */
@@ -95,7 +98,7 @@ class dnssd_browser:
      * Creates the most appropriate dnssd_browser implementation for the platform.
      * @return The created dnssd_browser instance, or nullptr if no implementation is available.
      */
-    static std::unique_ptr<dnssd_browser> create();
+    static std::unique_ptr<dnssd_browser> create(asio::io_context& io_context);
 };
 
 }  // namespace rav::dnssd

@@ -189,11 +189,11 @@ if (${BUILD_EXAMPLES})
     # DNSSD Browser example #
     #########################
 
-    add_executable(dnssd_browser
-            examples/dnssd_browser.cpp
+    add_executable(dnssd_browser_example
+            examples/dnssd_browser_example.cpp
     )
 
-    target_link_libraries(dnssd_browser
+    target_link_libraries(dnssd_browser_example
             PUBLIC
             rav_recommended_warning_flags
             rav_recommended_lto_flags
@@ -204,18 +204,18 @@ if (${BUILD_EXAMPLES})
     )
 
     if (TRACY_ENABLE)
-        target_link_libraries(dnssd_browser PUBLIC tracy)
+        target_link_libraries(dnssd_browser_example PUBLIC tracy)
     endif ()
 
     ############################
     # DNSSD Advertiser example #
     ############################
 
-    add_executable(dnssd_advertiser
-            examples/dnssd_advertiser.cpp
+    add_executable(dnssd_advertiser_example
+            examples/dnssd_advertiser_example.cpp
     )
 
-    target_link_libraries(dnssd_advertiser
+    target_link_libraries(dnssd_advertiser_example
             PUBLIC
             rav_recommended_warning_flags
             rav_recommended_lto_flags
@@ -226,7 +226,7 @@ if (${BUILD_EXAMPLES})
     )
 
     if (TRACY_ENABLE)
-        target_link_libraries(dnssd_advertiser PUBLIC tracy)
+        target_link_libraries(dnssd_advertiser_example PUBLIC tracy)
     endif ()
 
     #######################

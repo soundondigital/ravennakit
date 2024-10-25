@@ -8,6 +8,8 @@
 #include "ravennakit/core/result.hpp"
 #include "ravennakit/util/id.hpp"
 
+#include <asio/io_context.hpp>
+
 namespace rav::dnssd {
 
 namespace events {
@@ -37,6 +39,7 @@ class dnssd_advertiser: public event_emitter<dnssd_advertiser, events::advertise
 
     /**
      * Registers a service with given arguments.
+     * Function is not thread safe.
      *
      * @param reg_type The service type followed by the protocol, separated by a dot (e.g. "_ftp._tcp"). The service
      * type must be an underscore, followed by 1-15 characters, which may be letters, digits, or hyphens. The
@@ -59,6 +62,8 @@ class dnssd_advertiser: public event_emitter<dnssd_advertiser, events::advertise
 
     /**
      * Updates the TXT record of this service. The given TXT record will replace the previous one.
+     * Function is not thread safe.
+     *
      * @param id
      * @param txt_record The new TXT record.
      * @throws When an error occurs during updating.
@@ -67,6 +72,7 @@ class dnssd_advertiser: public event_emitter<dnssd_advertiser, events::advertise
 
     /**
      * Unregisters this service from the mDnsResponder, after which the service will no longer be found on the network.
+     * Function is not thread safe.
      */
     virtual void unregister_service(util::id id) = 0;
 
@@ -74,7 +80,7 @@ class dnssd_advertiser: public event_emitter<dnssd_advertiser, events::advertise
      * Creates the most appropriate dnssd_advertiser implementation for the platform.
      * @return The created dnssd_advertiser instance, or nullptr if no implementation is available.
      */
-    static std::unique_ptr<dnssd_advertiser> create();
+    static std::unique_ptr<dnssd_advertiser> create(asio::io_context& io_context);
 };
 
 }  // namespace rav::dnssd

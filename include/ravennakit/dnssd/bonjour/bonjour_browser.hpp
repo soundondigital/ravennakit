@@ -8,6 +8,8 @@
 #include "bonjour.hpp"
 #include "process_results_thread.hpp"
 
+#include <asio/io_context.hpp>
+
 #if RAV_HAS_APPLE_DNSSD
 
     #include "bonjour_scoped_dns_service_ref.hpp"
@@ -104,16 +106,19 @@ class bonjour_browser: public dnssd_browser {
         );
     };
 
-    explicit bonjour_browser();
+    explicit bonjour_browser(asio::io_context& io_context);
     ~bonjour_browser() override;
 
     void browse_for(const std::string& service) override;
 
   private:
     bonjour_shared_connection shared_connection_;
-    process_results_thread process_results_thread_;
+    asio::ip::tcp::socket service_socket_;
     std::map<std::string, service> services_;
     std::map<std::string, bonjour_scoped_dns_service_ref> browsers_;
+    size_t process_results_failed_attempts_ = 0;
+
+    void async_process_results();
 
     /**
      * Called by dns_sd logic in response to a browse reply.

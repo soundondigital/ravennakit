@@ -15,7 +15,9 @@ int main(const int argc, char* argv[]) {
         return -1;
     }
 
-    const auto browser = rav::dnssd::dnssd_browser::create();
+    asio::io_context io_context;  // NOLINT
+
+    const auto browser = rav::dnssd::dnssd_browser::create(io_context);
 
     if (browser == nullptr) {
         std::cout << "No browser implementation available for this platform" << std::endl;
@@ -54,10 +56,15 @@ int main(const int argc, char* argv[]) {
 
     browser->browse_for(argv[1]);
 
-    std::cout << "Press enter to exit..." << std::endl;
+    std::thread io_context_thread([&io_context] {
+        io_context.run();
+    });
 
-    std::string cmd;
-    std::getline(std::cin, cmd);
+    std::cout << "Press enter to exit..." << std::endl;
+    std::cin.get();
+
+    io_context.stop();
+    io_context_thread.join();
 
     std::cout << "Exit" << std::endl;
 
