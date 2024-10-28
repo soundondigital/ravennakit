@@ -29,7 +29,7 @@ class ravenna_rtsp_client {
 
     explicit ravenna_rtsp_client(asio::io_context& io_context, ravenna_browser& browser);
 
-    void subscribe(const std::string& session_name, subscriber& subscriber);
+    void subscribe(const std::string& session_name, subscriber& s);
 
   private:
     asio::io_context& io_context_;

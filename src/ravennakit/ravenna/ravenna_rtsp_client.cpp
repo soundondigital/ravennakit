@@ -18,15 +18,15 @@ rav::ravenna_rtsp_client::ravenna_rtsp_client(asio::io_context& io_context, rave
     browser.subscribe(ravenna_browser_subscriber_);
 }
 
-void rav::ravenna_rtsp_client::subscribe(const std::string& session_name, subscriber& subscriber) {
+void rav::ravenna_rtsp_client::subscribe(const std::string& session_name, subscriber& s) {
     if (session_name.empty()) {
         RAV_THROW_EXCEPTION("session_name cannot be empty");
     }
 
     auto& session = sessions_[session_name];
-    session.subscribers.push_back(subscriber);
+    session.subscribers.push_back(s);
     if (session.sdp_) {
-        subscriber->emit(sdp_updated{session_name, *session.sdp_});
+        s->emit(sdp_updated{session_name, *session.sdp_});
     }
 
     // TODO: See if there is connection info available on the browser, if so use that to create a connection.

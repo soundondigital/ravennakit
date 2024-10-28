@@ -26,8 +26,8 @@ void rav::ravenna_sink::set_sdp(sdp::session_description sdp) {
     manual_sdp_ = std::move(sdp);
 }
 
-void rav::ravenna_sink::set_mode(const mode mode) {
-    mode_ = mode;
+void rav::ravenna_sink::set_mode(const mode new_mode) {
+    mode_ = new_mode;
 }
 
 void rav::ravenna_sink::set_source(std::string session_name) {

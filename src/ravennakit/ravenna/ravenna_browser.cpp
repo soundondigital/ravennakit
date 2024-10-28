@@ -28,8 +28,8 @@ rav::ravenna_browser::ravenna_browser(asio::io_context& io_context) : io_context
         session_browser_->on<dnssd::dnssd_service_resolved>([this](const dnssd::dnssd_service_resolved& event) {
             RAV_INFO("RAVENNA Stream resolved: {}", event.description.name);
 
-            subscribers_.foreach([&event](auto& subscriber) {
-                subscriber.emit(ravenna_session_resolved {event.description});
+            subscribers_.foreach([&event](auto& s) {
+                s.emit(ravenna_session_resolved {event.description});
             });
         });
 
@@ -38,6 +38,6 @@ rav::ravenna_browser::ravenna_browser(asio::io_context& io_context) : io_context
     }
 }
 
-void rav::ravenna_browser::subscribe(subscriber& subscriber) {
-    subscribers_.push_back(subscriber);
+void rav::ravenna_browser::subscribe(subscriber& s) {
+    subscribers_.push_back(s);
 }

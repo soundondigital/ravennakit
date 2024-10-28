@@ -34,7 +34,7 @@ class ravenna_browser final {
 
     explicit ravenna_browser(asio::io_context& io_context);
 
-    void subscribe(subscriber& subscriber);
+    void subscribe(subscriber& s);
 
   private:
     asio::io_context& io_context_;

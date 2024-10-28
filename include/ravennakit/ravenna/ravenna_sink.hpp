@@ -24,7 +24,7 @@ class ravenna_sink {
 
     ~ravenna_sink() = default;
 
-    void set_mode(mode mode);
+    void set_mode(mode new_mode);
     void set_source(std::string session_name);
     void set_sdp(sdp::session_description sdp);
 
