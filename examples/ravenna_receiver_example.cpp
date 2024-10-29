@@ -36,18 +36,20 @@ int main(int const argc, char* argv[]) {
 
     asio::io_context io_context;
 
-    rav::dnssd::bonjour_browser node_browser(io_context);
-    node_browser.browse_for("_rtsp._tcp,_ravenna");
+    auto node_browser = rav::dnssd::dnssd_browser::create(io_context);
+    if (node_browser){
+        node_browser->browse_for("_rtsp._tcp,_ravenna");
 
-    rav::dnssd::bonjour_browser::subscriber subscriber;
-    subscriber->on<rav::dnssd::dnssd_browser::service_resolved>([](const auto& event) {
-        RAV_INFO("RAVENNA Node resolved: {}", event.description.description());
-    });
-    node_browser.subscribe(subscriber);
+        rav::dnssd::dnssd_browser::subscriber subscriber{};
+        subscriber->on<rav::dnssd::dnssd_browser::service_resolved>([](const auto& event) {
+            RAV_INFO("RAVENNA Node resolved: {}", event.description.description());
+        });
+        node_browser->subscribe(subscriber);
 
-    rav::ravenna_rtsp_client rtsp_client(io_context, node_browser);
-    // rav::ravenna_sink sink1(rtsp_client, "sink1");
-    // rav::ravenna_sink sink2(rtsp_client, "sink2");
+        rav::ravenna_rtsp_client rtsp_client(io_context, *node_browser);
+        // rav::ravenna_sink sink1(rtsp_client, "sink1");
+        // rav::ravenna_sink sink2(rtsp_client, "sink2");
+    }
 
     io_context.run();
 }
