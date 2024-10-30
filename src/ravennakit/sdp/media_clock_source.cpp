@@ -18,10 +18,10 @@ rav::sdp::media_clock_source::parse_result<rav::sdp::media_clock_source> rav::sd
 
     media_clock_source clock;
 
-    if (const auto mode_part = parser.read_until(' ')) {
+    if (const auto mode_part = parser.split(' ')) {
         string_parser mode_parser(*mode_part);
 
-        if (const auto mode = mode_parser.read_until('=')) {
+        if (const auto mode = mode_parser.split('=')) {
             if (mode == "direct") {
                 clock.mode_ = clock_mode::direct;
             } else {
@@ -45,7 +45,7 @@ rav::sdp::media_clock_source::parse_result<rav::sdp::media_clock_source> rav::sd
         return parse_result<media_clock_source>::ok(clock);
     }
 
-    if (const auto rate = parser.read_until('=')) {
+    if (const auto rate = parser.split('=')) {
         if (rate == "rate") {
             const auto numerator = parser.read_int<int32_t>();
             if (!numerator) {

@@ -69,12 +69,55 @@ class string_parser {
     explicit string_parser(const std::string& str) : str_(str) {}
 
     /**
-     * Reads a string until the given delimiter. If delimiter is not found, the whole string is returned.
+     * Reads until given delimiter.
+     * @param delimiter The character sequence to read until.
+     * @param include_delimiter Whether to include the delimiter in the returned string.
+     * @return The string until delimited, or a nullopt if the delimiter was not found.
+     */
+    std::optional<std::string_view> read_until(const char delimiter, const bool include_delimiter = false) {
+        if (str_.empty()) {
+            return std::nullopt;
+        }
+
+        const auto pos = str_.find(delimiter);
+        if (pos == std::string_view::npos) {
+            return {};
+        }
+
+        const auto substr = str_.substr(0, include_delimiter ? pos + 1 : pos);
+        str_.remove_prefix(pos + 1);
+        return substr;  // NOLINT: The address of the local variable 'substr' may escape the function
+    }
+
+    /**
+     * Reads until given delimiter.
+     * @param delimiter The character sequence to read until.
+     * @param include_delimiter Whether to include the delimiter in the returned string.
+     * @return The string until delimited, or a nullopt if the delimiter was not found.
+     */
+    std::optional<std::string_view> read_until(const char* delimiter, const bool include_delimiter = false) {
+        if (str_.empty()) {
+            return std::nullopt;
+        }
+
+        const auto pos = str_.find(delimiter);
+        if (pos == std::string_view::npos) {
+            return {};
+        }
+
+        const auto substr = str_.substr(0, include_delimiter ? pos + strlen(delimiter) : pos);
+        str_.remove_prefix(pos + strlen(delimiter));
+        return substr;  // NOLINT: The address of the local variable 'substr' may escape the function
+    }
+
+    /**
+     * Reads until given delimiter or until the end of the string. It's like splitting string, but only returning the
+     * first part.
      * @param delimiter The character sequence to read until.
      * @param include_delimiter Whether to include the delimiter in the returned string.
      * @return The read string, or an empty optional if the string is exhausted.
      */
-    std::optional<std::string_view> read_until(const char delimiter, const bool include_delimiter = false) {
+    std::optional<std::string_view> split(const char delimiter, const bool include_delimiter = false) {
         if (str_.empty()) {
             return std::nullopt;
         }
@@ -92,25 +135,13 @@ class string_parser {
     }
 
     /**
-     * Reads the rest of the string.
-     * @return The read string.
-     */
-    std::optional<std::string_view> read_until_end() {
-        if (str_.empty()) {
-            return std::nullopt;
-        }
-        auto str = str_;
-        str_ = {};
-        return str;
-    }
-
-    /**
-     * Reads a string until the given delimiter. If delimiter is not found, the whole string is returned.
+     * Reads until given delimiter or until the end of the string. It's like splitting string, but only returning the
+     * first part.
      * @param delimiter The character sequence to read until.
      * @param include_delimiter Whether to include the delimiter in the returned string.
-     * @return The read string.
+     * @return The read string, or an empty optional if the string is exhausted.
      */
-    std::optional<std::string_view> read_until(const char* delimiter, const bool include_delimiter = false) {
+    std::optional<std::string_view> split(const char* delimiter, const bool include_delimiter = false) {
         if (str_.empty()) {
             return std::nullopt;
         }
@@ -167,6 +198,19 @@ class string_parser {
             substr.remove_suffix(1);  // Remove CR from CRLF
         }
         return substr;  // NOLINT: The address of the local variable 'substr' may escape the function
+    }
+
+    /**
+     * Reads the rest of the string.
+     * @return The read string.
+     */
+    std::optional<std::string_view> read_until_end() {
+        if (str_.empty()) {
+            return std::nullopt;
+        }
+        auto str = str_;
+        str_ = {};
+        return str;
     }
 
     /**

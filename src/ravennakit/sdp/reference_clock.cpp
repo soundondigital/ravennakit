@@ -36,7 +36,7 @@ rav::sdp::reference_clock::parse_result<rav::sdp::reference_clock>
 rav::sdp::reference_clock::parse_new(const std::string_view line) {
     string_parser parser(line);
 
-    const auto source = parser.read_until("=");
+    const auto source = parser.split("=");
     if (!source) {
         return parse_result<reference_clock>::err("reference_clock: invalid source");
     }
@@ -46,7 +46,7 @@ rav::sdp::reference_clock::parse_new(const std::string_view line) {
 
         ref_clock.source_ = clock_source::ptp;
 
-        if (const auto ptp_version = parser.read_until(":")) {
+        if (const auto ptp_version = parser.split(":")) {
             if (ptp_version == "IEEE1588-2002") {
                 ref_clock.ptp_version_ = ptp_ver::IEEE_1588_2002;
             } else if (ptp_version == "IEEE1588-2008") {
@@ -58,7 +58,7 @@ rav::sdp::reference_clock::parse_new(const std::string_view line) {
             }
         }
 
-        if (const auto gmid = parser.read_until(":")) {
+        if (const auto gmid = parser.split(":")) {
             ref_clock.gmid_ = *gmid;
         }
 

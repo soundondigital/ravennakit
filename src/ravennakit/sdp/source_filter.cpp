@@ -23,7 +23,7 @@ rav::sdp::source_filter::parse_new(const std::string_view line) {
     }
 
     // Filter mode
-    const auto filter_mode = parser.read_until(' ');
+    const auto filter_mode = parser.split(' ');
     if (!filter_mode) {
         return parse_result<source_filter>::err("source_filter: filter mode not found");
     }
@@ -36,7 +36,7 @@ rav::sdp::source_filter::parse_new(const std::string_view line) {
     }
 
     // Network type
-    const auto netw_type = parser.read_until(' ');
+    const auto netw_type = parser.split(' ');
     if (!netw_type) {
         return parse_result<source_filter>::err("source_filter: network type not found");
     }
@@ -48,7 +48,7 @@ rav::sdp::source_filter::parse_new(const std::string_view line) {
     }
 
     // Address type
-    const auto addr_type = parser.read_until(' ');
+    const auto addr_type = parser.split(' ');
     if (!addr_type) {
         return parse_result<source_filter>::err("source_filter: address type not found");
     }
@@ -64,7 +64,7 @@ rav::sdp::source_filter::parse_new(const std::string_view line) {
     }
 
     // Destination address
-    const auto dest_address = parser.read_until(' ');
+    const auto dest_address = parser.split(' ');
     if (!dest_address) {
         return parse_result<source_filter>::err("source_filter: destination address not found");
     }
@@ -76,7 +76,7 @@ rav::sdp::source_filter::parse_new(const std::string_view line) {
     filter.dest_address_ = *dest_address;
 
     for (auto i = 0; i < RAV_LOOP_UPPER_BOUND; ++i) {
-        const auto src_address = parser.read_until(' ');
+        const auto src_address = parser.split(' ');
         if (!src_address) {
             break;
         }

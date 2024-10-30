@@ -54,7 +54,7 @@ rav::rtsp_parser::result rav::rtsp_parser::parse(string_buffer& input) {
                 string_parser header_parser(*header_line);
 
                 // Header name
-                if (auto name = header_parser.read_until(':')) {
+                if (auto name = header_parser.split(':')) {
                     h.name = *name;
                 } else {
                     return result::bad_header;
@@ -162,11 +162,11 @@ rav::rtsp_parser::result rav::rtsp_parser::handle_response() {
 
 rav::rtsp_parser::result rav::rtsp_parser::handle_request() {
     string_parser parser(start_line_);
-    const auto method = parser.read_until(' ');
+    const auto method = parser.split(' ');
     if (!method) {
         return result::bad_method;
     }
-    const auto uri = parser.read_until(' ');
+    const auto uri = parser.split(' ');
     if (!uri) {
         return result::bad_uri;
     }

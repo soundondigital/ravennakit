@@ -182,7 +182,7 @@ rav::sdp::session_description::parse_attribute(const std::string_view line) {
         return parse_result<void>::err("attribute: expecting 'a='");
     }
 
-    const auto key = parser.read_until(':');
+    const auto key = parser.split(':');
 
     if (!key) {
         return parse_result<void>::err("attribute: expecting key");

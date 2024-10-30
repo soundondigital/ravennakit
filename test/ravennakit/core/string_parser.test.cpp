@@ -14,7 +14,99 @@
 
 #include "ravennakit/core/util.hpp"
 
-TEST_CASE("string_parser", "[string_parser]") {
+TEST_CASE("string_parser | split") {
+    SECTION("Test delimited string without include_delimiter") {
+        const auto str = "this is just a random string";
+        rav::string_parser parser(str);
+        REQUIRE(parser.split("just") == "this is ");
+        REQUIRE(parser.split("string") == " a random ");
+    }
+
+    SECTION("Test delimited string with include_delimiter") {
+        const auto str = "this is just a random string";
+        rav::string_parser parser(str);
+        REQUIRE(parser.split("just", true) == "this is just");
+        REQUIRE(parser.split("string", true) == " a random string");
+    }
+
+    SECTION("Test delimited string without include_delimiter") {
+        const auto str = "key1=value1;key2=value2;key3=value3";
+        rav::string_parser parser(str);
+        REQUIRE(parser.split('=') == "key1");
+        REQUIRE(parser.split(';') == "value1");
+        REQUIRE(parser.split('=') == "key2");
+        REQUIRE(parser.split(';') == "value2");
+        REQUIRE(parser.split('=') == "key3");
+        REQUIRE(parser.split(';') == "value3");
+    }
+
+    SECTION("Test delimited string with include_delimiter") {
+        const auto str = "0.1.2.3";
+        rav::string_parser parser(str);
+        REQUIRE(parser.split('1', true) == "0.1");
+        REQUIRE(parser.split('.', true) == ".");
+        REQUIRE(parser.split('3', true) == "2.3");
+    }
+
+    SECTION("Test delimited string with include_delimiter") {
+        const auto str = "0.1.2.3";
+        rav::string_parser parser(str);
+        REQUIRE(parser.split('1') == "0.");
+        REQUIRE(parser.split('.') == "");
+        REQUIRE(parser.split('3') == "2.");
+    }
+
+    SECTION("Test delimited string where delimiter is not found") {
+        SECTION("Single char") {
+            const auto str = "0.1.2.3";
+            rav::string_parser parser(str);
+            REQUIRE(parser.split('4') == "0.1.2.3");
+        }
+        SECTION("Multi char") {
+            const auto str = "0.1.2.3";
+            rav::string_parser parser(str);
+            REQUIRE(parser.split("4") == "0.1.2.3");
+        }
+    }
+
+    SECTION("Test string exhaustion") {
+        SECTION("Single char") {
+            const auto str = "0.1.2.3";
+            rav::string_parser parser(str);
+            REQUIRE(parser.split('.') == "0");
+            REQUIRE(parser.split('.') == "1");
+            REQUIRE(parser.split('.') == "2");
+            REQUIRE(parser.split('.') == "3");
+            REQUIRE_FALSE(parser.split('.').has_value());
+        }
+
+        SECTION("Multiple chars") {
+            const auto str = "0.1.2.3";
+            rav::string_parser parser(str);
+            REQUIRE(parser.split(".") == "0");
+            REQUIRE(parser.split(".") == "1");
+            REQUIRE(parser.split(".") == "2");
+            REQUIRE(parser.split(".") == "3");
+            REQUIRE_FALSE(parser.split(".").has_value());
+        }
+    }
+
+    SECTION("Test string with only delimiter") {
+        SECTION("Include delimiter") {
+            const auto str = ".";
+            rav::string_parser parser(str);
+            REQUIRE(parser.split('.', true) == ".");
+        }
+
+        SECTION("Exclude delimiter") {
+            const auto str = ".";
+            rav::string_parser parser(str);
+            REQUIRE(parser.split('.') == "");
+        }
+    }
+}
+
+TEST_CASE("string_parser | read_until") {
     SECTION("Test delimited string without include_delimiter") {
         const auto str = "this is just a random string";
         rav::string_parser parser(str);
@@ -37,7 +129,7 @@ TEST_CASE("string_parser", "[string_parser]") {
         REQUIRE(parser.read_until('=') == "key2");
         REQUIRE(parser.read_until(';') == "value2");
         REQUIRE(parser.read_until('=') == "key3");
-        REQUIRE(parser.read_until(';') == "value3");
+        REQUIRE(parser.read_until(';') == std::nullopt);
     }
 
     SECTION("Test delimited string with include_delimiter") {
@@ -60,12 +152,12 @@ TEST_CASE("string_parser", "[string_parser]") {
         SECTION("Single char") {
             const auto str = "0.1.2.3";
             rav::string_parser parser(str);
-            REQUIRE(parser.read_until('4') == "0.1.2.3");
+            REQUIRE(parser.read_until('4') == std::nullopt);
         }
         SECTION("Multi char") {
             const auto str = "0.1.2.3";
             rav::string_parser parser(str);
-            REQUIRE(parser.read_until("4") == "0.1.2.3");
+            REQUIRE(parser.read_until("4") == std::nullopt);
         }
     }
 
@@ -76,7 +168,7 @@ TEST_CASE("string_parser", "[string_parser]") {
             REQUIRE(parser.read_until('.') == "0");
             REQUIRE(parser.read_until('.') == "1");
             REQUIRE(parser.read_until('.') == "2");
-            REQUIRE(parser.read_until('.') == "3");
+            REQUIRE(parser.read_until('.') == std::nullopt);
             REQUIRE_FALSE(parser.read_until('.').has_value());
         }
 
@@ -86,7 +178,7 @@ TEST_CASE("string_parser", "[string_parser]") {
             REQUIRE(parser.read_until(".") == "0");
             REQUIRE(parser.read_until(".") == "1");
             REQUIRE(parser.read_until(".") == "2");
-            REQUIRE(parser.read_until(".") == "3");
+            REQUIRE(parser.read_until(".") == std::nullopt);
             REQUIRE_FALSE(parser.read_until(".").has_value());
         }
     }
@@ -104,15 +196,17 @@ TEST_CASE("string_parser", "[string_parser]") {
             REQUIRE(parser.read_until('.') == "");
         }
     }
+}
 
+TEST_CASE("string_parser") {
     SECTION("Parse some ints") {
         const auto str = "0.1.23456";
         rav::string_parser parser(str);
         REQUIRE(parser.read_int<int32_t>().value() == 0);
         REQUIRE_FALSE(parser.read_int<int32_t>().has_value());
-        REQUIRE(parser.read_until('.')->empty());
+        REQUIRE(parser.split('.')->empty());
         REQUIRE(parser.read_int<int32_t>().value() == 1);
-        REQUIRE(parser.read_until('.')->empty());
+        REQUIRE(parser.split('.')->empty());
         REQUIRE(parser.read_int<int32_t>().value() == 23456);
         REQUIRE_FALSE(parser.read_int<int32_t>().has_value());
     }
@@ -290,9 +384,9 @@ TEST_CASE("string_parser", "[string_parser]") {
     SECTION("Parse some refclk strings") {
         const auto str = "ptp=IEEE1588-2008:39-A7-94-FF-FE-07-CB-D0:5";
         rav::string_parser parser(str);
-        REQUIRE(parser.read_until('=') == "ptp");
-        REQUIRE(parser.read_until(':') == "IEEE1588-2008");
-        REQUIRE(parser.read_until(':') == "39-A7-94-FF-FE-07-CB-D0");
+        REQUIRE(parser.split('=') == "ptp");
+        REQUIRE(parser.split(':') == "IEEE1588-2008");
+        REQUIRE(parser.split(':') == "39-A7-94-FF-FE-07-CB-D0");
         REQUIRE(parser.read_int<int32_t>().value() == 5);
     }
 }

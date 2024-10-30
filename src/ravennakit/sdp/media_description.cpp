@@ -29,7 +29,7 @@ rav::sdp::format::parse_result<rav::sdp::format> rav::sdp::format::parse_new(con
         return parse_result<format>::err("rtpmap: invalid payload type");
     }
 
-    if (const auto encoding_name = parser.read_until('/')) {
+    if (const auto encoding_name = parser.split('/')) {
         map.encoding_name = *encoding_name;
     } else {
         return parse_result<format>::err("rtpmap: failed to parse encoding name");
@@ -67,7 +67,7 @@ rav::sdp::connection_info_field::parse_new(const std::string_view line) {
     connection_info_field info;
 
     // Network type
-    if (const auto network_type = parser.read_until(' ')) {
+    if (const auto network_type = parser.split(' ')) {
         if (*network_type == sdp::k_sdp_inet) {
             info.network_type = sdp::netw_type::internet;
         } else {
@@ -78,7 +78,7 @@ rav::sdp::connection_info_field::parse_new(const std::string_view line) {
     }
 
     // Address type
-    if (const auto address_type = parser.read_until(' ')) {
+    if (const auto address_type = parser.split(' ')) {
         if (*address_type == sdp::k_sdp_ipv4) {
             info.address_type = sdp::addr_type::ipv4;
         } else if (*address_type == sdp::k_sdp_ipv6) {
@@ -91,7 +91,7 @@ rav::sdp::connection_info_field::parse_new(const std::string_view line) {
     }
 
     // Address
-    if (const auto address = parser.read_until('/')) {
+    if (const auto address = parser.split('/')) {
         info.address = *address;
     }
 
@@ -142,14 +142,14 @@ rav::sdp::origin_field::parse_result<rav::sdp::origin_field> rav::sdp::origin_fi
     origin_field o;
 
     // Username
-    if (const auto username = parser.read_until(' ')) {
+    if (const auto username = parser.split(' ')) {
         o.username = *username;
     } else {
         return parse_result<origin_field>::err("origin: failed to parse username");
     }
 
     // Session id
-    if (const auto session_id = parser.read_until(' ')) {
+    if (const auto session_id = parser.split(' ')) {
         o.session_id = *session_id;
     } else {
         return parse_result<origin_field>::err("origin: failed to parse session id");
@@ -164,7 +164,7 @@ rav::sdp::origin_field::parse_result<rav::sdp::origin_field> rav::sdp::origin_fi
     }
 
     // Network type
-    if (const auto network_type = parser.read_until(' ')) {
+    if (const auto network_type = parser.split(' ')) {
         if (*network_type != k_sdp_inet) {
             return parse_result<origin_field>::err("origin: invalid network type");
         }
@@ -174,7 +174,7 @@ rav::sdp::origin_field::parse_result<rav::sdp::origin_field> rav::sdp::origin_fi
     }
 
     // Address type
-    if (const auto address_type = parser.read_until(' ')) {
+    if (const auto address_type = parser.split(' ')) {
         if (*address_type == k_sdp_ipv4) {
             o.address_type = addr_type::ipv4;
         } else if (*address_type == k_sdp_ipv6) {
@@ -187,7 +187,7 @@ rav::sdp::origin_field::parse_result<rav::sdp::origin_field> rav::sdp::origin_fi
     }
 
     // Address
-    if (const auto address = parser.read_until(' ')) {
+    if (const auto address = parser.split(' ')) {
         o.unicast_address = *address;
     } else {
         return parse_result<origin_field>::err("origin: failed to parse address");
@@ -231,7 +231,7 @@ rav::sdp::ravenna_clock_domain::parse_new(const std::string_view line) {
 
     ravenna_clock_domain clock_domain;
 
-    if (const auto sync_source = parser.read_until(' ')) {
+    if (const auto sync_source = parser.split(' ')) {
         if (sync_source == "PTPv2") {
             if (const auto domain = parser.read_int<int32_t>()) {
                 clock_domain = ravenna_clock_domain {sync_source::ptp_v2, *domain};
@@ -259,7 +259,7 @@ rav::sdp::media_description::parse_new(const std::string_view line) {
     media_description media;
 
     // Media type
-    if (const auto media_type = parser.read_until(' ')) {
+    if (const auto media_type = parser.split(' ')) {
         media.media_type_ = *media_type;
     } else {
         return parse_result<media_description>::err("media: failed to parse media type");
@@ -283,14 +283,14 @@ rav::sdp::media_description::parse_new(const std::string_view line) {
     }
 
     // Protocol
-    if (const auto protocol = parser.read_until(' ')) {
+    if (const auto protocol = parser.split(' ')) {
         media.protocol_ = *protocol;
     } else {
         return parse_result<media_description>::err("media: failed to parse protocol");
     }
 
     // Formats
-    while (const auto format_str = parser.read_until(' ')) {
+    while (const auto format_str = parser.split(' ')) {
         if (const auto value = rav::ston<int8_t>(*format_str)) {
             media.formats_.push_back({*value, {}, {}, {}});
         } else {
@@ -309,7 +309,7 @@ rav::sdp::media_description::parse_result<void> rav::sdp::media_description::par
         return parse_result<void>::err("attribute: expecting 'a='");
     }
 
-    auto key = parser.read_until(':');
+    auto key = parser.split(':');
 
     if (!key) {
         return parse_result<void>::err("attribute: expecting key");
