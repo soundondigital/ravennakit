@@ -93,4 +93,6 @@ void rav::ravenna_rtsp_client::connect_to_service(const dnssd::service_descripti
 }
 
 rav::rtsp_client* rav::ravenna_rtsp_client::get_or_create_service_connection(const dnssd::service_description& service
-) {}
+) {
+    return nullptr;
+}
