@@ -25,8 +25,11 @@ int main(int const argc, char* argv[]) {
     CLI::App app {"RTSP Client example"};
     argv = app.ensure_utf8(argv);
 
-    std::string addr;
-    app.add_option("address", addr, "The address to connect to")->required();
+    std::string host;
+    app.add_option("host", host, "The host to connect to")->required();
+
+    std::string port;
+    app.add_option("port", port, "The port to connect to")->required();
 
     std::string path;
     app.add_option("path", path, "The path of the stream (/by-id/13 or /by-name/stream%20name)")->required();
@@ -39,7 +42,7 @@ int main(int const argc, char* argv[]) {
 
     client.on<rav::rtsp_connect_event>([path, &client](const rav::rtsp_connect_event&) {
         RAV_INFO("Connected, send DESCRIBE request");
-        client.describe(path);
+        client.async_describe(path);
     });
 
     client.on<rav::rtsp_request>([](const rav::rtsp_request& request) {
@@ -50,7 +53,7 @@ int main(int const argc, char* argv[]) {
         RAV_INFO("{}\n{}", response.to_debug_string(), rav::string_replace(response.data, "\r\n", "\n"));
     });
 
-    client.connect(addr, 80);
+    client.async_connect(host, port);
 
     io_context.run();
 }

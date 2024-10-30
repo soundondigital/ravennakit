@@ -35,24 +35,27 @@ class ravenna_rtsp_client {
     void subscribe(const std::string& session_name, subscriber& s);
 
   private:
-    enum class session_state { waiting_for_service, waiting_for_description };
-
     struct session_context {
         std::string session_name;
         subscriber subscribers;
         std::optional<sdp::session_description> sdp_;
-        session_state state = session_state::waiting_for_service;
+        std::string host_target;
+        uint16_t port {};
+    };
+
+    struct connection_context {
+        std::string host_target;
+        uint16_t port {};
+        rtsp_client client;
     };
 
     asio::io_context& io_context_;
     dnssd::dnssd_browser& browser_;
     dnssd::dnssd_browser::subscriber browser_subscriber_;
     std::vector<session_context> sessions_;
-    std::map<std::string, std::weak_ptr<rtsp_client>> existing_connections_;  // service fullname -> rtsp_client
+    std::vector<connection_context> connections_;
 
-    void describe_session(const std::string& session_name);
-    void connect_to_service(const dnssd::service_description& service);
-    rtsp_client* get_or_create_service_connection(const dnssd::service_description& service);
+    connection_context& find_or_create_connection(const std::string& host_target, uint16_t port);
 };
 
 }  // namespace rav

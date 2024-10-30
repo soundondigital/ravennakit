@@ -28,35 +28,36 @@ class rtsp_client final: public events<rtsp_connect_event, rtsp_response, rtsp_r
     explicit rtsp_client(asio::io_context& io_context);
 
     /**
-     * Connect to the given endpoint. Function is async and will return immediately.
-     * @param endpoint The endpoint to connect to.
-     */
-    void connect(const asio::ip::tcp::endpoint& endpoint);
-
-    /**
      * Connect to the given address and port. Function is async and will return immediately.
-     * @param addr The address to connect to.
+     * @param host The address to connect to.
      * @param port The port to connect to.
      */
-    void connect(const std::string& addr, uint16_t port);
+    void async_connect(const std::string& host, uint16_t port);
+
+    /**
+     * Connect to the given address/service. Function is async and will return immediately.
+     * @param host The host to connect to.
+     * @param service The service to connect to.
+     */
+    void async_connect(const std::string& host, const std::string& service);
 
     /**
      * Send a DESCRIBE request to the server. Function is async and will return immediately.
      * @param path The path to describe
      */
-    void describe(const std::string& path);
+    void async_describe(const std::string& path);
 
     /**
      * Sends a SETUP request to the server. Function is async and will return immediately.
      * @param path The path to setup.
      */
-    void setup(const std::string& path);
+    void async_setup(const std::string& path);
 
     /**
      * Sends a PLAY request to the server. Function is async and will return immediately.
      * @param path The path for the PLAY command.
      */
-    void play(const std::string& path);
+    void async_play(const std::string& path);
 
     /**
      * Post some work through the executor of the socket.
@@ -65,12 +66,14 @@ class rtsp_client final: public events<rtsp_connect_event, rtsp_response, rtsp_r
     void post(std::function<void()> work);
 
   private:
+    asio::ip::tcp::resolver resolver_;
     asio::ip::tcp::socket socket_;
+    std::string host_;
     string_buffer input_buffer_;
     string_buffer output_buffer_;
     rtsp_parser parser_;
 
-    void async_connect(const asio::ip::tcp::endpoint& endpoint);
+    void async_connect(const std::string& host, const std::string& service, asio::ip::resolver_base::flags flags);
     void async_write();
     void async_read_some();
 };
