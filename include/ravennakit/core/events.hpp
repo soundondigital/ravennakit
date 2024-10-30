@@ -31,7 +31,7 @@ class events {
     events& operator=(events&&) = default;
 
     template<class Type>
-    using handler = std::function<void(Type&)>;
+    using handler = std::function<void(const Type&)>;
 
     /**
      * Registers a handler for given event type.
@@ -75,9 +75,9 @@ class events {
      * @param event The event to publish.
      */
     template<class Type>
-    void emit(Type event) {
-        if (auto& l = get<Type>(); l) {
-            l(event);
+    void emit(const Type& event) {
+        if (auto& h = get<Type>(); h) {
+            h(event);
         }
     }
 

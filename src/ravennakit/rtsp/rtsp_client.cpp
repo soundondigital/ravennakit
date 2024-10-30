@@ -12,15 +12,9 @@
 
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/rtsp/rtsp_request.hpp"
+#include "ravennakit/util/uri.hpp"
 
-rav::rtsp_client::rtsp_client(asio::io_context& io_context) : resolver_(io_context), socket_(io_context) {
-    parser_.on<rtsp_response>([this](const rtsp_response& response) {
-        emit(response);
-    });
-    parser_.on<rtsp_request>([this](const rtsp_request& request) {
-        emit(request);
-    });
-}
+rav::rtsp_client::rtsp_client(asio::io_context& io_context) : resolver_(io_context), socket_(io_context) {}
 
 void rav::rtsp_client::async_connect(const std::string& host, const uint16_t port) {
     async_connect(host, std::to_string(port), asio::ip::resolver_base::flags::numeric_service);
@@ -38,12 +32,12 @@ void rav::rtsp_client::async_describe(const std::string& path) {
     asio::post(socket_.get_executor(), [this, path] {
         rtsp_request request;
         request.method = "DESCRIBE";
-        request.uri = fmt::format("rtsp://{}{}", host_, path);
+        request.uri = uri::encode("rtsp", host_, path);
         request.headers["CSeq"] = "15";
         request.headers["Accept"] = "application/sdp";
         const auto encoded = request.encode();
         RAV_TRACE("Sending request: {}", request.to_debug_string());
-        const bool should_trigger_async_write = output_buffer_.exhausted();
+        const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
         output_buffer_.write(encoded);
         if (should_trigger_async_write) {
             async_write();
@@ -103,6 +97,18 @@ void rav::rtsp_client::post(std::function<void()> work) {
 void rav::rtsp_client::async_connect(
     const std::string& host, const std::string& service, const asio::ip::resolver_base::flags flags
 ) {
+    if (!parser_.has_handler<rtsp_request>()) {
+        parser_.on<rtsp_request>([this](const rtsp_request& request) {
+            emit(request);
+        });
+    }
+
+    if (!parser_.has_handler<rtsp_response>()) {
+        parser_.on<rtsp_response>([this](const rtsp_response& response) {
+            emit(response);
+        });
+    }
+
     host_ = host;
     resolver_.async_resolve(
         host, service, flags,
