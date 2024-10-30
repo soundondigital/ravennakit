@@ -16,15 +16,16 @@
 
 TEST_CASE("uri parse") {
     SECTION("Full URI") {
-        auto uri =
-            rav::uri::parse("foo://user:pass@example.com:8042/some/path%20with%20space?key=value+space&key2=value2#fragment");
+        auto uri = rav::uri::parse(
+            "foo://user:pass@example.com:8042/some/path%20with%20space?key=value+space&key2=value2#fragment"
+        );
         REQUIRE(uri.scheme == "foo");
         REQUIRE(uri.user == "user");
         REQUIRE(uri.password == "pass");
         REQUIRE(uri.host == "example.com");
         REQUIRE(uri.port == 8042);
         REQUIRE(uri.path == "/some/path with space");
-        REQUIRE(uri.query == std::map<std::string, std::string>{{"key", "value space"}, {"key2", "value2"}});
+        REQUIRE(uri.query == std::map<std::string, std::string> {{"key", "value space"}, {"key2", "value2"}});
         REQUIRE(uri.fragment == "fragment");
     }
 
@@ -84,7 +85,7 @@ TEST_CASE("uri parse") {
         REQUIRE(uri.host == "example.com");
         REQUIRE(uri.port == 1234);
         REQUIRE(uri.path == "/some/path");
-        REQUIRE(uri.query == std::map<std::string, std::string>{{"key1", "value1"}, {"key2", "value2"}});
+        REQUIRE(uri.query == std::map<std::string, std::string> {{"key1", "value1"}, {"key2", "value2"}});
         REQUIRE(uri.fragment.empty());
     }
 
@@ -103,17 +104,19 @@ TEST_CASE("uri parse") {
 
 TEST_CASE("uri to_string") {
     const rav::uri uri {
-        .scheme = "foo",
-        .user = "user",
-        .password = "pass",
-        .host = "example.com",
-        .port = 8042,
-        .path = "/some/path with space",
-        .query = {{"key1", "value with space"}, {"key2", "value2"}},
-        .fragment = "fragment"
+        "foo",
+        "user",
+        "pass",
+        "example.com",
+        8042,
+        "/some/path with space",
+        {{"key1", "value with space"}, {"key2", "value2"}},
+        "fragment"
     };
     auto result = uri.to_string();
-    REQUIRE(result == "foo://user:pass@example.com:8042/some/path%20with%20space?key1=value+with+space&key2=value2#fragment");
+    REQUIRE(
+        result == "foo://user:pass@example.com:8042/some/path%20with%20space?key1=value+with+space&key2=value2#fragment"
+    );
 }
 
 TEST_CASE("uri decode") {
