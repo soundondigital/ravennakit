@@ -45,19 +45,18 @@ int main(int const argc, char* argv[]) {
 
     node_browser->browse_for("_rtsp._tcp,_ravenna_session");
 
-    std::thread io_thread([&io_context] {
-        io_context.run();
-    });
-
-    {
-        rav::ravenna_rtsp_client rtsp_client(io_context, *node_browser);
-        rav::ravenna_sink sink1(rtsp_client, "Anubis Combo LR");
-        rav::ravenna_sink sink2(rtsp_client, "Anubis_610120_16");
-
+    std::thread cin_thread([&io_context] {
         fmt::println("Press return key to stop...");
         std::cin.get();
-    }
+        io_context.stop();
+    });
 
+    rav::ravenna_rtsp_client rtsp_client(io_context, *node_browser);
+    rav::ravenna_sink sink1(rtsp_client, "Anubis Combo LR");
+    rav::ravenna_sink sink2(rtsp_client, "Anubis_610120_16");
+
+    io_context.run();
     node_browser.reset();
-    io_thread.join();
+    cin_thread.join();
 }
+

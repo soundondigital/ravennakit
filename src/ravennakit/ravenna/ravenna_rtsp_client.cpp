@@ -117,25 +117,23 @@ void rav::ravenna_rtsp_client::update_session_with_service(
 }
 
 void rav::ravenna_rtsp_client::schedule_maintenance() {
-    asio::post(io_context_, [this] {
-        for (auto& session : sessions_) {
-            if (!session.subscribers.is_linked()) {
-                if (!session.host_target.empty() && session.port != 0) {
-                    if (auto* connection = find_connection(session.host_target, session.port)) {
-                        connection->client.async_teardown(fmt::format("/by-name/{}", session.session_name));
-                    }
+    for (auto& session : sessions_) {
+        if (!session.subscribers.is_linked()) {
+            if (!session.host_target.empty() && session.port != 0) {
+                if (auto* connection = find_connection(session.host_target, session.port)) {
+                    connection->client.async_teardown(fmt::format("/by-name/{}", session.session_name));
                 }
             }
         }
+    }
 
-        sessions_.erase(
-            std::remove_if(
-                sessions_.begin(), sessions_.end(),
-                [](const auto& session) {
-                    return !session.subscribers.is_linked();
-                }
-            ),
-            sessions_.end()
-        );
-    });
+    sessions_.erase(
+        std::remove_if(
+            sessions_.begin(), sessions_.end(),
+            [](const auto& session) {
+                return !session.subscribers.is_linked();
+            }
+        ),
+        sessions_.end()
+    );
 }
