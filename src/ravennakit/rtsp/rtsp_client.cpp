@@ -96,7 +96,7 @@ void rav::rtsp_client::async_teardown(const std::string& path) {
 
     const auto encoded = request.encode();
     RAV_TRACE("Sending request: {}", request.to_debug_string());
-    const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();;
+    const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
     output_buffer_.write(encoded);
     if (should_trigger_async_write) {
         async_write();

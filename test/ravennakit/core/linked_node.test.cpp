@@ -102,7 +102,7 @@ TEST_CASE("linked_node | Build a list") {
         REQUIRE(list_of_node_values(n1) == std::vector {1, 2, 3});
     }
 
-    n2.remove();
+    n2.unlink();
 
     SECTION("Two nodes again") {
         REQUIRE(n1.value() == 1);
@@ -123,7 +123,7 @@ TEST_CASE("linked_node | Build a list") {
         REQUIRE(list_of_node_values(n1) == std::vector {1, 3});
     }
 
-    n1.remove();
+    n1.unlink();
 
     SECTION("One node again") {
         REQUIRE(n1.value() == 1);
@@ -158,22 +158,22 @@ TEST_CASE("linked_node | Removing nodes from front and back") {
     REQUIRE(list_of_node_values(n1) == std::vector {1, 2, 3});
 
     SECTION("From back") {
-        n3.remove();
+        n3.unlink();
         REQUIRE(list_of_node_values(n1) == std::vector {1, 2});
         REQUIRE(list_of_node_values(n3) == std::vector {3});
 
-        n2.remove();
+        n2.unlink();
         REQUIRE(list_of_node_values(n1) == std::vector {1});
         REQUIRE(list_of_node_values(n2) == std::vector {2});
         REQUIRE(list_of_node_values(n3) == std::vector {3});
     }
 
     SECTION("From front") {
-        n1.remove();
+        n1.unlink();
         REQUIRE(list_of_node_values(n1) == std::vector {1});
         REQUIRE(list_of_node_values(n2) == std::vector {2, 3});
 
-        n2.remove();
+        n2.unlink();
         REQUIRE(list_of_node_values(n1) == std::vector {1});
         REQUIRE(list_of_node_values(n2) == std::vector {2});
         REQUIRE(list_of_node_values(n3) == std::vector {3});

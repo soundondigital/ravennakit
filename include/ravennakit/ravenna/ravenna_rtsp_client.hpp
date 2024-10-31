@@ -28,29 +28,41 @@ class ravenna_rtsp_client {
         const sdp::session_description& sdp;
     };
 
-    class subscriber;
-
-    struct subscriber_about_to_unlink {
-        const subscriber& s;
-    };
-
-    class subscriber : public linked_node<events<announced, subscriber_about_to_unlink>> {
+    class subscriber final: public events<announced> {
     public:
-        explicit subscriber(ravenna_rtsp_client* owner);
-        ~subscriber();
+        subscriber() = default;
+        ~subscriber() override;
+
+        /**
+         * Subscribes this subscriber to the ravenna_rtsp_client.
+         * @param client The ravenna_rtsp_client to subscribe to.
+         * @param session_name The name of the session to subscribe to.
+         */
+        void subscribe(ravenna_rtsp_client& client, const std::string& session_name);
+
+        /**
+         * Unsubscribes this subscriber from the ravenna_rtsp_client.
+         * @param schedule_maintenance If true, maintenance will be scheduled after unsubscribing.
+         */
+        void unsubscribe(bool schedule_maintenance = true);
+
+        /**
+         * Unsubscribes this subscriber from the ravenna_rtsp_client, but without triggering maintenance.
+         */
+        void release();
 
       private:
         ravenna_rtsp_client* owner_{};
+        linked_node<subscriber*> node_;
     };
 
     explicit ravenna_rtsp_client(asio::io_context& io_context, dnssd::dnssd_browser& browser);
-
-    void subscribe(const std::string& session_name, subscriber& s);
+    ~ravenna_rtsp_client();
 
   private:
     struct session_context {
         std::string session_name;
-        linked_node<events<announced, subscriber_about_to_unlink>> subscribers;
+        linked_node<subscriber*> subscribers;
         std::optional<sdp::session_description> sdp_;
         std::string host_target;
         uint16_t port {};
@@ -69,7 +81,9 @@ class ravenna_rtsp_client {
     std::vector<connection_context> connections_;
 
     connection_context& find_or_create_connection(const std::string& host_target, uint16_t port);
+    connection_context* find_connection(const std::string& host_target, uint16_t port);
     void update_session_with_service(session_context& session, const dnssd::service_description& service);
+    void do_maintenance();
 };
 
 }  // namespace rav

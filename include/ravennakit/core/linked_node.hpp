@@ -62,7 +62,7 @@ class linked_node {
      * Destructor which removes itself from the linked list if linked.
      */
     ~linked_node() {
-        remove();
+        unlink();
     }
 
     linked_node(const linked_node&) = delete;
@@ -104,7 +104,7 @@ class linked_node {
             return *this;
         }
 
-        remove();
+        unlink();
 
         if (other.prev_) {
             other.prev_->next_ = this;
@@ -165,7 +165,7 @@ class linked_node {
      */
     void push_back(linked_node& node) {
         if (node.is_linked()) {
-            node.remove();
+            node.unlink();
         }
         auto* last_node = back();
         last_node->next_ = &node;
@@ -173,9 +173,9 @@ class linked_node {
     }
 
     /**
-     * Removes the node from the linked list.
+     * Unlinks the node from the linked list.
      */
-    void remove() {
+    void unlink() {
         if (prev_) {
             prev_->next_ = next_;
         }

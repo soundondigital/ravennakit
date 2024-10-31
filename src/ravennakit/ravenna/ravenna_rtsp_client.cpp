@@ -10,14 +10,55 @@
 
 #include "ravennakit/ravenna/ravenna_rtsp_client.hpp"
 
-rav::ravenna_rtsp_client::subscriber::subscriber(ravenna_rtsp_client* owner) : owner_(owner) {}
-
 rav::ravenna_rtsp_client::subscriber::~subscriber() {
-    foreach ([this](auto& node) {
-        node->emit(subscriber_about_to_unlink {*this});
-    })
-        ;
-    remove();
+    unsubscribe();
+}
+
+void rav::ravenna_rtsp_client::subscriber::subscribe(ravenna_rtsp_client& client, const std::string& session_name) {
+    if (session_name.empty()) {
+        RAV_THROW_EXCEPTION("session_name cannot be empty");
+    }
+
+    unsubscribe();
+
+    node_ = this;
+    owner_ = &client;
+
+    // Subscribe to existing session
+    for (auto& session : client.sessions_) {
+        if (session.session_name == session_name) {
+            session.subscribers.push_back(node_);
+            if (session.sdp_.has_value()) {
+                emit(announced {session_name, *session.sdp_});
+            }
+            return;
+        }
+    }
+
+    // Create new session
+    auto& new_session = client.sessions_.emplace_back();
+    new_session.session_name = session_name;
+    new_session.subscribers.push_back(node_);
+
+    // Get things going if a service is already available
+    if (auto* service = client.browser_.find_service(session_name)) {
+        client.update_session_with_service(new_session, *service);
+    }
+}
+
+void rav::ravenna_rtsp_client::subscriber::unsubscribe(const bool schedule_maintenance) {
+    node_.unlink();
+    if (owner_) {
+        if (schedule_maintenance) {
+            owner_->do_maintenance();
+        }
+        owner_ = nullptr;
+    }
+}
+
+void rav::ravenna_rtsp_client::subscriber::release() {
+    node_.unlink();
+    owner_ = nullptr;
 }
 
 rav::ravenna_rtsp_client::ravenna_rtsp_client(asio::io_context& io_context, dnssd::dnssd_browser& browser) :
@@ -33,43 +74,22 @@ rav::ravenna_rtsp_client::ravenna_rtsp_client(asio::io_context& io_context, dnss
     browser.subscribe(browser_subscriber_);
 }
 
-void rav::ravenna_rtsp_client::subscribe(const std::string& session_name, subscriber& s) {
-    if (session_name.empty()) {
-        RAV_THROW_EXCEPTION("session_name cannot be empty");
-    }
-
-    // Subscribe to existing session
+rav::ravenna_rtsp_client::~ravenna_rtsp_client() {
     for (auto& session : sessions_) {
-        if (session.session_name == session_name) {
-            session.subscribers.push_back(s);
-            if (session.sdp_.has_value()) {
-                s->emit(announced {session_name, *session.sdp_});
+        session.subscribers.foreach ([](auto& node) {
+            if (node.value()) {
+                node.value()->release();
             }
-            return;
-        }
-    }
-
-    // Create new session
-    auto& new_session = sessions_.emplace_back();
-    new_session.session_name = session_name;
-    new_session.subscribers->on<subscriber_about_to_unlink>([](const auto& event) {
-        RAV_TRACE("Subscriber about to unlink: {}", static_cast<const void*>(&event.s));
-    });
-    new_session.subscribers.push_back(s);
-
-    // Get things going if a service is already available
-    if (auto* service = browser_.find_service(session_name)) {
-        update_session_with_service(new_session, *service);
+        });
     }
 }
 
 rav::ravenna_rtsp_client::connection_context&
 rav::ravenna_rtsp_client::find_or_create_connection(const std::string& host_target, const uint16_t port) {
-    for (auto& connection : connections_) {
-        if (connection.host_target == host_target && connection.port == port) {
-            return connection;
-        }
+    if (const auto connection = find_connection(host_target, port)) {
+        return *connection;
     }
+
     connections_.push_back({host_target, port, rtsp_client {io_context_}});
     auto& new_connection = connections_.back();
 
@@ -86,6 +106,16 @@ rav::ravenna_rtsp_client::find_or_create_connection(const std::string& host_targ
     return new_connection;
 }
 
+rav::ravenna_rtsp_client::connection_context*
+rav::ravenna_rtsp_client::find_connection(const std::string& host_target, const uint16_t port) {
+    for (auto& connection : connections_) {
+        if (connection.host_target == host_target && connection.port == port) {
+            return &connection;
+        }
+    }
+    return nullptr;
+}
+
 void rav::ravenna_rtsp_client::update_session_with_service(
     session_context& session, const dnssd::service_description& service
 ) {
@@ -94,4 +124,28 @@ void rav::ravenna_rtsp_client::update_session_with_service(
 
     auto& connection = find_or_create_connection(service.host_target, service.port);
     connection.client.async_describe(fmt::format("/by-name/{}", session.session_name));
+}
+
+void rav::ravenna_rtsp_client::do_maintenance() {
+    asio::dispatch([this] {
+        for (auto& session : sessions_) {
+            if (!session.subscribers.is_linked()) {
+                if (!session.host_target.empty() && session.port != 0) {
+                    if (auto* connection = find_connection(session.host_target, session.port)) {
+                        connection->client.async_teardown(fmt::format("/by-name/{}", session.session_name));
+                    }
+                }
+            }
+        }
+
+        sessions_.erase(
+            std::remove_if(
+                sessions_.begin(), sessions_.end(),
+                [](const auto& session) {
+                    return !session.subscribers.is_linked();
+                }
+            ),
+            sessions_.end()
+        );
+    });
 }
