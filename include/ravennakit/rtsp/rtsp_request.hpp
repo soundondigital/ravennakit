@@ -49,7 +49,7 @@ struct rtsp_request {
      * Convert the request to a debug string.
      * @return The request as a debug string.
      */
-    [[nodiscard]] std::string to_debug_string() const;
+    [[nodiscard]] std::string to_debug_string(bool include_data) const;
 };
 
 }  // namespace rav

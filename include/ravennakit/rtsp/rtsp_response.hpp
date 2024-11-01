@@ -27,6 +27,10 @@ struct rtsp_response {
     rtsp_headers headers;
     std::string data;
 
+    rtsp_response() = default;
+    rtsp_response(int status, const std::string& reason);
+    rtsp_response(int status, std::string reason, std::string data_);
+
     /**
      * Resets the request to its initial state.
      */
@@ -57,7 +61,7 @@ struct rtsp_response {
      * Convert the response to a debug string.
      * @return The response as a debug string.
      */
-    [[nodiscard]] std::string to_debug_string() const;
+    [[nodiscard]] std::string to_debug_string(bool include_data) const;
 };
 
 }  // namespace rav

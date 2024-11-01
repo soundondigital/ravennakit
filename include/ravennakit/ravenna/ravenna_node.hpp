@@ -30,7 +30,7 @@ private:
     asio::io_context io_context_;
     std::unique_ptr<dnssd::dnssd_browser> node_browser_;
     std::unique_ptr<dnssd::dnssd_browser> session_browser_;
-    std::unique_ptr<ravenna_rtsp_client> ravenna_rtsp_client_;
+    // ravenna_rtsp_client ravenna_rtsp_client_{io_context_};
     std::vector<ravenna_sink> sinks_;
 };
 

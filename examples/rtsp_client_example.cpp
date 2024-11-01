@@ -43,11 +43,11 @@ int main(int const argc, char* argv[]) {
     });
 
     client.on<rav::rtsp_request>([](const rav::rtsp_request& request) {
-        RAV_INFO("{}\n{}", request.to_debug_string(), rav::string_replace(request.data, "\r\n", "\n"));
+        RAV_INFO("{}\n{}", request.to_debug_string(true), rav::string_replace(request.data, "\r\n", "\n"));
     });
 
     client.on<rav::rtsp_response>([](const rav::rtsp_response& response) {
-        RAV_INFO("{}\n{}", response.to_debug_string(), rav::string_replace(response.data, "\r\n", "\n"));
+        RAV_INFO("{}\n{}", response.to_debug_string(true), rav::string_replace(response.data, "\r\n", "\n"));
     });
 
     client.async_connect(host, port);

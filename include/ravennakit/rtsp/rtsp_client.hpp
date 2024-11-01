@@ -17,7 +17,11 @@
 
 namespace rav {
 
-struct rtsp_connect_event {};
+class rtsp_client;
+
+struct rtsp_connect_event {
+    rtsp_client& client;
+};
 
 /**
  * Client for connecting to an RTSP server. Given io_context must be single-threaded to implicitly support
@@ -70,6 +74,12 @@ class rtsp_client final: public events<rtsp_connect_event, rtsp_response, rtsp_r
      * @param response The response to send.
      */
     void async_send_response(const rtsp_response& response);
+
+    /**
+     * Sends given request to the server. Function is async and will return immediately.
+     * @param request The request to send.
+     */
+    void async_send_request(const rtsp_request& request);
 
     /**
      * Post some work through the executor of the socket.

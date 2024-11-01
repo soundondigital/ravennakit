@@ -16,26 +16,35 @@
 #include "ravennakit/util/exclusive_access_guard.hpp"
 #include "ravennakit/util/tracy.hpp"
 
-class rav::rtsp_server::connection: public std::enable_shared_from_this<connection> {
+class rav::rtsp_server::connection_impl final: public connection, public std::enable_shared_from_this<connection_impl> {
   public:
-    explicit connection(asio::ip::tcp::socket socket) : socket_(std::move(socket)) {
-        parser_.on<rtsp_response>([](const rtsp_response& response) {
-            TRACY_ZONE_SCOPED;
-            RAV_INFO("{}\n{}", response.to_debug_string(), rav::string_replace(response.data, "\r\n", "\n"));
-        });
-        parser_.on<rtsp_request>([](const rtsp_request& request) {
-            TRACY_ZONE_SCOPED;
-            RAV_INFO("{}\n{}", request.to_debug_string(), rav::string_replace(request.data, "\r\n", "\n"));
-        });
-    }
+    explicit connection_impl(asio::ip::tcp::socket socket, rtsp_server* owner) :
+        socket_(std::move(socket)), owner_(owner) {}
 
     void start() {
-        TRACY_ZONE_SCOPED;
+        parser_.on<rtsp_response>([this](const rtsp_response& response) {
+            owner_->events_.emit(response_event {response, *this});
+        });
+        parser_.on<rtsp_request>([this](const rtsp_request& request) {
+            owner_->events_.emit(request_event {request, *this});
+        });
         async_read_some();  // Start reading chain
+    }
+
+    void async_send_response(const rtsp_response& response) override {
+        // TODO: Implement
+    }
+
+    /**
+     * Sets owner to nullptr, so that the connection cannot emit events anymore.
+     */
+    void reset() {
+        owner_ = nullptr;
     }
 
   private:
     asio::ip::tcp::socket socket_;
+    rtsp_server* owner_ {};
     string_buffer input_stream_;
     rtsp_parser parser_;
 
@@ -50,17 +59,19 @@ class rav::rtsp_server::connection: public std::enable_shared_from_this<connecti
                 TRACY_ZONE_SCOPED;
 
                 if (ec) {
-                    RAV_ERROR("Read error: {}", ec.message());
-                    // TODO: Close the connection?
+                    RAV_ERROR("Read error: {}. Closing connection.", ec.message());
                     return;
+                }
+
+                if (owner_ == nullptr) {
+                    return;  // This connection was abandoned, closing.
                 }
 
                 input_stream_.commit(bytes_transferred);
 
                 auto result = parser_.parse(input_stream_);
                 if (!(result == rtsp_parser::result::good || result == rtsp_parser::result::indeterminate)) {
-                    RAV_ERROR("Parsing error: {}", static_cast<int>(result));
-                    // TODO: Close the connection?
+                    RAV_ERROR("Parsing error: {}. Closing connection.", static_cast<int>(result));
                     return;
                 }
 
@@ -70,10 +81,21 @@ class rav::rtsp_server::connection: public std::enable_shared_from_this<connecti
     }
 };
 
+rav::rtsp_server::~rtsp_server() {
+    for (auto& connection : connections_) {
+        if (const auto shared = connection.lock()) {
+            shared->reset();
+        }
+    }
+}
+
 rav::rtsp_server::rtsp_server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint) :
-    acceptor_(asio::make_strand(io_context), endpoint) {
+    acceptor_(io_context, endpoint) {
     async_accept();
 }
+
+rav::rtsp_server::rtsp_server(asio::io_context& io_context, const char* address, const uint16_t port) :
+    rtsp_server(io_context, asio::ip::tcp::endpoint(asio::ip::make_address(address), port)) {}
 
 void rav::rtsp_server::close() {
     TRACY_ZONE_SCOPED;
@@ -87,32 +109,35 @@ void rav::rtsp_server::cancel() {
 
 void rav::rtsp_server::async_accept() {
     TRACY_ZONE_SCOPED;
-    acceptor_.async_accept(
-        // Accepting through the strand -should- bind new sockets to this strand as well so that all operations on the
-        // socket are serialized with the acceptor's strand.
-        asio::make_strand(acceptor_.get_executor()),
-        [this](const std::error_code ec, asio::ip::tcp::socket socket) {
-            TRACY_ZONE_SCOPED;
-            if (ec) {
-                if (ec != asio::error::operation_aborted) {
-                    RAV_ERROR("Error accepting connection: {}", ec.message());
-                }
+    acceptor_.async_accept(acceptor_.get_executor(), [this](const std::error_code ec, asio::ip::tcp::socket socket) {
+        TRACY_ZONE_SCOPED;
+        if (ec) {
+            if (ec == asio::error::operation_aborted) {
+                RAV_TRACE("Operation aborted");
                 return;
             }
-
-            if (!acceptor_.is_open()) {
-                RAV_ERROR("Acceptor is not open, cannot accept connections");
+            if (ec == asio::error::eof) {
+                RAV_TRACE("EOF");
                 return;
             }
-
-            RAV_TRACE("Accepting connection from: {}", socket.remote_endpoint().address().to_string());
-            auto [it, inserted] = connections_.insert(std::make_shared<connection>(std::move(socket)));
-            if (!inserted) {
-                RAV_ERROR("Failed to insert connection into the set");
-                return;
-            }
-            (*it)->start();
-            async_accept();
+            RAV_ERROR("Read error: {}", ec.message());
+            return;
         }
-    );
+
+        if (!acceptor_.is_open()) {
+            RAV_ERROR("Acceptor is not open, cannot accept connections");
+            return;
+        }
+
+        RAV_TRACE(
+            "Accepted new connection from: {}:{}", socket.remote_endpoint().address().to_string(),
+            socket.remote_endpoint().port()
+        );
+
+        const auto connection = std::make_shared<connection_impl>(std::move(socket), this);
+        connections_.emplace_back(connection);
+        events_.emit(connection_event {*connection});
+        connection->start();
+        async_accept();
+    });
 }

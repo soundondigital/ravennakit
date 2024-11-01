@@ -20,7 +20,6 @@ class ravenna_sink {
     enum class mode { manual, automatic };
 
     explicit ravenna_sink(ravenna_rtsp_client& rtsp_client, std::string session_name);
-
     ~ravenna_sink() = default;
 
     void set_mode(mode new_mode);

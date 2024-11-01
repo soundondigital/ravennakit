@@ -39,9 +39,13 @@ void rav::rtsp_request::encode_append(std::string& out, const char* newline) con
     out += data;
 }
 
-std::string rav::rtsp_request::to_debug_string() const {
+std::string rav::rtsp_request::to_debug_string(bool include_data) const {
     std::string out;
     fmt::format_to(std::back_inserter(out), "{} {} RTSP/{}.{}", method, uri, rtsp_version_major, rtsp_version_minor);
     out += headers.to_debug_string();
+    if (include_data && !data.empty()) {
+        out += "\n";
+        out += string_replace(data, "\r\n", "\n");
+    }
     return out;
 }

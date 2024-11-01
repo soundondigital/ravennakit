@@ -149,7 +149,7 @@ std::string rav::uri::encode(const std::string_view str, const bool encode_plus,
 }
 
 std::string rav::uri::encode(const std::string_view scheme, const std::string_view host, const std::string_view path) {
-    return fmt::format("{}://{}{}", encode(scheme), encode(host), encode(path));
+    return fmt::format("{}://{}{}", encode(scheme), host, encode(path));
 }
 
 std::string rav::uri::decode(const std::string_view encoded, const bool decode_plus) {

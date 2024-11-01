@@ -13,7 +13,7 @@
 rav::ravenna_node::ravenna_node() {
     node_browser_ = dnssd::dnssd_browser::create(io_context_);
     session_browser_ = dnssd::dnssd_browser::create(io_context_);
-    ravenna_rtsp_client_ = std::make_unique<ravenna_rtsp_client>(io_context_, *session_browser_);
+    // ravenna_rtsp_client_ = std::make_unique<ravenna_rtsp_client>(io_context_, *session_browser_);
 
     node_browser_->browse_for("_rtsp._tcp,_ravenna");
     session_browser_->browse_for("_rtsp._tcp,_ravenna_session");

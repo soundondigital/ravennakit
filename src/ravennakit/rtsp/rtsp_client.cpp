@@ -34,13 +34,8 @@ void rav::rtsp_client::async_describe(const std::string& path) {
     request.uri = uri::encode("rtsp", host_, path);
     request.headers["CSeq"] = "15";
     request.headers["Accept"] = "application/sdp";
-    const auto encoded = request.encode();
-    RAV_TRACE("Sending request: {}", request.to_debug_string());
-    const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
-    output_buffer_.write(encoded);
-    if (should_trigger_async_write) {
-        async_write();
-    }
+
+    async_send_request(request);
 }
 
 void rav::rtsp_client::async_setup(const std::string& path) {
@@ -52,16 +47,9 @@ void rav::rtsp_client::async_setup(const std::string& path) {
     request.method = "SETUP";
     request.uri = uri::encode("rtsp", host_, path);
     request.headers["CSeq"] = "15";
-    // request.headers["Session"] = "47112344";
     request.headers["Transport"] = "RTP/AVP;unicast;client_port=5004-5005";
 
-    const auto encoded = request.encode();
-    RAV_TRACE("Sending request: {}", request.to_debug_string());
-    const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
-    output_buffer_.write(encoded);
-    if (should_trigger_async_write) {
-        async_write();
-    }
+    async_send_request(request);
 }
 
 void rav::rtsp_client::async_play(const std::string& path) {
@@ -75,13 +63,7 @@ void rav::rtsp_client::async_play(const std::string& path) {
     request.headers["CSeq"] = "15";
     request.headers["Transport"] = "RTP/AVP;unicast;client_port=5004-5005";
 
-    const auto encoded = request.encode();
-    RAV_TRACE("Sending request: {}", request.to_debug_string());
-    const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
-    output_buffer_.write(encoded);
-    if (should_trigger_async_write) {
-        async_write();
-    }
+    async_send_request(request);
 }
 
 void rav::rtsp_client::async_teardown(const std::string& path) {
@@ -94,8 +76,12 @@ void rav::rtsp_client::async_teardown(const std::string& path) {
     request.uri = uri::encode("rtsp", host_, path);
     request.headers["CSeq"] = "15";
 
-    const auto encoded = request.encode();
-    RAV_TRACE("Sending request: {}", request.to_debug_string());
+    async_send_request(request);
+}
+
+void rav::rtsp_client::async_send_response(const rtsp_response& response) {
+    const auto encoded = response.encode();
+    RAV_TRACE("Sending response: {}", response.to_debug_string(false));
     const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
     output_buffer_.write(encoded);
     if (should_trigger_async_write) {
@@ -103,9 +89,9 @@ void rav::rtsp_client::async_teardown(const std::string& path) {
     }
 }
 
-void rav::rtsp_client::async_send_response(const rtsp_response& response) {
-    const auto encoded = response.encode();
-    RAV_TRACE("Sending response: {}", response.to_debug_string());
+void rav::rtsp_client::async_send_request(const rtsp_request& request) {
+    const auto encoded = request.encode();
+    RAV_TRACE("Sending request: {}", request.to_debug_string(false));
     const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
     output_buffer_.write(encoded);
     if (should_trigger_async_write) {
@@ -160,7 +146,7 @@ void rav::rtsp_client::async_connect(
                     RAV_INFO("Connected to {}:{}", endpoint.address().to_string(), endpoint.port());
                     async_write();  // Schedule a write operation, in case there is data to send
                     async_read_some();
-                    emit<rtsp_connect_event>(rtsp_connect_event {});
+                    emit<rtsp_connect_event>(rtsp_connect_event {*this});
                 }
             );
         }

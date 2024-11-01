@@ -87,10 +87,7 @@ rav::ravenna_rtsp_client::find_or_create_connection(const std::string& host_targ
         RAV_TRACE("Connected to: rtsp://{}:{}", host_target, port);
     });
     new_connection.client.on<rtsp_request>([this, &client = new_connection.client](const auto& request) {
-        RAV_TRACE("{}", request.to_debug_string());
-        if (!request.data.empty()) {
-            RAV_TRACE("Data:\n{}", rav::string_replace(request.data, "\r\n", "\n"));
-        }
+        RAV_TRACE("{}", request.to_debug_string(true));
 
         if (request.method == "ANNOUNCE") {
             if (auto* content_type = request.headers.find_header("content-type")) {
@@ -122,10 +119,7 @@ rav::ravenna_rtsp_client::find_or_create_connection(const std::string& host_targ
         RAV_WARNING("Unhandled RTSP request: {}", request.method);
     });
     new_connection.client.on<rtsp_response>([=](const auto& response) {
-        RAV_TRACE("{}", response.to_debug_string());
-        if (!response.data.empty()) {
-            RAV_TRACE("Data:\n{}", rav::string_replace(response.data, "\r\n", "\n"));
-        }
+        RAV_TRACE("{}", response.to_debug_string(true));
 
         if (response.status_code != 200) {
             RAV_ERROR("RTSP request failed with status: {} {}", response.status_code, response.reason_phrase);
