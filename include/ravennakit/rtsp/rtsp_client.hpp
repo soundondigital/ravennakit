@@ -48,8 +48,9 @@ class rtsp_client final: public events<rtsp_connect_event, rtsp_response, rtsp_r
     /**
      * Send a DESCRIBE request to the server. Function is async and will return immediately.
      * @param path The path to describe
+     * @param data The data to add.
      */
-    void async_describe(const std::string& path);
+    void async_describe(const std::string& path, std::string data = {});
 
     /**
      * Sends a SETUP request to the server. Function is async and will return immediately.
@@ -96,6 +97,7 @@ class rtsp_client final: public events<rtsp_connect_event, rtsp_response, rtsp_r
     rtsp_parser parser_;
 
     void async_connect(const std::string& host, const std::string& service, asio::ip::resolver_base::flags flags);
+    void async_send_data(const std::string& data);
     void async_write();
     void async_read_some();
 };

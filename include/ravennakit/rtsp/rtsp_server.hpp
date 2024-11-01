@@ -48,24 +48,41 @@ class rtsp_server {
       public:
         virtual ~connection() = default;
         virtual void async_send_response(const rtsp_response& response) = 0;
+        virtual void async_send_request(const rtsp_request& response) = 0;
     };
 
     rtsp_server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint);
     rtsp_server(asio::io_context& io_context, const char* address, uint16_t port);
     ~rtsp_server();
 
-    [[nodiscard]] uint16_t port() const {
-        return acceptor_.local_endpoint().port();
-    }
+    /**
+     * @returns The port the server is listening on.
+     */
+    [[nodiscard]] uint16_t port() const;
 
+    /**
+     * Closes the listening socket. Implies cancellation.
+     */
     void close();
+
+    /**
+     * Cancels all outstanding operations on the listening socket.
+     */
     void cancel();
 
+    /**
+     * Registers a handler for a specific event.
+     * @tparam T The event type.
+     * @param handler The handler to register.
+     */
     template<class T>
     void on(events<connection_event>::handler<T> handler) {
         events_.on(handler);
     }
 
+    /**
+     * Resets handlers for all events.
+     */
     void reset() noexcept {
         events_.reset();
     }

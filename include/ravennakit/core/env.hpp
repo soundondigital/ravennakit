@@ -45,9 +45,8 @@ inline std::optional<std::string> get(const char* name) {
 #else
     if (auto* value = std::getenv(name)) {
         return value;
-    } else {
-        return {};
     }
+    return {};
 #endif
 }
 

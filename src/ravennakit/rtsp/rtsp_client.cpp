@@ -24,7 +24,7 @@ void rav::rtsp_client::async_connect(const std::string& host, const std::string&
     async_connect(host, service, asio::ip::resolver_base::flags());
 }
 
-void rav::rtsp_client::async_describe(const std::string& path) {
+void rav::rtsp_client::async_describe(const std::string& path, std::string data) {
     if (!string_starts_with(path, "/")) {
         RAV_THROW_EXCEPTION("Path must start with a /");
     }
@@ -34,6 +34,7 @@ void rav::rtsp_client::async_describe(const std::string& path) {
     request.uri = uri::encode("rtsp", host_, path);
     request.headers["CSeq"] = "15";
     request.headers["Accept"] = "application/sdp";
+    request.data = std::move(data);
 
     async_send_request(request);
 }
@@ -82,21 +83,13 @@ void rav::rtsp_client::async_teardown(const std::string& path) {
 void rav::rtsp_client::async_send_response(const rtsp_response& response) {
     const auto encoded = response.encode();
     RAV_TRACE("Sending response: {}", response.to_debug_string(false));
-    const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
-    output_buffer_.write(encoded);
-    if (should_trigger_async_write) {
-        async_write();
-    }
+    async_send_data(encoded);
 }
 
 void rav::rtsp_client::async_send_request(const rtsp_request& request) {
     const auto encoded = request.encode();
     RAV_TRACE("Sending request: {}", request.to_debug_string(false));
-    const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
-    output_buffer_.write(encoded);
-    if (should_trigger_async_write) {
-        async_write();
-    }
+    async_send_data(encoded);
 }
 
 void rav::rtsp_client::post(std::function<void()> work) {
@@ -153,6 +146,14 @@ void rav::rtsp_client::async_connect(
     );
 }
 
+void rav::rtsp_client::async_send_data(const std::string& data) {
+    const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
+    output_buffer_.write(data);
+    if (should_trigger_async_write) {
+        async_write();
+    }
+}
+
 void rav::rtsp_client::async_write() {
     if (output_buffer_.exhausted()) {
         return;
@@ -186,7 +187,7 @@ void rav::rtsp_client::async_read_some() {
                     RAV_TRACE("EOF");
                     return;
                 }
-                RAV_ERROR("Read error: {}", ec.message());
+                RAV_ERROR("Read error: {}. Closing connection.", ec.message());
                 return;
             }
 

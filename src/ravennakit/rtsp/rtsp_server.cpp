@@ -31,9 +31,16 @@ class rav::rtsp_server::connection_impl final: public connection, public std::en
         async_read_some();  // Start reading chain
     }
 
+    void async_send_request(const rtsp_request& request) override {
+        const auto encoded = request.encode();
+        RAV_TRACE("Sending request: {}", request.to_debug_string(false));
+        async_send_data(encoded);
+    }
+
     void async_send_response(const rtsp_response& response) override {
-        // TODO: Implement
-        std::ignore = response;
+        const auto encoded = response.encode();
+        RAV_TRACE("Sending response: {}", response.to_debug_string(false));
+        async_send_data(encoded);
     }
 
     /**
@@ -43,23 +50,36 @@ class rav::rtsp_server::connection_impl final: public connection, public std::en
         owner_ = nullptr;
     }
 
+    void shutdown() {
+        socket_.shutdown(asio::ip::tcp::socket::shutdown_both);
+    }
+
   private:
     asio::ip::tcp::socket socket_;
     rtsp_server* owner_ {};
-    string_buffer input_stream_;
+    string_buffer input_buffer_;
+    string_buffer output_buffer_;
     rtsp_parser parser_;
 
     void async_read_some() {
         TRACY_ZONE_SCOPED;
 
         auto self(shared_from_this());
-        auto buffer = input_stream_.prepare(512);
+        auto buffer = input_buffer_.prepare(512);
         socket_.async_read_some(
             asio::buffer(buffer.data(), buffer.size_bytes()),
             [this, self](const std::error_code ec, const std::size_t bytes_transferred) {
                 TRACY_ZONE_SCOPED;
 
                 if (ec) {
+                    if (ec == asio::error::operation_aborted) {
+                        RAV_TRACE("Operation aborted");
+                        return;
+                    }
+                    if (ec == asio::error::eof) {
+                        RAV_TRACE("EOF");
+                        return;
+                    }
                     RAV_ERROR("Read error: {}. Closing connection.", ec.message());
                     return;
                 }
@@ -68,9 +88,9 @@ class rav::rtsp_server::connection_impl final: public connection, public std::en
                     return;  // This connection was abandoned, closing.
                 }
 
-                input_stream_.commit(bytes_transferred);
+                input_buffer_.commit(bytes_transferred);
 
-                auto result = parser_.parse(input_stream_);
+                auto result = parser_.parse(input_buffer_);
                 if (!(result == rtsp_parser::result::good || result == rtsp_parser::result::indeterminate)) {
                     RAV_ERROR("Parsing error: {}. Closing connection.", static_cast<int>(result));
                     return;
@@ -80,14 +100,46 @@ class rav::rtsp_server::connection_impl final: public connection, public std::en
             }
         );
     }
+
+    void async_send_data(const std::string& data) {
+        const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
+        output_buffer_.write(data);
+        if (should_trigger_async_write) {
+            async_write();
+        }
+    }
+
+    void async_write() {
+        if (output_buffer_.exhausted()) {
+            return;
+        }
+        asio::async_write(
+            socket_, asio::buffer(output_buffer_.data()),
+            [this](const asio::error_code ec, const std::size_t length) {
+                if (ec) {
+                    RAV_ERROR("Write error: {}", ec.message());
+                    return;
+                }
+                output_buffer_.consume(length);
+                if (!output_buffer_.exhausted()) {
+                    async_write();  // Schedule another write
+                }
+            }
+        );
+    }
 };
 
 rav::rtsp_server::~rtsp_server() {
     for (auto& c : connections_) {
         if (const auto shared = c.lock()) {
             shared->reset();
+            shared->shutdown();
         }
     }
+}
+
+uint16_t rav::rtsp_server::port() const {
+    return acceptor_.local_endpoint().port();
 }
 
 rav::rtsp_server::rtsp_server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint) :
@@ -101,6 +153,12 @@ rav::rtsp_server::rtsp_server(asio::io_context& io_context, const char* address,
 void rav::rtsp_server::close() {
     TRACY_ZONE_SCOPED;
     acceptor_.close();
+
+    for (auto& c : connections_) {
+        if (const auto shared = c.lock()) {
+            shared->shutdown();
+        }
+    }
 }
 
 void rav::rtsp_server::cancel() {

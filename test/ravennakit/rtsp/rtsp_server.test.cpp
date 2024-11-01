@@ -42,35 +42,67 @@ TEST_CASE("rtsp_server", "[rtsp_server]") {
 }
 
 TEST_CASE("rtsp_server | DESCRIBE", "[rtsp_server]") {
-    const std::string test_data = "test data";
     asio::io_context io_context;
+    int server_request_count = 0;
+    int server_response_count = 0;
     rav::rtsp_server server(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v6(), 0));
-    server.on<rav::rtsp_server::connection_event>([](const rav::rtsp_server::connection_event&) {
-        RAV_TRACE("A new client connected");
+    server.on<rav::rtsp_server::connection_event>([](const rav::rtsp_server::connection_event& event) {
+        rav::rtsp_request request;
+        request.method = "ANNOUNCE";
+        request.uri = "/";
+        request.data = "announce request data";
+        event.client_connection.async_send_request(request);
     });
-    server.on<rav::rtsp_server::request_event>([=](const rav::rtsp_server::request_event& event) {
+    server.on<rav::rtsp_server::request_event>([&](const rav::rtsp_server::request_event& event) {
         RAV_TRACE("{}", event.request.to_debug_string(true));
-        event.client_connection.async_send_response(rav::rtsp_response(200, "OK", test_data));
+        REQUIRE(event.request.method == "DESCRIBE");
+        REQUIRE(event.request.uri == "rtsp://::1/");
+        REQUIRE(event.request.data == "describe request data");
+        event.client_connection.async_send_response(rav::rtsp_response(200, "OK", "describe response data"));
+        server_request_count++;
     });
-    server.on<rav::rtsp_server::response_event>([](const rav::rtsp_server::response_event& event) {
+    server.on<rav::rtsp_server::response_event>([&](const rav::rtsp_server::response_event& event) {
         RAV_TRACE("{}", event.response.to_debug_string(true));
+        REQUIRE(event.response.status_code == 200);
+        REQUIRE(event.response.reason_phrase == "OK");
+        REQUIRE(event.response.data == "announce response data");
+        server_response_count++;
+        server.close();
+        // io_context.stop();
     });
 
     const auto port = server.port();
     REQUIRE(port != 0);
 
+    int client_request_count = 0;
+    int client_response_count = 0;
     rav::rtsp_client client(io_context);
     client.on<rav::rtsp_connect_event>([](const rav::rtsp_connect_event& event) {
         RAV_TRACE("Connected, send DESCRIBE request");
-        event.client.async_describe("/");
+        event.client.async_describe("/", "describe request data");
     });
-    client.on<rav::rtsp_request>([](const rav::rtsp_request& request) {
+    client.on<rav::rtsp_request>([&](const rav::rtsp_request& request) {
         RAV_INFO("{}", request.to_debug_string(true));
+        REQUIRE(request.method == "ANNOUNCE");
+        REQUIRE(request.uri == "/");
+        REQUIRE(request.data == "announce request data");
+        client.async_send_response(rav::rtsp_response(200, "OK", "announce response data"));
+        client_request_count++;
     });
-    client.on<rav::rtsp_response>([](const rav::rtsp_response& response) {
+    std::string response_data;
+    client.on<rav::rtsp_response>([&](const rav::rtsp_response& response) {
         RAV_INFO("{}", response.to_debug_string(true));
+        REQUIRE(response.status_code == 200);
+        REQUIRE(response.reason_phrase == "OK");
+        REQUIRE(response.data == "describe response data");
+        client_response_count++;
     });
     client.async_connect("::1", port);
 
-    // io_context.run();
+    io_context.run();
+
+    REQUIRE(server_request_count == 1);
+    REQUIRE(server_response_count == 1);
+    REQUIRE(client_request_count == 1);
+    REQUIRE(client_response_count == 1);
 }

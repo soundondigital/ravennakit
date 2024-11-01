@@ -10,6 +10,8 @@
 
 #include "ravennakit/rtsp/rtsp_request.hpp"
 
+#include "ravennakit/util/uri.hpp"
+
 #include <catch2/catch_all.hpp>
 
 void rav::rtsp_request::reset() {
