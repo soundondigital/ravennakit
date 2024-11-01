@@ -308,5 +308,5 @@ target_link_libraries(ravennakit_tests
         rav_recommended_lto_flags
         ravennakit
         PRIVATE
-        Catch2::Catch2 Catch2::Catch2WithMain
+        Catch2::Catch2
 )

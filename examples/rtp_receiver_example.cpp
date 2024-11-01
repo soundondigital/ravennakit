@@ -58,10 +58,7 @@ static int audio_callback(
 }
 
 int main(int const argc, char* argv[]) {
-#if RAV_ENABLE_SPDLOG
-    spdlog::set_level(spdlog::level::trace);
-#endif
-
+    rav::log::set_level_from_env();
     rav::system::do_system_checks();
 
     CLI::App app {"RTP Receiver example"};

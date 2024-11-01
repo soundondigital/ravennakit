@@ -8,17 +8,11 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
+#include <catch2/catch_session.hpp>
+
 #include "ravennakit/core/log.hpp"
-#include "ravennakit/core/system.hpp"
 
-#include <CLI/App.hpp>
-
-int main(int const argc, char* argv[]) {
+int main(const int argc, char* argv[]) {
     rav::log::set_level_from_env();
-    rav::system::do_system_checks();
-
-    CLI::App app {"RAVENNA Receiver example"};
-    argv = app.ensure_utf8(argv);
-
-    CLI11_PARSE(app, argc, argv);
+    return Catch::Session().run(argc, argv);
 }

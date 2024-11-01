@@ -12,6 +12,8 @@
 
 #include "platform.hpp"
 
+#include <cstdlib>
+
 #ifndef RAV_ENABLE_SPDLOG
     #define RAV_ENABLE_SPDLOG 0
 #endif
@@ -20,9 +22,9 @@
 
     #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 
-#if RAV_MACOS
-    #define SPDLOG_FUNCTION __PRETTY_FUNCTION__
-#endif
+    #if RAV_MACOS
+        #define SPDLOG_FUNCTION __PRETTY_FUNCTION__
+    #endif
 
     #include <spdlog/spdlog.h>
 
@@ -102,3 +104,48 @@
     catch (...) {                                                                                              \
         RAV_CRITICAL("unknown exception caucght - please handle your exceptions before reaching this point."); \
     }
+
+namespace rav::log {
+
+/**
+ * Tries to find given environment variable and set the log level accordingly.
+ * The following are valid values for the log level:
+ *  - TRACE
+ *  - DEBUG
+ *  - INFO (default)
+ *  - WARN
+ *  - ERROR
+ *  - CRITICAL
+ *  - OFF
+ * By default the log level is set to INFO.
+ * Note: setting the log level is currently only implemented for spdlog.
+ * TODO: Implement log level setting for fmt.
+ * @param env_var The environment variable to read the log level from.
+ */
+inline void set_level_from_env(const char* env_var = "RAV_LOG_LEVEL") {
+    if (const auto* env_value = std::getenv(env_var)) {
+        const std::string_view level(env_value);
+#if RAV_ENABLE_SPDLOG
+        if (level == "TRACE") {
+            spdlog::set_level(spdlog::level::trace);
+        } else if (level == "DEBUG") {
+            spdlog::set_level(spdlog::level::debug);
+        } else if (level == "INFO") {
+            spdlog::set_level(spdlog::level::info);
+        } else if (level == "WARN") {
+            spdlog::set_level(spdlog::level::warn);
+        } else if (level == "ERROR") {
+            spdlog::set_level(spdlog::level::err);
+        } else if (level == "CRITICAL") {
+            spdlog::set_level(spdlog::level::critical);
+        } else if (level == "CRITICAL") {
+            spdlog::set_level(spdlog::level::off);
+        }
+#endif
+    } else {
+#if RAV_ENABLE_SPDLOG
+        spdlog::set_level(spdlog::level::info);
+#endif
+    }
+}
+}  // namespace rav::log

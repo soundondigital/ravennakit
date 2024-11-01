@@ -1,4 +1,5 @@
 #include "ravennakit/core/log.hpp"
+#include "ravennakit/core/system.hpp"
 #include "ravennakit/dnssd/service_description.hpp"
 #include "ravennakit/dnssd/dnssd_advertiser.hpp"
 
@@ -22,9 +23,8 @@ static bool parse_txt_record(rav::dnssd::txt_record& txt_record, const std::stri
 }
 
 int main(int const argc, char* argv[]) {
-#if RAV_ENABLE_SPDLOG
-    spdlog::set_level(spdlog::level::trace);
-#endif
+    rav::log::set_level_from_env();
+    rav::system::do_system_checks();
 
     std::vector<std::string> args;
     for (int i = 1; i < argc; i++) {

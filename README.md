@@ -126,6 +126,12 @@ Note: change the triplet to match your cpu architecture.
 | RAV_ENABLE_SPDLOG | -DRAV_ENABLE_SPDLOG=ON/OFF | When enabled, spdlog will be used for logging otherwise logs will be written to stdout. |
 | TRACY_ENABLE      | -DTRACY_ENABLE=ON/OFF      | When enabled, Tracy will be compiled into the library.                                  |
 
+## Environment variables
+
+| Variable      | Values                                         | Description          |
+|---------------|------------------------------------------------|----------------------|
+| RAV_LOG_LEVEL | TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL, OFF | The runtime loglevel |
+
 ## RFCs
 
 RFC 3550: RTP: A Transport Protocol for Real-Time Applications  

@@ -1,13 +1,13 @@
 #include "ravennakit/core/log.hpp"
+#include "ravennakit/core/system.hpp"
 #include "ravennakit/dnssd/dnssd_browser.hpp"
 
 #include <iostream>
 #include <string>
 
 int main(const int argc, char* argv[]) {
-#if RAV_ENABLE_SPDLOG
-    spdlog::set_level(spdlog::level::trace);
-#endif
+    rav::log::set_level_from_env();
+    rav::system::do_system_checks();
 
     if (argc < 2) {
         std::cout << "Expected an argument which specifies the service type to browse for (example: _http._tcp)"
