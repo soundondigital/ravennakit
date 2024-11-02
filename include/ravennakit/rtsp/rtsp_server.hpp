@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "rtsp_connection.hpp"
 #include "rtsp_request.hpp"
 #include "rtsp_response.hpp"
 #include "ravennakit/core/events.hpp"
@@ -26,30 +27,21 @@ namespace rav {
  */
 class rtsp_server {
   public:
-    class connection;
-
     struct connection_event {
-        connection& client_connection;
+        rtsp_connection& client_connection;
     };
 
     struct request_event {
         const rtsp_request& request;
-        connection& client_connection;
+        rtsp_connection& client_connection;
     };
 
     struct response_event {
         const rtsp_response& response;
-        connection& client_connection;
+        rtsp_connection& client_connection;
     };
 
     using events_type = events<connection_event, request_event, response_event>;
-
-    class connection {
-      public:
-        virtual ~connection() = default;
-        virtual void async_send_response(const rtsp_response& response) = 0;
-        virtual void async_send_request(const rtsp_request& response) = 0;
-    };
 
     rtsp_server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint);
     rtsp_server(asio::io_context& io_context, const char* address, uint16_t port);
@@ -91,7 +83,7 @@ class rtsp_server {
     class connection_impl;
 
     asio::ip::tcp::acceptor acceptor_;
-    std::vector<std::weak_ptr<connection_impl>> connections_;
+    std::vector<std::unique_ptr<connection_impl>> connections_;
     events_type events_;
 
     void async_accept();

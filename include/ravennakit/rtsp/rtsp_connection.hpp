@@ -19,7 +19,7 @@ namespace rav {
 
 class rtsp_connection {
 public:
-    virtual ~rtsp_connection() = default;
+    virtual ~rtsp_connection();
     explicit rtsp_connection(asio::ip::tcp::socket socket);
 
     rtsp_connection(const rtsp_connection&) = delete;
@@ -28,7 +28,24 @@ public:
     rtsp_connection(rtsp_connection&&) noexcept = default;
     rtsp_connection& operator=(rtsp_connection&&) noexcept = default;
 
-protected:
+    /**
+     * Sends given response to the server. Function is async and will return immediately.
+     * @param response The response to send.
+     */
+    void async_send_response(const rtsp_response& response);
+
+    /**
+     * Sends given request to the server. Function is async and will return immediately.
+     * @param request The request to send.
+     */
+    void async_send_request(const rtsp_request& request);
+
+    /**
+     * Shuts down the connection for both directions.
+     */
+    void shutdown();
+
+  protected:
     void async_connect(const asio::ip::tcp::resolver::results_type& results);
     void async_send_data(const std::string& data);
     void async_write();

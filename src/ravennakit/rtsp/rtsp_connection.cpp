@@ -10,6 +10,8 @@
 
 #include "ravennakit/rtsp/rtsp_connection.hpp"
 
+rav::rtsp_connection::~rtsp_connection() {}
+
 rav::rtsp_connection::rtsp_connection(asio::ip::tcp::socket socket) : socket_(std::move(socket)) {
     parser_.on<rtsp_request>([this](const rtsp_request& request) {
         on_rtsp_request(request);
@@ -20,20 +22,33 @@ rav::rtsp_connection::rtsp_connection(asio::ip::tcp::socket socket) : socket_(st
     });
 }
 
+void rav::rtsp_connection::async_send_response(const rtsp_response& response) {
+    const auto encoded = response.encode();
+    RAV_TRACE("Sending response: {}", response.to_debug_string(false));
+    async_send_data(encoded);
+}
+
+void rav::rtsp_connection::async_send_request(const rtsp_request& request) {
+    const auto encoded = request.encode();
+    RAV_TRACE("Sending request: {}", request.to_debug_string(false));
+    async_send_data(encoded);
+}
+
+void rav::rtsp_connection::shutdown() {
+    socket_.shutdown(asio::ip::tcp::socket::shutdown_both);
+}
+
 void rav::rtsp_connection::async_connect(const asio::ip::tcp::resolver::results_type& results) {
-    asio::async_connect(
-        socket_, results,
-        [this](const asio::error_code connect_error, const asio::ip::tcp::endpoint& endpoint) {
-            if (connect_error) {
-                RAV_ERROR("Failed to connect: {}", connect_error.message());
-                return;
-            }
-            RAV_INFO("Connected to {}:{}", endpoint.address().to_string(), endpoint.port());
-            async_write();      // Schedule a write operation, in case there is data to send
-            async_read_some();  // Start reading chain
-            on_connected();
+    asio::async_connect(socket_, results, [this](const asio::error_code ec, const asio::ip::tcp::endpoint& endpoint) {
+        if (ec) {
+            RAV_ERROR("Failed to connect: {}", ec.message());
+            return;
         }
-    );
+        RAV_INFO("Connected to {}:{}", endpoint.address().to_string(), endpoint.port());
+        async_write();      // Schedule a write operation, in case there is data to send
+        async_read_some();  // Start reading chain
+        on_connected();
+    });
 }
 
 void rav::rtsp_connection::async_send_data(const std::string& data) {

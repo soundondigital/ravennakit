@@ -77,18 +77,6 @@ class rtsp_client final: public events<rtsp_connect_event, rtsp_response, rtsp_r
      */
     void async_teardown(const std::string& path);
 
-    /**
-     * Sends given response to the server. Function is async and will return immediately.
-     * @param response The response to send.
-     */
-    void async_send_response(const rtsp_response& response);
-
-    /**
-     * Sends given request to the server. Function is async and will return immediately.
-     * @param request The request to send.
-     */
-    void async_send_request(const rtsp_request& request);
-
 protected:
     void on_connected() override;
     void on_rtsp_request(const rtsp_request& request) override;
@@ -98,7 +86,7 @@ protected:
     asio::ip::tcp::resolver resolver_;
     std::string host_;
 
-    void async_connect(const std::string& host, const std::string& service, asio::ip::resolver_base::flags flags);
+    void async_resolve_connect(const std::string& host, const std::string& service, asio::ip::resolver_base::flags flags);
 };
 
 }  // namespace rav

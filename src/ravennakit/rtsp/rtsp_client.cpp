@@ -18,11 +18,11 @@ rav::rtsp_client::rtsp_client(asio::io_context& io_context) :
     rtsp_connection(asio::ip::tcp::socket(io_context)), resolver_(io_context) {}
 
 void rav::rtsp_client::async_connect(const std::string& host, const uint16_t port) {
-    async_connect(host, std::to_string(port), asio::ip::resolver_base::flags::numeric_service);
+    async_resolve_connect(host, std::to_string(port), asio::ip::resolver_base::flags::numeric_service);
 }
 
 void rav::rtsp_client::async_connect(const std::string& host, const std::string& service) {
-    async_connect(host, service, asio::ip::resolver_base::flags());
+    async_resolve_connect(host, service, asio::ip::resolver_base::flags());
 }
 
 void rav::rtsp_client::async_describe(const std::string& path, std::string data) {
@@ -81,18 +81,6 @@ void rav::rtsp_client::async_teardown(const std::string& path) {
     async_send_request(request);
 }
 
-void rav::rtsp_client::async_send_response(const rtsp_response& response) {
-    const auto encoded = response.encode();
-    RAV_TRACE("Sending response: {}", response.to_debug_string(false));
-    async_send_data(encoded);
-}
-
-void rav::rtsp_client::async_send_request(const rtsp_request& request) {
-    const auto encoded = request.encode();
-    RAV_TRACE("Sending request: {}", request.to_debug_string(false));
-    async_send_data(encoded);
-}
-
 void rav::rtsp_client::on_connected() {
     emit(rtsp_connect_event {*this});
 }
@@ -105,7 +93,7 @@ void rav::rtsp_client::on_rtsp_response(const rtsp_response& response) {
     emit(response);
 }
 
-void rav::rtsp_client::async_connect(
+void rav::rtsp_client::async_resolve_connect(
     const std::string& host, const std::string& service, const asio::ip::resolver_base::flags flags
 ) {
     host_ = host;
