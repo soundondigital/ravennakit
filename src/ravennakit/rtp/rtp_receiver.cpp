@@ -117,10 +117,13 @@ class rav::rtp_receiver::impl: public std::enable_shared_from_this<impl> {
                     return;
                 }
                 const rtp_packet_view rtp_packet(self->rtp_data_.data(), length);
-                for (auto* sub : self->owner_->subscribers_) {
-                    sub->on(rtp_packet_event {rtp_packet});
+                const rtp_packet_event event {rtp_packet};
+                for (auto& node : self->owner_->subscriber_nodes_) {
+                    if (auto* subscriber = node->first) {
+                        subscriber->on(event);
+                    }
                 }
-                self->receive_rtp();
+                self->receive_rtp();  // Schedule another round of receiving.
             }
         );
     }
@@ -147,10 +150,13 @@ class rav::rtp_receiver::impl: public std::enable_shared_from_this<impl> {
                     return;
                 }
                 const rtcp_packet_view rtcp_packet(self->rtcp_data_.data(), length);
-                for (auto* sub : self->owner_->subscribers_) {
-                    sub->on(rtcp_packet_event {rtcp_packet});
+                const rtcp_packet_event event {rtcp_packet};
+                for (auto& node : self->owner_->subscriber_nodes_) {
+                    if (auto* subscriber = node->first) {
+                        subscriber->on(event);
+                    }
                 }
-                self->receive_rtcp();
+                self->receive_rtcp();  // Schedule another round of receiving.
             }
         );
     }
@@ -160,19 +166,15 @@ rav::rtp_receiver::rtp_receiver(asio::io_context& io_context) : impl_(std::make_
 
 rav::rtp_receiver::~rtp_receiver() {
     impl_->reset_owner();
+    for (auto& node : subscriber_nodes_) {
+        node.reset();
+    }
 }
 
 void rav::rtp_receiver::subscriber::subscribe(rtp_receiver& receiver) {
-    RAV_ASSERT(receiver.impl_ == nullptr, "Expecting valid receiver implementation");
-    rtp_receiver_ = &receiver;
-    rtp_receiver_->subscribers_.add(this);
-}
-
-void rav::rtp_receiver::subscriber::unsubscribe() {
-    if (rtp_receiver_) {
-        rtp_receiver_->subscribers_.remove(this);
-        rtp_receiver_ = nullptr;
-    }
+    RAV_ASSERT(receiver.impl_ != nullptr, "Expecting valid receiver implementation");
+    *node_ = {this, &receiver};
+    receiver.subscriber_nodes_.push_back(node_);
 }
 
 void rav::rtp_receiver::bind(const std::string& address, const uint16_t port) const {

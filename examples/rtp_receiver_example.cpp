@@ -41,10 +41,6 @@ class example_receiver final: public rav::rtp_receiver::subscriber {
         subscribe(rtp_receiver);
     }
 
-    ~example_receiver() override {
-        unsubscribe();
-    }
-
     void on(const rav::rtp_receiver::rtp_packet_event& event) override {
         RAV_INFO("{}", event.packet.to_string());
 

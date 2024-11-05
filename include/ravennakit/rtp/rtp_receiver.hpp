@@ -26,11 +26,11 @@ namespace rav {
 class rtp_receiver {
   public:
     struct rtp_packet_event {
-        rtp_packet_view packet;
+        const rtp_packet_view& packet;
     };
 
     struct rtcp_packet_event {
-        rtcp_packet_view packet;
+        const rtcp_packet_view& packet;
     };
 
     /**
@@ -59,13 +59,8 @@ class rtp_receiver {
          */
         void subscribe(rtp_receiver& receiver);
 
-        /**
-         * Unsubscribes from the current RTP receiver.
-         */
-        void unsubscribe();
-
       private:
-        rtp_receiver* rtp_receiver_ {};
+        linked_node<std::pair<subscriber*, rtp_receiver*>> node_;
     };
 
     rtp_receiver() = delete;
@@ -114,7 +109,8 @@ class rtp_receiver {
   private:
     class impl;
     std::shared_ptr<impl> impl_;
-    subscriber_list<subscriber> subscribers_;
+    linked_node<std::pair<subscriber*, rtp_receiver*>> subscriber_nodes_;
+
 };
 
 }  // namespace rav

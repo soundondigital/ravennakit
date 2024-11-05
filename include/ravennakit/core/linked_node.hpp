@@ -33,8 +33,9 @@ class linked_node {
         }
 
         iterator& operator++() {
-            if (current)
+            if (current) {
                 current = current->next_;
+            }
             return *this;
         }
 
