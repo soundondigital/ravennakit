@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/audio/formats/wav_audio_format.hpp"
+#include "ravennakit/core/audio/formats/wav_audio_format.hpp"
 
 #include "ravennakit/core/assert.hpp"
 #include "ravennakit/core/exception.hpp"

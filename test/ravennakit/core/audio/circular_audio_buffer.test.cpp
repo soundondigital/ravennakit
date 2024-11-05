@@ -9,7 +9,7 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include <ravennakit/audio/circular_audio_buffer.hpp>
+#include <ravennakit/core/audio/circular_audio_buffer.hpp>
 #include <thread>
 
 #include "ravennakit/core/containers/vector_buffer.hpp"

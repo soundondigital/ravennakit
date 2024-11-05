@@ -11,7 +11,7 @@
 #include <catch2/catch_all.hpp>
 
 #include "wav_audio_format.data.cpp"
-#include "ravennakit/audio/formats/wav_audio_format.hpp"
+#include "ravennakit/core/audio/formats/wav_audio_format.hpp"
 #include "ravennakit/core/streams/byte_stream.hpp"
 #include "ravennakit/core/util.hpp"
 

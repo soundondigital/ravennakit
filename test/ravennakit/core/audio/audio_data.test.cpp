@@ -8,11 +8,11 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/audio/audio_data.hpp"
+#include "ravennakit/core/audio/audio_data.hpp"
 
 #include <catch2/catch_all.hpp>
 
-#include "ravennakit/audio/audio_buffer.hpp"
+#include "ravennakit/core/audio/audio_buffer.hpp"
 #include "ravennakit/core/containers/buffer_view.hpp"
 #include "ravennakit/core/containers/vector_buffer.hpp"
 #include "ravennakit/core/util.hpp"

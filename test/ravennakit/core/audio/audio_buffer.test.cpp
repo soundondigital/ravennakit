@@ -9,7 +9,7 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include <ravennakit/audio/audio_buffer.hpp>
+#include <ravennakit/core/audio/audio_buffer.hpp>
 #include <ravennakit/core/util.hpp>
 
 namespace {
