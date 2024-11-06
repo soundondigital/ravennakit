@@ -12,6 +12,7 @@
 
 #include "rtcp_packet_view.hpp"
 #include "rtp_packet_view.hpp"
+#include "detail/rtp_endpoint.hpp"
 #include "ravennakit/core/events.hpp"
 #include "ravennakit/core/linked_node.hpp"
 #include "ravennakit/core/subscriber_list.hpp"
@@ -25,13 +26,8 @@ namespace rav {
  */
 class rtp_receiver {
   public:
-    struct rtp_packet_event {
-        const rtp_packet_view& packet;
-    };
-
-    struct rtcp_packet_event {
-        const rtcp_packet_view& packet;
-    };
+    using rtp_packet_event = rtp_endpoint::rtp_packet_event;
+    using rtcp_packet_event = rtp_endpoint::rtcp_packet_event;
 
     /**
      * Baseclass for other classes that want to subscribe to receiving RTP and RTCP packets.
@@ -64,8 +60,10 @@ class rtp_receiver {
         /**
          * Subscribes to the given RTP receiver.
          * @param receiver The receiver to subscribe to.
+         * @param address
+         * @param port
          */
-        void subscribe_to_rtp_receiver(rtp_receiver& receiver);
+        void subscribe_to_rtp_session(rtp_receiver& receiver, const asio::ip::address& address, uint16_t port);
 
       private:
         linked_node<std::pair<subscriber*, rtp_receiver*>> node_;
@@ -86,51 +84,24 @@ class rtp_receiver {
     rtp_receiver(rtp_receiver&&) = delete;
     rtp_receiver& operator=(rtp_receiver&&) = delete;
 
-    /**
-     * Binds 2 UDP sockets to the given address and port. One for receiving RTP packets and one for receiving RTCP
-     * packets. The sockets will be bound to the given address and port. The port number will be used for RTP and port
-     * number + 1 will be used for RTCP.
-     * @param address The address to bind to.
-     * @param port The port to bind to. Default is 5004.
-     * @return A result indicating success or failure.
-     */
-    void bind(const std::string& address, uint16_t port = 5004) const;
-
-    /**
-     * Sets the multicast membership for the given multicast address and interface address.
-     * @param multicast_address The multicast address to join or leave.
-     * @param interface_address The interface address to use.
-     * @return A result indicating success or failure.
-     */
-    void join_multicast_group(const std::string& multicast_address, const std::string& interface_address) const;
-
-    /**
-     * @return Starts receiving datagrams on the bound sockets.
-     */
-    void start() const;
-
-    /**
-     * Stops receiving datagrams on the bound sockets.
-     */
-    void stop() const;
-
   private:
-    /**
-     * Class which sets up sockets for receiving RTP and RTCP packets.
-     */
-    class rtp_endpoint;
+    class session : public rtp_endpoint::handler {
+      public:
+        session(asio::io_context& io_context, asio::ip::udp::endpoint endpoint);
+        ~session() override;
 
-    struct session {
-        uint32_t ssrc{};
-        asio::ip::address connection_address;
-        uint16_t connection_port{};
-        std::shared_ptr<rtp_endpoint> rtp_endpoint;
+        void on(const rtp_packet_event& rtp_event) override;
+        void on(const rtcp_packet_event& rtcp_event) override;
+
+        [[nodiscard]] asio::ip::udp::endpoint connection_endpoint() const;
+
+      private:
+        std::shared_ptr<rtp_endpoint> rtp_endpoint_;
+        linked_node<std::pair<subscriber*, rtp_receiver*>> subscriber_nodes_;
     };
 
-    class impl;
-    std::shared_ptr<impl> impl_;
-    std::vector<session> sessions_;
-    linked_node<std::pair<subscriber*, rtp_receiver*>> subscriber_nodes_;
+    asio::io_context& io_context_;
+    std::vector<std::unique_ptr<session>> sessions_;
 };
 
 }  // namespace rav

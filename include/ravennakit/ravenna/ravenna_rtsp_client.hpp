@@ -56,7 +56,7 @@ class ravenna_rtsp_client {
         /**
          * Unsubscribes this subscriber from the ravenna_rtsp_client.
          */
-        void unsubscribe();
+        void unsubscribe_from_ravenna_rtsp_client();
 
       private:
         linked_node<std::pair<subscriber*, ravenna_rtsp_client*>> node_;

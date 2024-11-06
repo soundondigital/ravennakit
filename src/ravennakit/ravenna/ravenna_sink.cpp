@@ -15,10 +15,12 @@
 rav::ravenna_sink::ravenna_sink(
     ravenna_rtsp_client& rtsp_client, rtp_receiver& rtp_receiver, std::string session_name
 ) :
-    rtsp_client_(rtsp_client) {
-    subscribe_to_ravenna_rtsp_client(rtsp_client_, session_name);
-    subscribe_to_rtp_receiver(rtp_receiver);
+    rtsp_client_(rtsp_client), rtp_receiver_(rtp_receiver) {
     set_source(std::move(session_name));
+}
+
+rav::ravenna_sink::~ravenna_sink() {
+    stop();
 }
 
 void rav::ravenna_sink::set_manual_sdp(sdp::session_description sdp) {
@@ -100,7 +102,23 @@ void rav::ravenna_sink::on(const ravenna_rtsp_client::announced_event& event) {
         // TODO: Subscribe to multicast
     }
 
+    subscribe_to_rtp_session(rtp_receiver_, addr, media_description.port());
+}
 
+void rav::ravenna_sink::start() {
+    if (started_) {
+        RAV_WARNING("ravenna_sink already started");
+        return;
+    }
+
+    subscribe_to_ravenna_rtsp_client(rtsp_client_, session_name_);
+
+    started_ = true;
+}
+
+void rav::ravenna_sink::stop() {
+    unsubscribe_from_ravenna_rtsp_client();
+    started_ = false;
 }
 
 void rav::ravenna_sink::set_mode(const mode new_mode) {

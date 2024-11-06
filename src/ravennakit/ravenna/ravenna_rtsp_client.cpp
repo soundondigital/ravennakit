@@ -11,7 +11,7 @@
 #include "ravennakit/ravenna/ravenna_rtsp_client.hpp"
 
 rav::ravenna_rtsp_client::subscriber::~subscriber() {
-    unsubscribe();
+    unsubscribe_from_ravenna_rtsp_client();
 }
 
 void rav::ravenna_rtsp_client::subscriber::subscribe_to_ravenna_rtsp_client(ravenna_rtsp_client& client, const std::string& session_name) {
@@ -19,7 +19,7 @@ void rav::ravenna_rtsp_client::subscriber::subscribe_to_ravenna_rtsp_client(rave
         RAV_THROW_EXCEPTION("session_name cannot be empty");
     }
 
-    unsubscribe();
+    unsubscribe_from_ravenna_rtsp_client();
 
     node_ = {this, &client};
 
@@ -45,7 +45,7 @@ void rav::ravenna_rtsp_client::subscriber::subscribe_to_ravenna_rtsp_client(rave
     }
 }
 
-void rav::ravenna_rtsp_client::subscriber::unsubscribe() {
+void rav::ravenna_rtsp_client::subscriber::unsubscribe_from_ravenna_rtsp_client() {
     node_.unlink();
     if (auto* owner = node_->second) {
         owner->do_maintenance();

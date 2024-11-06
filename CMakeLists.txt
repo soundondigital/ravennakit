@@ -163,28 +163,6 @@ endif ()
 
 if (${BUILD_EXAMPLES})
 
-    ########################
-    # RTP Receiver example #
-    ########################
-
-    add_executable(rtp_receiver_example
-            examples/rtp_receiver_example.cpp
-    )
-
-    target_link_libraries(rtp_receiver_example
-            PUBLIC
-            rav_recommended_warning_flags
-            rav_recommended_lto_flags
-            PRIVATE
-            ravennakit
-            portaudio_static
-            CLI11::CLI11
-    )
-
-    if (TRACY_ENABLE)
-        target_link_libraries(rtp_receiver_example PUBLIC tracy)
-    endif ()
-
     #########################
     # DNSSD Browser example #
     #########################

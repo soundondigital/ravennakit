@@ -48,11 +48,10 @@ int main(int const argc, char* argv[]) {
 
     rav::ravenna_rtsp_client rtsp_client(io_context, *node_browser);
     rav::rtp_receiver rtp_receiver(io_context);
-    rtp_receiver.bind("::");
 
     std::vector<std::unique_ptr<rav::ravenna_sink>> sinks;
     for (auto const& stream_name : stream_names) {
-        sinks.emplace_back(std::make_unique<rav::ravenna_sink>(rtsp_client, rtp_receiver, stream_name));
+        sinks.emplace_back(std::make_unique<rav::ravenna_sink>(rtsp_client, rtp_receiver, stream_name))->start();
     }
 
     io_context.run();
