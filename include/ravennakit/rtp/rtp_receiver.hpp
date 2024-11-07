@@ -84,6 +84,8 @@ class rtp_receiver {
     );
     void stop();
 
+    void join_multicast_group(const std::string& multicast_address, const std::string& interface_address);
+
     void subscribe(subscriber& subscriber);
     void unsubscribe(subscriber& subscriber);
 

@@ -20,6 +20,12 @@
 
 #include <utility>
 
+#if RAV_APPLE
+    #define IP_RECVDSTADDR_PKTINFO IP_RECVDSTADDR
+#elif RAV_LINUX
+    #define IP_RECVDSTADDR_PKTINFO IP_PKTINFO
+#endif
+
 class rav::rtp_receiver::impl: public std::enable_shared_from_this<impl> {
   public:
     explicit impl(
@@ -42,6 +48,14 @@ class rav::rtp_receiver::impl: public std::enable_shared_from_this<impl> {
         if (ec) {
             RAV_ERROR("Failed to bind RTP socket: {}", ec.message());
         }
+        rtp_socket_.non_blocking(true, ec);
+        if (ec) {
+            RAV_ERROR("Failed to set non-blocking mode on RTP socket: {}", ec.message());
+        }
+        rtp_socket_.set_option(asio::detail::socket_option::integer<IPPROTO_IP, IP_RECVDSTADDR_PKTINFO>(1), ec);
+        if (ec) {
+            RAV_ERROR("Failed to set IP_RECVDSTADDR option on RTP socket: {}", ec.message());
+        }
 
         // RTCP
         endpoint.port(rtcp_port);
@@ -56,6 +70,14 @@ class rav::rtp_receiver::impl: public std::enable_shared_from_this<impl> {
         rtcp_socket_.bind(endpoint, ec);
         if (ec) {
             RAV_ERROR("Failed to bind RTCP socket: {}", ec.message());
+        }
+        rtcp_socket_.non_blocking(true, ec);
+        if (ec) {
+            RAV_ERROR("Failed to set non-blocking mode on RTP socket: {}", ec.message());
+        }
+        rtcp_socket_.set_option(asio::detail::socket_option::integer<IPPROTO_IP, IP_RECVDSTADDR_PKTINFO>(1), ec);
+        if (ec) {
+            RAV_ERROR("Failed to set IP_RECVDSTADDR option on RTCP socket: {}", ec.message());
         }
     }
 
@@ -74,8 +96,8 @@ class rav::rtp_receiver::impl: public std::enable_shared_from_this<impl> {
 
         owner_ = &owner;
 
-        receive_rtp();
-        receive_rtcp();
+        async_wait_rtp();
+        async_wait_rtcp();
 
         RAV_TRACE(
             "RTP Receiver impl started. RTP on {}:{}, RTCP on {}:{}",
@@ -102,6 +124,16 @@ class rav::rtp_receiver::impl: public std::enable_shared_from_this<impl> {
         RAV_TRACE("Endpoint stopped.");
     }
 
+    void join_multicast_group(const std::string& multicast_address, const std::string& interface_address) {
+        rtp_socket_.set_option(asio::ip::multicast::join_group(
+            asio::ip::make_address(multicast_address).to_v4(), asio::ip::make_address(interface_address).to_v4()
+        ));
+
+        rtcp_socket_.set_option(asio::ip::multicast::join_group(
+            asio::ip::make_address(multicast_address).to_v4(), asio::ip::make_address(interface_address).to_v4()
+        ));
+    }
+
   private:
     rtp_receiver* owner_ = nullptr;
     asio::ip::udp::socket rtp_socket_;
@@ -111,71 +143,105 @@ class rav::rtp_receiver::impl: public std::enable_shared_from_this<impl> {
     std::array<uint8_t, 1500> rtp_data_ {};
     std::array<uint8_t, 1500> rtcp_data_ {};
 
-    void receive_rtp() {
+    void async_wait_rtp() {
         auto self = shared_from_this();
-        rtp_socket_.async_receive_from(
-            asio::buffer(rtp_data_), rtp_sender_endpoint_,
-            [self](const std::error_code& ec, const std::size_t length) {
-                TRACY_ZONE_SCOPED;
+        rtp_socket_.async_wait(asio::socket_base::wait_read, [self](std::error_code ec) {
+            if (ec) {
+                if (ec == asio::error::operation_aborted) {
+                    RAV_TRACE("Operation aborted");
+                    return;
+                }
+                if (ec == asio::error::eof) {
+                    RAV_TRACE("EOF");
+                    return;
+                }
+                RAV_ERROR("Read error: {}. Closing connection.", ec.message());
+                return;
+            }
+            if (self->owner_ == nullptr) {
+                RAV_ERROR("Owner is null. Closing connection.");
+                return;
+            }
+            RAV_TRACE("RTP Socket ready to read.");
+            while (self->rtp_socket_.available() > 0) {
+                const auto bytes_received = receive_from_socket(self->rtp_socket_, self->rtp_data_, ec);
                 if (ec) {
-                    if (ec == asio::error::operation_aborted) {
-                        RAV_TRACE("Operation aborted");
-                        return;
-                    }
-                    if (ec == asio::error::eof) {
-                        RAV_TRACE("EOF");
-                        return;
-                    }
                     RAV_ERROR("Read error: {}. Closing connection.", ec.message());
                     return;
                 }
-                if (self->owner_ == nullptr) {
-                    RAV_ERROR("Owner is null. Closing connection.");
-                    return;
+                if (bytes_received == 0) {
+                    break;
                 }
-                const rtp_packet_view rtp_packet(self->rtp_data_.data(), length);
+                const rtp_packet_view rtp_packet(self->rtp_data_.data(), bytes_received);
                 if (rtp_packet.validate()) {
                     const rtp_packet_event event {rtp_packet};
                     self->owner_->on(event);
                 } else {
                     RAV_WARNING("Invalid RTP packet received. Ignoring.");
                 }
-                self->receive_rtp();  // Schedule another round of receiving.
             }
-        );
+            self->async_wait_rtp();  // Schedule another round of waiting.
+        });
     }
 
-    void receive_rtcp() {
+    void async_wait_rtcp() {
         auto self = shared_from_this();
-        rtcp_socket_.async_receive_from(
-            asio::buffer(rtcp_data_), rtcp_sender_endpoint_,
-            [self](const std::error_code& ec, const std::size_t length) {
-                if (ec) {
-                    if (ec == asio::error::operation_aborted) {
-                        RAV_TRACE("Operation aborted");
-                        return;
-                    }
-                    if (ec == asio::error::eof) {
-                        RAV_TRACE("EOF");
-                        return;
-                    }
-                    RAV_ERROR("Read error: {}. Closing connection.", ec.message());
+        rtp_socket_.async_wait(asio::socket_base::wait_read, [self](const std::error_code& ec) {
+            if (ec) {
+                if (ec == asio::error::operation_aborted) {
+                    RAV_TRACE("Operation aborted");
                     return;
                 }
-                if (self->owner_ == nullptr) {
-                    RAV_ERROR("Owner is null. Closing connection.");
+                if (ec == asio::error::eof) {
+                    RAV_TRACE("EOF");
                     return;
                 }
-                const rtcp_packet_view rtcp_packet(self->rtcp_data_.data(), length);
-                if (rtcp_packet.validate()) {
-                    const rtcp_packet_event event {rtcp_packet};
-                    self->owner_->on(event);
-                } else {
-                    RAV_WARNING("Invalid RTCP packet received. Ignoring.");
-                }
-                self->receive_rtcp();  // Schedule another round of receiving.
+                RAV_ERROR("Read error: {}. Closing connection.", ec.message());
+                return;
             }
-        );
+            if (self->owner_ == nullptr) {
+                RAV_ERROR("Owner is null. Closing connection.");
+                return;
+            }
+            RAV_TRACE("RTCP Socket ready to read.");
+        });
+    }
+
+    static size_t
+    receive_from_socket(asio::ip::udp::socket& socket, std::array<uint8_t, 1500>& data_buf, asio::error_code& ec) {
+        sockaddr_in src_addr {};
+        iovec iov[1];
+        char ctrl_buf[CMSG_SPACE(sizeof(in_addr))];
+        msghdr msg {};
+
+        iov[0].iov_base = data_buf.data();
+        iov[0].iov_len = data_buf.size();
+
+        msg.msg_name = &src_addr;
+        msg.msg_namelen = sizeof(src_addr);
+        msg.msg_iov = iov;
+        msg.msg_iovlen = 1;
+        msg.msg_control = ctrl_buf;
+        msg.msg_controllen = sizeof(ctrl_buf);
+        msg.msg_flags = 0;
+
+        const ssize_t received_bytes = recvmsg(socket.native_handle(), &msg, 0);
+        if (received_bytes < 0) {
+            ec = asio::error_code(errno, asio::system_category());
+            return 0;
+        }
+
+        // Extract the destination IP from the control message
+        for (cmsghdr* cmsg = CMSG_FIRSTHDR(&msg); cmsg != nullptr; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+            if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR_PKTINFO) {
+                const auto* dst_addr = reinterpret_cast<struct in_addr*>(CMSG_DATA(cmsg));
+                char dest_ip[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, dst_addr, dest_ip, sizeof(dest_ip));
+                RAV_TRACE("Received packet destined to: {}", dest_ip);
+            }
+        }
+
+        return received_bytes;
     }
 };
 
@@ -200,10 +266,21 @@ void rav::rtp_receiver::start(const asio::ip::address& bind_addr, uint16_t rtp_p
 }
 
 void rav::rtp_receiver::stop() {
-    impl_->stop();
-    impl_.reset();
+    if (impl_ != nullptr) {
+        impl_->stop();
+        impl_.reset();
+        RAV_TRACE("RTP Receiver stopped.");
+    }
+}
 
-    RAV_TRACE("RTP Receiver stopped.");
+void rav::rtp_receiver::join_multicast_group(
+    const std::string& multicast_address, const std::string& interface_address
+) {
+    if (impl_ == nullptr) {
+        RAV_ERROR("RTP receiver is not running");
+        return;
+    }
+    impl_->join_multicast_group(multicast_address, interface_address);
 }
 
 void rav::rtp_receiver::subscribe(subscriber& subscriber) {

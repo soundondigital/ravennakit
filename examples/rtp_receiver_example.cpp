@@ -85,7 +85,7 @@ class example_receiver final: public rav::rtp_receiver::subscriber {
                     static_cast<float*>(output), num_frames
                 );
         if (!result) {
-            RAV_ERROR("Failed to read from buffer!");
+            // RAV_ERROR("Failed to read from buffer!");
             std::memset(output, 0, num_frames * context->num_channels_ * sizeof(float));
         }
 
@@ -159,14 +159,6 @@ int main(int const argc, char* argv[]) {
         exit(1);
     }
 
-    // if (multicast_addr.has_value()) {
-    //     if (multicast_interface.has_value()) {
-    //         rtp_receiver.join_multicast_group(*multicast_addr, *multicast_interface);
-    //     } else {
-    //         rtp_receiver.join_multicast_group(*multicast_addr, {});
-    //     }
-    // }
-
     example_receiver example_receiver(rtp_receiver, num_channels, audio_file, sample_rate);
 
     auto num_devices = Pa_GetDeviceCount();
@@ -212,6 +204,14 @@ int main(int const argc, char* argv[]) {
     }
 
     rtp_receiver.start(bind_addr, k_base_port, k_base_port + 1);
+
+    if (multicast_addr.has_value()) {
+        if (multicast_interface.has_value()) {
+            rtp_receiver.join_multicast_group(*multicast_addr, *multicast_interface);
+        } else {
+            rtp_receiver.join_multicast_group(*multicast_addr, {});
+        }
+    }
 
     asio::signal_set signals(io_context, SIGINT, SIGTERM);
 
