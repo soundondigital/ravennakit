@@ -12,6 +12,7 @@
 
 #include "rtcp_packet_view.hpp"
 #include "rtp_packet_view.hpp"
+#include "detail/udp_sender_receiver.hpp"
 #include "ravennakit/core/events.hpp"
 #include "ravennakit/core/linked_node.hpp"
 #include "ravennakit/core/subscriber_list.hpp"
@@ -86,7 +87,7 @@ class rtp_receiver {
     );
     void stop();
 
-    void join_multicast_group(const std::string& multicast_address, const std::string& interface_address);
+    void join_multicast_group(const asio::ip::address& multicast_address, const asio::ip::address& interface_address) const;
 
     void subscribe(subscriber& subscriber);
     void unsubscribe(subscriber& subscriber);
@@ -96,14 +97,10 @@ class rtp_receiver {
         asio::ip::address connection_address;
     };
 
-    class impl;
-    std::shared_ptr<impl> impl_;
-
     asio::io_context& io_context_;
+    std::shared_ptr<udp_sender_receiver> rtp_socket_;
+    std::shared_ptr<udp_sender_receiver> rtcp_socket_;
     subscriber_list<subscriber> subscribers_;
-
-    void on(const rtp_packet_event& rtp_event);
-    void on(const rtcp_packet_event& rtcp_event);
 };
 
 }  // namespace rav

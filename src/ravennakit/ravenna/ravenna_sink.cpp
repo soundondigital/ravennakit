@@ -44,19 +44,27 @@ void rav::ravenna_sink::on(const ravenna_rtsp_client::announced_event& event) {
         return;
     }
 
+    // Try to find a suitable media description
+    for (auto& media_description : sdp.media_descriptions()) {
+        if (media_description.media_type() != "audio") {
+            RAV_TRACE(
+                "Unsupported media type '{}' in SDP for session '{}'", media_description.media_type(), session_name_
+            );
+            continue;
+        }
+
+        // At this moment we only support the default port. In the future we may support other ports.
+        if (media_description.port() != ravenna::constants::k_default_rtp_port) {
+            RAV_WARNING("Unsupported port '{}' in SDP for session '{}'", media_description.port(), session_name_);
+            return;
+        }
+
+    }
+
+
     auto& media_description = sdp.media_descriptions().front();
 
-    if (media_description.media_type() != "audio") {
-        RAV_WARNING(
-            "Unsupported media type '{}' in SDP for session '{}'", media_description.media_type(), session_name_
-        );
-        return;
-    }
 
-    if (media_description.port() != ravenna::constants::k_default_rtp_port) {
-        RAV_WARNING("Unsupported port '{}' in SDP for session '{}'", media_description.port(), session_name_);
-        return;
-    }
 
     if (media_description.protocol() != "RTP/AVP") {
         RAV_WARNING("Unsupported protocol '{}' in SDP for session '{}'", media_description.protocol(), session_name_);

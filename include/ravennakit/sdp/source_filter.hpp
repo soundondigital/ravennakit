@@ -22,8 +22,6 @@ class source_filter {
   public:
     static constexpr auto k_attribute_name = "source-filter";
 
-    enum class filter_mode { undefined, exclude, include };
-
     /// A type alias for a parse result.
     template<class T>
     using parse_result = result<T, std::string>;

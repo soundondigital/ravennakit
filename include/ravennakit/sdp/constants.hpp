@@ -28,5 +28,6 @@ constexpr auto k_sdp_wildcard = "*";
 enum class netw_type { undefined, internet };
 enum class addr_type { undefined, ipv4, ipv6, both };
 enum class media_direction { sendrecv, sendonly, recvonly, inactive };
+enum class filter_mode { undefined, exclude, include };
 
 }

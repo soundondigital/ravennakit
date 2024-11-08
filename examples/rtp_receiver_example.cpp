@@ -207,9 +207,11 @@ int main(int const argc, char* argv[]) {
 
     if (multicast_addr.has_value()) {
         if (multicast_interface.has_value()) {
-            rtp_receiver.join_multicast_group(*multicast_addr, *multicast_interface);
+            rtp_receiver.join_multicast_group(
+                asio::ip::make_address(*multicast_addr), asio::ip::make_address(*multicast_interface)
+            );
         } else {
-            rtp_receiver.join_multicast_group(*multicast_addr, {});
+            rtp_receiver.join_multicast_group(asio::ip::make_address(*multicast_addr), {});
         }
     }
 
