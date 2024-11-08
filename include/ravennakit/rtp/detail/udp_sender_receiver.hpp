@@ -16,15 +16,9 @@
     #define IP_RECVDSTADDR_PKTINFO IP_PKTINFO
 #endif
 
-#if RAV_WINDOWS
-typedef BOOL(PASCAL* LPFN_WSARECVMSG)(
-    SOCKET s, LPWSAMSG lpMsg, LPDWORD lpNumberOfBytesRecvd, LPWSAOVERLAPPED lpOverlapped,
-    LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
-);
-#endif
-
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/core/tracy.hpp"
+#include "ravennakit/core/subscription.hpp"
 
 #include <asio.hpp>
 
@@ -93,27 +87,6 @@ class udp_sender_receiver: public std::enable_shared_from_this<udp_sender_receiv
     asio::ip::udp::endpoint sender_endpoint_ {};  // For receiving the senders address.
     std::array<uint8_t, 1500> recv_data_ {};
     handler_type handler_;
-
-#if RAV_WINDOWS
-    LPFN_WSARECVMSG wsa_recv_msg_func {};
-
-    void load_wsa_recv_msg_func() {
-        SOCKET temp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        rav::defer defer_close_socket([&temp_sock] {
-            closesocket(temp_sock);
-        });
-        DWORD bytes_returned = 0;
-        GUID WSARecvMsg_GUID = WSAID_WSARECVMSG;
-
-        if (WSAIoctl(
-                temp_sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &WSARecvMsg_GUID, sizeof(WSARecvMsg_GUID),
-                &wsa_recv_msg_func, sizeof(wsa_recv_msg_func), &bytes_returned, nullptr, nullptr
-            )
-            == SOCKET_ERROR) {
-            RAV_THROW_EXCEPTION(fmt::format("Failed to get WSARecvMsg function: {}", WSAGetLastError()));
-        }
-    }
-#endif
 
     /**
      * Construct a new instance of the class. Private to force the use of the factory methods.

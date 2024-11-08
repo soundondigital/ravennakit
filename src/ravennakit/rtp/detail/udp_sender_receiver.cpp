@@ -9,6 +9,7 @@
  */
 
 #include "ravennakit/rtp/detail/udp_sender_receiver.hpp"
+#include "ravennakit/core/platform/windows/wsa_recv_msg_function.hpp"
 
 void rav::udp_sender_receiver::start(handler_type handler) {
     TRACY_ZONE_SCOPED;
@@ -59,10 +60,6 @@ rav::udp_sender_receiver::udp_sender_receiver(asio::io_context& io_context, cons
     socket_.bind(endpoint);
     socket_.non_blocking(true);
     socket_.set_option(asio::detail::socket_option::integer<IPPROTO_IP, IP_RECVDSTADDR_PKTINFO>(1));
-
-#if RAV_WINDOWS
-    load_wsa_recv_msg_func();
-#endif
 }
 
 rav::udp_sender_receiver::udp_sender_receiver(
@@ -146,7 +143,8 @@ size_t rav::udp_sender_receiver::receive_from_socket(
     msg.Control.buf = control_buf;
 
     DWORD bytes_received = 0;
-    if (self->wsa_recv_msg_func(socket.native_handle(), &msg, &bytes_received, nullptr, nullptr) == SOCKET_ERROR) {
+    auto wsa_recv_msg = rav::windows::wsa_recv_msg_function::get_global();
+    if (wsa_recv_msg(socket.native_handle(), &msg, &bytes_received, nullptr, nullptr) == SOCKET_ERROR) {
         ec = asio::error_code(WSAGetLastError(), asio::system_category());
         return 0;
     }
