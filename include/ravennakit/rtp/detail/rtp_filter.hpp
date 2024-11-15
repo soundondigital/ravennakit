@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ravennakit/sdp/constants.hpp"
+#include "ravennakit/sdp/session_description.hpp"
 
 #include <asio.hpp>
 #include <tl/expected.hpp>
@@ -24,6 +25,10 @@ class rtp_filter {
   public:
     rtp_filter() = default;
 
+    /**
+     * Creates a new RTP filter for the given connection address.
+     * @param connection_address The connection address.
+     */
     explicit rtp_filter(asio::ip::address connection_address) : connection_address_(std::move(connection_address)) {}
 
     rtp_filter(const rtp_filter&) = default;
@@ -32,13 +37,24 @@ class rtp_filter {
     rtp_filter(rtp_filter&&) noexcept = default;
     rtp_filter& operator=(rtp_filter&&) noexcept = default;
 
-    void add_filter(asio::ip::address address, const sdp::filter_mode mode) {
+    /**
+     * Adds a filter for the given source address.
+     * @param src_address The source address.
+     * @param mode The filter mode.
+     */
+    void add_filter(asio::ip::address src_address, const sdp::filter_mode mode) {
         RAV_TRACE(
-            "Added source filter: {} {} {}", sdp::to_string(mode), connection_address_.to_string(), address.to_string()
+            "Added source filter: {} {} {}", rav::sdp::to_string(mode), connection_address_.to_string(),
+            src_address.to_string()
         );
-        filters_.push_back({mode, std::move(address)});
+        filters_.push_back({mode, std::move(src_address)});
     }
 
+    /**
+     * Adds a filter from the given source filter.
+     * @param filter The source filter.
+     * @return The number of source filters added.
+     */
     size_t add_filter(const sdp::source_filter& filter) {
         size_t total = 0;
         const auto dest_address = asio::ip::make_address(filter.dest_address());
@@ -52,6 +68,11 @@ class rtp_filter {
         return total;
     }
 
+    /**
+     * Adds filters from given vector of source filters.
+     * @param filters The source filters.
+     * @return The number of source filters added.
+     */
     size_t add_filters(const std::vector<sdp::source_filter>& filters) {
         size_t total = 0;
         for (auto& filter : filters) {
@@ -60,12 +81,25 @@ class rtp_filter {
         return total;
     }
 
+    /**
+     * Checks if the given connection address matches the filter.
+     * @param connection_address The connection address.
+     * @return True if the connection address matches the filter, or false if not.
+     */
     [[nodiscard]] bool matches(const asio::ip::address& connection_address) const {
         return connection_address_ == connection_address;
     }
 
+    /**
+     * Checks if the given connection address matches and if source address is a valid source address.
+     * If the source address is not a valid source address, it will return false.
+     * In case there are no filters, it will return true.
+     * @param connection_address The connection address.
+     * @param src_address The source address.
+     * @return True if the connection address and source address matches the filter, or false if not.
+     */
     [[nodiscard]] bool
-    matches(const asio::ip::address& connection_address, const asio::ip::address& src_address) const {
+    is_valid_source(const asio::ip::address& connection_address, const asio::ip::address& src_address) const {
         if (connection_address_ != connection_address) {
             return false;
         }
@@ -92,6 +126,9 @@ class rtp_filter {
         return has_include_filters ? is_address_included : true;
     }
 
+    /**
+     * @return True if the filter is empty, or false if not.
+     */
     [[nodiscard]] bool empty() const {
         return filters_.empty();
     }
