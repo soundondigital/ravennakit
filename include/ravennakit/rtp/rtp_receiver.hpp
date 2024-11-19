@@ -85,16 +85,16 @@ class rtp_receiver {
 
     /**
      * Subscribes to the given session.
-     * @param subscriber The subscriber to add.
+     * @param subscriber_to_add The subscriber to add.
      * @param session The session to subscribe to.
      */
-    void subscribe(subscriber& subscriber, const rtp_session& session);
+    void subscribe(subscriber& subscriber_to_add, const rtp_session& session);
 
     /**
      * Unsubscribes given subscriber from all sessions it's subscribed to.
-     * @param subscriber The subscriber to remove.
+     * @param subscriber_to_add The subscriber to remove.
      */
-    void unsubscribe(subscriber& subscriber);
+    void unsubscribe(subscriber& subscriber_to_add);
 
   private:
     struct source {

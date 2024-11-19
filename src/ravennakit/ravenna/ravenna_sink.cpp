@@ -154,7 +154,7 @@ void rav::ravenna_sink::on(const ravenna_rtsp_client::announced_event& event) {
         new_settings.format = *found_format;
         new_settings.session.rtp_port = found_media_description->port();
         new_settings.session.rtcp_port = new_settings.session.rtp_port + 1;
-        new_settings.rtp_filter = std::move(filter);
+        new_settings.filter = std::move(filter);
 
         // Now we have a suitable media description
         RAV_TRACE("Found suitable media description in SDP for session '{}'", session_name_);

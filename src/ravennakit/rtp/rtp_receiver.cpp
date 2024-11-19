@@ -37,7 +37,7 @@ typedef BOOL(PASCAL* LPFN_WSARECVMSG)(
 
 rav::rtp_receiver::rtp_receiver(asio::io_context& io_context) : io_context_(io_context) {}
 
-void rav::rtp_receiver::subscribe(subscriber& subscriber, const rtp_session& session) {
+void rav::rtp_receiver::subscribe(subscriber& subscriber_to_add, const rtp_session& session) {
     auto* context = find_or_create_session_context(session);
 
     if (context == nullptr) {
@@ -47,15 +47,15 @@ void rav::rtp_receiver::subscribe(subscriber& subscriber, const rtp_session& ses
 
     RAV_ASSERT(context != nullptr, "Expecting valid session at this point");
 
-    if (!context->subscribers.add(&subscriber)) {
+    if (!context->subscribers.add(&subscriber_to_add)) {
         // Note: this can never happen if the session was created, hence it's find to not clean up the session here.
         RAV_WARNING("Already subscribed to session");
     }
 }
 
-void rav::rtp_receiver::unsubscribe(subscriber& subscriber) {
+void rav::rtp_receiver::unsubscribe(subscriber& subscriber_to_add) {
     for (auto it = sessions_contexts_.begin(); it != sessions_contexts_.end();) {
-        if (it->subscribers.remove(&subscriber) && it->subscribers.empty()) {
+        if (it->subscribers.remove(&subscriber_to_add) && it->subscribers.empty()) {
             it = sessions_contexts_.erase(it);  // Remove the session
         } else {
             ++it;

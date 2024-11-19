@@ -40,7 +40,7 @@ class ravenna_sink: ravenna_rtsp_client::subscriber, rtp_receiver::subscriber {
     struct settings {
         rtp_session session;
         sdp::format format;
-        rtp_filter rtp_filter;
+        rtp_filter filter;
     };
 
     std::optional<settings> current_settings_{};

@@ -52,17 +52,17 @@ class rtp_filter {
 
     /**
      * Adds a filter from the given source filter.
-     * @param filter The source filter.
+     * @param source_filter The source filter.
      * @return The number of source filters added.
      */
-    size_t add_filter(const sdp::source_filter& filter) {
+    size_t add_filter(const sdp::source_filter& source_filter) {
         size_t total = 0;
-        const auto dest_address = asio::ip::make_address(filter.dest_address());
+        const auto dest_address = asio::ip::make_address(source_filter.dest_address());
         if (dest_address != connection_address_) {
             return 0;
         }
-        for (auto& src : filter.src_list()) {
-            add_filter(asio::ip::make_address(src), filter.mode());
+        for (auto& src : source_filter.src_list()) {
+            add_filter(asio::ip::make_address(src), source_filter.mode());
             total++;
         }
         return total;
@@ -75,8 +75,8 @@ class rtp_filter {
      */
     size_t add_filters(const std::vector<sdp::source_filter>& filters) {
         size_t total = 0;
-        for (auto& filter : filters) {
-            total += add_filter(filter);
+        for (auto& f : filters) {
+            total += add_filter(f);
         }
         return total;
     }
@@ -111,13 +111,13 @@ class rtp_filter {
         bool is_address_included = false;
         bool has_include_filters = false;
 
-        for (auto& filter : filters_) {
-            if (filter.mode == sdp::filter_mode::exclude && filter.address == src_address) {
+        for (auto& f : filters_) {
+            if (f.mode == sdp::filter_mode::exclude && f.address == src_address) {
                 return false;  // This prioritizes exclude filters over include filters
             }
-            if (filter.mode == sdp::filter_mode::include) {
+            if (f.mode == sdp::filter_mode::include) {
                 has_include_filters = true;
-                if (filter.address == src_address) {
+                if (f.address == src_address) {
                     is_address_included = true;
                 }
             }

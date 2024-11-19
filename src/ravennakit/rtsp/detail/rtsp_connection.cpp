@@ -50,8 +50,8 @@ void rav::rtsp_connection::stop() {
     socket_.close();
 }
 
-void rav::rtsp_connection::set_subscriber(subscriber* subscriber) {
-    subscriber_ = subscriber;
+void rav::rtsp_connection::set_subscriber(subscriber* subscriber_to_set) {
+    subscriber_ = subscriber_to_set;
 }
 
 void rav::rtsp_connection::async_connect(const asio::ip::tcp::resolver::results_type& results) {

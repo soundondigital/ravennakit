@@ -118,7 +118,7 @@ class rtsp_connection final: public std::enable_shared_from_this<rtsp_connection
     /**
      * Sets the subscriber for this connection.
      */
-    void set_subscriber(subscriber* subscriber);
+    void set_subscriber(subscriber* subscriber_to_set);
 
     void async_connect(const asio::ip::tcp::resolver::results_type& results);
     void async_send_data(const std::string& data);
