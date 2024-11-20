@@ -150,7 +150,7 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
     rtp_receiver_.subscribe(*this, primary_session_info_->session, primary_session_info_->filter);
 }
 
-void rav::rtp_stream_receiver::reset() {
+void rav::rtp_stream_receiver::reset() const {
     rtp_receiver_.unsubscribe(*this);
 }
 

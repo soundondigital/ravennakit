@@ -14,7 +14,6 @@
 #include "../rtcp_packet_view.hpp"
 #include "../rtp_packet_view.hpp"
 #include "rtp_session.hpp"
-#include "rtp_stream.hpp"
 #include "udp_sender_receiver.hpp"
 #include "ravennakit/core/events.hpp"
 #include "ravennakit/core/linked_node.hpp"
@@ -106,17 +105,43 @@ class rtp_receiver {
     void unsubscribe(const subscriber& subscriber_to_remove);
 
   private:
-    struct subscriber_context {
+    class subscriber_context {
+      public:
         subscriber_context(subscriber* subscriber, rtp_filter filter) :
-            subscriber(subscriber), filter(std::move(filter)) {}
+            subscriber_(subscriber), filter_(std::move(filter)) {}
 
-        subscriber* subscriber {};
-        rtp_filter filter;
+        [[nodiscard]] subscriber* get_subscriber() const {
+            return subscriber_;
+        }
+
+        [[nodiscard]] const rtp_filter& get_filter() const {
+            return filter_;
+        }
+
+        void set_filter(rtp_filter filter) {
+            filter_ = std::move(filter);
+        }
+
+      private:
+        subscriber* subscriber_ {};
+        rtp_filter filter_;
+    };
+
+    class stream_state {
+      public:
+        explicit stream_state(const uint32_t ssrc) : ssrc_(ssrc) {}
+
+        [[nodiscard]] uint32_t ssrc() const {
+            return ssrc_;
+        }
+
+      private:
+        uint32_t ssrc_ {};
     };
 
     struct session_context {
         rtp_session session;
-        std::vector<rtp_stream> streams;
+        std::vector<stream_state> streams;
         std::vector<subscriber_context> subscribers;
         std::shared_ptr<udp_sender_receiver> rtp_sender_receiver;
         std::shared_ptr<udp_sender_receiver> rtcp_sender_receiver;

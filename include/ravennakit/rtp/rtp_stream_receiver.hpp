@@ -36,7 +36,7 @@ class rtp_stream_receiver: rtp_receiver::subscriber {
     std::optional<sdp::format> expected_format_;
     std::vector<uint8_t> buffer_;
 
-    void reset();
+    void reset() const;
 
     void on_rtp_packet(const rtp_receiver::rtp_packet_event& rtp_event) override;
     void on_rtcp_packet(const rtp_receiver::rtcp_packet_event& rtcp_event) override;

@@ -50,8 +50,8 @@ void rav::rtp_receiver::subscribe(subscriber& subscriber_to_add, const rtp_sessi
 
     // Check if already subscribed, and update the filter if so
     for (auto& sub : context->subscribers) {
-        if (sub.subscriber == &subscriber_to_add) {
-            sub.filter = filter;
+        if (sub.get_subscriber() == &subscriber_to_add) {
+            sub.set_filter(filter);
             return;
         }
     }
@@ -62,7 +62,7 @@ void rav::rtp_receiver::subscribe(subscriber& subscriber_to_add, const rtp_sessi
 void rav::rtp_receiver::unsubscribe(const subscriber& subscriber_to_remove) {
     for (auto session = sessions_contexts_.begin(); session != sessions_contexts_.end();) {
         for (auto sub = session->subscribers.begin(); sub != session->subscribers.end();) {
-            if (sub->subscriber == &subscriber_to_remove) {
+            if (sub->get_subscriber() == &subscriber_to_remove) {
                 sub = session->subscribers.erase(sub);
             } else {
                 ++sub;
@@ -182,17 +182,28 @@ void rav::rtp_receiver::handle_incoming_rtp_data(const udp_sender_receiver::recv
     for (auto& context : sessions_contexts_) {
         if (context.session.connection_address == event.dst_endpoint.address()
             && context.session.rtp_port == event.dst_endpoint.port()) {
-            bool did_find_source = false;
+            bool did_find_stream = false;
 
-            for (auto& source : context.streams) {
-                if (source.ssrc() == packet.ssrc()) {
-                    did_find_source = true;
+            for (auto& stream : context.streams) {
+                if (stream.ssrc() == packet.ssrc()) {
+                    did_find_stream = true;
                 }
             }
 
-            if (!did_find_source) {
+            if (!did_find_stream) {
                 auto& it = context.streams.emplace_back(packet.ssrc());
-                RAV_TRACE("Added new source with SSRC {}", packet.ssrc());
+                RAV_TRACE(
+                    "Added new stream with SSRC {} from {}:{}", it.ssrc(), event.src_endpoint.address().to_string(),
+                    event.src_endpoint.port()
+                );
+            }
+
+            for (auto& subscriber : context.subscribers) {
+                if (subscriber.get_filter().is_valid_source(
+                        event.dst_endpoint.address(), event.src_endpoint.address()
+                    )) {
+                    subscriber.get_subscriber()->on_rtp_packet(rtp_event);
+                }
             }
         }
     }
