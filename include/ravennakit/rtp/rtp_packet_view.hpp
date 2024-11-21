@@ -101,7 +101,7 @@ class rtp_packet_view {
     [[nodiscard]] buffer_view<const uint8_t> get_header_extension_data() const;
 
     /**
-     * @returns Returns the start index of the payload data.
+     * @returns Returns the length of the header which is also the start index of the payload data.
      */
     [[nodiscard]] size_t header_total_length() const;
 

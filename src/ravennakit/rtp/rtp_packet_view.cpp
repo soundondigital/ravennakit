@@ -30,9 +30,11 @@ bool rav::rtp_packet_view::validate() const {
         return false;
     }
 
-    if (version() > 2) {
+    if (version() != 2) {
         return false;
     }
+
+
 
     return true;
 }
@@ -149,11 +151,12 @@ rav::buffer_view<const unsigned char> rav::rtp_packet_view::payload_data() const
         return {};
     }
 
-    if (size_bytes_ < header_total_length()) {
+    auto header_length = header_total_length();
+    if (size_bytes_ < header_length) {
         return {};
     }
 
-    return {data_ + header_total_length(), size_bytes_ - header_total_length()};
+    return {data_ + header_length, size_bytes_ - header_length};
 }
 
 std::string rav::rtp_packet_view::to_string() const {
