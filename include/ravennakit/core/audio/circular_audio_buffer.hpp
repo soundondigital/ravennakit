@@ -15,6 +15,8 @@
 #include "audio_buffer.hpp"
 #include "audio_data.hpp"
 
+#include <cstring>
+
 namespace rav {
 
 template<class T, class F = fifo::single>
