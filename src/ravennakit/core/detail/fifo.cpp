@@ -8,9 +8,11 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include <ravennakit/core/containers/detail/fifo.hpp>
+#include "ravennakit/core/assert.hpp"
+#include "ravennakit/core/containers/detail/fifo.hpp"
 
 void rav::fifo::position::update(const size_t timestamp, const size_t capacity, const size_t number_of_elements) {
+    RAV_ASSERT(number_of_elements <= capacity, "Number of elements must be less than or equal to capacity.");
     index1 = timestamp % capacity;
     size1 = number_of_elements;
     size2 = 0;

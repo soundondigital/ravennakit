@@ -121,7 +121,7 @@ class rtp_receive_buffer {
         }
 
         const auto number_of_elements = (at_timestamp - next_ts_) * bytes_per_frame_;
-        position_.update(next_ts_ * bytes_per_frame_, buffer_.size(), number_of_elements);
+        position_.update(next_ts_ * bytes_per_frame_, buffer_.size(), std::min(number_of_elements, buffer_.size()));
 
         std::memset(buffer_.data() + position_.index1, clear_value_, position_.size1);
 

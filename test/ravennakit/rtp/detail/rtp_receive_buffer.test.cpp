@@ -96,4 +96,16 @@ TEST_CASE("rtp_receive_buffer") {
         buffer.read(4, output.data(), output.size());
         REQUIRE(output == std::array<uint8_t, 8> {0xFF, 0xFF, 0xFF, 0xFF, 0x0, 0x0, 0x0, 0x0});
     }
+
+    SECTION("Clear until some high timestamp") {
+        rav::rtp_receive_buffer buffer;
+        buffer.resize(480, 2);
+        buffer.clear_until(1000);
+    }
+
+    SECTION("Clear until some crazy high timestamp") {
+        rav::rtp_receive_buffer buffer;
+        buffer.resize(480, 2);
+        buffer.clear_until(253366016);
+    }
 }
