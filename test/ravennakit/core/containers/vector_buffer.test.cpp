@@ -14,93 +14,93 @@
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("vector_buffer", "[vector_buffer]") {
-    rav::vector_buffer<uint32_t> stream;
+    rav::vector_buffer<uint32_t> buffer;
 
     SECTION("write") {
-        stream.push_back(0x12345678);
-        stream.push_back(0x87654321);
-        stream.push_back(0x56);
-        stream.push_back(0x78);
+        buffer.push_back(0x12345678);
+        buffer.push_back(0x87654321);
+        buffer.push_back(0x56);
+        buffer.push_back(0x78);
 
-        REQUIRE_FALSE(stream == std::vector<uint32_t> {0x12345678});
+        REQUIRE_FALSE(buffer == std::vector<uint32_t> {0x12345678});
 
         if constexpr (rav::little_endian) {
-            REQUIRE(stream == std::vector<uint32_t> {0x12345678, 0x87654321, 0x56, 0x78});
+            REQUIRE(buffer == std::vector<uint32_t> {0x12345678, 0x87654321, 0x56, 0x78});
         } else {
-            REQUIRE(stream == std::vector<uint32_t> {0x78563412, 0x21436587, 0x56000000, 0x78000000});
+            REQUIRE(buffer == std::vector<uint32_t> {0x78563412, 0x21436587, 0x56000000, 0x78000000});
         }
     }
 
     SECTION("write_be") {
-        stream.push_back_be(0x12345678);
-        stream.push_back_be(0x87654321);
-        stream.push_back_be({0x56, 0x78});
+        buffer.push_back_be(0x12345678);
+        buffer.push_back_be(0x87654321);
+        buffer.push_back_be({0x56, 0x78});
 
-        REQUIRE(stream == std::vector<uint32_t> {0x78563412, 0x21436587, 0x56000000, 0x78000000});
+        REQUIRE(buffer == std::vector<uint32_t> {0x78563412, 0x21436587, 0x56000000, 0x78000000});
     }
 
     SECTION("write_le") {
-        stream.push_back_le(0x12345678);
-        stream.push_back_le(0x87654321);
-        stream.push_back_le(0x56);
-        stream.push_back_le(0x78);
+        buffer.push_back_le(0x12345678);
+        buffer.push_back_le(0x87654321);
+        buffer.push_back_le(0x56);
+        buffer.push_back_le(0x78);
 
-        REQUIRE(stream == std::vector<uint32_t> {0x12345678, 0x87654321, 0x56, 0x78});
+        REQUIRE(buffer == std::vector<uint32_t> {0x12345678, 0x87654321, 0x56, 0x78});
     }
 
     SECTION("read") {
-        stream.push_back(0x12345678);
-        stream.push_back(0x87654321);
-        stream.push_back(0x56);
-        stream.push_back(0x78);
+        buffer.push_back(0x12345678);
+        buffer.push_back(0x87654321);
+        buffer.push_back(0x56);
+        buffer.push_back(0x78);
 
-        REQUIRE(stream.read() == 0x12345678);
-        REQUIRE(stream.read() == 0x87654321);
-        REQUIRE(stream.read() == 0x56);
-        REQUIRE(stream.read() == 0x78);
-        REQUIRE(stream.read() == 0);
+        REQUIRE(buffer.read() == 0x12345678);
+        REQUIRE(buffer.read() == 0x87654321);
+        REQUIRE(buffer.read() == 0x56);
+        REQUIRE(buffer.read() == 0x78);
+        REQUIRE(buffer.read() == 0);
     }
 
     SECTION("read_le") {
-        stream.push_back_le(0x12345678);
-        stream.push_back_le(0x87654321);
-        stream.push_back_le(0x56);
-        stream.push_back_le(0x78);
+        buffer.push_back_le(0x12345678);
+        buffer.push_back_le(0x87654321);
+        buffer.push_back_le(0x56);
+        buffer.push_back_le(0x78);
 
-        REQUIRE(stream.read_le() == 0x12345678);
-        REQUIRE(stream.read_le() == 0x87654321);
-        REQUIRE(stream.read_le() == 0x56);
-        REQUIRE(stream.read_le() == 0x78);
-        REQUIRE(stream.read_le() == 0);
+        REQUIRE(buffer.read_le() == 0x12345678);
+        REQUIRE(buffer.read_le() == 0x87654321);
+        REQUIRE(buffer.read_le() == 0x56);
+        REQUIRE(buffer.read_le() == 0x78);
+        REQUIRE(buffer.read_le() == 0);
     }
 
     SECTION("read_be") {
-        stream.push_back_be(0x12345678);
-        stream.push_back_be(0x87654321);
-        stream.push_back_be(0x56);
-        stream.push_back_be(0x78);
+        buffer.push_back_be(0x12345678);
+        buffer.push_back_be(0x87654321);
+        buffer.push_back_be(0x56);
+        buffer.push_back_be(0x78);
 
-        REQUIRE(stream.read_be() == 0x12345678);
-        REQUIRE(stream.read_be() == 0x87654321);
-        REQUIRE(stream.read_be() == 0x56);
-        REQUIRE(stream.read_be() == 0x78);
-        REQUIRE(stream.read_be() == 0);
+        REQUIRE(buffer.read_be() == 0x12345678);
+        REQUIRE(buffer.read_be() == 0x87654321);
+        REQUIRE(buffer.read_be() == 0x56);
+        REQUIRE(buffer.read_be() == 0x78);
+        REQUIRE(buffer.read_be() == 0);
     }
 
     SECTION("write le read be") {
-        stream.push_back_le(0x12345678);
-        REQUIRE(stream.read_be() == 0x78563412);
+        buffer.push_back_le(0x12345678);
+        REQUIRE(buffer.read_be() == 0x78563412);
     }
 
     SECTION("write be read le") {
-        stream.push_back_be(0x12345678);
-        REQUIRE(stream.read_le() == 0x78563412);
+        buffer.push_back_be(0x12345678);
+        REQUIRE(buffer.read_le() == 0x78563412);
     }
 
     SECTION("reset") {
-        stream.push_back_be(0x12345678);
-        stream.reset();
-        REQUIRE(stream.size() == 0); // NOLINT
-        REQUIRE(stream.empty());
+        buffer.push_back_be(0x12345678);
+        buffer.reset();
+        REQUIRE(buffer.size() == 0); // NOLINT
+        REQUIRE(buffer.empty());
     }
 }

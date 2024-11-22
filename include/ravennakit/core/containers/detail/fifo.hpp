@@ -26,11 +26,11 @@ struct position {
 
     /**
      * Updates the position with the given parameters.
-     * @param pointer The head or tail pointer.
+     * @param timestamp The read or write timestamp.
      * @param capacity The total capacity of the buffer.
      * @param number_of_elements The number of elements to read or write.
      */
-    void update(size_t pointer, size_t capacity, size_t number_of_elements);
+    void update(size_t timestamp, size_t capacity, size_t number_of_elements);
 };
 
 /**
@@ -119,8 +119,8 @@ struct single {
     void reset();
 
   private:
-    size_t read_ts_ = 0;   // Consumer index
-    size_t write_ts_ = 0;  // Producer index
+    size_t read_ts_ = 0;   // Consumer timestamp
+    size_t write_ts_ = 0;  // Producer timestamp
     size_t capacity_ = 0;
 };
 
@@ -198,8 +198,8 @@ struct spsc {
     void reset();
 
   private:
-    size_t read_ts_ = 0;            // Consumer index
-    size_t write_ts_ = 0;           // Producer index
+    size_t read_ts_ = 0;            // Consumer timestamp
+    size_t write_ts_ = 0;           // Producer timestamp
     std::atomic<size_t> size_ = 0;  // Number of elements in the buffer
     size_t capacity_ = 0;
 };
@@ -282,8 +282,8 @@ struct mpsc {
     void reset();
 
   private:
-    size_t read_ts_ = 0;   // Consumer index
-    size_t write_ts_ = 0;  // Producer index
+    size_t read_ts_ = 0;   // Consumer timestamp
+    size_t write_ts_ = 0;  // Producer timestamp
     size_t capacity_ = 0;
     std::atomic<size_t> size_ = 0;  // Number of elements in the buffer
     std::mutex mutex_;
@@ -367,8 +367,8 @@ struct spmc {
     void reset();
 
   private:
-    size_t read_ts_ = 0;   // Consumer index
-    size_t write_ts_ = 0;  // Producer index
+    size_t read_ts_ = 0;   // Consumer timestamp
+    size_t write_ts_ = 0;  // Producer timestamp
     size_t capacity_ = 0;
     std::atomic<size_t> size_ = 0;  // Number of elements in the buffer
     std::mutex mutex_;
@@ -450,8 +450,8 @@ struct mpmc {
     void reset();
 
   private:
-    size_t read_ts_ = 0;   // Consumer index
-    size_t write_ts_ = 0;  // Producer index
+    size_t read_ts_ = 0;   // Consumer timestamp
+    size_t write_ts_ = 0;  // Producer timestamp
     size_t capacity_ = 0;
     size_t size_ = 0;  // Number of elements in the buffer
     std::mutex mutex_;

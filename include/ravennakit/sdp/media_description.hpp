@@ -43,7 +43,12 @@ struct format {
     /**
      * @return The size of a sample in bytes, or an empty optional if the size cannot be determined.
      */
-    [[nodiscard]] std::optional<size_t> sample_size_bytes() const;
+    [[nodiscard]] std::optional<size_t> bytes_per_sample() const;
+
+    /**
+     * @return The size of a frame in bytes, or an empty optional if the size cannot be determined.
+     */
+    [[nodiscard]] std::optional<size_t> bytes_per_frame() const;
 
     /**
      * Parses a format from a string.

@@ -10,8 +10,8 @@
 
 #include <ravennakit/core/containers/detail/fifo.hpp>
 
-void rav::fifo::position::update(const size_t pointer, const size_t capacity, const size_t number_of_elements) {
-    index1 = pointer % capacity;
+void rav::fifo::position::update(const size_t timestamp, const size_t capacity, const size_t number_of_elements) {
+    index1 = timestamp % capacity;
     size1 = number_of_elements;
     size2 = 0;
 

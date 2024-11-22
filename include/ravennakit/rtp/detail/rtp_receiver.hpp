@@ -32,14 +32,14 @@ class rtp_receiver {
   public:
     struct rtp_packet_event {
         const rtp_packet_view& packet;
+        const rtp_session& session;
         const asio::ip::udp::endpoint& src_endpoint;
-        const asio::ip::udp::endpoint& dst_endpoint;
     };
 
     struct rtcp_packet_event {
         const rtcp_packet_view& packet;
+        const rtp_session& session;
         const asio::ip::udp::endpoint& src_endpoint;
-        const asio::ip::udp::endpoint& dst_endpoint;
     };
 
     struct configuration {
@@ -123,7 +123,7 @@ class rtp_receiver {
 
     struct session_context {
         rtp_session session;
-        std::vector<stream_state> streams;
+        std::vector<stream_state> stream_states;
         subscriber_list<subscriber, subscriber_context> subscribers;
         std::shared_ptr<udp_sender_receiver> rtp_sender_receiver;
         std::shared_ptr<udp_sender_receiver> rtcp_sender_receiver;

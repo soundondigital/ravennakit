@@ -227,7 +227,7 @@ TEST_CASE("media_description | format") {
         REQUIRE(fmt.encoding_name == "L16");
         REQUIRE(fmt.clock_rate == 48000);
         REQUIRE(fmt.num_channels == 2);
-        REQUIRE(fmt.sample_size_bytes() == 2);
+        REQUIRE(fmt.bytes_per_sample() == 2);
     }
 
     SECTION("98/L16/48000/4") {
@@ -238,7 +238,7 @@ TEST_CASE("media_description | format") {
         REQUIRE(fmt.encoding_name == "L16");
         REQUIRE(fmt.clock_rate == 48000);
         REQUIRE(fmt.num_channels == 4);
-        REQUIRE(fmt.sample_size_bytes() == 2);
+        REQUIRE(fmt.bytes_per_sample() == 2);
     }
 
     SECTION("98/L24/48000/2") {
@@ -249,7 +249,7 @@ TEST_CASE("media_description | format") {
         REQUIRE(fmt.encoding_name == "L24");
         REQUIRE(fmt.clock_rate == 48000);
         REQUIRE(fmt.num_channels == 2);
-        REQUIRE(fmt.sample_size_bytes() == 3);
+        REQUIRE(fmt.bytes_per_sample() == 3);
     }
 
     SECTION("98/L32/48000/2") {
@@ -260,7 +260,7 @@ TEST_CASE("media_description | format") {
         REQUIRE(fmt.encoding_name == "L32");
         REQUIRE(fmt.clock_rate == 48000);
         REQUIRE(fmt.num_channels == 2);
-        REQUIRE(fmt.sample_size_bytes() == 4);
+        REQUIRE(fmt.bytes_per_sample() == 4);
     }
 
     SECTION("98/NA/48000/2") {
@@ -271,6 +271,6 @@ TEST_CASE("media_description | format") {
         REQUIRE(fmt.encoding_name == "NA");
         REQUIRE(fmt.clock_rate == 48000);
         REQUIRE(fmt.num_channels == 2);
-        REQUIRE_FALSE(fmt.sample_size_bytes().has_value());
+        REQUIRE_FALSE(fmt.bytes_per_sample().has_value());
     }
 }
