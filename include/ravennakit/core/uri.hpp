@@ -17,7 +17,7 @@
 namespace rav {
 
 /**
- * URI parser and encoder. Should be enough for most use cases, but it's not a full implementation.
+ * URI parser and encoder. Should be enough for the common case, but it's not a full implementation.
  */
 struct uri {
     std::string scheme;

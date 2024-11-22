@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include "detail/rtp_depacketizer.hpp"
 #include "detail/rtp_filter.hpp"
 #include "detail/rtp_receive_buffer.hpp"
 #include "detail/rtp_receiver.hpp"
@@ -32,12 +31,10 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
 
   private:
     struct stream_info {
-        stream_info(rtp_session session_, const rtp_depacketizer depacketizer_) :
-            session(std::move(session_)), depacketizer(depacketizer_) {}
-
         rtp_session session;
         rtp_filter filter;
-        rtp_depacketizer depacketizer;
+        uint32_t sequence_number = 0;
+        uint32_t packet_time_frames = 0;
     };
 
     static constexpr uint32_t k_delay_multiplier = 2; // The buffer size is twice the delay.
@@ -45,13 +42,14 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     rtp_receiver& rtp_receiver_;
     sdp::format selected_format_;
     rtp_receive_buffer receiver_buffer_;
-    std::vector<stream_info> streams_; // After receiver_buffer_ to make sure receiver_buffer_ has a longer lifetime.
-    uint32_t delay_ = 480; // TODO: Make configurable
+    std::vector<stream_info> streams_;
+    uint32_t delay_ = 480;
 
     /// Restarts the streaming
     void restart();
 
     stream_info& find_or_create_stream_info(const rtp_session& session);
+    void handle_rtp_packet_for_stream(const rtp_packet_view& packet, stream_info& stream);
 };
 
 }  // namespace rav

@@ -155,12 +155,12 @@ size_t rav::rtp_packet_view::header_total_length() const {
     return kRtpHeaderBaseLengthOctets + csrc_count() * sizeof(uint32_t) + extension_length_octets;
 }
 
-rav::buffer_view<const unsigned char> rav::rtp_packet_view::payload_data() const {
+rav::buffer_view<const uint8_t> rav::rtp_packet_view::payload_data() const {
     if (data_ == nullptr) {
         return {};
     }
 
-    auto header_length = header_total_length();
+    const auto header_length = header_total_length();
     if (size_bytes_ < header_length) {
         return {};
     }

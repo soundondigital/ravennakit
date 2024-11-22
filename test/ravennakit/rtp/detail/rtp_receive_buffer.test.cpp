@@ -17,7 +17,7 @@ TEST_CASE("rtp_receive_buffer") {
         rav::rtp_receive_buffer buffer;
         buffer.resize(10, 2);
 
-        std::array<uint8_t, 4> input = {0x0, 0x1, 0x2, 0x3};
+        std::array<const uint8_t, 4> input = {0x0, 0x1, 0x2, 0x3};
         std::array<uint8_t, 4> output = {0x0, 0x1, 0x2, 0x3};
 
         const rav::buffer_view buffer_view(input.data(), input.size());
@@ -55,7 +55,7 @@ TEST_CASE("rtp_receive_buffer") {
         rav::rtp_receive_buffer buffer;
         buffer.resize(4, 2);
 
-        std::array<uint8_t, 8> input = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8};
+        std::array<const uint8_t, 8> input = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8};
         std::array<uint8_t, 4> output = {};
 
         const rav::buffer_view buffer_view(input.data(), input.size());
@@ -72,7 +72,7 @@ TEST_CASE("rtp_receive_buffer") {
         rav::rtp_receive_buffer buffer;
         buffer.resize(4, 2);
 
-        std::array<uint8_t, 8> input = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8};
+        std::array<const uint8_t, 8> input = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8};
         std::array<uint8_t, 8> output = {};
 
         const rav::buffer_view buffer_view(input.data(), input.size());

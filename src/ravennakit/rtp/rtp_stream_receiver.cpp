@@ -77,9 +77,6 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
         break;
     }
 
-    RAV_ASSERT(selected_media_description != nullptr, "Expecting found_media_description to be set");
-    RAV_ASSERT(selected_format != nullptr, "Expecting found_format to be set");
-
     if (!selected_media_description) {
         RAV_WARNING("No suitable media description found in SDP");
         return;
@@ -152,13 +149,8 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
         stream.session = session;
     }
     stream.session = session;
-
-    // Filter
-    RAV_ASSERT(
-        stream.filter.connection_address() == filter.connection_address(),
-        "Expecting connection address to be the same"
-    );
     stream.filter = filter;
+    stream.packet_time_frames = packet_time_frames;
 
     if (selected_format_ != *selected_format) {
         should_restart = true;
@@ -207,7 +199,25 @@ rav::rtp_stream_receiver::find_or_create_stream_info(const rtp_session& session)
         }
     }
 
-    return streams_.emplace_back(session, rtp_depacketizer(receiver_buffer_));
+    return streams_.emplace_back(stream_info {session, rtp_filter(), 0});
+}
+
+void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_view& packet, stream_info& stream) {
+    receiver_buffer_.clear_until(packet.timestamp());
+
+    if (packet.sequence_number() > stream.sequence_number) {
+        stream.sequence_number = packet.sequence_number();
+    }
+
+    // Discard packet if it's too old
+    if (packet.timestamp() + stream.packet_time_frames < receiver_buffer_.next_ts() - delay_) {
+        RAV_WARNING("Dropping packet because it's too old");
+        return;
+    }
+
+    if (!receiver_buffer_.write(packet.timestamp(), packet.payload_data())) {
+        RAV_ERROR("Packet not written to buffer");
+    }
 }
 
 void rav::rtp_stream_receiver::on_rtp_packet(const rtp_receiver::rtp_packet_event& rtp_event) {
@@ -223,7 +233,7 @@ void rav::rtp_stream_receiver::on_rtp_packet(const rtp_receiver::rtp_packet_even
 
     for (auto& stream : streams_) {
         if (rtp_event.session == stream.session) {
-            stream.depacketizer.handle_rtp_packet(rtp_event.packet, delay_);
+            handle_rtp_packet_for_stream(rtp_event.packet, stream);
             return;
         }
     }

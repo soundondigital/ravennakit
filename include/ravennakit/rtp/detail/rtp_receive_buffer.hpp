@@ -48,7 +48,7 @@ class rtp_receive_buffer {
      * @param payload The data to write to the buffer.
      * @return true if the data was written, false if the buffer is full or the timestamp is too old.
      */
-    bool write(const size_t at_timestamp, const buffer_view<uint8_t>& payload) {
+    bool write(const size_t at_timestamp, const buffer_view<const uint8_t>& payload) {
         RAV_ASSERT(payload.data() != nullptr, "Payload data must not be nullptr.");
         RAV_ASSERT(payload.size_bytes() > 0, "Payload size must be greater than 0.");
 
