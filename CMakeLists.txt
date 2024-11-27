@@ -84,16 +84,23 @@ endif ()
 # Tracy #
 #########
 
+set(TRACY_PATH "C:/tracy-0.11.1" CACHE STRING "Path to Tracy")
+
 if (TRACY_ENABLE)
     message(STATUS "Tracy enabled")
     add_library(tracy INTERFACE)
+    target_compile_definitions(tracy INTERFACE TRACY_ENABLE=1)
 
     if (APPLE)
         target_include_directories(tracy INTERFACE /opt/homebrew/include)
         target_link_directories(tracy INTERFACE /opt/homebrew/lib)
         target_link_libraries(tracy INTERFACE TracyClient)
-        target_compile_definitions(tracy INTERFACE TRACY_ENABLE=1)
     endif ()
+
+    if (WIN32)
+        target_include_directories(tracy INTERFACE "${TRACY_PATH}/public")
+        target_sources(tracy INTERFACE "${TRACY_PATH}/public/TracyClient.cpp")
+    endif()
 else ()
     message(STATUS "Tracy disabled")
 endif ()

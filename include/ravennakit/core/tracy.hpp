@@ -13,7 +13,9 @@
 #include "ravennakit/core/warnings.hpp"
 
 #if defined(TRACY_ENABLE) && TRACY_ENABLE
-    #define TracyFunction __PRETTY_FUNCTION__
+    #if RAV_APPLE
+        #define TracyFunction __PRETTY_FUNCTION__
+    #endif
 
 START_IGNORE_WARNINGS
     #include <tracy/Tracy.hpp>
