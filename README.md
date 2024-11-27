@@ -31,7 +31,7 @@ Optional:
 Unit tests:
 - [Catch2](https://github.com/catchorg/Catch2) (Boost Software License)
 
-Example:
+Examples:
 - [portaudio](https://github.com/PortAudio/portaudio) (MIT License)
 - [cli11](https://github.com/CLIUtils/CLI11) (BSD 3-Clause License)
 
@@ -152,5 +152,5 @@ https://datatracker.ietf.org/doc/html/rfc4570
 RFC 2326: Real Time Streaming Protocol (RTSP)  
 https://datatracker.ietf.org/doc/html/rfc2326
 
-RFC 2068: Hypertext Transfer Protocol -- HTTP/1.1
+RFC 2068: Hypertext Transfer Protocol -- HTTP/1.1  
 https://datatracker.ietf.org/doc/html/rfc2068
