@@ -22,20 +22,35 @@
 
 constexpr int k_block_size = 256;
 
-class portaudio_stream {
-  public:
-    portaudio_stream() {
+class portaudio {
+public:
+    static void init() {
+        static portaudio instance;
+        std::ignore = instance;
+    }
+
+private:
+    portaudio() {
         if (const auto error = Pa_Initialize(); error != paNoError) {
             RAV_THROW_EXCEPTION("PortAudio failed to initialize! Error: {}", Pa_GetErrorText(error));
         }
     }
 
-    ~portaudio_stream() {
-        close();
-
+    ~portaudio() {
         if (const auto error = Pa_Terminate(); error != paNoError) {
             RAV_ERROR("PortAudio failed to terminate! Error: {}", Pa_GetErrorText(error));
         }
+    }
+};
+
+class portaudio_stream {
+  public:
+    portaudio_stream() {
+        portaudio::init();
+    }
+
+    ~portaudio_stream() {
+        close();
     }
 
     void open_output_stream(
@@ -98,12 +113,11 @@ class portaudio_stream {
     }
 
     static void print_devices() {
-        Pa_Initialize();
+        portaudio::init();
         iterate_devices([](PaDeviceIndex index, const PaDeviceInfo& info) {
             RAV_INFO("[{}]: {}", index, info.name);
             return true;
         });
-        Pa_Terminate();
     }
 
   private:

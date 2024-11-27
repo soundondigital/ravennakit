@@ -63,7 +63,6 @@ void rav::rtsp_server::on_response(const rtsp_response& response, rtsp_connectio
 }
 
 void rav::rtsp_server::async_accept() {
-    TRACY_ZONE_SCOPED;
     acceptor_.async_accept(acceptor_.get_executor(), [this](const std::error_code ec, asio::ip::tcp::socket socket) {
         TRACY_ZONE_SCOPED;
         if (ec) {

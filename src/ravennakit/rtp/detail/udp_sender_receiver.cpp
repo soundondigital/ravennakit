@@ -25,6 +25,7 @@ size_t receive_from_socket(
     asio::ip::udp::socket& socket, std::array<uint8_t, 1500>& data_buf, asio::ip::udp::endpoint& src_endpoint,
     asio::ip::udp::endpoint& dst_endpoint, asio::error_code& ec
 ) {
+    TRACY_ZONE_SCOPED;
     // Set up the message structure
     char control_buf[1024];
     WSABUF wsabuf;
@@ -82,6 +83,7 @@ size_t receive_from_socket(
     asio::ip::udp::socket& socket, std::array<uint8_t, 1500>& data_buf, asio::ip::udp::endpoint& src_endpoint,
     asio::ip::udp::endpoint& dst_endpoint, asio::error_code& ec
 ) {
+    TRACY_ZONE_SCOPED;
     sockaddr_in src_addr {};
     iovec iov[1];
     char ctrl_buf[CMSG_SPACE(sizeof(in_addr))];
@@ -224,6 +226,7 @@ rav::udp_sender_receiver::~udp_sender_receiver() {
 void rav::udp_sender_receiver::impl::async_receive() {
     auto self = shared_from_this();
     socket_.async_wait(asio::socket_base::wait_read, [self](std::error_code ec) {
+        TRACY_ZONE_SCOPED;
         if (ec) {
             if (ec == asio::error::operation_aborted) {
                 RAV_TRACE("Operation aborted");
