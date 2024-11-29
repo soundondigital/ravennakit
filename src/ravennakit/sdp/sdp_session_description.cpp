@@ -8,15 +8,15 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/sdp/session_description.hpp"
+#include "ravennakit/sdp/sdp_session_description.hpp"
 
 #include "ravennakit/core/assert.hpp"
 #include "ravennakit/core/exception.hpp"
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/core/string_parser.hpp"
 #include "ravennakit/core/todo.hpp"
-#include "ravennakit/sdp/media_description.hpp"
-#include "ravennakit/sdp/reference_clock.hpp"
+#include "ravennakit/sdp/sdp_media_description.hpp"
+#include "ravennakit/sdp/detail/sdp_reference_clock.hpp"
 
 rav::sdp::session_description::parse_result<rav::sdp::session_description>
 rav::sdp::session_description::parse_new(const std::string& sdp_text) {
@@ -156,6 +156,12 @@ const std::vector<rav::sdp::source_filter>& rav::sdp::session_description::sourc
 
 const std::map<std::string, std::string>& rav::sdp::session_description::attributes() const {
     return attributes_;
+}
+
+std::string rav::sdp::session_description::to_string() const {
+    std::string sdp;
+    sdp += fmt::format("v={}\n", version_);
+    return sdp;
 }
 
 rav::sdp::session_description::parse_result<int>

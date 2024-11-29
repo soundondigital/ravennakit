@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/sdp/reference_clock.hpp"
+#include "ravennakit/sdp/detail/sdp_reference_clock.hpp"
 
 #include <catch2/catch_all.hpp>
 

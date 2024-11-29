@@ -10,7 +10,7 @@
 
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/core/string_parser.hpp"
-#include "ravennakit/sdp/media_clock_source.hpp"
+#include "ravennakit/sdp/detail/sdp_media_clock_source.hpp"
 
 rav::sdp::media_clock_source::parse_result<rav::sdp::media_clock_source> rav::sdp::media_clock_source::parse_new(const std::string_view line
 ) {

@@ -8,12 +8,12 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/sdp/media_description.hpp"
+#include "ravennakit/sdp/sdp_media_description.hpp"
 
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/core/string_parser.hpp"
-#include "ravennakit/sdp/session_description.hpp"
-#include "ravennakit/sdp/source_filter.hpp"
+#include "ravennakit/sdp/sdp_session_description.hpp"
+#include "ravennakit/sdp/detail/sdp_source_filter.hpp"
 
 std::string rav::sdp::format::to_string() const {
     return fmt::format("{} {}/{}/{}", payload_type, encoding_name, clock_rate, num_channels);

@@ -10,7 +10,7 @@
 
 #include <catch2/catch_all.hpp>
 
-#include "ravennakit/sdp/media_clock_source.hpp"
+#include "ravennakit/sdp/detail/sdp_media_clock_source.hpp"
 
 TEST_CASE("media_clock", "[media_clock]") {
     SECTION("Parse direct only") {

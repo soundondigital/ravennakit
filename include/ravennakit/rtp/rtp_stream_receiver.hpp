@@ -13,7 +13,7 @@
 #include "detail/rtp_filter.hpp"
 #include "detail/rtp_receive_buffer.hpp"
 #include "detail/rtp_receiver.hpp"
-#include "ravennakit/sdp/session_description.hpp"
+#include "ravennakit/sdp/sdp_session_description.hpp"
 
 namespace rav {
 

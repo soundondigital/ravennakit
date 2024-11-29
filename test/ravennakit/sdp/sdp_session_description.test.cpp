@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/sdp/session_description.hpp"
+#include "ravennakit/sdp/sdp_session_description.hpp"
 
 #include <catch2/catch_all.hpp>
 
@@ -435,4 +435,15 @@ TEST_CASE("session_description | Unknown attributes") {
             REQUIRE(attributes.at("midi-pre2") == "50040 0,0;0,1");
         }
     }
+}
+
+TEST_CASE("session_description | To string") {
+    auto expected =
+        "v=0\r\n";
+        // "o=- 13 0 IN IP4 192.168.15.52\r\n";
+
+    rav::sdp::session_description sdp;
+    auto output = sdp.to_string();
+
+
 }

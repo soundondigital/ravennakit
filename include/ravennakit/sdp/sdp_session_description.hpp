@@ -13,9 +13,9 @@
 #include <sstream>
 #include <vector>
 
-#include "media_description.hpp"
+#include "sdp_media_description.hpp"
 #include "ravennakit/core/result.hpp"
-#include "reference_clock.hpp"
+#include "detail/sdp_reference_clock.hpp"
 #include "detail/sdp_origin.hpp"
 
 namespace rav::sdp {
@@ -98,6 +98,12 @@ class session_description {
      * @returns Attributes which have not been parsed into a specific field.
      */
     [[nodiscard]] const std::map<std::string, std::string>& attributes() const;
+
+    /**
+     * Converts the session description to a string.
+     * @return The session description as a string.
+     */
+    [[nodiscard]] std::string to_string() const;
 
   private:
     /// Type to specify which section of the SDP we are parsing

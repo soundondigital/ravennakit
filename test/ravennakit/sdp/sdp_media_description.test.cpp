@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/sdp/media_description.hpp"
+#include "ravennakit/sdp/sdp_media_description.hpp"
 
 #include <catch2/catch_all.hpp>
 

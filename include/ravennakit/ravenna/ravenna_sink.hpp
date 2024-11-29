@@ -14,7 +14,7 @@
 #include "ravennakit/rtp/rtp_stream_receiver.hpp"
 #include "ravennakit/rtp/detail/rtp_receiver.hpp"
 #include "ravennakit/rtp/detail/rtp_filter.hpp"
-#include "ravennakit/sdp/session_description.hpp"
+#include "ravennakit/sdp/sdp_session_description.hpp"
 
 namespace rav {
 

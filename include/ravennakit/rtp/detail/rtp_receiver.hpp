@@ -18,7 +18,7 @@
 #include "ravennakit/core/events.hpp"
 #include "ravennakit/core/linked_node.hpp"
 #include "ravennakit/core/subscriber_list.hpp"
-#include "ravennakit/sdp/media_description.hpp"
+#include "ravennakit/sdp/sdp_media_description.hpp"
 
 #include <asio.hpp>
 #include <utility>

@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/sdp/source_filter.hpp"
+#include "ravennakit/sdp/detail/sdp_source_filter.hpp"
 
 #include "ravennakit/core/string_parser.hpp"
 

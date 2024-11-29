@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "ravennakit/sdp/detail/constants.hpp"
-#include "ravennakit/sdp/session_description.hpp"
+#include "ravennakit/sdp/detail/sdp_constants.hpp"
+#include "ravennakit/sdp/sdp_session_description.hpp"
 
 #include <asio.hpp>
 #include <tl/expected.hpp>

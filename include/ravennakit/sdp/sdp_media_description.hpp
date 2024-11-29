@@ -10,16 +10,16 @@
 
 #pragma once
 
-#include "detail/constants.hpp"
+#include "detail/sdp_constants.hpp"
 
 #include <cstdint>
 #include <string>
 
-#include "media_clock_source.hpp"
+#include "detail/sdp_media_clock_source.hpp"
 #include "ravennakit/core/result.hpp"
 #include "ravennakit/core/string_parser.hpp"
-#include "reference_clock.hpp"
-#include "source_filter.hpp"
+#include "detail/sdp_reference_clock.hpp"
+#include "detail/sdp_source_filter.hpp"
 #include "ravennakit/core/audio/audio_format.hpp"
 
 #include <map>

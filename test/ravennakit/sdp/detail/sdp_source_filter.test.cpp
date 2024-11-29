@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/sdp/source_filter.hpp"
+#include "ravennakit/sdp/detail/sdp_source_filter.hpp"
 
 #include <catch2/catch_all.hpp>
 
