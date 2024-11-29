@@ -255,6 +255,14 @@ template<
     class SrcType, class SrcByteOrder, class SrcInterleaving, class DstType, class DstByteOrder, class DstInterleaving>
 static bool
 convert(const SrcType* src, const size_t src_size, DstType* dst, const size_t dst_size, const size_t num_channels) {
+    RAV_ASSERT(src != nullptr, "src shouldn't be nullptr");
+    RAV_ASSERT(dst != nullptr, "dst shouldn't be nullptr");
+    RAV_ASSERT(src_size > 0, "src_size should be greater than 0");
+    RAV_ASSERT(dst_size > 0, "dst_size should be greater than 0");
+    RAV_ASSERT(src_size % num_channels == 0, "src_size should be divisible by num_channels");
+    RAV_ASSERT(dst_size % num_channels == 0, "dst_size should be divisible by num_channels");
+    RAV_ASSERT(num_channels > 0, "num_channels should be greater than 0");
+
     // Shortcut for when no conversion is needed
     if constexpr (std::is_same_v<SrcType, DstType> && std::is_same_v<SrcByteOrder, DstByteOrder> && std::is_same_v<SrcInterleaving, DstInterleaving>) {
         if (src_size == 0 || src_size != dst_size) {
