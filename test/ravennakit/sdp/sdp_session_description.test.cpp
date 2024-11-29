@@ -470,4 +470,48 @@ TEST_CASE("session_description | To string") {
     }
 
     REQUIRE(sdp.to_string().value() == expected);
+
+    SECTION("RAVENNA clock-domain attribute") {
+        rav::sdp::ravenna_clock_domain clock_domain;
+        clock_domain.source = rav::sdp::ravenna_clock_domain::sync_source::ptp_v2;
+        clock_domain.domain = 0;
+        sdp.set_clock_domain(clock_domain);
+        expected += "a=clock-domain:PTPv2 0\r\n";
+        REQUIRE(sdp.to_string().value() == expected);
+    }
+
+    SECTION("Reference clock attribute") {
+        rav::sdp::reference_clock ref_clock(
+            rav::sdp::reference_clock::clock_source::ptp, rav::sdp::reference_clock::ptp_ver::IEEE_1588_2008,
+            "00-1D-C1-FF-FE-51-9E-F7", 0
+        );
+        sdp.set_ref_clock(ref_clock);
+        expected += "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n";
+        REQUIRE(sdp.to_string().value() == expected);
+    }
+
+    SECTION("Media direction attribute") {
+        sdp.set_media_direction(rav::sdp::media_direction::recvonly);
+        expected += "a=recvonly\r\n";
+        REQUIRE(sdp.to_string().value() == expected);
+    }
+
+    SECTION("Media clock attribute") {
+        rav::sdp::media_clock_source media_clock(
+            rav::sdp::media_clock_source::clock_mode::direct, 0, rav::fraction<int>({1000, 1001})
+        );
+        sdp.set_media_clock(media_clock);
+        expected += "a=mediaclk:direct=0 rate=1000/1001\r\n";
+        REQUIRE(sdp.to_string().value() == expected);
+    }
+
+    SECTION("Source filters") {
+        rav::sdp::source_filter filter(
+            rav::sdp::filter_mode::include, rav::sdp::netw_type::internet, rav::sdp::addr_type::ipv4, "239.1.16.51",
+            {"192.168.16.51"}
+        );
+        sdp.add_source_filter(filter);
+        expected += "a=source-filter: incl IN IP4 239.1.16.51 192.168.16.51\r\n";
+        REQUIRE(sdp.to_string().value() == expected);
+    }
 }

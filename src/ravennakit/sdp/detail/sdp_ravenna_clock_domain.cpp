@@ -12,6 +12,34 @@
 
 #include "ravennakit/core/string_parser.hpp"
 
+tl::expected<void, std::string> rav::sdp::ravenna_clock_domain::validate() const {
+    if (source == sync_source::undefined) {
+        return tl::unexpected("clock_domain: sync source is undefined");
+    }
+    if (domain < 0) {
+        return tl::unexpected("clock_domain: domain is negative");
+    }
+    return {};
+}
+
+tl::expected<std::string, std::string> rav::sdp::ravenna_clock_domain::to_string() const {
+    auto validated = validate();
+    if (!validated) {
+        return tl::unexpected(validated.error());
+    }
+    return fmt::format("a={}:{} {}", k_attribute_name, to_string(source), domain);
+}
+
+std::string rav::sdp::ravenna_clock_domain::to_string(const sync_source source) {
+    switch (source) {
+        case sync_source::ptp_v2:
+            return "PTPv2";
+        case sync_source::undefined:
+        default:
+            return "undefined";
+    }
+}
+
 rav::sdp::ravenna_clock_domain::parse_result<rav::sdp::ravenna_clock_domain>
 rav::sdp::ravenna_clock_domain::parse_new(const std::string_view line) {
     string_parser parser(line);

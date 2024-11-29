@@ -106,9 +106,21 @@ class session_description {
     [[nodiscard]] std::optional<reference_clock> ref_clock() const;
 
     /**
+     * Sets the reference clock of the session description.
+     * @param ref_clock The reference clock to set.
+     */
+    void set_ref_clock(reference_clock ref_clock);
+
+    /**
      * @return The media clock of the session description.
      */
     [[nodiscard]] const std::optional<media_clock_source>& media_clock() const;
+
+    /**
+     * Sets the media clock of the session description.
+     * @param media_clock The media clock to set.
+     */
+    void set_media_clock(media_clock_source media_clock);
 
     /**
      * @return The clock domain of the session description. This is a RAVENNA-specific attribute extension.
@@ -116,15 +128,38 @@ class session_description {
     [[nodiscard]] const std::optional<ravenna_clock_domain>& clock_domain() const;
 
     /**
+     * Sets the clock domain of the session description.
+     * @param clock_domain The clock domain to set.
+     */
+    void set_clock_domain(ravenna_clock_domain clock_domain);
+
+    /**
      * @returns The source filters of the media description.
      */
     [[nodiscard]] const std::vector<source_filter>& source_filters() const;
 
     /**
+     * Adds a source filter to the session description. If the filter already exists, it will be replaced.
+     * @param filter The source filter to add.
+     */
+    void add_source_filter(const source_filter& filter);
+
+    /**
+     * @return The media direction of the session description.
+     */
+    [[nodiscard]] std::optional<media_direction> get_media_direction() const;
+
+    /**
+     * Sets the media direction of the session description.
+     * @param direction The media direction to set.
+     */
+    void set_media_direction(media_direction direction);
+
+    /**
      * @returns Attributes which have not been parsed into a specific field.
      */
     [[nodiscard]] const std::map<std::string, std::string>& attributes() const;
-
+    
     /**
      * Converts the session description to a string.
      * @return The session description as a string.

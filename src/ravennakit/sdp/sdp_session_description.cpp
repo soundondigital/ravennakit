@@ -159,16 +159,48 @@ std::optional<rav::sdp::reference_clock> rav::sdp::session_description::ref_cloc
     return reference_clock_;
 }
 
+void rav::sdp::session_description::set_ref_clock(reference_clock ref_clock) {
+    reference_clock_ = std::move(ref_clock);
+}
+
 const std::optional<rav::sdp::media_clock_source>& rav::sdp::session_description::media_clock() const {
     return media_clock_;
+}
+
+void rav::sdp::session_description::set_media_clock(media_clock_source media_clock) {
+    media_clock_ = std::move(media_clock);
 }
 
 const std::optional<rav::sdp::ravenna_clock_domain>& rav::sdp::session_description::clock_domain() const {
     return clock_domain_;
 }
 
+void rav::sdp::session_description::set_clock_domain(ravenna_clock_domain clock_domain) {
+    clock_domain_ = clock_domain;
+}
+
 const std::vector<rav::sdp::source_filter>& rav::sdp::session_description::source_filters() const {
     return source_filters_;
+}
+
+void rav::sdp::session_description::add_source_filter(const source_filter& filter) {
+    for (auto& f : source_filters_) {
+        if (f.network_type() == filter.network_type() && f.address_type() == filter.address_type() &&
+            f.dest_address() == filter.dest_address()) {
+            f = filter;
+            return;
+        }
+    }
+
+    source_filters_.push_back(filter);
+}
+
+std::optional<rav::sdp::media_direction> rav::sdp::session_description::get_media_direction() const {
+    return media_direction_;
+}
+
+void rav::sdp::session_description::set_media_direction(media_direction direction) {
+    media_direction_ = direction;
 }
 
 const std::map<std::string, std::string>& rav::sdp::session_description::attributes() const {
@@ -206,6 +238,46 @@ tl::expected<std::string, std::string> rav::sdp::session_description::to_string(
             return connection;
         }
         fmt::format_to(std::back_inserter(sdp), "{}{}", connection.value(), newline);
+    }
+
+    // Clock domain
+    if (clock_domain().has_value()) {
+        auto clock = clock_domain_->to_string();
+        if (!clock) {
+            return clock;
+        }
+        fmt::format_to(std::back_inserter(sdp), "{}{}", clock.value(), newline);
+    }
+
+    // Ref clock
+    if (reference_clock_.has_value()) {
+        auto ref_clock = reference_clock_->to_string();
+        if (!ref_clock) {
+            return ref_clock;
+        }
+        fmt::format_to(std::back_inserter(sdp), "{}{}", ref_clock.value(), newline);
+    }
+
+    // Media direction
+    if (media_direction_.has_value()) {
+        fmt::format_to(std::back_inserter(sdp), "a={}{}", sdp::to_string(*media_direction_), newline);
+    }
+
+    // Media clock source
+    if (media_clock_.has_value()) {
+        auto clock = media_clock_->to_string();
+        if (!clock) {
+            return clock;
+        }
+        fmt::format_to(std::back_inserter(sdp), "{}{}", clock.value(), newline);
+    }
+
+    for (auto& filter : source_filters_) {
+        auto source_filter = filter.to_string();
+        if (!source_filter) {
+            return source_filter;
+        }
+        fmt::format_to(std::back_inserter(sdp), "{}{}", source_filter.value(), newline);
     }
 
     return sdp;

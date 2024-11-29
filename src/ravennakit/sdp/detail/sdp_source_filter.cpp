@@ -13,13 +13,57 @@
 #include "ravennakit/core/string_parser.hpp"
 #include "ravennakit/sdp/detail/sdp_constants.hpp"
 
+rav::sdp::source_filter::source_filter(
+    filter_mode mode, netw_type net_type, addr_type addr_type, std::string dest_address,
+    std::vector<std::string> src_list
+) :
+    mode_(mode),
+    net_type_(net_type),
+    addr_type_(addr_type),
+    dest_address_(std::move(dest_address)),
+    src_list_(std::move(src_list)) {}
+
+tl::expected<std::string, std::string> rav::sdp::source_filter::to_string() const {
+    auto validated = validate();
+    if (!validated) {
+        return tl::unexpected(validated.error());
+    }
+    auto txt = fmt::format(
+        "a={}: {} {} {} {}", k_attribute_name, sdp::to_string(mode_), sdp::to_string(net_type_),
+        sdp::to_string(addr_type_), dest_address_
+    );
+    for (const auto& src : src_list_) {
+        fmt::format_to(std::back_inserter(txt), " {}", src);
+    }
+    return txt;
+}
+
+tl::expected<void, std::string> rav::sdp::source_filter::validate() const {
+    if (filter_mode::undefined == mode_) {
+        return tl::unexpected("source_filter: mode is undefined");
+    }
+    if (netw_type::undefined == net_type_) {
+        return tl::unexpected("source_filter: network type is undefined");
+    }
+    if (addr_type::undefined == addr_type_) {
+        return tl::unexpected("source_filter: address type is undefined");
+    }
+    if (dest_address_.empty()) {
+        return tl::unexpected("source_filter: destination address is empty");
+    }
+    if (src_list_.empty()) {
+        return tl::unexpected("source_filter: source list is empty");
+    }
+    return {};
+}
+
 rav::sdp::source_filter::parse_result<rav::sdp::source_filter>
 rav::sdp::source_filter::parse_new(const std::string_view line) {
     source_filter filter;
     string_parser parser(line);
 
     // Skip leading space
-    if (!parser.skip(' ') ) {
+    if (!parser.skip(' ')) {
         return parse_result<source_filter>::err("source_filter: leading space not found");
     }
 

@@ -15,6 +15,7 @@
 
 #include <string>
 #include <vector>
+#include <tl/expected.hpp>
 
 namespace rav::sdp {
 
@@ -25,6 +26,12 @@ class source_filter {
     /// A type alias for a parse result.
     template<class T>
     using parse_result = result<T, std::string>;
+
+    source_filter() = default;
+    source_filter(
+        filter_mode mode, netw_type net_type, addr_type addr_type, std::string dest_address,
+        std::vector<std::string> src_list
+    );
 
     /**
      * @returns The filter mode.
@@ -60,6 +67,18 @@ class source_filter {
     [[nodiscard]] const std::vector<std::string>& src_list() const {
         return src_list_;
     }
+
+    /**
+     * Converts the source filter to a string.
+     * @returns The source filter as a string.
+     */
+    [[nodiscard]] tl::expected<std::string, std::string> to_string() const;
+
+    /**
+     * Validates the source filter.
+     * @return An error message if the source filter is invalid.
+     */
+    [[nodiscard]] tl::expected<void, std::string> validate() const;
 
     /**
      * Parses a connection info field from a string.

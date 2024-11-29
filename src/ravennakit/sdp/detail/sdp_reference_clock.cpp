@@ -13,8 +13,14 @@
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/core/string.hpp"
 #include "ravennakit/core/string_parser.hpp"
+#include "ravennakit/sdp/detail/sdp_constants.hpp"
 
 namespace {}  // namespace
+
+rav::sdp::reference_clock::reference_clock(
+    const clock_source source, ptp_ver version, std::string gmid, int32_t domain
+) :
+    source_(source), ptp_version_(version), gmid_(gmid), domain_(domain) {}
 
 rav::sdp::reference_clock::clock_source rav::sdp::reference_clock::source() const {
     return source_;
@@ -30,6 +36,39 @@ const std::optional<std::string>& rav::sdp::reference_clock::gmid() const {
 
 const std::optional<int32_t>& rav::sdp::reference_clock::domain() const {
     return domain_;
+}
+
+tl::expected<void, std::string> rav::sdp::reference_clock::validate() const {
+    if (source_ == clock_source::ptp) {
+        if (!ptp_version_) {
+            return tl::unexpected("reference_clock: ptp version is undefined");
+        }
+        if (!gmid_) {
+            return tl::unexpected("reference_clock: gmid is undefined");
+        }
+        if (!domain_) {
+            return tl::unexpected("reference_clock: domain is undefined");
+        }
+    }
+    if (source_ == clock_source::undefined) {
+        return tl::unexpected("reference_clock: source is undefined");
+    }
+    return {};
+}
+
+tl::expected<std::string, std::string> rav::sdp::reference_clock::to_string() const {
+    auto validated = validate();
+    if (!validated) {
+        return tl::unexpected(validated.error());
+    }
+    if (source_ == clock_source::ptp) {
+        return fmt::format(
+            "a={}:{}={}:{}:{}", k_sdp_ts_refclk, to_string(source_), to_string(ptp_version_.value()), gmid_.value(),
+            domain_.value()
+        );
+    }
+    // Note: this is not properly implemented:
+    return fmt::format("a={}:{}", k_sdp_ts_refclk, to_string(source_));
 }
 
 rav::sdp::reference_clock::parse_result<rav::sdp::reference_clock>
@@ -80,4 +119,42 @@ rav::sdp::reference_clock::parse_new(const std::string_view line) {
     RAV_WARNING("reference_clock: ignoring clock source: {}", *source);
 
     return parse_result<reference_clock>::err("reference_clock: unsupported source");
+}
+
+std::string rav::sdp::reference_clock::to_string(const clock_source source) {
+    switch (source) {
+        case clock_source::atomic_clock:
+            return "atomic-clock";
+        case clock_source::gps:
+            return "gps";
+        case clock_source::terrestrial_radio:
+            return "terrestrial-radio";
+        case clock_source::ptp:
+            return "ptp";
+        case clock_source::ntp:
+            return "ntp";
+        case clock_source::ntp_server:
+            return "ntp-server";
+        case clock_source::ntp_pool:
+            return "ntp-pool";
+        case clock_source::undefined:
+        default:
+            return "undefined";
+    }
+}
+
+std::string rav::sdp::reference_clock::to_string(const ptp_ver version) {
+    switch (version) {
+        case ptp_ver::IEEE_1588_2002:
+            return "IEEE1588-2002";
+        case ptp_ver::IEEE_1588_2008:
+            return "IEEE1588-2008";
+        case ptp_ver::IEEE_802_1AS_2011:
+            return "IEEE802.1AS-2011";
+        case ptp_ver::traceable:
+            return "traceable";
+        case ptp_ver::undefined:
+        default:
+            return "undefined";
+    }
 }

@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <string_view>
+#include <tl/expected.hpp>
 
 namespace rav::sdp {
 
@@ -31,7 +32,29 @@ struct ravenna_clock_domain {
     sync_source source {sync_source::undefined};
     int32_t domain {};
 
+    /**
+     * Validates the values of this structure.
+     * @returns An error message if the values are invalid.
+     */
+    [[nodiscard]] tl::expected<void, std::string> validate() const;
+
+    /**
+     * @return The string representation of this structure.
+     */
+    [[nodiscard]] tl::expected<std::string, std::string> to_string() const;
+
+    /**
+     * @param source The sync source to convert.
+     * @returns A string representation of the sync source.
+     */
+    static std::string to_string(sync_source source);
+
+    /**
+     * Parses a new instance of this structure from a string.
+     * @param line The string to parse.
+     * @return A parse result.
+     */
     static parse_result<ravenna_clock_domain> parse_new(std::string_view line);
 };
 
-}
+}  // namespace rav::sdp
