@@ -16,6 +16,7 @@
 #include "media_description.hpp"
 #include "ravennakit/core/result.hpp"
 #include "reference_clock.hpp"
+#include "detail/sdp_origin.hpp"
 
 namespace rav::sdp {
 
@@ -50,7 +51,7 @@ class session_description {
     /**
      * @return The connection information of the SDP session description.
      */
-    [[nodiscard]] const std::optional<rav::sdp::connection_info_field>& connection_info() const;
+    [[nodiscard]] const std::optional<connection_info_field>& connection_info() const;
 
     /**
      * @returns The session name of the SDP session description.

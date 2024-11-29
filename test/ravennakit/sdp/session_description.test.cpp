@@ -14,7 +14,7 @@
 
 #include "ravennakit/core/util.hpp"
 
-TEST_CASE("session_description", "[session_description]") {
+TEST_CASE("session_description") {
     SECTION("Test crlf delimited string") {
         constexpr auto crlf =
             "v=0\r\n"
@@ -36,7 +36,7 @@ TEST_CASE("session_description", "[session_description]") {
     }
 }
 
-TEST_CASE("session_description | description from anubis", "[session_description]") {
+TEST_CASE("session_description | description from anubis") {
     constexpr auto k_anubis_sdp =
         "v=0\r\n"
         "o=- 13 0 IN IP4 192.168.15.52\r\n"
@@ -200,7 +200,7 @@ TEST_CASE("session_description | description from anubis", "[session_description
     }
 }
 
-TEST_CASE("session_description | description from AES67 spec", "[session_description]") {
+TEST_CASE("session_description | description from AES67 spec") {
     constexpr auto k_aes67_sdp =
         "v=0\n"
         "o=- 1311738121 1311738121 IN IP4 192.168.1.1\n"
@@ -261,7 +261,7 @@ TEST_CASE("session_description | description from AES67 spec", "[session_descrip
     REQUIRE_FALSE(media_clock.rate().has_value());
 }
 
-TEST_CASE("session_description | description from AES67 spec 2", "[session_description]") {
+TEST_CASE("session_description | description from AES67 spec 2") {
     constexpr auto k_aes67_sdp =
         "v=0\n"
         "o=audio 1311738121 1311738121 IN IP4 192.168.1.1\n"
@@ -324,7 +324,7 @@ TEST_CASE("session_description | description from AES67 spec 2", "[session_descr
     REQUIRE_FALSE(media_clock.rate().has_value());
 }
 
-TEST_CASE("session_description | source filters", "[session_description]") {
+TEST_CASE("session_description | source filters") {
     constexpr auto k_anubis_sdp =
         "v=0\r\n"
         "o=- 13 0 IN IP4 192.168.15.52\r\n"
@@ -385,7 +385,7 @@ TEST_CASE("session_description | source filters", "[session_description]") {
     }
 }
 
-TEST_CASE("session_description | Unknown attributes", "[session_description]") {
+TEST_CASE("session_description | Unknown attributes") {
     constexpr auto k_anubis_sdp =
         "v=0\r\n"
         "o=- 13 0 IN IP4 192.168.15.52\r\n"

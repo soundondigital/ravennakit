@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "ravennakit/sdp/constants.hpp"
+#include "ravennakit/sdp/detail/constants.hpp"
 #include "ravennakit/sdp/session_description.hpp"
 
 #include <asio.hpp>
