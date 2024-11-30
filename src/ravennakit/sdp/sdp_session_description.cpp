@@ -148,6 +148,10 @@ const std::vector<rav::sdp::media_description>& rav::sdp::session_description::m
     return media_descriptions_;
 }
 
+void rav::sdp::session_description::add_media_description(media_description media_description) {
+    media_descriptions_.push_back(std::move(media_description));
+}
+
 rav::sdp::media_direction rav::sdp::session_description::direction() const {
     if (media_direction_.has_value()) {
         return *media_direction_;
@@ -185,8 +189,8 @@ const std::vector<rav::sdp::source_filter>& rav::sdp::session_description::sourc
 
 void rav::sdp::session_description::add_source_filter(const source_filter& filter) {
     for (auto& f : source_filters_) {
-        if (f.network_type() == filter.network_type() && f.address_type() == filter.address_type() &&
-            f.dest_address() == filter.dest_address()) {
+        if (f.network_type() == filter.network_type() && f.address_type() == filter.address_type()
+            && f.dest_address() == filter.dest_address()) {
             f = filter;
             return;
         }
@@ -272,12 +276,21 @@ tl::expected<std::string, std::string> rav::sdp::session_description::to_string(
         fmt::format_to(std::back_inserter(sdp), "{}{}", clock.value(), newline);
     }
 
+    // Source filters
     for (auto& filter : source_filters_) {
         auto source_filter = filter.to_string();
         if (!source_filter) {
             return source_filter;
         }
         fmt::format_to(std::back_inserter(sdp), "{}{}", source_filter.value(), newline);
+    }
+
+    for (const auto& media : media_descriptions_) {
+        auto media_str = media.to_string(newline);
+        if (!media_str) {
+            return media_str;
+        }
+        fmt::format_to(std::back_inserter(sdp), "{}", media_str.value());
     }
 
     return sdp;

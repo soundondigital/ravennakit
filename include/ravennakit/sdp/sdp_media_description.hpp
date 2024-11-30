@@ -124,7 +124,6 @@ class media_description {
      */
     void add_connection_info(connection_info_field connection_info);
 
-
     /**
      * @returns The value of the "ptime" attribute, or an empty optional if the attribute does not exist or the
      * value is invalid.
@@ -238,6 +237,19 @@ class media_description {
      * @param framecount The frame count to set.
      */
     void set_framecount(std::optional<uint32_t> framecount);
+
+    /**
+     * Returns the clock domain attribute. This is a RAVENNA-specific attribute.
+     * @return The clock domain of the media description.
+     */
+    [[nodiscard]]
+    std::optional<ravenna_clock_domain> clock_domain() const;
+
+    /**
+     * Sets the clock domain attribute. This is a RAVENNA-specific attribute.
+     * @param clock_domain The clock domain to set.
+     */
+    void set_clock_domain(ravenna_clock_domain clock_domain);
 
     /**
      * @returns Attributes which have not been parsed into a specific field.

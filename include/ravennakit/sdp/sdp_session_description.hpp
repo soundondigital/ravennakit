@@ -95,6 +95,12 @@ class session_description {
     [[nodiscard]] const std::vector<media_description>& media_descriptions() const;
 
     /**
+     * Adds a media description to the SDP session description.
+     * @param media_description The media description to add.
+     */
+    void add_media_description(media_description media_description);
+
+    /**
      * @return The direction of the media description. If the direction is not specified, the return value is sendrecv
      * which is the default as specified in RFC 8866 section 6.7).
      */

@@ -514,4 +514,99 @@ TEST_CASE("session_description | To string") {
         expected += "a=source-filter: incl IN IP4 239.1.16.51 192.168.16.51\r\n";
         REQUIRE(sdp.to_string().value() == expected);
     }
+
+    rav::sdp::media_description md1;
+    md1.set_media_type("audio");
+    md1.set_port(5004);
+    md1.set_number_of_ports(1);
+    md1.set_protocol("RTP/AVP");
+    md1.add_format({98, "L16", 44100, 2});
+    md1.add_connection_info({rav::sdp::netw_type::internet, rav::sdp::addr_type::ipv4, "192.168.1.1", 15, {}});
+    md1.set_ptime(20);
+    md1.set_max_ptime(60);
+    md1.set_direction(rav::sdp::media_direction::recvonly);
+    md1.set_ref_clock(
+        {rav::sdp::reference_clock::clock_source::ptp, rav::sdp::reference_clock::ptp_ver::IEEE_1588_2008, "gmid", 1}
+    );
+    md1.set_media_clock(
+        {rav::sdp::media_clock_source::clock_mode::direct, 5, std::optional<rav::fraction<int>>({48000, 1})}
+    );
+    md1.set_clock_domain(rav::sdp::ravenna_clock_domain {rav::sdp::ravenna_clock_domain::sync_source::ptp_v2, 1});
+    md1.set_sync_time(1234);
+    md1.set_clock_deviation(std::optional<rav::fraction<unsigned>>({1001, 1000}));
+    sdp.add_media_description(md1);
+
+    expected +=
+        "m=audio 5004 RTP/AVP 98\r\n"
+        "c=IN IP4 192.168.1.1/15\r\n"
+        "a=rtpmap:98 L16/44100/2\r\n"
+        "a=ptime:20\r\n"
+        "a=maxptime:60\r\n"
+        "a=recvonly\r\n"
+        "a=ts-refclk:ptp=IEEE1588-2008:gmid:1\r\n"
+        "a=mediaclk:direct=5 rate=48000/1\r\n"
+        "a=clock-domain:PTPv2 1\r\n"
+        "a=sync-time:1234\r\n"
+        "a=clock-deviation:1001/1000\r\n";
+
+    REQUIRE(sdp.to_string().value() == expected);
+}
+
+TEST_CASE("session_description | To string - regenerate Anubis SDP") {
+    constexpr auto k_anubis_sdp =
+        "v=0\r\n"
+        "o=- 13 0 IN IP4 192.168.15.52\r\n"
+        "s=Anubis_610120_13\r\n"
+        "c=IN IP4 239.1.15.52/15\r\n"
+        "t=0 0\r\n"
+        "a=clock-domain:PTPv2 0\r\n"
+        "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n"
+        "a=mediaclk:direct=0\r\n"
+        "a=source-filter: incl IN IP4 239.1.15.52 192.168.15.52\r\n"
+        "a=unknown-attribute-session:unknown-attribute-session-value\r\n"
+        "m=audio 5004 RTP/AVP 98\r\n"
+        "c=IN IP4 239.1.15.52/15\r\n"
+        "a=rtpmap:98 L16/48000/2\r\n"
+        "a=clock-domain:PTPv2 0\r\n"
+        "a=sync-time:0\r\n"
+        "a=framecount:48\r\n"
+        "a=source-filter: incl IN IP4 239.1.15.52 192.168.15.52\r\n"
+        "a=unknown-attribute-media:unknown-attribute-media-value\r\n"
+        "a=palign:0\r\n"  // Unknown attribute
+        "a=ptime:1\r\n"
+        "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n"
+        "a=mediaclk:direct=0\r\n"
+        "a=recvonly\r\n"
+        "a=midi-pre2:50040 0,0;0,1\r\n";
+
+    auto result = rav::sdp::session_description::parse_new(k_anubis_sdp);
+    REQUIRE(result.is_ok());
+
+    auto sdp_txt = result.get_ok().to_string().value();
+    fmt::println("{}", sdp_txt);
+
+    // Slightly different order
+    auto expected =
+        "v=0\r\n"
+        "o=- 13 0 IN IP4 192.168.15.52\r\n"
+        "s=Anubis_610120_13\r\n"
+        "t=0 0\r\n"
+        "c=IN IP4 239.1.15.52/15\r\n"
+        "a=clock-domain:PTPv2 0\r\n"
+        "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n"
+        "a=mediaclk:direct=0\r\n"
+        "a=source-filter: incl IN IP4 239.1.15.52 192.168.15.52\r\n"
+        "m=audio 5004 RTP/AVP 98\r\n"
+        "c=IN IP4 239.1.15.52/15\r\n"
+        "a=rtpmap:98 L16/48000/2\r\n"
+        "a=ptime:1\r\n"
+        "a=recvonly\r\n"
+        "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n"
+        "a=mediaclk:direct=0\r\n"
+        "a=clock-domain:PTPv2 0\r\n"
+        "a=sync-time:0\r\n"
+        "a=source-filter: incl IN IP4 239.1.15.52 192.168.15.52\r\n"
+        "a=framecount:48\r\n";
+
+    REQUIRE(sdp_txt == expected);
 }

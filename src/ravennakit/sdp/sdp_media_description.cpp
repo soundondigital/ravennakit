@@ -365,6 +365,14 @@ void rav::sdp::media_description::set_framecount(const std::optional<uint32_t> f
     framecount_ = framecount;
 }
 
+std::optional<rav::sdp::ravenna_clock_domain> rav::sdp::media_description::clock_domain() const {
+    return clock_domain_;
+}
+
+void rav::sdp::media_description::set_clock_domain(ravenna_clock_domain clock_domain) {
+    clock_domain_ = clock_domain;
+}
+
 const std::map<std::string, std::string>& rav::sdp::media_description::attributes() const {
     return attributes_;
 }
@@ -389,8 +397,116 @@ tl::expected<void, std::string> rav::sdp::media_description::validate() const {
 }
 
 tl::expected<std::string, std::string> rav::sdp::media_description::to_string(const char* newline) const {
-    TODO("No implemented");
-    return {};
+    auto validated = validate();
+    if (!validated) {
+        return tl::make_unexpected(validated.error());
+    }
+
+    // Media line
+    std::string result;
+    fmt::format_to(std::back_inserter(result), "m={} {}", media_type_, port_);
+    if (number_of_ports_ > 1) {
+        fmt::format_to(std::back_inserter(result), "/{}", number_of_ports_);
+    }
+    fmt::format_to(std::back_inserter(result), " {}", protocol_);
+
+    for (auto& fmt : formats_) {
+        fmt::format_to(std::back_inserter(result), " {}", fmt.payload_type);
+    }
+
+    fmt::format_to(std::back_inserter(result), "{}", newline);
+
+    // Connection info
+    for (const auto& conn : connection_infos_) {
+        const auto txt = conn.to_string();
+        if (!txt) {
+            return tl::make_unexpected(validated.error());
+        }
+        fmt::format_to(std::back_inserter(result), "{}{}", txt.value(), newline);
+    }
+
+    // Session information
+    if (session_information_) {
+        fmt::format_to(std::back_inserter(result), "s={}{}", *session_information_, newline);
+    }
+
+    // rtpmaps
+    for (const auto& fmt : formats_) {
+        fmt::format_to(std::back_inserter(result), "a=rtpmap:{}{}", fmt.to_string(), newline);
+    }
+
+    // ptime
+    if (ptime_) {
+        fmt::format_to(std::back_inserter(result), "a=ptime:{}{}", *ptime_, newline);
+    }
+
+    // max_ptime
+    if (max_ptime_) {
+        fmt::format_to(std::back_inserter(result), "a=maxptime:{}{}", *max_ptime_, newline);
+    }
+
+    // Media direction
+    if (media_direction_) {
+        fmt::format_to(std::back_inserter(result), "a={}{}", sdp::to_string(*media_direction_), newline);
+    }
+
+    // Reference clock
+    if (reference_clock_) {
+        auto refclk = reference_clock_->to_string();
+        if (!refclk) {
+            return tl::make_unexpected(refclk.error());
+        }
+        fmt::format_to(std::back_inserter(result), "{}{}", refclk.value(), newline);
+    }
+
+    // Media clock
+    if (media_clock_) {
+        auto clock = media_clock_->to_string();
+        if (!clock) {
+            return tl::make_unexpected(clock.error());
+        }
+        fmt::format_to(std::back_inserter(result), "{}{}", clock.value(), newline);
+    }
+
+    // Clock domain (RAVENNA Specific)
+    if (clock_domain_) {
+        auto txt = clock_domain_->to_string();
+        if (!txt) {
+            return tl::make_unexpected(txt.error());
+        }
+        fmt::format_to(
+            std::back_inserter(result), "{}{}",txt.value(), newline
+        );
+    }
+
+    // Sync time (RAVENNA Specific)
+    if (sync_time_) {
+        fmt::format_to(std::back_inserter(result), "a=sync-time:{}{}", *sync_time_, newline);
+    }
+
+    // Clock deviation (RAVENNA Specific)
+    if (clock_deviation_) {
+        fmt::format_to(
+            std::back_inserter(result), "a=clock-deviation:{}/{}{}", clock_deviation_->numerator,
+            clock_deviation_->denominator, newline
+        );
+    }
+
+    // Source filters
+    for (auto& filter : source_filters_) {
+        auto txt = filter.to_string();
+        if (!txt) {
+            return tl::make_unexpected(txt.error());
+        }
+        fmt::format_to(std::back_inserter(result), "{}{}", txt.value(), newline);
+    }
+
+    // Framecount (legacy RAVENNA)
+    if (framecount_) {
+        fmt::format_to(std::back_inserter(result), "a=framecount:{}{}", *framecount_, newline);
+    }
+
+    return result;
 }
 
 bool rav::sdp::operator==(const format& lhs, const format& rhs) {
