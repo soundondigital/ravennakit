@@ -12,7 +12,7 @@
 
 #include "ravennakit/core/assert.hpp"
 #include "ravennakit/core/exception.hpp"
-#include "ravennakit/core/todo.hpp"
+#include "ravennakit/core/util/todo.hpp"
 
 #include <tuple>
 

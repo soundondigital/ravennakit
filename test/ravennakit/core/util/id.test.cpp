@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/core/id.hpp"
+#include "ravennakit/core/util/id.hpp"
 
 #include <catch2/catch_all.hpp>
 
