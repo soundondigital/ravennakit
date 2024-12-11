@@ -44,10 +44,10 @@ struct format {
      * description of what went wrong.
      */
     static parse_result<format> parse_new(std::string_view line);
-
-    friend bool operator==(const format& lhs, const format& rhs);
-    friend bool operator!=(const format& lhs, const format& rhs);
 };
+
+bool operator==(const format& lhs, const format& rhs);
+bool operator!=(const format& lhs, const format& rhs);
 
 inline auto format_as(const format& f) {
     return f.to_string();
