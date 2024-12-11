@@ -52,6 +52,15 @@ class network_interface {
         other,
     };
 
+    /// The capabilities of the network interface.
+    struct capabilities {
+        bool hw_timestamp {false};
+        bool sw_timestamp {false};
+        bool multicast {false};
+
+        [[nodiscard]] std::string to_string() const;
+    };
+
     /**
      * Constructs a network interface with the given identifier. The identifier is used to uniquely identify the
      * interface, and should be the BSD name on BSD-style platforms and the AdapterName on Windows platforms.
@@ -104,9 +113,12 @@ class network_interface {
     std::optional<mac_address> mac_address_;
     std::vector<asio::ip::address> addresses_;
     type type_ {type::undefined};
+    capabilities capabilities_ {};
 #if RAV_WINDOWS
     IF_LUID if_luid_ {};
 #endif
+
+    void determine_capabilities();
 };
 
 }  // namespace rav

@@ -118,6 +118,11 @@ std::string rav::network_interface::to_string() {
         fmt::format_to(std::back_inserter(output), "  mac:\n    {}\n", mac_address_->to_string());
     }
 
+    auto caps = capabilities_.to_string();
+    if (!caps.empty()) {
+        fmt::format_to(std::back_inserter(output), "  capabilities:\n   {}\n", caps);
+    }
+
     fmt::format_to(std::back_inserter(output), "  type:\n    {}\n", type_to_string(type_));
 
     fmt::format_to(std::back_inserter(output), "  index:\n    {}\n", interface_index().value_or(0));
@@ -213,6 +218,8 @@ tl::expected<std::vector<rav::network_interface>, int> rav::network_interface::g
     #endif
             }
         }
+
+        it->determine_capabilities();
 
     #if RAV_APPLE
         it->type_ = functional_type_for_interface(ifa->ifa_name);
@@ -337,6 +344,60 @@ tl::expected<std::vector<rav::network_interface>, int> rav::network_interface::g
 #endif
 
     return network_interfaces;
+}
+
+void rav::network_interface::determine_capabilities() {
+#if HAS_BSD_SOCKETS
+    ifreq ifr {};
+
+    const auto fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) {
+        RAV_ERROR("Failed to open socket");
+        return;
+    }
+
+    defer close_socket([&] {
+        close(fd);
+    });
+
+    std::strncpy(ifr.ifr_name, identifier_.c_str(), identifier_.size());
+
+    // Query the interface capabilities
+    if (ioctl(fd, SIOCGIFCAP, &ifr) < 0) {
+        RAV_ERROR("Failed to query interface capabilities");
+        return;
+    }
+
+    capabilities caps;
+    caps.hw_timestamp = ifr.ifr_curcap & IFCAP_HW_TIMESTAMP;
+    caps.sw_timestamp = ifr.ifr_curcap & IFCAP_SW_TIMESTAMP;
+
+    // Query the interface flags
+    if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+        RAV_ERROR("Failed to query interface flags");
+        return;
+    }
+
+    if (ifr.ifr_flags & IFF_MULTICAST) {
+        caps.multicast = true;
+    }
+
+    capabilities_ = caps;
+#endif
+}
+
+std::string rav::network_interface::capabilities::to_string() const {
+    std::string output;
+    if (hw_timestamp) {
+        fmt::format_to(std::back_inserter(output), " HW_TIMESTAMP");
+    }
+    if (sw_timestamp) {
+        fmt::format_to(std::back_inserter(output), " SW_TIMESTAMP");
+    }
+    if (multicast) {
+        fmt::format_to(std::back_inserter(output), " MULTICAST");
+    }
+    return output;
 }
 
 const std::string& rav::network_interface::identifier() const {
