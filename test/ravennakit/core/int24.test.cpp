@@ -24,7 +24,7 @@ TEST_CASE("int24_t") {
         REQUIRE(static_cast<int32_t>(zero) == 0);
 
         const rav::int24_t twenty_four(24);
-        REQUIRE(static_cast<int32_t>(twenty_four) == 0);
+        REQUIRE(static_cast<int32_t>(twenty_four) == 24);
 
         const rav::int24_t in32max(std::numeric_limits<int32_t>::max());
         REQUIRE(static_cast<int32_t>(in32max) == 8388607);  // Value is truncated
