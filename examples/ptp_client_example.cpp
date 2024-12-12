@@ -9,6 +9,7 @@
  */
 
 #include "ravennakit/core/system.hpp"
+#include "ravennakit/ptp/messages/ptp_message_header.hpp"
 #include "ravennakit/rtp/detail/udp_sender_receiver.hpp"
 
 #include <CLI/App.hpp>
@@ -33,19 +34,21 @@ int main(int const argc, char* argv[]) {
     const rav::udp_sender_receiver ptp_event_socket(io_context, asio::ip::address_v4(), 319);
     const rav::udp_sender_receiver ptp_general_socket(io_context, asio::ip::address_v4(), 320);
 
-    subscriptions.push_back(ptp_event_socket.join_multicast_group(
-        ptp_multicast_address, asio::ip::make_address(interface_address)
-    ));
-    subscriptions.push_back(ptp_general_socket.join_multicast_group(
-        ptp_multicast_address, asio::ip::make_address(interface_address)
-    ));
+    subscriptions.push_back(
+        ptp_event_socket.join_multicast_group(ptp_multicast_address, asio::ip::make_address(interface_address))
+    );
+    subscriptions.push_back(
+        ptp_general_socket.join_multicast_group(ptp_multicast_address, asio::ip::make_address(interface_address))
+    );
 
-    ptp_event_socket.start([](const rav::udp_sender_receiver::recv_event& event) {
-        RAV_TRACE("PTP time messages received");
-    });
-    ptp_general_socket.start([](const rav::udp_sender_receiver::recv_event& event) {
-        RAV_TRACE("PTP event messages received");
-    });
+    auto handler = [](const rav::udp_sender_receiver::recv_event& event) {
+        rav::ptp_message_header header;
+        header.decode(event.data, event.size);
+        RAV_TRACE("{}", header.to_string());
+    };
+
+    ptp_event_socket.start(handler);
+    ptp_general_socket.start(handler);
 
     io_context.run();
 

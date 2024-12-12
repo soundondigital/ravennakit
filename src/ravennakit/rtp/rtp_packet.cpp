@@ -36,7 +36,7 @@ void rav::rtp_packet::ssrc(const uint32_t value) {
     ssrc_ = value;
 }
 
-bool rav::rtp_packet::encode(const uint8_t* payload_data, size_t payload_size, output_stream& stream) const {
+bool rav::rtp_packet::encode(const uint8_t* payload_data, const size_t payload_size, output_stream& stream) const {
     uint8_t v_p_x_cc = 0;
     v_p_x_cc |= 0b10000000;  // Version 2.
     v_p_x_cc |= 0b00000000;  // No padding.
