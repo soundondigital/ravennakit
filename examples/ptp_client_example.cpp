@@ -9,6 +9,7 @@
  */
 
 #include "ravennakit/core/system.hpp"
+#include "ravennakit/ptp/ptp_instance.hpp"
 #include "ravennakit/ptp/messages/ptp_announce_message.hpp"
 #include "ravennakit/ptp/messages/ptp_message.hpp"
 #include "ravennakit/ptp/messages/ptp_message_header.hpp"
@@ -32,30 +33,12 @@ int main(int const argc, char* argv[]) {
     std::vector<rav::subscription> subscriptions;
     asio::io_context io_context;
 
-    const auto ptp_multicast_address = asio::ip::make_address("224.0.1.129");
-    const rav::udp_sender_receiver ptp_event_socket(io_context, asio::ip::address_v4(), 319);
-    const rav::udp_sender_receiver ptp_general_socket(io_context, asio::ip::address_v4(), 320);
-
-    subscriptions.push_back(
-        ptp_event_socket.join_multicast_group(ptp_multicast_address, asio::ip::make_address(interface_address))
-    );
-    subscriptions.push_back(
-        ptp_general_socket.join_multicast_group(ptp_multicast_address, asio::ip::make_address(interface_address))
-    );
-
-    auto handler = [](const rav::udp_sender_receiver::recv_event& event) {
-        const rav::buffer_view data(event.data, event.size);
-
-        auto message = rav::ptp_message::from_data(data);
-        if (!message.has_value()) {
-            RAV_TRACE("PTP Error: {}", static_cast<std::underlying_type_t<rav::ptp_error>>(message.error()));
-            return;
-        }
-        RAV_TRACE("{}", message->to_string());
-    };
-
-    ptp_event_socket.start(handler);
-    ptp_general_socket.start(handler);
+    rav::ptp_instance ptp_instance(io_context);
+    auto result = ptp_instance.add_port(asio::ip::make_address(interface_address));
+    if (!result) {
+        RAV_TRACE("PTP Error: {}", static_cast<std::underlying_type_t<rav::ptp_error>>(result.error()));
+        return 1;
+    }
 
     io_context.run();
 

@@ -12,6 +12,11 @@
 
 #include "ptp_definitions.hpp"
 #include "ravennakit/core/types/uint48.hpp"
+#include "ravennakit/core/format.hpp"
+#include "ravennakit/core/net/interfaces/mac_address.hpp"
+#include "ravennakit/core/util/todo.hpp"
+
+#include <string>
 
 namespace rav {
 
@@ -22,6 +27,10 @@ struct ptp_timestamp {
 
 struct ptp_clock_identity {
     uint8_t data[8] {};
+
+    static ptp_clock_identity from_mac_address(const mac_address& mac_address) {
+        TODO("Implement");
+    }
 
     [[nodiscard]] std::string to_string() const {
         return fmt::format(

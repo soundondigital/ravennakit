@@ -12,6 +12,15 @@
 
 namespace rav {
 
-enum class ptp_error { invalid_data, invalid_header_length, invalid_message_length };
+enum class ptp_error {
+    invalid_data,
+    invalid_header_length,
+    invalid_message_length,
+    only_ordinary_clock_supported,
+    only_slave_supported,
+    failed_to_get_network_interfaces,
+    network_interface_not_found,
+    no_mac_address_available,
+};
 
 }

@@ -21,5 +21,5 @@ tl::expected<rav::ptp_message, rav::ptp_error> rav::ptp_message::from_data(const
 }
 
 std::string rav::ptp_message::to_string() const {
-
+    return {};
 }
