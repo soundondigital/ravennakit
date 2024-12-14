@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include "ravennakit/core/byte_order.hpp"
 #include "ravennakit/core/containers/buffer_view.hpp"
 #include "ravennakit/ptp/ptp_definitions.hpp"
 #include "ravennakit/ptp/ptp_error.hpp"
@@ -24,10 +23,10 @@ namespace rav {
 struct ptp_version {
     uint8_t major {};
     uint8_t minor {};
-
-    friend bool operator==(const ptp_version& lhs, const ptp_version& rhs);
-    friend bool operator!=(const ptp_version& lhs, const ptp_version& rhs);
 };
+
+bool operator==(const ptp_version& lhs, const ptp_version& rhs);
+bool operator!=(const ptp_version& lhs, const ptp_version& rhs);
 
 /**
  * Provides a view over given data, interpreting it as a PTP message header.
@@ -51,10 +50,6 @@ struct ptp_message_header {
 
         static flag_field from_octets(uint8_t octet1, uint8_t octet2);
 
-        friend bool operator==(const flag_field& lhs, const flag_field& rhs);
-        friend bool operator!=(const flag_field& lhs, const flag_field& rhs);
-
-      private:
         [[nodiscard]] auto tie_members() const;
     };
 
@@ -73,11 +68,13 @@ struct ptp_message_header {
 
     [[nodiscard]] std::string to_string() const;
 
-    friend bool operator==(const ptp_message_header& lhs, const ptp_message_header& rhs);
-    friend bool operator!=(const ptp_message_header& lhs, const ptp_message_header& rhs);
-
-  private:
     [[nodiscard]] auto tie_members() const;
 };
+
+bool operator==(const ptp_message_header::flag_field& lhs, const ptp_message_header::flag_field& rhs);
+bool operator!=(const ptp_message_header::flag_field& lhs, const ptp_message_header::flag_field& rhs);
+
+bool operator==(const ptp_message_header& lhs, const ptp_message_header& rhs);
+bool operator!=(const ptp_message_header& lhs, const ptp_message_header& rhs);
 
 }  // namespace rav

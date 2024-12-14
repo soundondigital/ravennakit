@@ -9,6 +9,7 @@
  */
 
 #include "ravennakit/ptp/messages/ptp_announce_message.hpp"
+#include "ravennakit/core/byte_order.hpp"
 
 tl::expected<rav::ptp_announce_message, rav::ptp_error>
 rav::ptp_announce_message::from_data(const buffer_view<const uint8_t> data) {

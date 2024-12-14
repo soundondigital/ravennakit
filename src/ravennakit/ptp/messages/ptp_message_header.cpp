@@ -9,6 +9,7 @@
  */
 
 #include "ravennakit/ptp/messages/ptp_message_header.hpp"
+#include "ravennakit/core/byte_order.hpp"
 
 #include <bitset>
 
