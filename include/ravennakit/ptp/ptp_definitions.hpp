@@ -18,7 +18,7 @@ namespace rav {
  * IEEE1588-2019: 8.2.15.3.1, 9.2.5, Table 27
  */
 enum class ptp_state : uint8_t {
-    undefined = 0x0,
+    undefined = 0x0,  // Not specified in IEEE1588-2019
     initializing = 0x1,
     faulty = 0x2,
     disabled = 0x3,
@@ -73,7 +73,7 @@ enum class ptp_clock_accuracy : uint8_t {
  * IEEE1588-2019: 7.6.2.8, Table 6
  */
 enum class ptp_time_source : uint8_t {
-    undefined = 0x0,  // Not specified in IEEE1588-2019 (afaik)
+    undefined = 0x0,  // Not specified in IEEE1588-2019
     atomic_clock = 0x10,
     gnss = 0x20,
     terrestrial_radio = 0x30,
@@ -166,5 +166,18 @@ inline const char* ptp_message_type_to_string(const ptp_message_type type) {
             return "Unknown";
     }
 }
+
+/**
+ * PTP Delay mechanism.
+ * IEEE1588-2019: 8.2.15.4.4, Table 21
+ */
+enum class ptp_delay_mechanism : uint8_t {
+    undefined = 0x0,  // Not specified in IEEE1588-2019
+    e2e = 0x1,
+    p2p = 0x2,
+    common_ptp = 0x3,
+    special = 0x4,
+    no_mechanism = 0xfe,
+};
 
 }  // namespace rav

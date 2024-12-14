@@ -13,31 +13,40 @@
 #include "ravennakit/core/net/interfaces/network_interface.hpp"
 #include "ravennakit/core/net/interfaces/network_interface_list.hpp"
 
-rav::ptp_instance::ptp_instance(asio::io_context& io_context) : io_context_(io_context) {}
+rav::ptp_instance::ptp_instance(asio::io_context& io_context) : io_context_(io_context) {
+    default_ds_.slave_only = true; // Only slave supported at the moment.
+}
 
-tl::expected<void, rav::ptp_error> rav::ptp_instance::add_port(const asio::ip::address& address) {
+tl::expected<void, rav::ptp_error> rav::ptp_instance::add_port(const asio::ip::address& interface_address) {
     if (!ports_.empty()) {
         return tl::unexpected(ptp_error::only_ordinary_clock_supported);
     }
 
     network_interfaces_.refresh();
-    auto* iface = network_interfaces_.find_by_address(address);
+    auto* iface = network_interfaces_.find_by_address(interface_address);
     if (!iface) {
         return tl::unexpected(ptp_error::network_interface_not_found);
     }
 
-    if (ports_.empty()) {
+    if (default_ds_.clock_identity.empty()) {
         // Need to assign the instance clock identity based on the first port added
         const auto mac_address = iface->get_mac_address();
         if (!mac_address) {
             return tl::unexpected(ptp_error::no_mac_address_available);
         }
 
-        auto identity = ptp_clock_identity::from_mac_address(mac_address.value());
+        const auto identity = ptp_clock_identity::from_mac_address(mac_address.value());
+        if (!identity.is_valid()) {
+            return tl::unexpected(ptp_error::invalid_clock_identity);
+        }
 
-        TODO("Store identity in defaultDS");
+        default_ds_.clock_identity = identity;
     }
 
-    ports_.emplace_back(std::make_unique<ptp_port>(io_context_, address));
+    ptp_port_identity port_identity;
+    port_identity.clock_identity = default_ds_.clock_identity;
+    port_identity.port_number = ports_.size();
+
+    ports_.emplace_back(std::make_unique<ptp_port>(io_context_, interface_address, port_identity));
     return {};
 }

@@ -15,6 +15,7 @@
 #include "ravennakit/core/format.hpp"
 #include "ravennakit/core/net/interfaces/mac_address.hpp"
 #include "ravennakit/core/util/todo.hpp"
+#include "types/ptp_clock_identity.hpp"
 
 #include <string>
 
@@ -25,42 +26,7 @@ struct ptp_timestamp {
     uint32_t nanoseconds {};
 };
 
-struct ptp_clock_identity {
-    uint8_t data[8] {};
 
-    static ptp_clock_identity from_mac_address(const mac_address& mac_address) {
-        std::ignore = mac_address;
-        TODO("Implement");
-    }
-
-    [[nodiscard]] std::string to_string() const {
-        return fmt::format(
-            "{:02x}-{:02x}-{:02x}-{:02x}-{:02x}-{:02x}-{:02x}-{:02x}", data[0], data[1], data[2], data[3], data[4],
-            data[5], data[6], data[7]
-        );
-    }
-
-    friend bool operator==(const ptp_clock_identity& lhs, const ptp_clock_identity& rhs) {
-        return std::memcmp(lhs.data, rhs.data, sizeof(lhs.data)) == 0;
-    }
-
-    friend bool operator!=(const ptp_clock_identity& lhs, const ptp_clock_identity& rhs) {
-        return !(lhs == rhs);
-    }
-};
-
-struct ptp_port_identity {
-    ptp_clock_identity clock_identity;
-    uint16_t port_number {};
-
-    friend bool operator==(const ptp_port_identity& lhs, const ptp_port_identity& rhs) {
-        return std::tie(lhs.clock_identity, lhs.port_number) == std::tie(rhs.clock_identity, rhs.port_number);
-    }
-
-    friend bool operator!=(const ptp_port_identity& lhs, const ptp_port_identity& rhs) {
-        return !(lhs == rhs);
-    }
-};
 
 /**
  * PTP Clock Quality
@@ -72,5 +38,7 @@ struct ptp_clock_quality {
     ptp_clock_accuracy clock_accuracy {ptp_clock_accuracy::unknown};
     uint16_t offset_scaled_log_variance {};
 };
+
+using ptp_time_interval = int64_t;
 
 }  // namespace rav

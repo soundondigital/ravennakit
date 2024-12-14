@@ -10,10 +10,12 @@
 
 #pragma once
 
+#include "ravennakit/core/exception.hpp"
+#include "ravennakit/core/string.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include "ravennakit/core/format.hpp"
 
 namespace rav {
 
@@ -48,9 +50,27 @@ class mac_address {
         address_ {byte0, byte1, byte2, byte3, byte4, byte5} {}
 
     /**
+     * Construct a MAC address from a string. The string must be in the format "00:11:22:33:44:55".
+     * @param str The string containing the MAC address.
+     */
+    explicit mac_address(const char* str) {
+        const auto parts = string_split(str, ':');
+        if (parts.size() != 6) {
+            RAV_THROW_EXCEPTION("Invalid MAC address format: {}", str);
+        }
+        for (size_t i = 0; i < 6; ++i) {
+            auto number = rav::ston<uint8_t>(std::string_view(parts[i]), true, 16);
+            if (!number) {
+                RAV_THROW_EXCEPTION("Failed to parse MAC address part: {}", parts[i]);
+            }
+            address_[i] = number.value();
+        }
+    }
+
+    /**
      * @returns The MAC address as a byte array.
      */
-    [[nodiscard]] const std::array<uint8_t, 6>& to_bytes() const {
+    [[nodiscard]] const std::array<uint8_t, 6>& bytes() const {
         return address_;
     }
 
@@ -67,7 +87,7 @@ class mac_address {
     /**
      * @return The MAC address as a string.
      */
-    std::string to_string() const {
+    [[nodiscard]] std::string to_string() const {
         return fmt::format(
             "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", address_[0], address_[1], address_[2], address_[3],
             address_[4], address_[5]

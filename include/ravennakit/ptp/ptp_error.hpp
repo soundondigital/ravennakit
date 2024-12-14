@@ -21,6 +21,7 @@ enum class ptp_error {
     failed_to_get_network_interfaces,
     network_interface_not_found,
     no_mac_address_available,
+    invalid_clock_identity,
 };
 
 }

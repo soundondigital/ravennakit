@@ -10,8 +10,9 @@
 
 #pragma once
 
-#include "ptp_types.hpp"
+#include "datasets/ptp_port_ds.hpp"
 #include "ravennakit/rtp/detail/udp_sender_receiver.hpp"
+#include "types/ptp_port_identity.hpp"
 
 #include <optional>
 #include <vector>
@@ -20,9 +21,10 @@ namespace rav {
 
 class ptp_port {
   public:
-    ptp_port(asio::io_context& io_context, const asio::ip::address& interface_address);
+    ptp_port(asio::io_context& io_context, const asio::ip::address& interface_address, ptp_port_identity port_identity);
 
   private:
+    ptp_port_ds port_ds_;
     udp_sender_receiver event_socket_;
     udp_sender_receiver general_socket_;
     std::vector<subscription> subscriptions_;

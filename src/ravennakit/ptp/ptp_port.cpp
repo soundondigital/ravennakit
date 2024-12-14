@@ -19,9 +19,13 @@ constexpr auto k_ptp_event_port = 319;
 constexpr auto k_ptp_general_port = 320;
 }  // namespace
 
-rav::ptp_port::ptp_port(asio::io_context& io_context, const asio::ip::address& interface_address) :
+rav::ptp_port::ptp_port(
+    asio::io_context& io_context, const asio::ip::address& interface_address, ptp_port_identity port_identity
+) :
     event_socket_(io_context, asio::ip::address_v4(), k_ptp_event_port),
     general_socket_(io_context, asio::ip::address_v4(), k_ptp_general_port) {
+    port_ds_.port_identity = port_identity;
+    port_ds_.port_state = ptp_state::initializing;
     subscriptions_.push_back(event_socket_.join_multicast_group(k_ptp_multicast_address, interface_address));
     subscriptions_.push_back(general_socket_.join_multicast_group(k_ptp_multicast_address, interface_address));
 
