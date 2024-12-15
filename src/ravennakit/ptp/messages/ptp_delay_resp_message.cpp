@@ -25,6 +25,11 @@ rav::ptp_delay_resp_message::from_data(const buffer_view<const uint8_t> data) {
     return msg;
 }
 
+void rav::ptp_delay_resp_message::write_to(output_stream& stream) const {
+    receive_timestamp.write_to(stream);
+    requesting_port_identity.write_to(stream);
+}
+
 std::string rav::ptp_delay_resp_message::to_string() const {
     return fmt::format(
         "receive_timestamp={}.{:09d} requesting_port_identity={}", receive_timestamp.to_string(),

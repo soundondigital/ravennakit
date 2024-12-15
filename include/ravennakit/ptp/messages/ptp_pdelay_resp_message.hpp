@@ -9,6 +9,7 @@
  */
 
 #pragma once
+#include "ravennakit/core/streams/byte_stream.hpp"
 #include "ravennakit/ptp/types/ptp_port_identity.hpp"
 #include "ravennakit/ptp/types/ptp_timestamp.hpp"
 
@@ -24,6 +25,12 @@ struct ptp_pdelay_resp_message {
      * @return A ptp_announce_message if the data is valid, otherwise a ptp_error.
      */
     static tl::expected<ptp_pdelay_resp_message, ptp_error> from_data(buffer_view<const uint8_t> data);
+
+    /**
+     * Write the ptp_announce_message to a byte_stream.
+     * @param stream The stream to write to.
+     */
+    void write_to(byte_stream& stream) const;
 
     /**
      * @returns A string representation of the ptp_announce_message.

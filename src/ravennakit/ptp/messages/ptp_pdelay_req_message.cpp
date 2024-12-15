@@ -21,6 +21,10 @@ rav::ptp_pdelay_req_message::from_data(const buffer_view<const uint8_t> data) {
     return msg;
 }
 
+void rav::ptp_pdelay_req_message::write_to(output_stream& stream) const {
+    origin_timestamp.write_to(stream);
+}
+
 std::string rav::ptp_pdelay_req_message::to_string() const {
     return fmt::format("origin_timestamp={}", origin_timestamp.to_string());
 }
