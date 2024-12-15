@@ -45,7 +45,7 @@ struct ptp_timestamp {
      * @return A string representation of the ptp_timestamp.
      */
     [[nodiscard]] std::string to_string() const {
-        return fmt::format("{}.{}", seconds.to_uint64(), nanoseconds);
+        return fmt::format("{}.{:09}", seconds.to_uint64(), nanoseconds);
     }
 };
 
