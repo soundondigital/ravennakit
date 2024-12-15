@@ -9,6 +9,7 @@
  */
 
 #pragma once
+
 #include "output_stream.hpp"
 #include "ravennakit/core/file.hpp"
 
@@ -31,7 +32,7 @@ class file_output_stream final: public output_stream {
     ~file_output_stream() override = default;
 
     // output_stream overrides
-    size_t write(const uint8_t* buffer, size_t size) override {
+    size_t write(const uint8_t* buffer, const size_t size) override {
         ofstream_.write(reinterpret_cast<const char*>(buffer), static_cast<std::streamsize>(size));
         return size;
     }

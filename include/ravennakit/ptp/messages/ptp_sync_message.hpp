@@ -26,6 +26,12 @@ struct ptp_sync_message {
     static tl::expected<ptp_sync_message, ptp_error> from_data(buffer_view<const uint8_t> data);
 
     /**
+     * Write the ptp_announce_message to a stream.
+     * @param stream The stream to write to.
+     */
+    void write_to(output_stream& stream) const;
+
+    /**
      * @returns A string representation of the ptp_announce_message.
      */
     [[nodiscard]] std::string to_string() const;
