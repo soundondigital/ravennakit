@@ -24,7 +24,7 @@ struct ptp_announce_message {
     uint8_t grandmaster_priority2 {};
     ptp_clock_identity grandmaster_identity;
     uint16_t steps_removed {};
-    ptp_time_source gm_time_base_indicator{};
+    ptp_time_source time_source{};
 
     /**
      * Create a ptp_announce_message from a buffer_view.
@@ -32,6 +32,12 @@ struct ptp_announce_message {
      * @return A ptp_announce_message if the data is valid, otherwise a ptp_error.
      */
     static tl::expected<ptp_announce_message, ptp_error> from_data(buffer_view<const uint8_t> data);
+
+    /**
+     * Writes the ptp_announce_message to the given stream.
+     * @param stream The stream to write the ptp_announce_message to.
+     */
+    void write_to(output_stream& stream) const;
 
     /**
      * @returns A string representation of the ptp_announce_message.

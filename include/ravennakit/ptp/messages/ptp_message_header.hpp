@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ravennakit/core/containers/buffer_view.hpp"
+#include "ravennakit/core/streams/output_stream.hpp"
 #include "ravennakit/ptp/ptp_definitions.hpp"
 #include "ravennakit/ptp/ptp_error.hpp"
 #include "ravennakit/ptp/types/ptp_port_identity.hpp"
@@ -49,6 +50,7 @@ struct ptp_message_header {
         bool synchronization_uncertain {};  // Announce
 
         static flag_field from_octets(uint8_t octet1, uint8_t octet2);
+        [[nodiscard]] uint16_t to_octets() const;
 
         [[nodiscard]] auto tie_members() const;
     };
@@ -64,10 +66,27 @@ struct ptp_message_header {
     uint16_t sequence_id {};
     int8_t log_message_interval {};
 
+    /**
+     * Creates a PTP message header from the given data.
+     * @param data The data to interpret as a PTP message header.
+     * @return A PTP message header if the data is valid, otherwise an error.
+     */
     static tl::expected<ptp_message_header, ptp_error> from_data(buffer_view<const uint8_t> data);
 
+    /**
+     * Writes the PTP message header to the given stream.
+     * @param stream The stream to write the PTP message header to.
+     */
+    void write_to(output_stream& stream) const;
+
+    /**
+     * Converts the PTP message header to a human-readable string.
+     */
     [[nodiscard]] std::string to_string() const;
 
+    /**
+     * Returns a tuple of the members of the PTP message header.
+     */
     [[nodiscard]] auto tie_members() const;
 };
 

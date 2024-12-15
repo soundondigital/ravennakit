@@ -28,8 +28,20 @@ rav::ptp_announce_message::from_data(buffer_view<const uint8_t> data) {
     msg.grandmaster_priority2 = data[18];
     msg.grandmaster_identity = ptp_clock_identity::from_data(data.subview(19));
     msg.steps_removed = data.read_be<uint16_t>(27);
-    msg.gm_time_base_indicator = static_cast<ptp_time_source>(data[29]);
+    msg.time_source = static_cast<ptp_time_source>(data[29]);
     return msg;
+}
+
+void rav::ptp_announce_message::write_to(output_stream& stream) const {
+    origin_timestamp.write_to(stream);
+    stream.write_be<int16_t>(current_utc_offset);
+    stream.write_be<uint8_t>(0);  // Reserved
+    stream.write_be<uint8_t>(grandmaster_priority1);
+    grandmaster_clock_quality.write_to(stream);
+    stream.write_be<uint8_t>(grandmaster_priority2);
+    grandmaster_identity.write_to(stream);
+    stream.write_be<uint16_t>(steps_removed);
+    stream.write_be<uint8_t>(static_cast<uint8_t>(time_source));
 }
 
 std::string rav::ptp_announce_message::to_string() const {

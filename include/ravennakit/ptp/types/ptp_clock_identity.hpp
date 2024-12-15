@@ -11,9 +11,11 @@
 #pragma once
 
 #include "ravennakit/core/log.hpp"
+#include "ravennakit/core/util.hpp"
 #include "ravennakit/core/net/interfaces/mac_address.hpp"
 #include "ravennakit/core/util/todo.hpp"
 #include "ravennakit/core/containers/buffer_view.hpp"
+#include "ravennakit/core/streams/output_stream.hpp"
 
 #include <cstdint>
 
@@ -37,13 +39,21 @@ struct ptp_clock_identity {
 
     /**
      * Construct a PTP clock identity from a byte array.
-     * @param data The data to construct the clock identity from. Must be at least 8 bytes long.
+     * @param view The data view to construct the clock identity from. Must be at least 8 bytes long.
      */
-    static ptp_clock_identity from_data(buffer_view<const uint8_t> data) {
-        RAV_ASSERT(data.size() >= 8, "Data is too short to construct a PTP clock identity");
+    static ptp_clock_identity from_data(buffer_view<const uint8_t> view) {
+        RAV_ASSERT(view.size() >= 8, "Data is too short to construct a PTP clock identity");
         ptp_clock_identity clock_identity;
-        std::memcpy(clock_identity.data, data.data(), 8);
+        std::memcpy(clock_identity.data, view.data(), sizeof(clock_identity.data));
         return clock_identity;
+    }
+
+    /**
+     * Writes the clock identity to the given stream.
+     * @param stream The stream to write the clock identity to.
+     */
+    void write_to(output_stream& stream) const {
+        stream.write(data, sizeof(data));
     }
 
     /**

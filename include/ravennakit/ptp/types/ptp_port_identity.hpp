@@ -13,6 +13,7 @@
 #include "ptp_clock_identity.hpp"
 #include "ravennakit/core/byte_order.hpp"
 #include "ravennakit/core/log.hpp"
+#include "ravennakit/core/streams/output_stream.hpp"
 #include "ravennakit/ptp/ptp_error.hpp"
 
 #include <tl/expected.hpp>
@@ -43,6 +44,15 @@ struct ptp_port_identity {
         port_identity.clock_identity = ptp_clock_identity::from_data(data);
         port_identity.port_number = rav::byte_order::read_be<uint16_t>(data.data() + 8);
         return port_identity;
+    }
+
+    /**
+     * Writes the port identity to the given stream.
+     * @param stream The stream to write the port identity to.
+     */
+    void write_to(output_stream& stream) const {
+        clock_identity.write_to(stream);
+        stream.write_be<uint16_t>(port_number);
     }
 
     /**

@@ -28,6 +28,7 @@ class input_stream {
 
     /**
      * Reads data from the stream into the given buffer.
+     * If the stream doesn't have enough data, then nothing will be read.
      * @param buffer The buffer to read data into.
      * @param size The number of bytes to read.
      * @return The number of bytes read.

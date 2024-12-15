@@ -23,7 +23,7 @@ namespace rav::util {
  * @return The number of elements in the array.
  */
 template<typename Type, size_t N>
-constexpr int num_elements_in_array(Type (&)[N]) noexcept {
+constexpr size_t num_elements_in_array(Type (&)[N]) noexcept {
     return N;
 }
 

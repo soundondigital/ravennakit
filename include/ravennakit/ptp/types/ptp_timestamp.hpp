@@ -12,6 +12,7 @@
 
 #include "ravennakit/core/byte_order.hpp"
 #include "ravennakit/core/containers/buffer_view.hpp"
+#include "ravennakit/core/streams/output_stream.hpp"
 #include "ravennakit/core/types/uint48.hpp"
 
 namespace rav {
@@ -39,6 +40,15 @@ struct ptp_timestamp {
         ts.seconds = data.read_be<uint48_t>(0);
         ts.nanoseconds = data.read_be<uint32_t>(6);
         return ts;
+    }
+
+    /**
+     * Writes the ptp_timestamp to the given stream.
+     * @param stream The stream to write the ptp_timestamp to.
+     */
+    void write_to(output_stream& stream) const {
+        stream.write_be<uint48_t>(seconds);
+        stream.write_be<uint32_t>(nanoseconds);
     }
 
     /**

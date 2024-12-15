@@ -19,14 +19,12 @@ void rav::byte_stream::reset() {
 }
 
 size_t rav::byte_stream::read(uint8_t* buffer, const size_t size) {
-    if (exhausted()) {
+    if (data_.size() - read_position_ < size) {
         return 0;
     }
-
-    const size_t bytes_to_read = std::min(size, data_.size() - read_position_);
-    std::memcpy(buffer, data_.data() + read_position_, bytes_to_read);
-    read_position_ += bytes_to_read;
-    return bytes_to_read;
+    std::memcpy(buffer, data_.data() + read_position_, size);
+    read_position_ += size;
+    return size;
 }
 
 bool rav::byte_stream::set_read_position(const size_t position) {

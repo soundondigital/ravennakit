@@ -37,7 +37,7 @@ class file_input_stream final: public input_stream {
     }
 
     // input_stream overrides
-    size_t read(uint8_t* buffer, size_t size) override {
+    size_t read(uint8_t* buffer, const size_t size) override {
         fstream_.read(reinterpret_cast<char*>(buffer), static_cast<std::streamsize>(size));
 
         // Check if reading was unsuccessful
@@ -53,7 +53,7 @@ class file_input_stream final: public input_stream {
         return static_cast<size_t>(count);
     }
 
-    bool set_read_position(size_t position) override {
+    bool set_read_position(const size_t position) override {
         fstream_.seekg(static_cast<std::streamsize>(position));
         return !fstream_.fail();
     }
