@@ -24,6 +24,14 @@ struct ptp_clock_quality {
     ptp_clock_accuracy clock_accuracy {ptp_clock_accuracy::unknown};
     uint16_t offset_scaled_log_variance {};
 
+    ptp_clock_quality() = default;
+
+    explicit ptp_clock_quality(const bool slave_only) {
+        clock_class = slave_only ? 255 : 248;
+        clock_accuracy = ptp_clock_accuracy::unknown;
+        offset_scaled_log_variance = 0;
+    }
+
     /**
      * Create a PTP clock quality from a buffer_view.
      * @param stream The stream to read the clock quality from.

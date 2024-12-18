@@ -42,6 +42,8 @@ rav::ptp_port::ptp_port(
 
     event_socket_.start(handler);
     general_socket_.start(handler);
+
+    port_ds_.port_state = ptp_state::listening;
 }
 
 uint16_t rav::ptp_port::get_port_number() const {
@@ -57,6 +59,11 @@ void rav::ptp_port::handle_recv_event(const udp_sender_receiver::recv_event& eve
     auto header = ptp_message_header::from_data(data);
     if (!header) {
         RAV_TRACE("PTP Header error: {}", to_string(header.error()));
+        return;
+    }
+
+    if (header->source_port_identity == port_ds_.port_identity) {
+        RAV_WARNING("Received own message, ignoring");
         return;
     }
 
@@ -156,33 +163,82 @@ void rav::ptp_port::handle_recv_event(const udp_sender_receiver::recv_event& eve
 
 void rav::ptp_port::handle_announce_message(
     const ptp_message_header& header, const ptp_announce_message& announce_message, buffer_view<const uint8_t> tlvs
-) {}
+) {
+    std::ignore = header;
+    std::ignore = announce_message;
+    std::ignore = tlvs;
+
+    if (port_ds_.port_state == ptp_state::initializing) {
+        RAV_TRACE("Discarding announce message while initializing");
+        return;
+    }
+
+    if (port_ds_.port_state == ptp_state::disabled) {
+        RAV_TRACE("Discarding announce message while disabled");
+        return;
+    }
+
+    if (port_ds_.port_state == ptp_state::faulty) {
+        RAV_TRACE("Discarding announce message while faulty");
+        return;
+    }
+
+
+}
 
 void rav::ptp_port::handle_sync_message(
     const ptp_message_header& header, const ptp_sync_message& sync_message, buffer_view<const uint8_t> tlvs
-) {}
+) {
+    std::ignore = header;
+    std::ignore = sync_message;
+    std::ignore = tlvs;
+}
 
 void rav::ptp_port::handle_delay_req_message(
     const ptp_message_header& header, const ptp_delay_req_message& delay_req_message, buffer_view<const uint8_t> tlvs
-) {}
+) {
+    std::ignore = header;
+    std::ignore = delay_req_message;
+    std::ignore = tlvs;
+}
 
 void rav::ptp_port::handle_follow_up_message(
     const ptp_message_header& header, const ptp_follow_up_message& follow_up_message, buffer_view<const uint8_t> tlvs
-) {}
+) {
+    std::ignore = header;
+    std::ignore = follow_up_message;
+    std::ignore = tlvs;
+}
 
 void rav::ptp_port::handle_delay_resp_message(
     const ptp_message_header& header, const ptp_delay_req_message& delay_resp_message, buffer_view<const uint8_t> tlvs
-) {}
+) {
+    std::ignore = header;
+    std::ignore = delay_resp_message;
+    std::ignore = tlvs;
+}
 
 void rav::ptp_port::handle_pdelay_req_message(
     const ptp_message_header& header, const ptp_pdelay_req_message& delay_req_message, buffer_view<const uint8_t> tlvs
-) {}
+) {
+    std::ignore = header;
+    std::ignore = delay_req_message;
+    std::ignore = tlvs;
+}
 
 void rav::ptp_port::handle_pdelay_resp_message(
     const ptp_message_header& header, const ptp_pdelay_resp_message& delay_req_message, buffer_view<const uint8_t> tlvs
-) {}
+) {
+    std::ignore = header;
+    std::ignore = delay_req_message;
+    std::ignore = tlvs;
+}
 
 void rav::ptp_port::handle_pdelay_resp_follow_up_message(
     const ptp_message_header& header, const ptp_pdelay_resp_follow_up_message& delay_req_message,
     buffer_view<const uint8_t> tlvs
-) {}
+) {
+    std::ignore = header;
+    std::ignore = delay_req_message;
+    std::ignore = tlvs;
+}

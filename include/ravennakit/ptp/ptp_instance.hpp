@@ -12,7 +12,9 @@
 
 #include "ptp_error.hpp"
 #include "ptp_port.hpp"
+#include "datasets/ptp_current_ds.hpp"
 #include "datasets/ptp_default_ds.hpp"
+#include "datasets/ptp_parent_ds.hpp"
 #include "ravennakit/core/net/interfaces/network_interface_list.hpp"
 
 #include <asio/ip/address.hpp>
@@ -35,6 +37,8 @@ class ptp_instance {
   private:
     asio::io_context& io_context_;
     ptp_default_ds default_ds_;
+    ptp_current_ds current_ds_;
+    ptp_parent_ds parent_ds_;
     std::vector<std::unique_ptr<ptp_port>> ports_;
     network_interface_list network_interfaces_;
 

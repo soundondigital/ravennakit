@@ -12,6 +12,9 @@
 
 namespace rav {
 
+/**
+ * Represents the default data set as described in IEEE1588-2019: 8.2.1.
+ */
 struct ptp_default_ds {
     // Static members
     ptp_clock_identity clock_identity;
@@ -31,6 +34,11 @@ struct ptp_default_ds {
     bool slave_only {false }; // Default for default profile
 
     uint16_t sdo_id { 0 };  // 12 bit on the wire (0-4095), default for default profile
+
+    explicit ptp_default_ds(const bool slave_only_) {
+        slave_only = slave_only_;
+        clock_quality = ptp_clock_quality(slave_only);
+    }
 };
 
 }  // namespace rav

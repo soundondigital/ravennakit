@@ -60,22 +60,28 @@ class ptp_port {
         const ptp_message_header& header, const ptp_sync_message& sync_message, buffer_view<const uint8_t> tlvs
     );
     void handle_delay_req_message(
-        const ptp_message_header& header, const ptp_delay_req_message& delay_req_message, buffer_view<const uint8_t> tlvs
+        const ptp_message_header& header, const ptp_delay_req_message& delay_req_message,
+        buffer_view<const uint8_t> tlvs
     );
     void handle_follow_up_message(
-        const ptp_message_header& header, const ptp_follow_up_message& follow_up_message, buffer_view<const uint8_t> tlvs
+        const ptp_message_header& header, const ptp_follow_up_message& follow_up_message,
+        buffer_view<const uint8_t> tlvs
     );
     void handle_delay_resp_message(
-        const ptp_message_header& header, const ptp_delay_req_message& delay_resp_message, buffer_view<const uint8_t> tlvs
+        const ptp_message_header& header, const ptp_delay_req_message& delay_resp_message,
+        buffer_view<const uint8_t> tlvs
     );
     void handle_pdelay_req_message(
-        const ptp_message_header& header, const ptp_pdelay_req_message& delay_req_message, buffer_view<const uint8_t> tlvs
+        const ptp_message_header& header, const ptp_pdelay_req_message& delay_req_message,
+        buffer_view<const uint8_t> tlvs
     );
     void handle_pdelay_resp_message(
-        const ptp_message_header& header, const ptp_pdelay_resp_message& delay_req_message, buffer_view<const uint8_t> tlvs
+        const ptp_message_header& header, const ptp_pdelay_resp_message& delay_req_message,
+        buffer_view<const uint8_t> tlvs
     );
     void handle_pdelay_resp_follow_up_message(
-        const ptp_message_header& header, const ptp_pdelay_resp_follow_up_message& delay_req_message, buffer_view<const uint8_t> tlvs
+        const ptp_message_header& header, const ptp_pdelay_resp_follow_up_message& delay_req_message,
+        buffer_view<const uint8_t> tlvs
     );
 };
 

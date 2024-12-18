@@ -13,9 +13,8 @@
 #include "ravennakit/core/net/interfaces/network_interface.hpp"
 #include "ravennakit/core/net/interfaces/network_interface_list.hpp"
 
-rav::ptp_instance::ptp_instance(asio::io_context& io_context) : io_context_(io_context) {
-    default_ds_.slave_only = true;  // Only slave supported at the moment.
-}
+rav::ptp_instance::ptp_instance(asio::io_context& io_context) :
+    io_context_(io_context), default_ds_(true), parent_ds_(default_ds_) {}
 
 tl::expected<void, rav::ptp_error> rav::ptp_instance::add_port(const asio::ip::address& interface_address) {
     if (!ports_.empty()) {

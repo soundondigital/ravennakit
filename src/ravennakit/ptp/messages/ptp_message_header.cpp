@@ -105,7 +105,7 @@ void rav::ptp_message_header::write_to(output_stream& stream) const {
     // major sdo id + message type
     stream.write_be<uint8_t>((sdo_id >> 4 & 0b11110000) | (static_cast<uint8_t>(message_type) & 0b00001111));
     // minor version ptp + version ptp
-    stream.write_be<uint8_t>(version.minor << 4 | (version.major & 0b00001111));
+    stream.write_be<uint8_t>(static_cast<uint8_t>(version.minor << 4) | (version.major & 0b00001111));
     stream.write_be<uint16_t>(message_length);
     stream.write_be<uint8_t>(domain_number);
     stream.write_be<uint8_t>(static_cast<uint8_t>(sdo_id));
