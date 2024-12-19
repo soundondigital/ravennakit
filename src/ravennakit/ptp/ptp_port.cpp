@@ -57,6 +57,26 @@ void rav::ptp_port::assert_valid_state(const ptp_profile& profile) const {
     port_ds_.assert_valid_state(profile);
 }
 
+std::optional<rav::ptp_announce_message> rav::ptp_port::execute_state_decision_event() {
+    if (port_ds_.port_state == ptp_state::disabled || port_ds_.port_state == ptp_state::faulty
+        || port_ds_.port_state == ptp_state::initializing) {
+        return std::nullopt;
+    }
+
+    // TODO: compute Erbest using data set comparison algorithm
+
+    // Only consider qualified messages
+
+    // If SLAVE, UNCALIBRATED, or PASSIVE include previous Erbest, but if a newer message from this port is available
+    // then this should be used.
+
+
+}
+
+rav::ptp_state rav::ptp_port::state() const {
+    return port_ds_.port_state;
+}
+
 void rav::ptp_port::handle_recv_event(const udp_sender_receiver::recv_event& event) {
     const buffer_view data(event.data, event.size);
     auto header = ptp_message_header::from_data(data);
@@ -186,9 +206,9 @@ void rav::ptp_port::handle_announce_message(
         return;
     }
 
-    /// IEEE 1588-2019: 9.3.2.5 a)
-    if (parent_.has_port_identity(announce_message.header.source_port_identity)) {
-        RAV_TRACE("Discarding announce message from known port identity");
+    if (announce_message.header.source_port_identity.clock_identity == port_ds_.port_identity.clock_identity) {
+        RAV_TRACE("Discarding announce message from the same PTP instance");
+        // Note: this is a shortcut for one of the checks if a message is qualified.
         return;
     }
 
@@ -196,9 +216,8 @@ void rav::ptp_port::handle_announce_message(
         && announce_message.header.source_port_identity == parent_.get_parent_ds().parent_port_identity) {
         // Message is from current parent ptp instance (master)
         parent_.update_data_sets(ptp_state_decision_code::s1, announce_message);
-        // TODO: Update port_ds state
     } else {
-        // TODO: Update or create entry in foreign master list
+        foreign_master_list_.add_or_update_entry(announce_message);
     }
 
     // TODO: Trigger STATE_DECISION_EVENT? Can also happen on a regular interval.

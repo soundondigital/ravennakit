@@ -48,6 +48,17 @@ class ptp_port {
      */
     void assert_valid_state(const ptp_profile& profile) const;
 
+    /**
+     * Executes a state decision event for this port.
+     * @return The best announce message of this port (Ebest) if there is one, otherwise std::nullopt.
+     */
+    std::optional<ptp_announce_message> execute_state_decision_event();
+
+    /**
+     * @return The current state of this port.
+     */
+    [[nodiscard]] ptp_state state() const;
+
   private:
     ptp_instance& parent_;
     ptp_port_ds port_ds_;

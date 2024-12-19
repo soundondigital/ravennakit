@@ -66,6 +66,13 @@ class sequence_number {
     }
 
     /**
+     * @returns The value of the sequence number.
+     */
+    T value() const {
+        return value_;
+    }
+
+    /**
      * Assigns a new value to the sequence number.
      * @param value The new value of the sequence number.
      * @return This instance.

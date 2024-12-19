@@ -54,6 +54,11 @@ class ptp_instance {
      */
     [[nodiscard]] bool has_port_identity(const ptp_port_identity& port_identity) const;
 
+    /**
+     * Execute a state decision event on all ports in the PTP instance.
+     */
+    void execute_state_decision_event();
+
   private:
     asio::io_context& io_context_;
     ptp_default_ds default_ds_;

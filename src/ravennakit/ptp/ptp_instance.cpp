@@ -73,6 +73,31 @@ bool rav::ptp_instance::has_port_identity(const ptp_port_identity& port_identity
     return false;
 }
 
+void rav::ptp_instance::execute_state_decision_event() {
+    // Note: should be called at least every announce message transmission interval
+
+    const auto all_ports_initializing = std::all_of(ports_.begin(), ports_.end(), [](const auto& port) {
+        return port->state() == ptp_state::initializing;
+    });
+
+    if (all_ports_initializing) {
+        RAV_TRACE("Not executing state decision event because all ports are in slave state");
+        return;
+    }
+
+    std::vector<ptp_announce_message> best_announce_messages;
+    for (const auto& port : ports_) {
+        if (auto ebest = port->execute_state_decision_event()) {
+            best_announce_messages.push_back(ebest.value());
+        }
+    }
+
+    // TODO: Compute Ebest
+    // TODO: Apply state decision algorithm
+    // TODO: Update data sets for all ports
+    // TODO: Instantiate the recommended state event in the state machine and make required changes in all PTP ports
+}
+
 uint16_t rav::ptp_instance::get_next_available_port_number() const {
     for (uint16_t i = ptp_port_identity::k_port_number_min; i <= ptp_port_identity::k_port_number_max; ++i) {
         if (std::none_of(ports_.begin(), ports_.end(), [i](const auto& port) {

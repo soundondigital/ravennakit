@@ -12,6 +12,7 @@
 
 #include "ravennakit/core/containers/buffer_view.hpp"
 #include "ravennakit/core/streams/output_stream.hpp"
+#include "ravennakit/core/util/sequence_number.hpp"
 #include "ravennakit/ptp/ptp_definitions.hpp"
 #include "ravennakit/ptp/ptp_error.hpp"
 #include "ravennakit/ptp/types/ptp_port_identity.hpp"
@@ -63,7 +64,7 @@ struct ptp_message_header {
     flag_field flags;
     int64_t correction_field {};
     ptp_port_identity source_port_identity;
-    uint16_t sequence_id {};
+    uint16_t sequence_id{};
     int8_t log_message_interval {};
 
     /**
