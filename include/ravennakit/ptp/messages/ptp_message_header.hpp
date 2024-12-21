@@ -65,7 +65,7 @@ struct ptp_message_header {
     flag_field flags;
     int64_t correction_field {};
     ptp_port_identity source_port_identity;
-    uint16_t sequence_id{};
+    sequence_number<uint16_t> sequence_id{};
     int8_t log_message_interval {};
 
     /**

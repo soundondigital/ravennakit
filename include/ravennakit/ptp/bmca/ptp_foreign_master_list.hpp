@@ -45,8 +45,7 @@ class ptp_foreign_master_list {
         if (auto* entry = find_entry(foreign_port_identity)) {
             // IEEE 1588-2019: 9.3.2.5.b If message is not the most recent one, it is not qualified.
             if (entry->most_recent_announce_message) {
-                if (sequence_number(announce_message.header.sequence_id)
-                    <= sequence_number(entry->most_recent_announce_message->header.sequence_id)) {
+                if (announce_message.header.sequence_id <= entry->most_recent_announce_message->header.sequence_id) {
                     RAV_WARNING("Discarding announce message because it is not the most recent one");
                     return;
                 }

@@ -46,9 +46,6 @@ struct ptp_announce_message {
      */
     [[nodiscard]] std::string to_string() const;
 
-    bool is_newer(const ptp_announce_message& other) const {
-        return header.sequence_id > other.header.sequence_id;
-    }
 private:
     constexpr static size_t k_message_size = 30; // Excluding header size
 };

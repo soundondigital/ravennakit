@@ -250,8 +250,11 @@ void rav::ptp_port::handle_announce_message(
     if (port_ds_.port_state == ptp_state::slave || port_ds_.port_state == ptp_state::uncalibrated
         || port_ds_.port_state == ptp_state::passive) {
         if (erbest_ && erbest_->header.source_port_identity == announce_message.header.source_port_identity) {
-            // TODO: Test whether the announce message is newer than the previous Erbest
-            erbest_ = announce_message;
+            if (announce_message.header.sequence_id > erbest_->header.sequence_id) {
+                erbest_ = announce_message;
+            } else {
+                RAV_WARNING("Received an older announce message from the same port");
+            }
         }
     }
 

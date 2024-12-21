@@ -114,7 +114,7 @@ void rav::ptp_message_header::write_to(output_stream& stream) const {
     stream.write_be<int64_t>(correction_field);
     stream.write_be<uint32_t>(0);  // Ignored
     source_port_identity.write_to(stream);
-    stream.write_be<uint16_t>(sequence_id);
+    stream.write_be<uint16_t>(sequence_id.value());
     stream.write_be<uint8_t>(0);  // Ignored
     stream.write_be<int8_t>(log_message_interval);
 }
@@ -122,8 +122,8 @@ void rav::ptp_message_header::write_to(output_stream& stream) const {
 std::string rav::ptp_message_header::to_string() const {
     return fmt::format(
         "PTP {}: sdo_id={} version={}.{} domain_number={} sequence_id={} source_port_identity={}.{}",
-        rav::to_string(message_type), sdo_id.to_string(), version.major, version.minor, domain_number, sequence_id,
-        source_port_identity.clock_identity.to_string(), source_port_identity.port_number
+        rav::to_string(message_type), sdo_id.to_string(), version.major, version.minor, domain_number,
+        sequence_id.value(), source_port_identity.clock_identity.to_string(), source_port_identity.port_number
     );
 }
 
