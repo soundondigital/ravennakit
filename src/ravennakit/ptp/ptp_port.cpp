@@ -263,6 +263,26 @@ void rav::ptp_port::handle_recv_event(const udp_sender_receiver::recv_event& eve
         return;
     }
 
+    RAV_TRACE(
+        "{} from {}", to_string(header.value().message_type),
+        header.value().source_port_identity.clock_identity.to_string()
+    );
+
+    if (port_ds_.port_state == ptp_state::initializing) {
+        RAV_TRACE("Discarding announce message while initializing");
+        return;
+    }
+
+    if (port_ds_.port_state == ptp_state::disabled) {
+        RAV_TRACE("Discarding announce message while disabled");
+        return;
+    }
+
+    if (port_ds_.port_state == ptp_state::faulty) {
+        RAV_TRACE("Discarding announce message while faulty");
+        return;
+    }
+
     switch (header->message_type) {
         case ptp_message_type::announce: {
             auto announce_message =
@@ -270,25 +290,24 @@ void rav::ptp_port::handle_recv_event(const udp_sender_receiver::recv_event& eve
             if (!announce_message) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(announce_message.error()));
             }
-            RAV_TRACE("Announce from {}", announce_message->source_to_string());
             handle_announce_message(announce_message.value(), {});
             break;
         }
         case ptp_message_type::sync: {
-            auto sync_message = ptp_sync_message::from_data(data.subview(ptp_message_header::k_header_size));
+            auto sync_message =
+                ptp_sync_message::from_data(header.value(), data.subview(ptp_message_header::k_header_size));
             if (!sync_message) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(sync_message.error()));
             }
-            // RAV_TRACE("{} {}", header->to_string(), sync_message->to_string());
             handle_sync_message(sync_message.value(), {});
             break;
         }
         case ptp_message_type::delay_req: {
-            auto delay_req = ptp_delay_req_message::from_data(data.subview(ptp_message_header::k_header_size));
+            auto delay_req =
+                ptp_delay_req_message::from_data(header.value(), data.subview(ptp_message_header::k_header_size));
             if (!delay_req) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(delay_req.error()));
             }
-            // RAV_TRACE("{} {}", header->to_string(), delay_req->to_string());
             handle_delay_req_message(delay_req.value(), {});
             break;
         }
@@ -297,7 +316,6 @@ void rav::ptp_port::handle_recv_event(const udp_sender_receiver::recv_event& eve
             if (!pdelay_req) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(pdelay_req.error()));
             }
-            // RAV_TRACE("{} {}", header->to_string(), pdelay_req->to_string());
             handle_pdelay_req_message(pdelay_req.value(), {});
             break;
         }
@@ -306,25 +324,24 @@ void rav::ptp_port::handle_recv_event(const udp_sender_receiver::recv_event& eve
             if (!pdelay_resp) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(pdelay_resp.error()));
             }
-            // RAV_TRACE("{} {}", header->to_string(), pdelay_resp->to_string());
             handle_pdelay_resp_message(pdelay_resp.value(), {});
             break;
         }
         case ptp_message_type::follow_up: {
-            auto follow_up = ptp_follow_up_message::from_data(data.subview(ptp_message_header::k_header_size));
+            auto follow_up =
+                ptp_follow_up_message::from_data(header.value(), data.subview(ptp_message_header::k_header_size));
             if (!follow_up) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(follow_up.error()));
             }
-            // RAV_TRACE("{} {}", header->to_string(), follow_up->to_string());
             handle_follow_up_message(follow_up.value(), {});
             break;
         }
         case ptp_message_type::delay_resp: {
-            auto delay_resp = ptp_delay_req_message::from_data(data.subview(ptp_message_header::k_header_size));
+            auto delay_resp =
+                ptp_delay_req_message::from_data(header.value(), data.subview(ptp_message_header::k_header_size));
             if (!delay_resp) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(delay_resp.error()));
             }
-            // RAV_TRACE("{} {}", header->to_string(), delay_resp->to_string());
             handle_delay_resp_message(delay_resp.value(), {});
             break;
         }
@@ -334,7 +351,6 @@ void rav::ptp_port::handle_recv_event(const udp_sender_receiver::recv_event& eve
             if (!pdelay_resp_follow_up) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(pdelay_resp_follow_up.error()));
             }
-            // RAV_TRACE("{} {}", header->to_string(), pdelay_resp_follow_up->to_string());
             handle_pdelay_resp_follow_up_message(pdelay_resp_follow_up.value(), {});
             break;
         }
@@ -363,21 +379,6 @@ void rav::ptp_port::handle_announce_message(
 ) {
     std::ignore = announce_message;
     std::ignore = tlvs;
-
-    if (port_ds_.port_state == ptp_state::initializing) {
-        RAV_TRACE("Discarding announce message while initializing");
-        return;
-    }
-
-    if (port_ds_.port_state == ptp_state::disabled) {
-        RAV_TRACE("Discarding announce message while disabled");
-        return;
-    }
-
-    if (port_ds_.port_state == ptp_state::faulty) {
-        RAV_TRACE("Discarding announce message while faulty");
-        return;
-    }
 
     // IEEE 1588-2019: 9.3.2.5.a If a message comes from the same PTP instance, the message is not qualified.
     if (announce_message.header.source_port_identity.clock_identity == port_ds_.port_identity.clock_identity) {
@@ -425,6 +426,24 @@ void rav::ptp_port::handle_announce_message(
 void rav::ptp_port::handle_sync_message(const ptp_sync_message& sync_message, buffer_view<const uint8_t> tlvs) {
     std::ignore = sync_message;
     std::ignore = tlvs;
+
+    if (!(port_ds_.port_state == ptp_state::slave || port_ds_.port_state == ptp_state::uncalibrated)) {
+        RAV_TRACE("Discarding sync message while not in slave or uncalibrated state");
+        return;
+    }
+
+    if (sync_message.header.source_port_identity != parent_.get_parent_ds().parent_port_identity) {
+        RAV_TRACE("Discarding sync message from a different source");
+        return;
+    }
+
+    // TODO: Take <syncEventIngressTimestamp> (here or earlier?)
+
+    if (!sync_message.header.flags.two_step_flag) {
+        // TODO: Execute clock adjustments
+    }
+
+    // TODO: Else what?
 }
 
 void rav::ptp_port::handle_delay_req_message(
@@ -439,6 +458,18 @@ void rav::ptp_port::handle_follow_up_message(
 ) {
     std::ignore = follow_up_message;
     std::ignore = tlvs;
+
+    if (!(port_ds_.port_state == ptp_state::slave || port_ds_.port_state == ptp_state::uncalibrated)) {
+        RAV_TRACE("Discarding sync message while not in slave or uncalibrated state");
+        return;
+    }
+
+    if (follow_up_message.header.source_port_identity != parent_.get_parent_ds().parent_port_identity) {
+        RAV_TRACE("Discarding sync message from a different source");
+        return;
+    }
+
+    // TODO: Find associated sync message and execute clock adjustments
 }
 
 void rav::ptp_port::handle_delay_resp_message(

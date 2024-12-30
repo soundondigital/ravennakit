@@ -16,14 +16,16 @@
 namespace rav {
 
 struct ptp_sync_message {
+    ptp_message_header header;
     ptp_timestamp origin_timestamp;
 
     /**
      * Create a ptp_announce_message from a buffer_view.
+     * @param header The header of the message.
      * @param data The message data. Expects it to start at the beginning of the message, excluding the header.
      * @return A ptp_announce_message if the data is valid, otherwise a ptp_error.
      */
-    static tl::expected<ptp_sync_message, ptp_error> from_data(buffer_view<const uint8_t> data);
+    static tl::expected<ptp_sync_message, ptp_error> from_data(const ptp_message_header& header, buffer_view<const uint8_t> data);
 
     /**
      * Write the ptp_announce_message to a stream.

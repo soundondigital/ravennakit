@@ -18,7 +18,7 @@ TEST_CASE("ptp_follow_up_message") {
         constexpr std::array<const uint8_t, 30> data {
             0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90,
         };
-        auto follow = rav::ptp_follow_up_message::from_data(rav::buffer_view(data)).value();
+        auto follow = rav::ptp_follow_up_message::from_data({}, rav::buffer_view(data)).value();
         REQUIRE(follow.precise_origin_timestamp.seconds == 0x123456789012);
         REQUIRE(follow.precise_origin_timestamp.nanoseconds == 0x34567890);
     }
