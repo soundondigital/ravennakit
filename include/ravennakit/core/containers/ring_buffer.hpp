@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "ravennakit/core/assert.hpp"
+
 #include <vector>
 
 namespace rav {
@@ -21,8 +23,34 @@ namespace rav {
 template<class T>
 class ring_buffer {
   public:
-    explicit ring_buffer(size_t size) : data_(size) {}
+    explicit ring_buffer(size_t size) : data_(size) {
+        RAV_ASSERT(size > 0, "Ring buffer must have a size greater than zero");
+    }
+
     ring_buffer(std::initializer_list<T> initializer_list) : data_(initializer_list), count_(initializer_list.size()) {}
+
+    ring_buffer(const ring_buffer& other) = default;
+    ring_buffer& operator=(const ring_buffer& other) = default;
+
+    ring_buffer(ring_buffer&& other) noexcept {
+        if (this != &other) {
+            std::swap(data_, other.data_);
+            std::swap(read_index_, other.read_index_);
+            std::swap(write_index_, other.write_index_);
+            std::swap(count_, other.count_);
+        }
+    }
+
+    ring_buffer& operator=(ring_buffer&& other) noexcept {
+        if (this != &other) {
+            std::swap(data_, other.data_);
+            std::swap(read_index_, other.read_index_);
+            std::swap(write_index_, other.write_index_);
+            std::swap(count_, other.count_);
+            other.clear();
+        }
+        return *this;
+    }
 
     /**
      * Add an element to the buffer. If the buffer is full, the oldest element will be overwritten.
@@ -52,7 +80,7 @@ class ring_buffer {
     }
 
     /**
-     * Indexing operator.
+     * Indexing operator. Buffer must not have zero capacity.
      * @param index The logical index of the element to access. The index will wrap around if too high.
      * @return The element at the given index.
      */
@@ -61,7 +89,7 @@ class ring_buffer {
     }
 
     /**
-     * Indexing operator
+     * Indexing operator. Buffer must not have zero capacity.
      * @param index The logical index of the element to access. The index will wrap around if too high.
      * @return The element at the given index.
      */
@@ -98,6 +126,18 @@ class ring_buffer {
         read_index_ = 0;
         write_index_ = 0;
         count_ = 0;
+    }
+
+    auto tie() {
+        return std::tie(data_, read_index_, write_index_, count_);
+    }
+
+    friend bool operator==(const ring_buffer& lhs, const ring_buffer& rhs) {
+        return lhs.tie() == rhs.tie();
+    }
+
+    friend bool operator!=(const ring_buffer& lhs, const ring_buffer& rhs) {
+        return lhs.tie() != rhs.tie();
     }
 
     /**
