@@ -10,6 +10,8 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <map>
+
 TEST_CASE("std::multimap") {
     SECTION("Test order") {
         std::multimap<int, int> map;
