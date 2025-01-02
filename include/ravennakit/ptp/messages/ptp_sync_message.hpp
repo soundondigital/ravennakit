@@ -16,7 +16,7 @@
 namespace rav {
 
 struct ptp_sync_message {
-    constexpr static size_t k_message_size = 10; // Excluding header size
+    constexpr static size_t k_message_length = ptp_message_header::k_header_size + 10;
 
     ptp_message_header header;
     ptp_timestamp origin_timestamp;

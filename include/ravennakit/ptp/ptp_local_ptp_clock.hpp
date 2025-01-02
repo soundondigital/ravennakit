@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ptp_local_clock.hpp"
+#include "types/ptp_timestamp.hpp"
 
 #include <cstdint>
 
@@ -22,16 +23,13 @@ namespace rav {
  */
 class ptp_local_ptp_clock {
 public:
-    [[nodiscard]] uint64_t now() const {
-        return ptp_local_clock::now() + correction_;
+    [[nodiscard]] ptp_timestamp now() const {
+        return ptp_local_clock::now(); // TODO: Add correction value based on PTP messages
     }
 
     [[nodiscard]] bool is_calibrated() const {
-        return false;
+        return false; // TODO: Implement calibration
     }
-
-private:
-    int64_t correction_ {};
 };
 
 }

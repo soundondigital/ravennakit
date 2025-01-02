@@ -63,6 +63,14 @@ class udp_sender_receiver {
     void start(handler_type handler) const;
 
     /**
+     * Sends a datagram to the given endpoint.
+     * @param data The data to send.
+     * @param size The size of the data. Must be smaller than MTU.
+     * @param endpoint The endpoint to send the data to.
+     */
+    void send(const uint8_t* data, size_t size, const asio::ip::udp::endpoint& endpoint) const;
+
+    /**
      * Join a multicast group. A group can be joined multiple times as the group will be counted internally. Only when
      * the last subscription is removed will the group be left.
      * @param multicast_address The multicast address to join.

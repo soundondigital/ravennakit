@@ -212,7 +212,7 @@ rav::ptp_state rav::ptp_instance::get_state_for_decision_code(const ptp_state_de
     }
 }
 
-uint64_t rav::ptp_instance::get_current_ptp_time() const {
+rav::ptp_timestamp rav::ptp_instance::get_local_ptp_time() const {
     return local_ptp_clock_.now();
 }
 

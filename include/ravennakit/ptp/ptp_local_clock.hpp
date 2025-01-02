@@ -11,16 +11,21 @@
 #pragma once
 
 #include "ravennakit/core/chrono/high_resolution_clock.hpp"
+#include "types/ptp_timestamp.hpp"
 
 #include <cstdint>
 
 namespace rav {
 
+/**
+ * A class that maintains a local clock.
+ * This implementation is a simple wrapper around the high_resolution_clock.
+ */
 class ptp_local_clock {
-public:
-    [[nodiscard]] static uint64_t now() {
-        return high_resolution_clock::now();
+  public:
+    [[nodiscard]] static ptp_timestamp now() {
+        return ptp_timestamp(high_resolution_clock::now());
     }
 };
 
-}
+}  // namespace rav

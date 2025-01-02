@@ -39,6 +39,7 @@ rav::ptp_port::ptp_port(
     general_socket_(io_context, asio::ip::address_v4(), k_ptp_general_port) {
     // Initialize the port data set
     port_ds_.port_identity = port_identity;
+    port_ds_.delay_mechanism = ptp_delay_mechanism::e2e;  // TODO: Make this configurable
     set_state(ptp_state::initializing);
 
     subscriptions_.push_back(event_socket_.join_multicast_group(k_ptp_multicast_address, interface_address));
@@ -152,36 +153,6 @@ void rav::ptp_port::schedule_announce_receipt_timeout() {
     });
 }
 
-void rav::ptp_port::schedule_delay_req_message_send(const ptp_delay_req_message& delay_req_message, uint64_t t2) {
-    RAV_ASSERT(
-        port_ds_.port_state == ptp_state::slave || port_ds_.port_state == ptp_state::uncalibrated,
-        "Delay request message should only be scheduled in slave or uncalibrated state"
-    );
-    RAV_ASSERT(
-        port_ds_.delay_mechanism == ptp_delay_mechanism::e2e,
-        "Delay request message should only be scheduled when E2E delay mechanism is configured"
-    );
-
-    const auto max_interval_ms = std::pow(2, port_ds_.log_min_delay_req_interval + 1) * 1000;
-    const auto interval = random().get_random_interval_ms(0, static_cast<int>(max_interval_ms));
-
-
-
-
-    delay_req_timer_.expires_after(interval);
-    delay_req_timer_.async_wait([this](const std::error_code& error) {
-        if (error == asio::error::operation_aborted) {
-            return;
-        }
-        if (error) {
-            RAV_ERROR("Delay req timer error: {}", error.message());
-        }
-        // TODO: Send delay request message
-
-        // schedule_delay_req_message_send(TODO, TODO);  // Schedule another delay request message
-    });
-}
-
 void rav::ptp_port::set_state(const ptp_state new_state) {
     if (new_state == port_ds_.port_state) {
         return;
@@ -210,7 +181,7 @@ void rav::ptp_port::set_state(const ptp_state new_state) {
 
     port_ds_.port_state = new_state;
 
-    RAV_INFO("Switching port {} to state {}", port_ds_.port_identity.port_number, to_string(new_state));
+    RAV_INFO("Switching port {} to {}", port_ds_.port_identity.port_number, to_string(new_state));
 }
 
 void rav::ptp_port::trigger_announce_receipt_timeout_expires_event() {
@@ -220,6 +191,52 @@ void rav::ptp_port::trigger_announce_receipt_timeout_expires_event() {
     } else {
         RAV_ASSERT_FALSE("Master state not implemented");
     }
+}
+
+void rav::ptp_port::process_request_response_delay_sequence() {
+    RAV_ASSERT(
+        port_ds_.port_state == ptp_state::slave || port_ds_.port_state == ptp_state::uncalibrated,
+        "Request-response delay sequence should only be processed in slave or uncalibrated state"
+    );
+    RAV_ASSERT(
+        port_ds_.delay_mechanism == ptp_delay_mechanism::e2e,
+        "Request-response delay sequence should only be processed in E2E delay mechanism"
+    );
+
+    const auto now = std::chrono::steady_clock::now();
+    std::optional<std::chrono::time_point<std::chrono::steady_clock>> next_timer_expires_at;
+    for (auto& seq : request_response_delay_sequences_) {
+        if (auto send_at = seq.get_delay_req_send_time()) {
+            if (now >= send_at.value()) {
+                send_delay_req_message(seq);
+            } else if (next_timer_expires_at) {
+                if (send_at.value() < next_timer_expires_at.value()) {
+                    next_timer_expires_at = send_at;
+                }
+            } else {
+                next_timer_expires_at = send_at;
+            }
+        }
+    }
+
+    if (next_timer_expires_at) {
+        delay_req_timer_.expires_at(*next_timer_expires_at);
+        delay_req_timer_.async_wait([this](const std::error_code& error) {
+            if (error == asio::error::operation_aborted) {
+                return;
+            }
+            if (error) {
+                RAV_ERROR("Delay req timer error: {}", error.message());
+            }
+            process_request_response_delay_sequence();
+        });
+    }
+}
+
+void rav::ptp_port::send_delay_req_message(ptp_request_response_delay_sequence& sequence) {
+    auto msg = sequence.create_delay_req_message(port_ds_);
+    byte_stream stream;
+    msg.write_to(stream);
 }
 
 rav::ptp_state rav::ptp_port::state() const {
@@ -335,21 +352,9 @@ void rav::ptp_port::handle_recv_event(const udp_sender_receiver::recv_event& eve
             handle_sync_message(sync_message.value(), {});
             break;
         }
-        case ptp_message_type::delay_req: {
-            auto delay_req =
-                ptp_delay_req_message::from_data(header.value(), data.subview(ptp_message_header::k_header_size));
-            if (!delay_req) {
-                RAV_ERROR("{} error: {}", header->to_string(), to_string(delay_req.error()));
-            }
-            handle_delay_req_message(delay_req.value(), {});
-            break;
-        }
+        case ptp_message_type::delay_req:
         case ptp_message_type::p_delay_req: {
-            auto pdelay_req = ptp_pdelay_req_message::from_data(data.subview(ptp_message_header::k_header_size));
-            if (!pdelay_req) {
-                RAV_ERROR("{} error: {}", header->to_string(), to_string(pdelay_req.error()));
-            }
-            handle_pdelay_req_message(pdelay_req.value(), {});
+            // Ignoring delay request messages because master functionality is not implemented
             break;
         }
         case ptp_message_type::p_delay_resp: {
@@ -460,40 +465,25 @@ void rav::ptp_port::handle_sync_message(const ptp_sync_message& sync_message, bu
     std::ignore = tlvs;
 
     // TODO: Should this timestamp be taken earlier? Or maybe even from the SO_TIMESTAMP value with added latency?
-    const auto t2 = parent_.get_current_ptp_time();
+    const auto sync_receive_time = parent_.get_local_ptp_time();
 
+    // Ignore sync messages when not in slave or uncalibrated state
     if (!(port_ds_.port_state == ptp_state::slave || port_ds_.port_state == ptp_state::uncalibrated)) {
-        RAV_TRACE("Discarding sync message while not in slave or uncalibrated state");
         return;
     }
 
+    // Ignore follow-up messages which are not from current parent
     if (sync_message.header.source_port_identity != parent_.get_parent_ds().parent_port_identity) {
-        RAV_TRACE("Discarding sync message from a different source");
         return;
     }
 
     if (port_ds_.delay_mechanism == ptp_delay_mechanism::e2e) {
-        const ptp_request_response_delay_sequence seq(sync_message, t2);
-        request_response_delay_sequences_.push_back(seq);
-
-        if (!sync_message.header.flags.two_step_flag) {
-            // TODO: Schedule delay request message because no follow-up message is expected
-            auto msg = seq.create_delay_req_message(port_ds_.port_identity);
-            // TODO: Schedule delay request message for sending
-        }
+        request_response_delay_sequences_.push_back({sync_message, sync_receive_time, port_ds_});
     } else if (port_ds_.delay_mechanism == ptp_delay_mechanism::e2e) {
         TODO("Implement P2P delay mechanism");
     } else {
         RAV_ASSERT_FALSE("Unknown delay mechanism");
     }
-}
-
-void rav::ptp_port::handle_delay_req_message(
-    const ptp_delay_req_message& delay_req_message, buffer_view<const uint8_t> tlvs
-) {
-    std::ignore = delay_req_message;
-    std::ignore = tlvs;
-    // Ignoring since only slave operation is supported
 }
 
 void rav::ptp_port::handle_follow_up_message(
@@ -502,21 +492,19 @@ void rav::ptp_port::handle_follow_up_message(
     std::ignore = follow_up_message;
     std::ignore = tlvs;
 
+    // Ignore follow-up messages when not in slave or uncalibrated state
     if (!(port_ds_.port_state == ptp_state::slave || port_ds_.port_state == ptp_state::uncalibrated)) {
-        RAV_TRACE("Discarding sync message while not in slave or uncalibrated state");
         return;
     }
 
+    // Ignore follow-up messages which are not from current parent
     if (follow_up_message.header.source_port_identity != parent_.get_parent_ds().parent_port_identity) {
-        RAV_TRACE("Discarding sync message from a different source");
         return;
     }
 
     for (auto& seq : request_response_delay_sequences_) {
         if (seq.matches(follow_up_message.header)) {
-            seq.set_follow_up_message(follow_up_message);
-            auto msg = seq.create_delay_req_message(port_ds_.port_identity);
-            // TODO: Schedule delay request message for sending
+            seq.update(follow_up_message, port_ds_);
             return;
         }
     }
@@ -528,13 +516,6 @@ void rav::ptp_port::handle_delay_resp_message(
     const ptp_delay_req_message& delay_resp_message, buffer_view<const uint8_t> tlvs
 ) {
     std::ignore = delay_resp_message;
-    std::ignore = tlvs;
-}
-
-void rav::ptp_port::handle_pdelay_req_message(
-    const ptp_pdelay_req_message& delay_req_message, buffer_view<const uint8_t> tlvs
-) {
-    std::ignore = delay_req_message;
     std::ignore = tlvs;
 }
 

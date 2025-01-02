@@ -88,7 +88,7 @@ class ptp_instance {
     /**
      * @returns The current PTP time from the local PTP clock in nanoseconds.
      */
-    [[nodiscard]] uint64_t get_current_ptp_time() const;
+    [[nodiscard]] ptp_timestamp get_local_ptp_time() const;
 
   private:
     asio::io_context& io_context_;

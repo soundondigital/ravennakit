@@ -15,6 +15,12 @@
 
 TEST_CASE("ptp_sync_message") {
     SECTION("Unpack") {
+        rav::ptp_message_header header;
+        rav::byte_stream stream;
+        header.write_to(stream);
+
+
+
         constexpr std::array<const uint8_t, 30> data {
             0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90,
         };
@@ -29,8 +35,9 @@ TEST_CASE("ptp_sync_message") {
         sync.origin_timestamp.nanoseconds = 0x34567890;
         rav::byte_stream stream;
         sync.write_to(stream);
-        REQUIRE(stream.size() == 10);
-        REQUIRE(stream.read_be<rav::uint48_t>() == 0x123456789012);
-        REQUIRE(stream.read_be<uint32_t>() == 0x34567890);
+        REQUIRE(stream.size() == rav::ptp_sync_message::k_message_length);
+        stream.skip(rav::ptp_message_header::k_header_size);
+        REQUIRE(stream.read_be<rav::uint48_t>() == sync.origin_timestamp.seconds);
+        REQUIRE(stream.read_be<uint32_t>() == sync.origin_timestamp.nanoseconds);
     }
 }

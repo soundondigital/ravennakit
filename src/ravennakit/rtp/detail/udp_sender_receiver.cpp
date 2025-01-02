@@ -138,6 +138,7 @@ class rav::udp_sender_receiver::impl: public std::enable_shared_from_this<impl> 
     void stop();
 
     void async_receive();
+    void send(const uint8_t* data, size_t size, const asio::ip::udp::endpoint& endpoint);
 
     subscription
     join_multicast_group(const asio::ip::address& multicast_address, const asio::ip::address& interface_address);
@@ -149,6 +150,17 @@ class rav::udp_sender_receiver::impl: public std::enable_shared_from_this<impl> 
     handler_type handler_;
     std::vector<multicast_group> multicast_groups_;
 };
+
+void rav::udp_sender_receiver::impl::send(
+    const uint8_t* data, const size_t size, const asio::ip::udp::endpoint& endpoint
+) {
+    RAV_ASSERT(data != nullptr, "Data must not be null");
+    RAV_ASSERT(size > 0, "Size must be greater than 0");
+    const auto sent = socket_.send_to(asio::buffer(data, size), endpoint);
+    if (sent != size) {
+        RAV_ERROR("Failed to send all data");
+    }
+}
 
 void rav::udp_sender_receiver::impl::stop() {
     if (handler_ == nullptr) {
@@ -187,6 +199,12 @@ void rav::udp_sender_receiver::impl::start(handler_type handler) {
 void rav::udp_sender_receiver::start(handler_type handler) const {
     TRACY_ZONE_SCOPED;
     impl_->start(std::move(handler));
+}
+
+void rav::udp_sender_receiver::send(
+    const uint8_t* data, const size_t size, const asio::ip::udp::endpoint& endpoint
+) const {
+    impl_->send(data, size, endpoint);
 }
 
 rav::subscription rav::udp_sender_receiver::join_multicast_group(
