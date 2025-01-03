@@ -18,6 +18,7 @@
 namespace rav {
 
 struct ptp_pdelay_req_message {
+    // TODO: Add the header
     ptp_timestamp origin_timestamp;
     const uint8_t reserved[10] = {}; // To match the messages length of the pdelay_resp message.
 
@@ -29,10 +30,10 @@ struct ptp_pdelay_req_message {
     static tl::expected<ptp_pdelay_req_message, ptp_error> from_data(buffer_view<const uint8_t> data);
 
     /**
-     * Write the ptp_announce_message to a stream.
-     * @param stream The stream to write to.
+     * Write the ptp_announce_message to a byte buffer.
+     * @param buffer The buffer to write to.
      */
-    [[nodiscard]] tl::expected<void, rav::output_stream::error> write_to(output_stream& stream) const;
+    void write_to(byte_buffer& buffer) const;
 
     /**
      * @returns A string representation of the ptp_announce_message.

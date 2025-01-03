@@ -24,10 +24,6 @@ rav::ptp_follow_up_message::from_data(const ptp_message_header& header, const bu
     return msg;
 }
 
-tl::expected<void, rav::output_stream::error> rav::ptp_follow_up_message::write_to(output_stream& stream) const {
-    return precise_origin_timestamp.write_to(stream);
-}
-
 std::string rav::ptp_follow_up_message::to_string() const {
     return fmt::format("precise_origin_timestamp={}", precise_origin_timestamp.to_string());
 }

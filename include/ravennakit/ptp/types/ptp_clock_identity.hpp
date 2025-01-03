@@ -15,6 +15,7 @@
 #include "ravennakit/core/net/interfaces/mac_address.hpp"
 #include "ravennakit/core/util/todo.hpp"
 #include "ravennakit/core/containers/buffer_view.hpp"
+#include "ravennakit/core/containers/byte_buffer.hpp"
 #include "ravennakit/core/streams/output_stream.hpp"
 
 #include <cstdint>
@@ -49,11 +50,11 @@ struct ptp_clock_identity {
     }
 
     /**
-     * Writes the clock identity to the given stream.
-     * @param stream The stream to write the clock identity to.
+     * Write the ptp_announce_message to a byte buffer.
+     * @param buffer The buffer to write to.
      */
-    [[nodiscard]] tl::expected<void, output_stream::error> write_to(output_stream& stream) const {
-        return stream.write(data.data(), data.size());
+    void write_to(byte_buffer& buffer) const {
+        buffer.write(data.data(), data.size());
     }
 
     /**

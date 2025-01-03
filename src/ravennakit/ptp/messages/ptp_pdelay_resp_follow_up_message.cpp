@@ -26,13 +26,6 @@ rav::ptp_pdelay_resp_follow_up_message::from_data(const buffer_view<const uint8_
     return msg;
 }
 
-tl::expected<void, rav::output_stream::error>
-rav::ptp_pdelay_resp_follow_up_message::write_to(byte_stream& stream) const {
-    OK_OR_RETURN(response_origin_timestamp.write_to(stream));
-    OK_OR_RETURN(requesting_port_identity.write_to(stream));
-    return {};
-}
-
 std::string rav::ptp_pdelay_resp_follow_up_message::to_string() const {
     return fmt::format(
         "response_origin_timestamp={} requesting_port_identity={}", response_origin_timestamp.to_string(),

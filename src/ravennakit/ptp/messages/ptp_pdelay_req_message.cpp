@@ -21,8 +21,8 @@ rav::ptp_pdelay_req_message::from_data(const buffer_view<const uint8_t> data) {
     return msg;
 }
 
-tl::expected<void, rav::output_stream::error> rav::ptp_pdelay_req_message::write_to(output_stream& stream) const {
-    return origin_timestamp.write_to(stream);
+void rav::ptp_pdelay_req_message::write_to(byte_buffer& buffer) const {
+    return origin_timestamp.write_to(buffer);
 }
 
 std::string rav::ptp_pdelay_req_message::to_string() const {

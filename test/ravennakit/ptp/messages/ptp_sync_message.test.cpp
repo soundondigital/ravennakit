@@ -9,6 +9,7 @@
  */
 
 #include "ravennakit/core/streams/byte_stream.hpp"
+#include "ravennakit/core/streams/input_stream_view.hpp"
 #include "ravennakit/ptp/messages/ptp_sync_message.hpp"
 
 #include <catch2/catch_all.hpp>
@@ -28,11 +29,13 @@ TEST_CASE("ptp_sync_message") {
         rav::ptp_sync_message sync;
         sync.origin_timestamp.seconds = 0x123456789012;
         sync.origin_timestamp.nanoseconds = 0x34567890;
-        rav::byte_stream stream;
-        REQUIRE(sync.write_to(stream));
-        REQUIRE(stream.size() == rav::ptp_sync_message::k_message_length);
-        REQUIRE(stream.skip(rav::ptp_message_header::k_header_size));
-        REQUIRE(stream.read_be<rav::uint48_t>() == sync.origin_timestamp.seconds);
-        REQUIRE(stream.read_be<uint32_t>() == sync.origin_timestamp.nanoseconds);
+        rav::byte_buffer buffer;
+        sync.write_to(buffer);
+
+        rav::input_stream_view buffer_view(buffer);
+        REQUIRE(buffer_view.size() == rav::ptp_sync_message::k_message_length);
+        REQUIRE(buffer_view.skip(rav::ptp_message_header::k_header_size));
+        REQUIRE(buffer_view.read_be<rav::uint48_t>() == sync.origin_timestamp.seconds);
+        REQUIRE(buffer_view.read_be<uint32_t>() == sync.origin_timestamp.nanoseconds);
     }
 }

@@ -12,6 +12,7 @@
 
 #include "ravennakit/core/byte_order.hpp"
 #include "ravennakit/core/containers/buffer_view.hpp"
+#include "ravennakit/core/containers/byte_buffer.hpp"
 #include "ravennakit/core/streams/output_stream.hpp"
 #include "ravennakit/core/types/uint48.hpp"
 
@@ -54,13 +55,12 @@ struct ptp_timestamp {
     }
 
     /**
-     * Writes the ptp_timestamp to the given stream.
-     * @param stream The stream to write the ptp_timestamp to.
+     * Write the ptp_announce_message to a byte buffer.
+     * @param buffer The buffer to write to.
      */
-    [[nodiscard]] tl::expected<void, output_stream::error> write_to(output_stream& stream) const {
-        OK_OR_RETURN(stream.write_be<uint48_t>(seconds));
-        OK_OR_RETURN(stream.write_be<uint32_t>(nanoseconds));
-        return {};
+    void write_to(byte_buffer& buffer) const {
+        buffer.write_be<uint48_t>(seconds);
+        buffer.write_be<uint32_t>(nanoseconds);
     }
 
     /**

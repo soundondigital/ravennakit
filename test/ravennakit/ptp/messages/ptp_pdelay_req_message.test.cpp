@@ -27,10 +27,18 @@ TEST_CASE("ptp_pdelay_req_message") {
         rav::ptp_pdelay_req_message msg;
         msg.origin_timestamp.seconds = 0x123456789012;
         msg.origin_timestamp.nanoseconds = 0x34567890;
-        rav::byte_stream stream;
-        REQUIRE(msg.write_to(stream));
-        REQUIRE(stream.size() == 10);
-        REQUIRE(stream.read_be<rav::uint48_t>() == 0x123456789012);
-        REQUIRE(stream.read_be<uint32_t>() == 0x34567890);
+        rav::byte_buffer buffer;
+        msg.write_to(buffer);
+        REQUIRE(buffer.size() == 10);
+        REQUIRE(buffer.data()[0] == 0x12);
+        REQUIRE(buffer.data()[1] == 0x34);
+        REQUIRE(buffer.data()[2] == 0x56);
+        REQUIRE(buffer.data()[3] == 0x78);
+        REQUIRE(buffer.data()[4] == 0x90);
+        REQUIRE(buffer.data()[5] == 0x12);
+        REQUIRE(buffer.data()[6] == 0x34);
+        REQUIRE(buffer.data()[7] == 0x56);
+        REQUIRE(buffer.data()[8] == 0x78);
+        REQUIRE(buffer.data()[9] == 0x90);
     }
 }

@@ -235,13 +235,10 @@ void rav::ptp_port::process_request_response_delay_sequence() {
 
 void rav::ptp_port::send_delay_req_message(ptp_request_response_delay_sequence& sequence) {
     const auto msg = sequence.create_delay_req_message(port_ds_);
-    byte_stream stream;  // TODO: Reuse the stream
-    if (!msg.write_to(stream)) {
-        RAV_ERROR("Failed to write delay request message");
-        return;
-    }
-
-    // event_socket_.send(stream.data().data(), stream.data().size(), {k_ptp_multicast_address, k_ptp_event_port});
+    byte_buffer buffer;  // TODO: Reuse the buffer
+    msg.write_to(buffer);
+    event_socket_.send(buffer.data(), buffer.size(), {k_ptp_multicast_address, k_ptp_event_port});
+    // TODO: Take timestamp, update sequence.
 }
 
 rav::ptp_state rav::ptp_port::state() const {

@@ -9,6 +9,7 @@
  */
 
 #include "ravennakit/core/streams/byte_stream.hpp"
+#include "ravennakit/core/streams/input_stream_view.hpp"
 #include "ravennakit/ptp/messages/ptp_message_header.hpp"
 
 #include <catch2/catch_all.hpp>
@@ -72,7 +73,6 @@ TEST_CASE("ptp_message_header") {
     }
 
     SECTION("Write to stream") {
-        rav::byte_stream stream;
         rav::ptp_message_header header;
         header.sdo_id.major = 0xf;
         header.sdo_id.minor = 0x22;
@@ -93,8 +93,12 @@ TEST_CASE("ptp_message_header") {
         header.source_port_identity.port_number = 0xabcd;
         header.sequence_id = 0x1122;
         header.log_message_interval = -127;
-        REQUIRE(header.write_to(stream));
+        rav::byte_buffer buffer;
+        header.write_to(buffer);
 
+        REQUIRE(buffer.size() == 34);
+
+        rav::input_stream_view stream(buffer);
         REQUIRE(stream.read_be<uint8_t>().value() == 0xfd);                 // majorSdoId & messageType
         REQUIRE(stream.read_be<uint8_t>().value() == 0x12);                 // minorVersionPTP & versionPTP
         REQUIRE(stream.read_be<uint16_t>().value() == 300);                 // messageLength

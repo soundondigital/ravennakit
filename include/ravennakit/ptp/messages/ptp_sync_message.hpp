@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ptp_message_header.hpp"
+#include "ravennakit/core/containers/byte_buffer.hpp"
 #include "ravennakit/ptp/types/ptp_timestamp.hpp"
 
 namespace rav {
@@ -30,10 +31,10 @@ struct ptp_sync_message {
     static tl::expected<ptp_sync_message, ptp_error> from_data(const ptp_message_header& header, buffer_view<const uint8_t> data);
 
     /**
-     * Write the ptp_announce_message to a stream.
-     * @param stream The stream to write to.
+     * Write the ptp_announce_message to a byte buffer.
+     * @param buffer The buffer to write to.
      */
-    [[nodiscard]] tl::expected<void, rav::output_stream::error> write_to(output_stream& stream) const;
+    void write_to(byte_buffer& buffer) const;
 
     /**
      * @returns A string representation of the ptp_announce_message.

@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ravennakit/core/containers/buffer_view.hpp"
+#include "ravennakit/core/containers/byte_buffer.hpp"
 #include "ravennakit/core/streams/output_stream.hpp"
 #include "ravennakit/core/util/sequence_number.hpp"
 #include "ravennakit/ptp/ptp_definitions.hpp"
@@ -76,10 +77,10 @@ struct ptp_message_header {
     static tl::expected<ptp_message_header, ptp_error> from_data(buffer_view<const uint8_t> data);
 
     /**
-     * Writes the PTP message header to the given stream.
-     * @param stream The stream to write the PTP message header to.
+     * Write the ptp_announce_message to a byte buffer.
+     * @param buffer The buffer to write to.
      */
-    [[nodiscard]] tl::expected<void, output_stream::error> write_to(output_stream& stream) const;
+    void write_to(byte_buffer& buffer) const;
 
     /**
      * Converts the PTP message header to a human-readable string.

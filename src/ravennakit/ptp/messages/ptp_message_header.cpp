@@ -102,24 +102,21 @@ rav::ptp_message_header::from_data(buffer_view<const uint8_t> data) {
     return header;
 }
 
-tl::expected<void, rav::output_stream::error> rav::ptp_message_header::write_to(output_stream& stream) const {
+void rav::ptp_message_header::write_to(byte_buffer& buffer) const {
     // major sdo id + message type (left shift by multiplication to avoid type promotion)
-    OK_OR_RETURN(
-        stream.write_be<uint8_t>(((sdo_id.major & 0b00001111) * 16) | (static_cast<uint8_t>(message_type) & 0b00001111))
-    );
+    buffer.write_be<uint8_t>(((sdo_id.major & 0b00001111) * 16) | (static_cast<uint8_t>(message_type) & 0b00001111));
     // minor version ptp + version ptp (left shift by multiplication to avoid type promotion)
-    OK_OR_RETURN(stream.write_be<uint8_t>((version.minor * 16) | (version.major & 0b00001111)));
-    OK_OR_RETURN(stream.write_be<uint16_t>(message_length));
-    OK_OR_RETURN(stream.write_be<uint8_t>(domain_number));
-    OK_OR_RETURN(stream.write_be<uint8_t>(sdo_id.minor));
-    OK_OR_RETURN(stream.write_be<uint16_t>(flags.to_octets()));
-    OK_OR_RETURN(stream.write_be<int64_t>(correction_field));
-    OK_OR_RETURN(stream.write_be<uint32_t>(0));  // Ignored
-    OK_OR_RETURN(source_port_identity.write_to(stream));
-    OK_OR_RETURN(stream.write_be<uint16_t>(sequence_id.value()));
-    OK_OR_RETURN(stream.write_be<uint8_t>(0));  // Ignored
-    OK_OR_RETURN(stream.write_be<int8_t>(log_message_interval));
-    return {};
+    buffer.write_be<uint8_t>((version.minor * 16) | (version.major & 0b00001111));
+    buffer.write_be<uint16_t>(message_length);
+    buffer.write_be<uint8_t>(domain_number);
+    buffer.write_be<uint8_t>(sdo_id.minor);
+    buffer.write_be<uint16_t>(flags.to_octets());
+    buffer.write_be<int64_t>(correction_field);
+    buffer.write_be<uint32_t>(0);  // Ignored
+    source_port_identity.write_to(buffer);
+    buffer.write_be<uint16_t>(sequence_id.value());
+    buffer.write_be<uint8_t>(0);  // Ignored
+    buffer.write_be<int8_t>(log_message_interval);
 }
 
 std::string rav::ptp_message_header::to_string() const {

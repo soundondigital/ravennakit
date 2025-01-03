@@ -37,12 +37,6 @@ struct ptp_announce_message {
     from_data(const ptp_message_header& header, buffer_view<const uint8_t> data);
 
     /**
-     * Writes the ptp_announce_message to the given stream.
-     * @param stream The stream to write the ptp_announce_message to.
-     */
-    [[nodiscard]] tl::expected<void, rav::output_stream::error> write_to(output_stream& stream) const;
-
-    /**
      * @returns A string representation of the ptp_announce_message.
      */
     [[nodiscard]] std::string to_string() const;

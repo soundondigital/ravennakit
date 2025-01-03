@@ -18,6 +18,7 @@
 namespace rav {
 
 struct ptp_delay_resp_message {
+    // TODO: Add the header
     ptp_timestamp receive_timestamp;
     ptp_port_identity requesting_port_identity;
 
@@ -27,12 +28,6 @@ struct ptp_delay_resp_message {
      * @return A ptp_announce_message if the data is valid, otherwise a ptp_error.
      */
     static tl::expected<ptp_delay_resp_message, ptp_error> from_data(buffer_view<const uint8_t> data);
-
-    /**
-     * Write the ptp_announce_message to a stream.
-     * @param stream The stream to write to.
-     */
-    [[nodiscard]] tl::expected<void, rav::output_stream::error> write_to(output_stream& stream) const;
 
     /**
      * @returns A string representation of the ptp_announce_message.

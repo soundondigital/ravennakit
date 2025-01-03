@@ -34,14 +34,13 @@ struct ptp_clock_quality {
     }
 
     /**
-     * Create a PTP clock quality from a buffer_view.
-     * @param stream The stream to read the clock quality from.
+     * Write the ptp_announce_message to a byte buffer.
+     * @param buffer The buffer to write to.
      */
-    [[nodiscard]] tl::expected<void, output_stream::error> write_to(output_stream& stream) const {
-        OK_OR_RETURN(stream.write_be<uint8_t>(clock_class));
-        OK_OR_RETURN(stream.write_be<uint8_t>(static_cast<uint8_t>(clock_accuracy)));
-        OK_OR_RETURN(stream.write_be<uint16_t>(offset_scaled_log_variance));
-        return {};
+    void write_to(byte_buffer& buffer) const {
+        buffer.write_be<uint8_t>(clock_class);
+        buffer.write_be<uint8_t>(static_cast<uint8_t>(clock_accuracy));
+        buffer.write_be<uint16_t>(offset_scaled_log_variance);
     }
 
     /**

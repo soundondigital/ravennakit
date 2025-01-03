@@ -32,31 +32,4 @@ TEST_CASE("ptp_delay_resp_message") {
         REQUIRE(msg.requesting_port_identity.clock_identity.data[6] == 0x70);
         REQUIRE(msg.requesting_port_identity.clock_identity.data[7] == 0x80);
     }
-
-    SECTION("Pack") {
-        rav::ptp_delay_resp_message msg;
-        msg.receive_timestamp.seconds = 0x102030405;
-        msg.receive_timestamp.nanoseconds = 0x06070809;
-        msg.requesting_port_identity.clock_identity.data[0] = 0x10;
-        msg.requesting_port_identity.clock_identity.data[1] = 0x20;
-        msg.requesting_port_identity.clock_identity.data[2] = 0x30;
-        msg.requesting_port_identity.clock_identity.data[3] = 0x40;
-        msg.requesting_port_identity.clock_identity.data[4] = 0x50;
-        msg.requesting_port_identity.clock_identity.data[5] = 0x60;
-        msg.requesting_port_identity.clock_identity.data[6] = 0x70;
-        msg.requesting_port_identity.clock_identity.data[7] = 0x80;
-        rav::byte_stream stream;
-        REQUIRE(msg.write_to(stream));
-        REQUIRE(stream.size() == 20);
-        REQUIRE(stream.read_be<rav::uint48_t>() == 0x102030405);
-        REQUIRE(stream.read_be<uint32_t>() == 0x06070809);
-        REQUIRE(stream.read_be<uint8_t>() == 0x10);
-        REQUIRE(stream.read_be<uint8_t>() == 0x20);
-        REQUIRE(stream.read_be<uint8_t>() == 0x30);
-        REQUIRE(stream.read_be<uint8_t>() == 0x40);
-        REQUIRE(stream.read_be<uint8_t>() == 0x50);
-        REQUIRE(stream.read_be<uint8_t>() == 0x60);
-        REQUIRE(stream.read_be<uint8_t>() == 0x70);
-        REQUIRE(stream.read_be<uint8_t>() == 0x80);
-    }
 }

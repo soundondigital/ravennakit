@@ -22,10 +22,9 @@ rav::ptp_sync_message::from_data(const ptp_message_header& header, const buffer_
     return msg;
 }
 
-tl::expected<void, rav::output_stream::error> rav::ptp_sync_message::write_to(output_stream& stream) const {
-    OK_OR_RETURN(header.write_to(stream));
-    OK_OR_RETURN(origin_timestamp.write_to(stream));
-    return {};
+void rav::ptp_sync_message::write_to(byte_buffer& buffer) const {
+    header.write_to(buffer);
+    origin_timestamp.write_to(buffer);
 }
 
 std::string rav::ptp_sync_message::to_string() const {
