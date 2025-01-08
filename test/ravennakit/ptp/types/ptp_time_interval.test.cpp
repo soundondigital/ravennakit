@@ -230,4 +230,68 @@ TEST_CASE("ptp_time_interval") {
         REQUIRE(r.nanos_raw() == 500'005'000);
         REQUIRE(r.fraction_raw() == 1);
     }
+
+    SECTION("Multiply") {
+        rav::ptp_time_interval interval1(5, 10000, 2);
+        interval1 *= 2;
+        REQUIRE(interval1.seconds() == 10);
+        REQUIRE(interval1.nanos_raw() == 20000);
+        REQUIRE(interval1.fraction_raw() == 4);
+    }
+
+    SECTION("Multiply") {
+        rav::ptp_time_interval interval1(5, 600'000'000, 2);
+        interval1 *= 2;
+        REQUIRE(interval1.seconds() == 11);
+        REQUIRE(interval1.nanos_raw() == 200'000'000);
+        REQUIRE(interval1.fraction_raw() == 4);
+    }
+
+    SECTION("Multiply") {
+        rav::ptp_time_interval interval1(5, 600'000'000, 1);
+        auto nanos = interval1.nanos();
+        interval1 *= -1;
+        REQUIRE(nanos * -1 == interval1.nanos());
+        REQUIRE(interval1.seconds() == -6);
+        REQUIRE(interval1.nanos_raw() == 400'000'000);
+        REQUIRE(interval1.fraction_raw() == 1);
+    }
+
+    SECTION("Multiply") {
+        rav::ptp_time_interval interval1(5, 600'000'000, 1);
+        auto nanos = interval1.nanos();
+        interval1 *= -2;
+        REQUIRE(nanos * -2 == interval1.nanos());
+        REQUIRE(interval1.seconds() == -12);
+        REQUIRE(interval1.nanos_raw() == 800'000'000);
+        REQUIRE(interval1.fraction_raw() == 2);
+    }
+
+    SECTION("Multiply 2") {
+        auto interval = rav::ptp_time_interval(5, 10000, 2) * 2;
+        REQUIRE(interval.seconds() == 10);
+        REQUIRE(interval.nanos_raw() == 20000);
+        REQUIRE(interval.fraction_raw() == 4);
+    }
+
+    SECTION("Multiply 2") {
+        auto interval = rav::ptp_time_interval(5, 600'000'000, 2) * 2;
+        REQUIRE(interval.seconds() == 11);
+        REQUIRE(interval.nanos_raw() == 200'000'000);
+        REQUIRE(interval.fraction_raw() == 4);
+    }
+
+    SECTION("Multiply 2") {
+        auto interval = rav::ptp_time_interval (5, 600'000'000, 1) * -1;
+        REQUIRE(interval.seconds() == -6);
+        REQUIRE(interval.nanos_raw() == 400'000'000);
+        REQUIRE(interval.fraction_raw() == 1);
+    }
+
+    SECTION("Multiply 2") {
+        auto interval = rav::ptp_time_interval (5, 600'000'000, 1) * -2;
+        REQUIRE(interval.seconds() == -12);
+        REQUIRE(interval.nanos_raw() == 800'000'000);
+        REQUIRE(interval.fraction_raw() == 2);
+    }
 }
