@@ -56,7 +56,7 @@ TEST_CASE("ptp_message_header") {
         REQUIRE(header->flags.frequency_traceable == true);
         REQUIRE(header->flags.synchronization_uncertain == true);
 
-        REQUIRE(header->correction_field == 0x28000);
+        REQUIRE(header->correction_field.to_wire_format() == 0x28000);
         REQUIRE(header->source_port_identity.clock_identity.data[0] == 0x12);
         REQUIRE(header->source_port_identity.clock_identity.data[1] == 0x34);
         REQUIRE(header->source_port_identity.clock_identity.data[2] == 0x56);
@@ -81,7 +81,7 @@ TEST_CASE("ptp_message_header") {
         header.version.minor = 0x1;
         header.message_length = 300;
         header.domain_number = 1;
-        header.correction_field = 0x28000;
+        header.correction_field = rav::ptp_time_interval::from_wire_format(0x28000);
         header.source_port_identity.clock_identity.data[0] = 0x12;
         header.source_port_identity.clock_identity.data[1] = 0x34;
         header.source_port_identity.clock_identity.data[2] = 0x56;

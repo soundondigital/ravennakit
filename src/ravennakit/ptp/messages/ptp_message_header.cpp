@@ -91,7 +91,7 @@ rav::ptp_message_header::from_data(buffer_view<const uint8_t> data) {
     header.version.minor = (data[1] & 0b11110000) >> 4;
     header.domain_number = data[4];
     header.flags = flag_field::from_octets(data[6], data[7]);
-    header.correction_field = data.read_be<int64_t>(8);
+    header.correction_field = ptp_time_interval::from_wire_format(data.read_be<int64_t>(8));
     // Type specific octets are ignored (4 octets)
     std::memcpy(header.source_port_identity.clock_identity.data.data(), data.data() + 20, 8);
     header.source_port_identity.port_number = data.read_be<uint16_t>(28);
@@ -111,7 +111,7 @@ void rav::ptp_message_header::write_to(byte_buffer& buffer) const {
     buffer.write_be<uint8_t>(domain_number);
     buffer.write_be<uint8_t>(sdo_id.minor);
     buffer.write_be<uint16_t>(flags.to_octets());
-    buffer.write_be<int64_t>(correction_field);
+    buffer.write_be<int64_t>(correction_field.to_wire_format());
     buffer.write_be<uint32_t>(0);  // Ignored
     source_port_identity.write_to(buffer);
     buffer.write_be<uint16_t>(sequence_id.value());

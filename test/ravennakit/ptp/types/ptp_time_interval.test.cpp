@@ -140,14 +140,14 @@ TEST_CASE("ptp_time_interval") {
         const auto interval = rav::ptp_time_interval::from_wire_format(0x24000);
         REQUIRE(interval.seconds() == 0);
         REQUIRE(interval.nanos_raw() == 0x2);
-        REQUIRE(interval.fraction_raw() == 0x4000);
+        REQUIRE(interval.fraction_raw() == 0x40000000);
     }
 
     SECTION("From wire negative") {
         const auto interval = rav::ptp_time_interval::from_wire_format(-0x24000);
         REQUIRE(interval.seconds() == -1);
         REQUIRE(interval.nanos_raw() == 0x3b9ac9fd);
-        REQUIRE(interval.fraction_raw() == 0xc000);  // 0x10000 - 0x4000
+        REQUIRE(interval.fraction_raw() == 0xc0000000);  // 0x10000 - 0x4000
     }
 
     SECTION("To wire positive") {
@@ -158,6 +158,11 @@ TEST_CASE("ptp_time_interval") {
     SECTION("To wire negative") {
         const auto interval = rav::ptp_time_interval(0, -0x2, 0x40000000);
         REQUIRE(interval.to_wire_format() == -0x24000);
+    }
+
+    SECTION("From and to wire roundtrip") {
+        const auto interval = rav::ptp_time_interval::from_wire_format(0x28000);
+        REQUIRE(interval.to_wire_format() == 0x28000);
     }
 
     SECTION("Equality and inequality operators") {
@@ -202,5 +207,22 @@ TEST_CASE("ptp_time_interval") {
 
         rav::ptp_time_interval interval2(0, 1, 0x7fffffff);
         REQUIRE(interval2.nanos_rounded() == 1);
+    }
+
+    SECTION("Divide") {
+        rav::ptp_time_interval interval1(5, 10000, 2);
+        auto nanos = interval1.nanos();
+        interval1 /= 2;
+        REQUIRE(nanos / 2 == interval1.nanos());
+        REQUIRE(interval1.seconds() == 2);
+        REQUIRE(interval1.nanos_raw() == 500'005'000);
+        REQUIRE(interval1.fraction_raw() == 1);
+    }
+
+    SECTION("Divide") {
+        auto r = rav::ptp_time_interval (5, 10000, 2) / 2;
+        REQUIRE(r.seconds() == 2);
+        REQUIRE(r.nanos_raw() == 500'005'000);
+        REQUIRE(r.fraction_raw() == 1);
     }
 }

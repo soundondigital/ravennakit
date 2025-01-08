@@ -75,7 +75,6 @@ class ptp_time_interval {
         return static_cast<uint32_t>(nanos_ % k_fractional_scale);
     }
 
-
     /**
      * Create a ptp_time_interval from a wire format value where the nanoseconds are in the high 48 bits and the
      * fraction is in the low 16 bits.
@@ -86,12 +85,14 @@ class ptp_time_interval {
         auto nanoseconds = value >> 16;
         const auto seconds = nanoseconds / 1'000'000'000;
         nanoseconds -= seconds * 1'000'000'000;
-        return {seconds, static_cast<int32_t>(nanoseconds), static_cast<uint32_t>(value & 0xffff)};
+        return {
+            seconds, static_cast<int32_t>(nanoseconds),
+            static_cast<uint32_t>((value & 0xffff) * (k_fractional_scale / 0x10000))
+        };
     }
 
     /**
-     * Convert the ptp_time_interval to wire format where the nanoseconds are in the high 48 bits and the fraction is
-     in
+     * Convert the ptp_time_interval to wire format where the nanoseconds are in the high 48 bits and the fraction is in
      * the low 16 bits.
      * @return The wire format value.
      */
@@ -132,6 +133,20 @@ class ptp_time_interval {
     }
 
     /**
+     * Divide the time interval by a scalar.
+     * @param other The scalar to divide by.
+     * @return A reference to this object.
+     */
+    ptp_time_interval operator/(const int64_t& other) const {
+        ptp_time_interval r = *this;
+        r.nanos_ += r.seconds_ % other * 1'000'000'000 * k_fractional_scale;
+        r.seconds_ /= other;
+        r.nanos_ /= other;
+        r.normalize();
+        return r;
+    }
+
+    /**
      * Adds another ptp_time_interval to this one.
      * @param other The time interval to add.
      * @return A reference to this object.
@@ -151,6 +166,19 @@ class ptp_time_interval {
     ptp_time_interval& operator-=(const ptp_time_interval& other) {
         seconds_ -= other.seconds_;
         nanos_ -= other.nanos_;
+        normalize();
+        return *this;
+    }
+
+    /**
+     * Divide the time interval by a scalar.
+     * @param other The scalar to divide by.
+     * @return A reference to this object.
+     */
+    ptp_time_interval& operator/=(const int64_t& other) {
+        nanos_ += seconds_ % other * 1'000'000'000 * k_fractional_scale;
+        seconds_ /= other;
+        nanos_ /= other;
         normalize();
         return *this;
     }

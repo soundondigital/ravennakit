@@ -24,16 +24,7 @@ namespace rav {
  */
 class ptp_local_ptp_clock {
   public:
-    ptp_local_ptp_clock() {
-        // const auto steady_now =
-        //     std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch())
-        //         .count();
-        //
-        // const auto system_clock_now =
-        //     std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch())
-        //         .count();
-        //
-        // correction_ns_ = static_cast<double>(steady_now) - static_cast<double>(system_clock_now);
+    ptp_local_ptp_clock() : last_sync_(ptp_local_clock::now()){
     }
 
     [[nodiscard]] ptp_timestamp now() const {
@@ -47,25 +38,6 @@ class ptp_local_ptp_clock {
 
     void adjust(const ptp_time_interval offset_from_master) {
 
-        // if (offset_from_master == std::numeric_limits<int64_t>::max()) {
-        //     const auto now = ptp_local_clock::now();
-        //     RAV_ASSERT(now > best_guess_timestamp, "Expecting best now timestamp to be in the future");
-        //     const auto guessed_correction = now - best_guess_timestamp;
-        //     correction_ns_ = guessed_correction.to_time_interval_double();
-        //     return;
-        // }
-        // if (offset_from_master == std::numeric_limits<int64_t>::min()) {
-        //     const auto now = ptp_local_clock::now();
-        //     RAV_ASSERT(best_guess_timestamp > now, "Expecting best guess timestamp to be in the future");
-        //     const auto guessed_correction = best_guess_timestamp - now;
-        //     correction_ns_ = guessed_correction.to_time_interval_double();
-        //     return;
-        // }
-        // auto diff = -(offset_from_master / ptp_timestamp::k_time_interval_multiplier);
-        // RAV_TRACE("Correct PTP clock by {} ns", diff);
-        // TRACY_PLOT("Correction diff (ns): ", diff);
-        // TRACY_PLOT("Correction value (ns): ", correction_ns_);
-        // correction_ns_ = offset_from_master / ptp_timestamp::k_time_interval_multiplier;
     }
 
     void step_clock() {
@@ -73,6 +45,7 @@ class ptp_local_ptp_clock {
     }
 
   private:
+    ptp_timestamp last_sync_{};
     ptp_time_interval correction_ns_ {};
 };
 
