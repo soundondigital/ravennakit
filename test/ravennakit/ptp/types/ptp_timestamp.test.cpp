@@ -96,28 +96,28 @@ TEST_CASE("ptp_timestamp") {
     SECTION("Add correction field") {
         SECTION("Add 2.5ns") {
             rav::ptp_timestamp ts(1'000'000'001);
-            ts.add({2, 0x8000});  // 2.5ns
+            ts.add({0, 2, 0x80000000});  // 2.5ns
             REQUIRE(ts.seconds == 1);
-            REQUIRE(ts.nanoseconds == 4); // 4 because of rounding
+            REQUIRE(ts.nanoseconds == 3);  // 4 because of rounding
         }
 
         SECTION("Add -2.5ns") {
             rav::ptp_timestamp ts(1'000'000'001);
-            ts.add({-3, 0x8000});  // -2.5ns
+            ts.add({0, -3, 0x80000000});  // -2.5ns
             REQUIRE(ts.seconds == 0);
-            REQUIRE(ts.nanoseconds == 999'999'999);
+            REQUIRE(ts.nanoseconds == 0);
         }
 
         SECTION("Add 2.5s") {
             rav::ptp_timestamp ts(1'000'000'001);
-            ts.add({2'500'000'001, 0});  // 2.5s + 1
+            ts.add({2, 500'000'001, 0});  // 2.5s + 1
             REQUIRE(ts.seconds == 3);
             REQUIRE(ts.nanoseconds == 500'000'002);
         }
 
         SECTION("Add -2.5s") {
             rav::ptp_timestamp ts(3'000'000'001);
-            ts.add({-2'500'000'001, 0});  // 2.5s + 1
+            ts.add({-2, 500'000'001, 0});  // 2.5s + 1
             REQUIRE(ts.seconds == 0);
             REQUIRE(ts.nanoseconds == 500'000'000);
         }

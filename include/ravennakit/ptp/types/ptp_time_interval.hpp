@@ -16,9 +16,7 @@
 namespace rav {
 
 /**
- * Represents TimeInterval as specified in PTP IEEE1588-2019. TimeInterval is the time interval expressed in
- * nanoseconds, multiplied by 2^16. This structure stores the data in bigger integers to allow for math operations
- * without overflowing or precision loss.
+ * Represents a point in time. It stores this point as a combination of seconds + nanoseconds + fraction.
  */
 class ptp_time_interval {
   public:
@@ -27,38 +25,56 @@ class ptp_time_interval {
     /**
      * Constructs a ptp_time_interval from nanoseconds and fraction.
      * Ensures that the fraction part is normalized to always be positive.
+     * @param seconds The number of seconds.
      * @param nanos The number of nanoseconds.
-     * @param fraction The nanosecond fraction part of the time interval.
+     * @param fraction The nanosecond fraction part.
      */
-    ptp_time_interval(const int64_t nanos, const int32_t fraction) {
-        nanos_ = nanos;
-        fraction_ = fraction;
+    ptp_time_interval(const int64_t seconds, const int32_t nanos, const uint32_t fraction) :
+        seconds_(seconds), nanos_(nanos) {
+        seconds_ = seconds;
+        nanos_ = nanos * k_fractional_scale + fraction;
         normalize();
     }
 
     /**
-     * @return The number of nanoseconds.
+     * @return The number of seconds.
+     */
+    [[nodiscard]] int64_t seconds() const {
+        return seconds_;
+    }
+
+    /**
+     * @return The number of nanoseconds. If the value is too big to represent as a 64-bit integer, the result is
+     * undefined.
      */
     [[nodiscard]] int64_t nanos() const {
-        return nanos_;
+        return seconds_ * 1'000'000'000 + nanos_ / k_fractional_scale;
     }
 
     /**
      * @return The number of nanoseconds, rounded to the nearest nanosecond.
      */
     [[nodiscard]] int64_t nanos_rounded() const {
-        if (fraction_ >= k_fractional_scale / 2) {
-            return nanos_ + 1;
+        if (fraction_raw() >= k_fractional_scale / 2) {
+            return nanos() + 1;
         }
-        return nanos_;
+        return nanos();
     }
 
     /**
-     * @return The nanosecond fraction part of the time interval.
+     * @return The number of nanoseconds, without taking seconds into account and without fraction.
      */
-    [[nodiscard]] int32_t fraction() const {
-        return fraction_;
+    [[nodiscard]] int32_t nanos_raw() const {
+        return static_cast<int32_t>(nanos_ / k_fractional_scale);
     }
+
+    /**
+     * @return The number of fractional nanoseconds, without taking seconds into account.
+     */
+    [[nodiscard]] uint32_t fraction_raw() const {
+        return static_cast<uint32_t>(nanos_ % k_fractional_scale);
+    }
+
 
     /**
      * Create a ptp_time_interval from a wire format value where the nanoseconds are in the high 48 bits and the
@@ -67,20 +83,26 @@ class ptp_time_interval {
      * @return The ptp_time_interval.
      */
     static ptp_time_interval from_wire_format(const int64_t value) {
-        ptp_time_interval interval;
-        interval.nanos_ = value / k_fractional_scale;
-        interval.fraction_ = static_cast<int32_t>(value % k_fractional_scale);
-        interval.normalize();
-        return interval;
+        auto nanoseconds = value >> 16;
+        const auto seconds = nanoseconds / 1'000'000'000;
+        nanoseconds -= seconds * 1'000'000'000;
+        return {seconds, static_cast<int32_t>(nanoseconds), static_cast<uint32_t>(value & 0xffff)};
     }
 
     /**
-     * Convert the ptp_time_interval to wire format where the nanoseconds are in the high 48 bits and the fraction is in
+     * Convert the ptp_time_interval to wire format where the nanoseconds are in the high 48 bits and the fraction is
+     in
      * the low 16 bits.
      * @return The wire format value.
      */
     [[nodiscard]] int64_t to_wire_format() const {
-        return nanos_ * k_fractional_scale + fraction_;
+        const auto fraction16 = (nanos_ & 0xffffffff) / (k_fractional_scale / 0x10000);
+        const auto ns = (seconds_ * 1'000'000'000 + nanos_ / k_fractional_scale) * 0x10000;
+        if (seconds_ < 0) {
+            return ns - fraction16;
+        }
+        // TODO: Clamp value to INT64_MAX or INT64_MIN if it's too big
+        return ns + fraction16;
     }
 
     /**
@@ -89,7 +111,11 @@ class ptp_time_interval {
      * @return The sum of the two time intervals.
      */
     ptp_time_interval operator+(const ptp_time_interval& other) const {
-        return {nanos_ + other.nanos_, fraction_ + other.fraction_};
+        ptp_time_interval r;
+        r.seconds_ = seconds_ + other.seconds_;
+        r.nanos_ = nanos_ + other.nanos_;
+        r.normalize();
+        return r;
     }
 
     /**
@@ -98,7 +124,11 @@ class ptp_time_interval {
      * @return The difference of the two time intervals.
      */
     ptp_time_interval operator-(const ptp_time_interval& other) const {
-        return {nanos_ - other.nanos_, fraction_ - other.fraction_};
+        ptp_time_interval r;
+        r.seconds_ = seconds_ - other.seconds_;
+        r.nanos_ = nanos_ - other.nanos_;
+        r.normalize();
+        return r;
     }
 
     /**
@@ -107,8 +137,8 @@ class ptp_time_interval {
      * @return A reference to this object.
      */
     ptp_time_interval& operator+=(const ptp_time_interval& other) {
+        seconds_ += other.seconds_;
         nanos_ += other.nanos_;
-        fraction_ += other.fraction_;
         normalize();
         return *this;
     }
@@ -119,8 +149,8 @@ class ptp_time_interval {
      * @return A reference to this object.
      */
     ptp_time_interval& operator-=(const ptp_time_interval& other) {
+        seconds_ -= other.seconds_;
         nanos_ -= other.nanos_;
-        fraction_ -= other.fraction_;
         normalize();
         return *this;
     }
@@ -131,7 +161,7 @@ class ptp_time_interval {
      * @return True if the time intervals are equal, false otherwise.
      */
     bool operator==(const ptp_time_interval& other) const {
-        return nanos_ == other.nanos_ && fraction_ == other.fraction_;
+        return seconds_ == other.seconds_ && nanos_ == other.nanos_;
     }
 
     /**
@@ -143,24 +173,30 @@ class ptp_time_interval {
         return !(*this == other);
     }
 
-    constexpr static int64_t k_fractional_scale = 0x10000;  // pow(2, 16) = 65536
+    constexpr static int64_t k_fractional_scale = 0x100000000;
 
   private:
-    int64_t nanos_ {};     // 48 bits on the wire
-    int32_t fraction_ {};  // Range: [0, k_time_interval_multiplier)
+    int64_t seconds_ {};  // 48 bits on the wire
+    int64_t nanos_ {};    // [0, 1'000'000'000) including 32-bit fraction
 
     /**
-     * Normalizes the time interval such that the fraction part is always non-negative.
+     * Normalizes the time interval such that:
+     * - nanos_ is always in the range [0, 1'000'000'000 * k_fractional_scale).
+     * - Adjusts seconds_ accordingly.
      */
     void normalize() {
-        if (fraction_ < 0) {
-            const auto borrow = (-fraction_ + k_fractional_scale - 1) / k_fractional_scale;
-            nanos_ -= borrow;
-            fraction_ += static_cast<int32_t>(borrow * k_fractional_scale);
-        } else if (fraction_ >= k_fractional_scale) {
-            const int64_t carry = fraction_ / k_fractional_scale;
-            nanos_ += carry;
-            fraction_ -= static_cast<int32_t>(carry * k_fractional_scale);
+        if (nanos_ >= 1'000'000'000 * k_fractional_scale) {
+            const auto carry = nanos_ / 1'000'000'000 / k_fractional_scale;
+            seconds_ += carry;
+            nanos_ -= carry * k_fractional_scale * 1'000'000'000;
+        } else if (nanos_ < 0) {
+            auto borrow = std::abs(nanos_ / 1'000'000'000 / k_fractional_scale);
+            const auto remainder = nanos_ % (1'000'000'000 * k_fractional_scale);
+            if (remainder != 0) {
+                borrow += 1;
+            }
+            seconds_ -= borrow;
+            nanos_ += borrow * k_fractional_scale * 1'000'000'000;
         }
     }
 };

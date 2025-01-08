@@ -80,11 +80,10 @@ struct ptp_timestamp {
      * @return The remaining fractional nanoseconds.
      */
     void add(const ptp_time_interval time_interval) {
-        const auto nanos = time_interval.nanos_rounded();
-        if (nanos < 0) {
+        if (time_interval.seconds() < 0) {
             // Subtract the value
-            const auto seconds_delta = std::abs(nanos / 1'000'000'000);
-            const auto nanoseconds_delta = std::abs(nanos % 1'000'000'000);
+            const auto seconds_delta = static_cast<uint64_t>(std::abs(time_interval.seconds()));
+            const auto nanoseconds_delta = static_cast<uint64_t>(std::abs(time_interval.nanos_raw()));
             if (nanoseconds_delta > nanoseconds) {
                 if (seconds < 1) {
                     RAV_WARNING("ptp_timestamp underflow");
@@ -103,8 +102,8 @@ struct ptp_timestamp {
             nanoseconds -= nanoseconds_delta;
         } else {
             // Add the value
-            const auto seconds_delta = nanos / 1'000'000'000;
-            const auto nanoseconds_delta = nanos % 1'000'000'000;
+            const auto seconds_delta = static_cast<uint64_t>(time_interval.seconds());
+            const auto nanoseconds_delta = static_cast<uint64_t>(time_interval.nanos_raw());
             seconds += seconds_delta;
             nanoseconds += nanoseconds_delta;
             if (nanoseconds >= 1'000'000'000) {
@@ -180,13 +179,16 @@ struct ptp_timestamp {
      * and never overflow.
      */
     [[nodiscard]] ptp_time_interval to_time_interval() const {
+        RAV_ASSERT(nanoseconds < 1'000'000'000, "Nano seconds must be within [0, 1'000'000'000)");
+
         const auto nanos = seconds * 1'000'000'000 + nanoseconds;
-        if (nanos > std::numeric_limits<int64_t>::max()) {
+
+        if (seconds > std::numeric_limits<int64_t>::max()) {
             RAV_WARNING("Time interval overflow");
             return {};
         }
 
-        return {static_cast<int64_t>(nanos), 0};
+        return {static_cast<int64_t>(seconds), static_cast<int32_t>(nanos), 0};
     }
 };
 

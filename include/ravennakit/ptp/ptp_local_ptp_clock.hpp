@@ -38,11 +38,7 @@ class ptp_local_ptp_clock {
 
     [[nodiscard]] ptp_timestamp now() const {
         const auto now = ptp_local_clock::now();
-        if (correction_ns_ < 0) {
-            return now - ptp_timestamp(std::abs(correction_ns_));
-        }
-
-        return now + ptp_timestamp(correction_ns_);
+        return now;
     }
 
     [[nodiscard]] bool is_calibrated() const {
@@ -77,8 +73,7 @@ class ptp_local_ptp_clock {
     }
 
   private:
-
-    double correction_ns_ {};
+    ptp_time_interval correction_ns_ {};
 };
 
 }  // namespace rav
