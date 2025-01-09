@@ -11,6 +11,7 @@
 #pragma once
 
 #include <optional>
+#include <limits>
 
 namespace rav::safe_math {
 
