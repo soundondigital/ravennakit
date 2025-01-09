@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "ravennakit/core/math/safe_int.hpp"
+
 #include <cstdint>
 #include <cmath>
 
@@ -94,8 +96,22 @@ class ptp_time_interval {
      * @return The wire format value.
      */
     [[nodiscard]] int64_t to_wire_format() const {
-        // TODO: Clamp value to INT64_MAX or INT64_MIN if it's too big
-        return seconds_ * 1'000'000'000 * k_fractional_scale + nanos_;
+        const auto r = safe_int(seconds_) * 1'000'000'000 * k_fractional_scale + nanos_;
+
+        if (r.expected()) {
+            return r.value();
+        }
+
+        switch (r.error()) {
+            case safe_int_error::overflow:
+                return std::numeric_limits<int64_t>::max();
+            case safe_int_error::underflow:
+                return std::numeric_limits<int64_t>::min();
+            case safe_int_error::div_by_zero:
+            default:
+                RAV_ASSERT_FALSE("Division by zero when converting to wire format");
+                return {};
+        }
     }
 
     /**

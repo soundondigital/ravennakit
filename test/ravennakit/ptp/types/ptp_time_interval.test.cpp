@@ -153,11 +153,23 @@ TEST_CASE("ptp_time_interval") {
     SECTION("To wire positive") {
         const auto interval = rav::ptp_time_interval(0, 2, 0x4000);
         REQUIRE(interval.to_wire_format() == 0x24000);
+
+        // Clamp overflow to max value
+        REQUIRE(
+            rav::ptp_time_interval(std::numeric_limits<int64_t>::max(), 0, 0).to_wire_format()
+            == std::numeric_limits<int64_t>::max()
+        );
     }
 
     SECTION("To wire negative") {
         const auto interval = rav::ptp_time_interval(0, -3, 0xc000);
         REQUIRE(interval.to_wire_format() == -0x24000);
+
+        // Clamp underflow to min value
+        REQUIRE(
+            rav::ptp_time_interval(std::numeric_limits<int64_t>::min(), 0, 0).to_wire_format()
+            == std::numeric_limits<int64_t>::min()
+        );
     }
 
     SECTION("From and to wire roundtrip") {
@@ -225,7 +237,7 @@ TEST_CASE("ptp_time_interval") {
     }
 
     SECTION("Divide") {
-        auto r = rav::ptp_time_interval (5, 10000, 2) / 2;
+        auto r = rav::ptp_time_interval(5, 10000, 2) / 2;
         REQUIRE(r.seconds() == 2);
         REQUIRE(r.nanos_raw() == 500'005'000);
         REQUIRE(r.fraction_raw() == 1);
@@ -282,14 +294,14 @@ TEST_CASE("ptp_time_interval") {
     }
 
     SECTION("Multiply 2") {
-        auto interval = rav::ptp_time_interval (5, 600'000'000, 1) * -1;
+        auto interval = rav::ptp_time_interval(5, 600'000'000, 1) * -1;
         REQUIRE(interval.seconds() == -6);
         REQUIRE(interval.nanos_raw() == 400'000'000);
         REQUIRE(interval.fraction_raw() == 1);
     }
 
     SECTION("Multiply 2") {
-        auto interval = rav::ptp_time_interval (5, 600'000'000, 1) * -2;
+        auto interval = rav::ptp_time_interval(5, 600'000'000, 1) * -2;
         REQUIRE(interval.seconds() == -12);
         REQUIRE(interval.nanos_raw() == 800'000'000);
         REQUIRE(interval.fraction_raw() == 2);
