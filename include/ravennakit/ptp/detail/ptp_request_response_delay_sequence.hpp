@@ -146,9 +146,9 @@ class ptp_request_response_delay_sequence {
     state state_ = state::sync_received;
     ptp_sync_message sync_message_;
     std::chrono::time_point<std::chrono::steady_clock> send_delay_req_at_ {};  // Should this be a ptp_timestamp?
-    ptp_time_interval corrected_sync_correction_field_ {};
-    ptp_time_interval follow_up_correction_field_ {};
-    ptp_time_interval delay_resp_correction_field_ {};
+    int64_t corrected_sync_correction_field_ {};
+    int64_t follow_up_correction_field_ {};
+    int64_t delay_resp_correction_field_ {};
     ptp_timestamp t1_ {};  // Sync.originTimestamp or Follow_Up.preciseOriginTimestamp if two-step
     ptp_timestamp t2_ {};  // Sync receive time (measured locally)
     ptp_timestamp t3_ {};  // Delay request send time (measured locally)

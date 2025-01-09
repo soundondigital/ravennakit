@@ -219,8 +219,8 @@ rav::ptp_timestamp rav::ptp_instance::get_local_ptp_time() const {
 void rav::ptp_instance::adjust_ptp_clock(
     const ptp_time_interval mean_delay, const ptp_time_interval offset_from_master
 ) {
-    current_ds_.mean_delay = mean_delay;
-    current_ds_.offset_from_master = offset_from_master;
+    current_ds_.mean_delay = mean_delay.to_wire_format();
+    current_ds_.offset_from_master = offset_from_master.to_wire_format();
 
     if (std::abs(offset_from_master.seconds()) >= 1) {
         // RAV_WARNING(
