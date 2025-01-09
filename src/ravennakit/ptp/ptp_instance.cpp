@@ -222,16 +222,12 @@ void rav::ptp_instance::adjust_ptp_clock(
     current_ds_.mean_delay = mean_delay.to_wire_format();
     current_ds_.offset_from_master = offset_from_master.to_wire_format();
 
-    if (std::abs(offset_from_master.seconds()) >= 1) {
-        // RAV_WARNING(
-            // "Offset from master is too large: {}.{}", offset_from_master.seconds(), offset_from_master.nanos_raw()
-        // );
+    if (std::abs(offset_from_master.seconds()) >= 10) {
         local_ptp_clock_.step_clock(offset_from_master);
         return;
     }
 
-    local_ptp_clock_.step_clock(offset_from_master);
-    // local_ptp_clock_.adjust(offset_from_master);
+    local_ptp_clock_.adjust(offset_from_master);
 }
 
 uint16_t rav::ptp_instance::get_next_available_port_number() const {

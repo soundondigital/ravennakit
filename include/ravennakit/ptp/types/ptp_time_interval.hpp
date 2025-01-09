@@ -46,8 +46,8 @@ class ptp_time_interval {
     }
 
     /**
-     * @return The number of nanoseconds. If the value is too big to represent as a 64-bit integer, the result is
-     * undefined.
+     * @return The number of nanoseconds, including the seconds part. If the value is too big to represent as a 64-bit
+     * integer, the result is undefined.
      */
     [[nodiscard]] int64_t nanos() const {
         return seconds_ * 1'000'000'000 + nanos_ / k_fractional_scale;
@@ -96,7 +96,7 @@ class ptp_time_interval {
      * @return The wire format value.
      */
     [[nodiscard]] int64_t to_wire_format() const {
-        const auto r = safe_int(seconds_) * 1'000'000'000 * k_fractional_scale + nanos_;
+        const auto r = safe_int64(seconds_) * 1'000'000'000 * k_fractional_scale + nanos_;
 
         if (r.expected()) {
             return r.value();

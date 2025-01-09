@@ -275,4 +275,14 @@ class safe_int {
     tl::expected<T, safe_int_error> value_ {};
 };
 
+// Convenience aliases
+using safe_int8 = safe_int<int8_t>;
+using safe_int16 = safe_int<int16_t>;
+using safe_int32 = safe_int<int32_t>;
+using safe_int64 = safe_int<int64_t>;
+using safe_uint8 = safe_int<uint8_t>;
+using safe_uint16 = safe_int<uint16_t>;
+using safe_uint32 = safe_int<uint32_t>;
+using safe_uint64 = safe_int<uint64_t>;
+
 }  // namespace rav

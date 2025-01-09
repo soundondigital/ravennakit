@@ -16,20 +16,16 @@ namespace rav {
 
 /**
  * A running average.
- * @tparam T The floating-point type of the average.
  */
-template<class T = double>
 class running_average {
 public:
-    static_assert(std::is_floating_point_v<T>, "T must be a floating-point type");
-
     /**
      * Adds a new value to the running average.
      * @param value The value to add.
      */
-    void add(double value) {
+    void add(const double value) {
         count_++;
-        average_ += (value - average_) / count_;
+        average_ += (value - average_) / static_cast<double>(count_);
     }
 
     /**
@@ -45,7 +41,7 @@ public:
     /**
      * @return The current average.
      */
-    T average() const {
+    [[nodiscard]] double average() const {
         return average_;
     }
 
@@ -65,7 +61,7 @@ public:
     }
 
 private:
-    T average_ {};
+    double average_ {};
     size_t count_ {};
 };
 
