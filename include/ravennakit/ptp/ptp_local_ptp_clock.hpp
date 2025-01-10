@@ -38,53 +38,16 @@ class ptp_local_ptp_clock {
         // let elapsed = roclock_time - self.last_sync;
         const auto elapsed = (now - last_sync_).total_seconds_double();
         // let corr = elapsed * self.freq_scale_ppm_diff / 1_000_000;
-        auto correction = elapsed * frequency_correction_ppm_ / 1'000'000;
+        const auto correction = elapsed * frequency_correction_ppm_ / 1'000'000'000;
 
+        TRACY_PLOT("Correction (ms)", correction * 1000.0);
         now.add_seconds(shift_);
-        // now.add(correction);
 
         return now;
     }
 
     [[nodiscard]] bool is_calibrated() const {
         return false;  // TODO: Implement calibration
-    }
-
-    void adjust(const ptp_measurement<ptp_time_interval>& measurement) {
-        std::ignore = measurement;
-        RAV_ASSERT_FALSE("Dead code");
-        // const auto local_now = ptp_local_clock::now();
-        // const auto ptp_now = now();
-        // shift_ = ptp_now - local_now;
-        // last_sync_ = local_now;
-        //
-        // measurements_.push_back(measurement);
-        // if (measurements_.size() > 1) {
-        //     bool first = true;
-        //     ptp_time_interval local_interval = {};
-        //     ptp_time_interval master_interval = {};
-        //     for (const auto& m : measurements_) {
-        //         if (first) {
-        //             local_interval = m.sync_event_ingress_timestamp;
-        //             master_interval = m.corrected_master_event_timestamp;
-        //             first = false;
-        //             continue;
-        //         }
-        //         local_interval -= m.sync_event_ingress_timestamp;
-        //         master_interval -= m.corrected_master_event_timestamp;
-        //     }
-        //
-        //     const auto ratio =
-        //         static_cast<double>(local_interval.total_nanos()) /
-        //         static_cast<double>(master_interval.total_nanos());
-        //     const auto ppm = -(ratio - 1.0) * 1e6;
-        //     freq_average_.add(ppm);
-        //     TRACY_PLOT("Frequency ratio (ppm)", ppm);
-        //     TRACY_PLOT("Frequency ratio (ppm, avg)", freq_average_.average());
-        //     frequency_correction_ppm_ = static_cast<int64_t>(freq_average_.average());
-        // } else {
-        //     frequency_correction_ppm_ = 0;
-        // }
     }
 
     void adjust(const ptp_measurement<double>& measurement) {
@@ -114,29 +77,17 @@ class ptp_local_ptp_clock {
             freq_average_.add(ppm);
             TRACY_PLOT("Frequency ratio (ppm)", ppm);
             TRACY_PLOT("Frequency ratio (ppm, avg)", freq_average_.average());
-            frequency_correction_ppm_ = freq_average_.average(); // TODO: Take the direct ppm?
+            frequency_correction_ppm_ = ppm; // TODO: Take the direct ppm?
         } else {
-            frequency_correction_ppm_ = 0;
+            frequency_correction_ppm_ = {};
         }
-    }
-
-    void step_clock(const ptp_time_interval offset_from_master) {
-        std::ignore = offset_from_master;
-        RAV_ASSERT_FALSE("Dead code");
-        // last_sync_ = ptp_local_clock::now();
-        // const auto multiplier = 1'000'000.0 + frequency_correction_ppm_;
-        // const auto reciprocal = 1'000'000.0 / multiplier;
-        // shift_ += offset_from_master * -1;  // * reciprocal;
-        // freq_average_.reset();
-        // freq_window_average_.reset();
-        // TRACY_MESSAGE("Clock stepped");
     }
 
     void step_clock(const double offset_from_master_seconds) {
         last_sync_ = ptp_local_clock::now();
         const auto multiplier = 1'000'000.0 + frequency_correction_ppm_;
         const auto reciprocal = 1'000'000.0 / multiplier;
-        shift_ += offset_from_master_seconds * -1;  // * reciprocal;
+        shift_ += offset_from_master_seconds * -1; // * frequency_correction_ppm_;
         freq_average_.reset();
         freq_window_average_.reset();
         TRACY_MESSAGE("Clock stepped");
@@ -146,7 +97,7 @@ class ptp_local_ptp_clock {
     ptp_timestamp last_sync_ {};  // Timestamp from ptp_local_clock when the clock was last synchronized
     double shift_ {}; // Seconds
     ring_buffer<ptp_measurement<double>> measurements_ {8};
-    double frequency_correction_ppm_ {};
+    double frequency_correction_ppm_ = {};
     running_average freq_average_;
     sliding_window_average freq_window_average_ {2024};
 };

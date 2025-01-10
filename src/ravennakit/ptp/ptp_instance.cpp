@@ -217,26 +217,6 @@ rav::ptp_timestamp rav::ptp_instance::get_local_ptp_time() const {
     return local_ptp_clock_.now();
 }
 
-void rav::ptp_instance::adjust_ptp_clock(const ptp_measurement<ptp_time_interval>& measurement) {
-    current_ds_.mean_delay = measurement.mean_delay.to_wire_format();
-    current_ds_.offset_from_master = measurement.offset_from_master.to_wire_format();
-
-    if (std::abs(measurement.offset_from_master.seconds()) >= k_clock_step_threshold_seconds) {
-        local_ptp_clock_.step_clock(measurement.offset_from_master);
-        offset_average_.reset();
-        offset_window_average_.reset();
-        return;
-    }
-
-    offset_average_.add(measurement.offset_from_master.total_seconds_double());
-    offset_window_average_.add(measurement.offset_from_master.total_seconds_double());
-
-    TRACY_PLOT("Offset from master (avg)", offset_average_.average() * 1000.0);
-    TRACY_PLOT("Offset from master (sliding avg)", offset_window_average_.average() * 1000.0);
-
-    local_ptp_clock_.adjust(measurement);
-}
-
 void rav::ptp_instance::adjust_ptp_clock(const ptp_measurement<double>& measurement) {
     current_ds_.mean_delay = ptp_time_interval::to_fractional_interval(measurement.mean_delay);
     current_ds_.offset_from_master = ptp_time_interval::to_fractional_interval(measurement.offset_from_master);

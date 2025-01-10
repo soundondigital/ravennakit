@@ -94,12 +94,6 @@ class ptp_instance {
      * Adjusts the PTP clock of the PTP instance based on the mean delay and offset from the master.
      * @param measurement The measurement data.
      */
-    void adjust_ptp_clock(const ptp_measurement<ptp_time_interval>& measurement);
-
-    /**
-     * Adjusts the PTP clock of the PTP instance based on the mean delay and offset from the master.
-     * @param measurement The measurement data.
-     */
     void adjust_ptp_clock(const ptp_measurement<double>& measurement);
 
   private:
