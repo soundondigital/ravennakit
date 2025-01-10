@@ -59,7 +59,7 @@ TEST_CASE("ptp_request_response_delay_sequence") {
 
         auto measurement = seq.calculate_offset_from_master();
 
-        REQUIRE(measurement.mean_delay.nanos_total() == expected_mean_delay * 1'000'000'000);
-        REQUIRE(measurement.offset_from_master.nanos_total() == expected_offset * 1'000'000'000);
+        REQUIRE(measurement.mean_delay.total_nanos() == expected_mean_delay * 1'000'000'000);
+        REQUIRE(measurement.offset_from_master.total_nanos() == expected_offset * 1'000'000'000);
     }
 }

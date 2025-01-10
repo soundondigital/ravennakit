@@ -9,12 +9,12 @@
  */
 
 #include "ravennakit/core/util.hpp"
-#include "ravennakit/core/math/sliding_window_average.hpp"
+#include "ravennakit/core/math/sliding_average.hpp"
 
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("sliding_window_average") {
-    rav::sliding_window_average avg(5);
+    rav::sliding_average avg(5);
     REQUIRE(avg.count() == 0);
     REQUIRE(avg.average() == 0.0);
     avg.add(1);

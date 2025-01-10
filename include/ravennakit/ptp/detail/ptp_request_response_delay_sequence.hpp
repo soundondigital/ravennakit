@@ -106,20 +106,34 @@ class ptp_request_response_delay_sequence {
         const auto t3 = t3_.to_time_interval();
         const auto t4 = t4_.to_time_interval();
 
+        auto result = t2 - t3 + (t4 - t1) - corrected_sync_correction_field_;
         if (sync_message_.header.flags.two_step_flag) {
-            return ((t2 - t3) + (t4 - t1) - corrected_sync_correction_field_ - follow_up_correction_field_
-                    - delay_resp_correction_field_)
-                / 2;
+            result -= follow_up_correction_field_;
         }
+        result -= delay_resp_correction_field_;
+        return result / 2;
+    }
 
-        return ((t2 - t3) + (t4 - t1) - corrected_sync_correction_field_ - delay_resp_correction_field_) / 2;
+    [[nodiscard]] double calculate_mean_path_delay_as_double() const {
+        RAV_ASSERT(state_ == state::delay_resp_received, "State should be delay_resp_received");
+        const auto t1 = t1_.total_seconds_double();
+        const auto t2 = t2_.total_seconds_double();
+        const auto t3 = t3_.total_seconds_double();
+        const auto t4 = t4_.total_seconds_double();
+
+        auto result = t2 - t3 + (t4 - t1) - corrected_sync_correction_field_.total_seconds_double();
+        if (sync_message_.header.flags.two_step_flag) {
+            result -= follow_up_correction_field_.total_seconds_double();
+        }
+        result -= delay_resp_correction_field_.total_seconds_double();
+        return result / 2.0;
     }
 
     /**
      * Calculate the offset from the master clock.
      * @return A pair of the offset and the mean path delay.
      */
-    [[nodiscard]] ptp_measurement calculate_offset_from_master() const {
+    [[nodiscard]] ptp_measurement<ptp_time_interval> calculate_offset_from_master() const {
         RAV_ASSERT(state_ == state::delay_resp_received, "State should be delay_resp_received");
         const auto mean_delay = calculate_mean_path_delay();
         const auto t1 = t1_.to_time_interval();
@@ -135,7 +149,31 @@ class ptp_request_response_delay_sequence {
         return {t2, offset, mean_delay, corrected_master_event_timestamp};
     }
 
-    state get_state() const {
+    /**
+     * Calculate the offset from the master clock.
+     * @return A pair of the offset and the mean path delay.
+     */
+    [[nodiscard]] ptp_measurement<double> calculate_offset_from_master_as_double() const {
+        RAV_ASSERT(state_ == state::delay_resp_received, "State should be delay_resp_received");
+        const auto mean_delay = calculate_mean_path_delay_as_double();
+        const auto t1 = t1_.total_seconds_double();
+        const auto t2 = t2_.total_seconds_double();
+        const auto offset = t2 - t1 - mean_delay - corrected_sync_correction_field_.total_seconds_double();
+
+        auto corrected_master_event_timestamp =
+            t1 + mean_delay + corrected_sync_correction_field_.total_seconds_double();
+
+        if (sync_message_.header.flags.two_step_flag) {
+            corrected_master_event_timestamp += follow_up_correction_field_.total_seconds_double();
+        }
+
+        return {t2, offset, mean_delay, corrected_master_event_timestamp};
+    }
+
+    /**
+     * @return The current state of the sequence.
+     */
+    [[nodiscard]] state get_state() const {
         return state_;
     }
 

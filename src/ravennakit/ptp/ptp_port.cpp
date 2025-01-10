@@ -562,10 +562,10 @@ void rav::ptp_port::handle_delay_resp_message(
                 seq.update(delay_resp_message);
                 port_ds_.log_min_delay_req_interval = delay_resp_message.header.log_message_interval;
 
-                const auto measurement = seq.calculate_offset_from_master();
+                const auto measurement = seq.calculate_offset_from_master_as_double();
 
-                TRACY_PLOT("Offset from master (ms)", measurement.offset_from_master.total_seconds_double() * 1000.0);
-                RAV_TRACE("Offset from master (ms): {}", measurement.offset_from_master.total_seconds_double() * 1000.0);
+                TRACY_PLOT("Offset from master (ms)", measurement.offset_from_master * 1000.0);
+                RAV_TRACE("Offset from master (ms): {}", measurement.offset_from_master * 1000.0);
 
                 parent_.adjust_ptp_clock(measurement);
                 return;  // Done here.

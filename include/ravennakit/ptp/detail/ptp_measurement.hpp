@@ -13,11 +13,12 @@
 
 namespace rav {
 
+template<class T>
 struct ptp_measurement {
-    ptp_time_interval sync_event_ingress_timestamp;
-    ptp_time_interval offset_from_master;
-    ptp_time_interval mean_delay;
-    ptp_time_interval corrected_master_event_timestamp;
+    T sync_event_ingress_timestamp;
+    T offset_from_master;
+    T mean_delay;
+    T corrected_master_event_timestamp;
 };
 
 }

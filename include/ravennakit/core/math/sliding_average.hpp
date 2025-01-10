@@ -16,9 +16,9 @@ namespace rav {
 /**
  * A class that calculates the average of the last N values added to it.
  */
-class sliding_window_average {
+class sliding_average {
   public:
-    explicit sliding_window_average(const size_t size) : window_(size) {}
+    explicit sliding_average(const size_t size) : window_(size) {}
 
     /**
      * Adds a new value to the sliding window average.
