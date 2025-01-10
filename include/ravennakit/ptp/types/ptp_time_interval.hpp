@@ -39,48 +39,48 @@ class ptp_time_interval {
     }
 
     /**
-     * @return The number of seconds.
+     * @return The seconds part.
      */
     [[nodiscard]] int64_t seconds() const {
         return seconds_;
     }
 
     /**
-     * @return The number of nanoseconds, including the seconds part. If the value is too big to represent as a 64-bit
-     * integer, the result is undefined.
+     * @return The number of seconds, including the nanosecond and fraction part as double.
      */
-    [[nodiscard]] int64_t nanos() const {
-        return seconds_ * 1'000'000'000 + nanos_ / k_fractional_scale;
+    double seconds_total_double() const {
+        return static_cast<double>(seconds_) + static_cast<double>(nanos_) / 1'000'000'000.0 / k_fractional_scale;
     }
 
     /**
-     * @return The number of nanoseconds, including the seconds part. The result will never overflow.
+     * @return The nanoseconds part (without fraction or seconds).
      */
-    double total_seconds_double() const {
-        return static_cast<double>(seconds_) + static_cast<double>(nanos_) / 1'000'000'000.0 / k_fractional_scale;
+    [[nodiscard]] int64_t nanos() const {
+        return nanos_ / k_fractional_scale;
+    }
+
+    /**
+     * @return The number of nanoseconds summed with he seconds part, without the fraction. If the value is too big to
+     * represent as a 64-bit integer, the result is undefined.
+     */
+    [[nodiscard]] int64_t nanos_total() const {
+        return seconds_ * 1'000'000'000 + nanos_ / k_fractional_scale;
     }
 
     /**
      * @return The number of nanoseconds, rounded to the nearest nanosecond.
      */
     [[nodiscard]] int64_t nanos_rounded() const {
-        if (fraction_raw() >= k_fractional_scale / 2) {
-            return nanos() + 1;
+        if (fraction() >= k_fractional_scale / 2) {
+            return nanos_total() + 1;
         }
-        return nanos();
+        return nanos_total();
     }
 
     /**
-     * @return The number of nanoseconds, without taking seconds into account and without fraction.
+     * @return The fractional part, without nanoseconds and seconds.
      */
-    [[nodiscard]] int64_t nanos_raw() const {
-        return nanos_ / k_fractional_scale;
-    }
-
-    /**
-     * @return The number of fractional nanoseconds, without taking seconds into account.
-     */
-    [[nodiscard]] uint16_t fraction_raw() const {
+    [[nodiscard]] uint16_t fraction() const {
         return static_cast<uint16_t>(nanos_ % k_fractional_scale);
     }
 

@@ -57,9 +57,9 @@ TEST_CASE("ptp_request_response_delay_sequence") {
             rav::ptp_timestamp(t1, 0), rav::ptp_timestamp(t2, 0), rav::ptp_timestamp(t3, 0), rav::ptp_timestamp(t4, 0)
         );
 
-        auto [offset, mean_delay] = seq.calculate_offset_from_master();
+        auto measurement = seq.calculate_offset_from_master();
 
-        REQUIRE(mean_delay.nanos() == expected_mean_delay * 1'000'000'000);
-        REQUIRE(offset.nanos() == expected_offset * 1'000'000'000);
+        REQUIRE(measurement.mean_delay.nanos_total() == expected_mean_delay * 1'000'000'000);
+        REQUIRE(measurement.offset_from_master.nanos_total() == expected_offset * 1'000'000'000);
     }
 }

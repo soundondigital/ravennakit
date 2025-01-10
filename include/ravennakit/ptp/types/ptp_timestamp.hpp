@@ -73,7 +73,7 @@ struct ptp_timestamp {
         if (time_interval.seconds() < 0) {
             // Subtract the value
             const auto seconds_delta = static_cast<uint64_t>(std::abs(time_interval.seconds()));
-            const auto nanoseconds_delta = static_cast<uint64_t>(std::abs(time_interval.nanos_raw()));
+            const auto nanoseconds_delta = static_cast<uint64_t>(std::abs(time_interval.nanos()));
             if (nanoseconds_delta > nanoseconds_) {
                 if (seconds_ < 1) {
                     RAV_WARNING("ptp_timestamp underflow");
@@ -93,7 +93,7 @@ struct ptp_timestamp {
         } else {
             // Add the value
             const auto seconds_delta = static_cast<uint64_t>(time_interval.seconds());
-            const auto nanoseconds_delta = static_cast<uint64_t>(time_interval.nanos_raw());
+            const auto nanoseconds_delta = static_cast<uint64_t>(time_interval.nanos());
             seconds_ += seconds_delta;
             nanoseconds_ += nanoseconds_delta;
             if (nanoseconds_ >= 1'000'000'000) {

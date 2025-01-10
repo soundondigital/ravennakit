@@ -73,7 +73,7 @@ class ptp_local_ptp_clock {
             }
 
             const auto ratio =
-                static_cast<double>(local_interval.nanos()) / static_cast<double>(master_interval.nanos());
+                static_cast<double>(local_interval.nanos_total()) / static_cast<double>(master_interval.nanos_total());
             const auto ppm = -(ratio - 1.0) * 1e6;
             freq_average_.add(ppm);
             TRACY_PLOT("Frequency ratio (ppm)", ppm);

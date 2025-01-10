@@ -228,8 +228,8 @@ void rav::ptp_instance::adjust_ptp_clock(const ptp_measurement& measurement) {
         return;
     }
 
-    offset_average_.add(measurement.offset_from_master.total_seconds_double());
-    offset_window_average_.add(measurement.offset_from_master.total_seconds_double());
+    offset_average_.add(measurement.offset_from_master.seconds_total_double());
+    offset_window_average_.add(measurement.offset_from_master.seconds_total_double());
 
     TRACY_PLOT("Offset from master (avg)", offset_average_.average() * 1000.0);
     TRACY_PLOT("Offset from master (sliding avg)", offset_window_average_.average() * 1000.0);
