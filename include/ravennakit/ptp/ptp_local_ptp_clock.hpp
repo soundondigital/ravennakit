@@ -11,6 +11,7 @@
 #pragma once
 
 #include "detail/ptp_measurement.hpp"
+#include "detail/ptp_servo.hpp"
 #include "ravennakit/core/tracy.hpp"
 #include "ravennakit/core/util.hpp"
 #include "ravennakit/core/chrono/high_resolution_clock.hpp"
@@ -53,15 +54,22 @@ class ptp_local_ptp_clock {
         TRACY_PLOT("Offset from master (ms median)", offset_average_.median() * 1000.0);
         TRACY_PLOT("Adjustments since last step", static_cast<int64_t>(adjustments_since_last_step_));
 
-        if (adjustments_since_last_step_ >= 20) {
+        if (adjustments_since_last_step_ >= 10) {
             constexpr double base = 1.5;  // The higher the value, the faster the clock will adjust (>= 1.0)
-            constexpr double max_ratio = 0.2;
-            constexpr double rc = 0.5;  // Time constant (adjust to control smoothing strength)
-            constexpr double dt = 0.1;  // Time step (constant interval between samples)
+            constexpr double max_ratio = 0.2; // +/-
+            constexpr double max_step = 0.001;  // Maximum step size
             const auto nominal_ratio =
                 std::clamp(std::pow(base, -offset_average_.median()), 1.0 - max_ratio, 1 + max_ratio);
 
-            frequency_ratio_ = low_pass_filter(nominal_ratio, frequency_ratio_, rc, dt);
+            if (std::fabs(nominal_ratio - frequency_ratio_) > max_step) {
+                if (frequency_ratio_ < nominal_ratio) {
+                    frequency_ratio_ += max_step;
+                } else {
+                    frequency_ratio_ -= max_step;
+                }
+            } else {
+                frequency_ratio_ = nominal_ratio;
+            }
         } else {
             adjustments_since_last_step_++;
             frequency_ratio_ = 1.0;
@@ -86,11 +94,6 @@ class ptp_local_ptp_clock {
     double frequency_ratio_ = 1.0;
     sliding_median offset_average_ {101};
     size_t adjustments_since_last_step_ {};
-
-    static double low_pass_filter(const double current, const double previous, const double rc, const double dt) {
-        const double alpha = dt / (rc + dt);  // Compute the smoothing factor
-        return alpha * current + (1.0 - alpha) * previous;
-    }
 };
 
 }  // namespace rav
