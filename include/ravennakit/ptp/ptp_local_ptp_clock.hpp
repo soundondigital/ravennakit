@@ -12,6 +12,7 @@
 
 #include "detail/ptp_measurement.hpp"
 #include "ravennakit/core/tracy.hpp"
+#include "ravennakit/core/util.hpp"
 #include "ravennakit/core/chrono/high_resolution_clock.hpp"
 #include "ravennakit/core/math/running_average.hpp"
 #include "ravennakit/core/math/sliding_window_average.hpp"
@@ -34,11 +35,12 @@ class ptp_local_ptp_clock {
     }
 
     [[nodiscard]] ptp_timestamp now() const {
-        auto system_now = system_clock_now();
-        const auto elapsed = system_now.total_seconds_double() - last_sync_.total_seconds_double();
-        const auto correction = elapsed * frequency_correction_ppm_ / 1'000'000'000;
-        system_now.add_seconds(shift_ + correction);
-        return system_now;
+        const auto system_now = system_clock_now();
+        const auto elapsed = (system_now - last_sync_).total_seconds_double();
+        auto result = last_sync_;
+        result.add_seconds(elapsed * frequency_ratio_);
+        result.add_seconds(shift_);
+        return result;
     }
 
     [[nodiscard]] bool is_calibrated() const {
@@ -46,10 +48,8 @@ class ptp_local_ptp_clock {
     }
 
     void adjust(const ptp_measurement<double>& measurement) {
-        const auto system_now = system_clock_now();
-        const auto ptp_now = now();
-        shift_ = (ptp_now - system_now).total_seconds_double();
-        last_sync_ = system_now;
+        offset_average_.add(measurement.offset_from_master);
+        TRACY_PLOT("Offset from master (ms avg)", offset_average_.average() * 1000.0);
 
         measurements_.push_back(measurement);
         if (measurements_.size() > 1) {
@@ -67,35 +67,33 @@ class ptp_local_ptp_clock {
                 master_interval -= m.corrected_master_event_timestamp;
             }
 
-            const auto ratio = local_interval / master_interval;
-            const auto ppm = -(ratio - 1.0) * 1e6;
-            freq_average_.add(ppm);
-            TRACY_PLOT("Frequency ratio (ppm)", ppm);
-            TRACY_PLOT("Frequency ratio (ppm, avg)", freq_average_.average());
-            frequency_correction_ppm_ += ppm;  // TODO: Take the direct ppm?
+            frequency_ratio_ = local_interval / master_interval;
+            frequency_ratio_average_.add(frequency_ratio_);
         } else {
-            frequency_correction_ppm_ = {};
+            frequency_ratio_ = 1.0;
         }
+
+        TRACY_PLOT("Frequency ratio", frequency_ratio_);
+        TRACY_PLOT("Frequency ratio (avg)", frequency_ratio_average_.average());
     }
 
     void step_clock(const double offset_from_master_seconds) {
         last_sync_ = system_clock_now();
-        const auto multiplier = 1'000'000.0 + frequency_correction_ppm_;
-        const auto reciprocal = 1'000'000.0 / multiplier;
-        const auto diff = -offset_from_master_seconds * reciprocal;
-        shift_ += diff;
-        TRACY_PLOT("Step clock (ms)", diff * 1000.0);
-        freq_average_.reset();
-        freq_window_average_.reset();
+        shift_ += -offset_from_master_seconds;
+        TRACY_PLOT("Step clock add (ms)", shift_ * 1000.0);
+        offset_average_.add(offset_from_master_seconds);
+        frequency_ratio_average_.reset();
+        frequency_ratio_ = 1.0;
+        measurements_.clear();
     }
 
   private:
-    ptp_timestamp last_sync_ = system_clock_now();    // Timestamp from ptp_local_clock when the clock was last synchronized
-    double shift_ {};  // Seconds
+    ptp_timestamp last_sync_ = system_clock_now();
+    double shift_ {};
     ring_buffer<ptp_measurement<double>> measurements_ {8};
-    double frequency_correction_ppm_ = {};
-    running_average freq_average_;
-    sliding_window_average freq_window_average_ {100};
+    double frequency_ratio_ = 1.0;
+    sliding_window_average frequency_ratio_average_ {100};
+    sliding_window_average offset_average_ {100};
 };
 
 }  // namespace rav
