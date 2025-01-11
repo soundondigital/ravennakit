@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "detail/ptp_basic_filter.hpp"
 #include "detail/ptp_measurement.hpp"
 #include "ravennakit/core/tracy.hpp"
 #include "ravennakit/core/util.hpp"
@@ -53,8 +54,10 @@ class ptp_local_ptp_clock {
         shift_ = now().total_seconds_double() - system_now.total_seconds_double();
         last_sync_ = system_now;
 
-        offset_average_.add(measurement.offset_from_master);
-        TRACY_PLOT("Offset from master (ms median)", offset_average_.median() * 1000.0);
+        const auto offset = offset_filter_.update(measurement.offset_from_master);
+        offset_median_.add(offset);
+        TRACY_PLOT("Filtered offset (ms)", offset * 1000.0);
+        TRACY_PLOT("Offset from master (ms median)", offset_median_.median() * 1000.0);
         TRACY_PLOT("Adjustments since last step", static_cast<int64_t>(adjustments_since_last_step_));
 
         if (adjustments_since_last_step_ >= 10) {
@@ -62,7 +65,7 @@ class ptp_local_ptp_clock {
             constexpr double max_ratio = 0.5; // +/-
             constexpr double max_step = 0.001;  // Maximum step size
             const auto nominal_ratio =
-                std::clamp(std::pow(base, -measurement.offset_from_master), 1.0 - max_ratio, 1 + max_ratio);
+                std::clamp(std::pow(base, -offset), 1.0 - max_ratio, 1 + max_ratio);
 
             if (std::fabs(nominal_ratio - frequency_ratio_) > max_step) {
                 if (frequency_ratio_ < nominal_ratio) {
@@ -84,9 +87,7 @@ class ptp_local_ptp_clock {
     void step_clock(const double offset_from_master_seconds) {
         last_sync_ = system_clock_now();
         shift_ += -offset_from_master_seconds;
-        TRACY_PLOT("Step clock add (ms)", shift_ * 1000.0);
-        // offset_average_.add(offset_from_master_seconds);
-        offset_average_.reset();
+        offset_median_.reset();
         frequency_ratio_ = 1.0;
         adjustments_since_last_step_ = 0;
     }
@@ -95,8 +96,9 @@ class ptp_local_ptp_clock {
     ptp_timestamp last_sync_ = system_clock_now();
     double shift_ {};
     double frequency_ratio_ = 1.0;
-    sliding_median offset_average_ {101};
+    sliding_median offset_median_ {101};
     size_t adjustments_since_last_step_ {};
+    ptp_basic_filter offset_filter_{0.5};
 };
 
 }  // namespace rav

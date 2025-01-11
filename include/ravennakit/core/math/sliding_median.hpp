@@ -34,25 +34,18 @@ class sliding_median {
      */
     double median() {
         buffer_.clear();
-
         for (auto& value : window_) {
             buffer_.push_back(value);
         }
-
         if (buffer_.empty()) {
             return 0.0;
         }
-
         std::sort(buffer_.begin(), buffer_.end());
-
         const size_t n = buffer_.size();
         if (n % 2 == 1) {
-            // Odd: Return the middle element
-            return buffer_[n / 2];
+            return buffer_[n / 2]; // Odd: return the middle element
         }
-
-        // Even: Return the average of the two middle elements
-        return (buffer_[n / 2 - 1] + buffer_[n / 2]) / 2.0;
+        return (buffer_[n / 2 - 1] + buffer_[n / 2]) / 2.0; // Even: return the average of the two middle elements
     }
 
     /**
