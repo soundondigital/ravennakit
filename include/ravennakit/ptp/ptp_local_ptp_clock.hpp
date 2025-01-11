@@ -49,16 +49,20 @@ class ptp_local_ptp_clock {
     }
 
     void adjust(const ptp_measurement<double>& measurement) {
+        const auto system_now = system_clock_now();
+        shift_ = now().total_seconds_double() - system_now.total_seconds_double();
+        last_sync_ = system_now;
+
         offset_average_.add(measurement.offset_from_master);
         TRACY_PLOT("Offset from master (ms median)", offset_average_.median() * 1000.0);
         TRACY_PLOT("Adjustments since last step", static_cast<int64_t>(adjustments_since_last_step_));
 
         if (adjustments_since_last_step_ >= 10) {
             constexpr double base = 1.5;  // The higher the value, the faster the clock will adjust (>= 1.0)
-            constexpr double max_ratio = 0.2; // +/-
+            constexpr double max_ratio = 0.5; // +/-
             constexpr double max_step = 0.001;  // Maximum step size
             const auto nominal_ratio =
-                std::clamp(std::pow(base, -offset_average_.median()), 1.0 - max_ratio, 1 + max_ratio);
+                std::clamp(std::pow(base, -measurement.offset_from_master), 1.0 - max_ratio, 1 + max_ratio);
 
             if (std::fabs(nominal_ratio - frequency_ratio_) > max_step) {
                 if (frequency_ratio_ < nominal_ratio) {
