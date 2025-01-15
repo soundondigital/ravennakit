@@ -121,9 +121,7 @@ struct ptp_timestamp {
                 seconds_ -= 1;
                 nanoseconds_ += 1'000'000'000;
             }
-            if (s_abs > seconds_) {
-                RAV_WARNING("ptp_timestamp underflow");
-                // TODO: This case should be reported to the caller
+            if (s_abs > static_cast<double>(seconds_)) {
                 *this = {};  // Prevent underflow
                 return;
             }
