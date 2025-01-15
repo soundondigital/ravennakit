@@ -21,6 +21,10 @@
 
 namespace rav {
 
+/**
+ * This class captures all the data needed to calculate the mean path delay and the offset from the master clock using
+ * the request-response delay mechanism.
+ */
 class ptp_request_response_delay_sequence {
   public:
     enum class state {
@@ -33,6 +37,12 @@ class ptp_request_response_delay_sequence {
 
     ptp_request_response_delay_sequence() = default;
 
+    /**
+     * Constructor.
+     * @param sync_message The initiating sync message.
+     * @param sync_receive_time The time the sync message was received (t2).
+     * @param port_ds The port data set of the port that received the sync message.
+     */
     ptp_request_response_delay_sequence(
         const ptp_sync_message& sync_message, const ptp_timestamp sync_receive_time, const ptp_port_ds& port_ds
     ) :
@@ -45,10 +55,20 @@ class ptp_request_response_delay_sequence {
         }
     }
 
+    /**
+     * Tests whether given header matches the sequence.
+     * @param header The header to test.
+     * @return True if the header matches the sequence, false otherwise.
+     */
     [[nodiscard]] bool matches(const ptp_message_header& header) const {
         return sync_message_.header.matches(header);
     }
 
+    /**
+     * Updates the sequence with the follow-up message.
+     * @param follow_up_message The follow-up message to update with.
+     * @param port_ds The port data set of the port that received the follow-up message.
+     */
     void update(const ptp_follow_up_message& follow_up_message, const ptp_port_ds& port_ds) {
         RAV_ASSERT(state_ == state::awaiting_follow_up, "State should be awaiting_follow_up");
         follow_up_correction_field_ = ptp_time_interval::from_wire_format(follow_up_message.header.correction_field);
@@ -56,6 +76,11 @@ class ptp_request_response_delay_sequence {
         schedule_delay_req_message_send(port_ds);
     }
 
+    /**
+     * Updates the sequence with the delay response message.
+     * Sets the state to delay_resp_received.
+     * @param delay_resp_message The delay response message to update with.
+     */
     void update(const ptp_delay_resp_message& delay_resp_message) {
         RAV_ASSERT(state_ == state::awaiting_delay_resp, "State should be awaiting_delay_resp");
         delay_resp_correction_field_ = ptp_time_interval::from_wire_format(delay_resp_message.header.correction_field);
@@ -63,6 +88,11 @@ class ptp_request_response_delay_sequence {
         state_ = state::delay_resp_received;
     }
 
+    /**
+     * Creates a delay request message.
+     * @param port_ds The port data set of the port that received the sync message.
+     * @return The created delay request message.
+     */
     [[nodiscard]] ptp_delay_req_message create_delay_req_message(const ptp_port_ds& port_ds) {
         RAV_ASSERT(state_ == state::delay_req_send_scheduled, "State should be delay_req_send_scheduled");
         requesting_port_identity_ = port_ds.port_identity;
@@ -76,6 +106,9 @@ class ptp_request_response_delay_sequence {
         return delay_req_message;
     }
 
+    /**
+     * @return The time the delay request message is scheduled to be sent.
+     */
     [[nodiscard]] std::optional<std::chrono::time_point<std::chrono::steady_clock>>
     get_delay_req_scheduled_send_time() const {
         if (state_ != state::delay_req_send_scheduled) {
@@ -84,20 +117,35 @@ class ptp_request_response_delay_sequence {
         return send_delay_req_at_;
     }
 
+    /**
+     * Sets the time the delay request message was sent.
+     * Sets the state to awaiting_delay_resp.
+     * @param sent_at The time the delay request message was sent.
+     */
     void set_delay_req_send_time(const ptp_timestamp& sent_at) {
         RAV_ASSERT(state_ == state::delay_req_send_scheduled, "State should be delay_req_send_scheduled");
         t3_ = sent_at;
         state_ = state::awaiting_delay_resp;
     }
 
+    /**
+     * @return The port identity of the port that initiated the sequence.
+     */
     [[nodiscard]] const ptp_port_identity& get_requesting_port_identity() const {
         return requesting_port_identity_;
     }
 
+    /**
+     * @return The sequence id of the sync message.
+     */
     [[nodiscard]] sequence_number<uint16_t> get_sequence_id() const {
         return sync_message_.header.sequence_id;
     }
 
+    /**
+     * Calculates the mean path delay.
+     * @return The mean path delay.
+     */
     [[nodiscard]] double calculate_mean_path_delay() {
         RAV_ASSERT(state_ == state::delay_resp_received, "State should be delay_resp_received");
         const auto t1 = t1_.total_seconds_double();
@@ -121,7 +169,7 @@ class ptp_request_response_delay_sequence {
     }
 
     /**
-     * Calculate the offset from the master clock.
+     * Calculates the offset from the master clock.
      * @return A pair of the offset and the mean path delay.
      */
     [[nodiscard]] ptp_measurement<double> calculate_offset_from_master() {

@@ -155,8 +155,7 @@ void rav::ptp_instance::execute_state_decision_event() {
         port->apply_state_decision_algorithm(default_ds_, ebest);
     }
 
-    // TODO: Update data sets for all ports
-    // TODO: Instantiate the recommended state event in the state machine and make required changes in all PTP ports
+    // TODO: Update data sets for all ports (currently only one port is supported)
 }
 
 bool rav::ptp_instance::should_process_ptp_messages(const ptp_message_header& header) const {
