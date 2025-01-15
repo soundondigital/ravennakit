@@ -16,7 +16,7 @@
 #include "ravennakit/ptp/messages/ptp_sync_message.hpp"
 #include "ravennakit/core/random.hpp"
 #include "ravennakit/core/tracy.hpp"
-#include "ravennakit/core/math/sliding_median.hpp"
+#include "ravennakit/core/math/sliding_stats.hpp"
 #include "ravennakit/ptp/messages/ptp_delay_resp_message.hpp"
 
 namespace rav {
@@ -169,7 +169,7 @@ class ptp_request_response_delay_sequence {
     ptp_timestamp t3_ {};  // Delay request send time (measured locally)
     ptp_timestamp t4_ {};  // Delay_Resp.receiveTimestamp
     ptp_port_identity requesting_port_identity_ {};
-    sliding_median asymmetry_median_ {101};
+    sliding_stats asymmetry_median_ {101};
 
     void schedule_delay_req_message_send(const ptp_port_ds& port_ds) {
         const auto max_interval_ms = std::pow(2, port_ds.log_min_delay_req_interval + 1) * 1000;

@@ -17,7 +17,7 @@
 #include "ravennakit/core/util.hpp"
 #include "ravennakit/core/chrono/high_resolution_clock.hpp"
 #include "ravennakit/core/math/running_average.hpp"
-#include "ravennakit/core/math/sliding_median.hpp"
+#include "ravennakit/core/math/sliding_stats.hpp"
 #include "types/ptp_timestamp.hpp"
 
 #include <cstdint>
@@ -183,7 +183,7 @@ class ptp_local_ptp_clock {
     ptp_timestamp last_sync_ = system_clock_now();
     double shift_ {};
     double frequency_ratio_ = 1.0;
-    sliding_median offset_median_ {101};
+    sliding_stats offset_median_ {101};
     size_t adjustments_since_last_step_ {};
     ptp_basic_filter offset_filter_ {0.1};
     int32_t filtered_outliers_ {};

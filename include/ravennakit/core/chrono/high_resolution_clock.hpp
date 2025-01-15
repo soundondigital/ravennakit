@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ravennakit/core/platform.hpp"
+#include "ravennakit/core/math/fraction.hpp"
 
 #include <cstdint>
 #include <ctime>
