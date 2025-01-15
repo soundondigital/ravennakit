@@ -42,24 +42,22 @@ rav::ptp_request_response_delay_sequence get_finished_sequence(
 
 TEST_CASE("ptp_request_response_delay_sequence") {
     SECTION("Test calculation of offset and mean delay") {
-        constexpr int64_t t1 = 1;   // Sync send time
-        constexpr int64_t t2 = 10;  // Sync receive time
-        constexpr int64_t t3 = 11;  // Delay req send time
-        constexpr int64_t t4 = 12;  // Delay resp receive time
+        const auto t1 = rav::ptp_timestamp(1, 0);   // Sync send time
+        const auto t2 = rav::ptp_timestamp(10, 0);  // Sync receive time
+        const auto t3 = rav::ptp_timestamp(11, 0);  // Delay req send time
+        const auto t4 = rav::ptp_timestamp(12, 0);  // Delay resp receive time
 
-        constexpr auto expected_mean_delay = ((t2 - t3) + (t4 - t1)) / 2;
-        constexpr auto expected_offset = (t2 - t1) - expected_mean_delay;
+        const auto expected_mean_delay = (t2 - t3 + (t4 - t1)) / 2;
+        const auto expected_offset = t2 - t1 - expected_mean_delay;
 
-        INFO("Expected mean delay: " << expected_mean_delay);
-        INFO("Expected offset: " << expected_offset);
+        INFO("Expected mean delay: " << expected_mean_delay.total_seconds_double());
+        INFO("Expected offset: " << expected_offset.total_seconds_double());
 
-        auto seq = get_finished_sequence(
-            rav::ptp_timestamp(t1, 0), rav::ptp_timestamp(t2, 0), rav::ptp_timestamp(t3, 0), rav::ptp_timestamp(t4, 0)
-        );
+        auto seq = get_finished_sequence(t1, t2, t3, t4);
 
         auto measurement = seq.calculate_offset_from_master();
 
-        REQUIRE(measurement.mean_delay.total_nanos() == expected_mean_delay * 1'000'000'000);
-        REQUIRE(measurement.offset_from_master.total_nanos() == expected_offset * 1'000'000'000);
+        REQUIRE(rav::util::is_within(measurement.mean_delay, 5.0, 0.0));
+        REQUIRE(rav::util::is_within(measurement.offset_from_master, expected_offset.total_seconds_double(), 0.0));
     }
 }
