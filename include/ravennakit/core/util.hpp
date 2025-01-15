@@ -23,7 +23,7 @@ namespace rav::util {
  * @return The number of elements in the array.
  */
 template<typename Type, size_t N>
-constexpr int num_elements_in_array(Type (&)[N]) noexcept {
+constexpr size_t num_elements_in_array(Type (&)[N]) noexcept {
     return N;
 }
 
@@ -41,7 +41,7 @@ bool is_within(T a, T b, T tolerance) {
 }
 
 /**
- * Tests if a value is between two other values.
+ * Tests if a value is between two other values, inclusive.
  * @tparam T The type of the values to compare.
  * @param a The value to test.
  * @param min The minimum value.

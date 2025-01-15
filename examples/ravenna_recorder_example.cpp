@@ -21,6 +21,15 @@
 #include <asio/io_context.hpp>
 #include <utility>
 
+/**
+ * This examples demonstrates how to receive audio streams from a RAVENNA device and write the audio data to wav files.
+ * It sets up a RAVENNA sink that listens for announcements from a RAVENNA device and starts receiving audio data.
+ * Separate files for each stream are created and existing files will be overwritten.
+ */
+
+/**
+ * A class that is a subscriber to a rtp_stream_receiver and writes the audio data to a wav file.
+ */
 class stream_recorder: public rav::rtp_stream_receiver::subscriber {
   public:
     explicit stream_recorder(std::unique_ptr<rav::ravenna_sink> sink) : sink_(std::move(sink)) {
@@ -40,7 +49,9 @@ class stream_recorder: public rav::rtp_stream_receiver::subscriber {
 
     void close() {
         if (wav_writer_) {
-            wav_writer_->finalize();
+            if (!wav_writer_->finalize()) {
+                RAV_ERROR("Failed to finalize wav file");
+            }
             wav_writer_.reset();
         }
         if (file_output_stream_) {
@@ -72,7 +83,9 @@ class stream_recorder: public rav::rtp_stream_receiver::subscriber {
         if (audio_format_.byte_order == rav::audio_format::byte_order::be) {
             rav::byte_order::swap_bytes(audio_data_.data(), audio_data_.size(), audio_format_.bytes_per_sample());
         }
-        wav_writer_->write_audio_data(audio_data_.data(), audio_data_.size());
+        if (!wav_writer_->write_audio_data(audio_data_.data(), audio_data_.size())) {
+            RAV_ERROR("Failed to write audio data");
+        }
     }
 
   private:
@@ -83,11 +96,6 @@ class stream_recorder: public rav::rtp_stream_receiver::subscriber {
     rav::audio_format audio_format_;
 };
 
-/**
- * This examples demonstrates how to receive audio streams from a RAVENNA device and write the audio data to wav files.
- * It sets up a RAVENNA sink that listens for announcements from a RAVENNA device and starts receiving audio data.
- * Separate files for each stream are created and existing files will be overwritten.
- */
 class ravenna_recorder_example {
   public:
     explicit ravenna_recorder_example(const std::string& interface_address) {

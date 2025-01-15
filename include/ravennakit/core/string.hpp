@@ -202,12 +202,13 @@ inline bool remove_suffix(std::string_view& string, const std::string_view suffi
  * @param string String to convert to a value.
  * @param strict If true, the whole string must be a number, otherwise only the beginning of the string must be a
  * number.
+ * @param base Base of the number to convert. When 16, the "0x" and "0X" prefixes are not recognized.
  * @return The converted value as optional, which will contain a value on success or will be empty on failure.
  */
 template<typename Type>
-std::optional<Type> ston(std::string_view string, const bool strict = false) {
+std::optional<Type> ston(std::string_view string, const bool strict = false, const int base = 10) {
     Type result {};
-    auto [p, ec] = std::from_chars(string.data(), string.data() + string.size(), result);
+    auto [p, ec] = std::from_chars(string.data(), string.data() + string.size(), result, base);
     if (ec == std::errc() && (!strict || p >= string.data() + string.size()))
         return result;
     return {};

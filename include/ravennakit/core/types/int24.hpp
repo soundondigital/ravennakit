@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <algorithm>
 
 namespace rav {
 
@@ -40,11 +41,11 @@ class int24_t {
     /**
      * Construct an int24_t from an int32_t value. The value is truncated to 24 bits.
      * @param value The value to store in the int24_t.
-     * ReSharper disable once CppNonExplicitConvertingConstructor
      */
     // ReSharper disable once CppNonExplicitConvertingConstructor
-    int24_t(const int32_t value) {  // NOLINT(google-explicit-constructor)
-        std::memcpy(data, std::addressof(value), 3);
+    int24_t(int32_t value) {  // NOLINT(google-explicit-constructor)
+        value = std::clamp(value, k_min, k_max);
+        std::memcpy(data_, std::addressof(value), sizeof(data_));
     }
 
     int24_t(const int24_t& other) = default;
@@ -61,12 +62,15 @@ class int24_t {
      */
     explicit operator int32_t() const {
         int32_t value {};
-        std::memcpy(std::addressof(value), data, 3);
+        std::memcpy(std::addressof(value), data_, sizeof(data_));
         return value << 8 >> 8; // Sign extend the 24-bit value to 32 bits
     }
 
   private:
-    uint8_t data[3] {};
+    static constexpr int32_t k_max = 0x7fffff;
+    static constexpr int32_t k_min = -0x800000;
+
+    uint8_t data_[3] {};
 };
 
 // Ensure that int24_t is 3 bytes in size

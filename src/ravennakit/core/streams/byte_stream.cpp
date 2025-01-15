@@ -18,15 +18,13 @@ void rav::byte_stream::reset() {
     write_position_ = 0;
 }
 
-size_t rav::byte_stream::read(uint8_t* buffer, const size_t size) {
-    if (exhausted()) {
-        return 0;
+tl::expected<size_t, rav::input_stream::error> rav::byte_stream::read(uint8_t* buffer, const size_t size) {
+    if (data_.size() - read_position_ < size) {
+        return tl::unexpected(input_stream::error::insufficient_data);
     }
-
-    const size_t bytes_to_read = std::min(size, data_.size() - read_position_);
-    std::memcpy(buffer, data_.data() + read_position_, bytes_to_read);
-    read_position_ += bytes_to_read;
-    return bytes_to_read;
+    std::memcpy(buffer, data_.data() + read_position_, size);
+    read_position_ += size;
+    return size;
 }
 
 bool rav::byte_stream::set_read_position(const size_t position) {
@@ -49,22 +47,23 @@ bool rav::byte_stream::exhausted() const {
     return read_position_ >= data_.size();
 }
 
-size_t rav::byte_stream::write(const uint8_t* buffer, const size_t size) {
-    if (write_position_ + size > data_.size()) {
-        data_.resize(write_position_ + size, 0);
+tl::expected<void, rav::output_stream::error> rav::byte_stream::write(const uint8_t* buffer, const size_t size) {
+    try {
+        if (write_position_ + size > data_.size()) {
+            data_.resize(write_position_ + size, 0);
+        }
+    } catch (...) {
+        return tl::unexpected(output_stream::error::out_of_memory);
     }
 
     std::memcpy(data_.data() + write_position_, buffer, size);
     write_position_ += size;
-    return size;
+    return {};
 }
 
-bool rav::byte_stream::set_write_position(const size_t position) {
-    if (position > data_.size()) {
-        return false;
-    }
+tl::expected<void, rav::output_stream::error> rav::byte_stream::set_write_position(const size_t position) {
     write_position_ = position;
-    return true;
+    return {};
 }
 
 size_t rav::byte_stream::get_write_position() {

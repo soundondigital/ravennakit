@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ravennakit/core/byte_order.hpp"
+#include "ravennakit/core/expected.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -23,23 +24,29 @@ namespace rav {
  */
 class input_stream {
   public:
+    enum class error {
+        insufficient_data,
+        failed_to_set_read_position,
+    };
+
     input_stream() = default;
     virtual ~input_stream() = default;
 
     /**
      * Reads data from the stream into the given buffer.
+     * If the stream doesn't have enough data, then nothing will be read.
      * @param buffer The buffer to read data into.
      * @param size The number of bytes to read.
      * @return The number of bytes read.
      */
-    virtual size_t read(uint8_t* buffer, size_t size) = 0;
+    [[nodiscard]] virtual tl::expected<size_t, error> read(uint8_t* buffer, size_t size) = 0;
 
     /**
      * Sets the read position in the stream.
      * @param position The new read position.
      * @return True if the read position was successfully set.
      */
-    virtual bool set_read_position(size_t position) = 0;
+    [[nodiscard]] virtual bool set_read_position(size_t position) = 0;
 
     /**
      * @return The current read position in the stream.
@@ -68,7 +75,7 @@ class input_stream {
      * @param size The number of bytes to skip.
      * @return True if the skip was successful.
      */
-    bool skip(size_t size);
+    [[nodiscard]] bool skip(size_t size);
 
     /**
      * Reads size amount of bytes from the stream and returns it as a string.
@@ -76,7 +83,7 @@ class input_stream {
      * @param size The number of bytes to read.
      * @return The string read from the stream.
      */
-    std::string read_as_string(size_t size);
+    [[nodiscard]] tl::expected<std::string, error> read_as_string(size_t size);
 
     /**
      * Reads a value from the given stream in native byte order (not to be confused with network-endian).
@@ -84,11 +91,14 @@ class input_stream {
      * @return The decoded value.
      */
     template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
-    std::optional<Type> read_ne() {
+    [[nodiscard]] tl::expected<Type, error> read_ne() {
         Type value;
-        const auto n = read(reinterpret_cast<uint8_t*>(std::addressof(value)), sizeof(Type));
-        if (n != sizeof(Type)) {
-            return std::nullopt;
+        auto result = read(reinterpret_cast<uint8_t*>(std::addressof(value)), sizeof(Type));
+        if (!result) {
+            return tl::unexpected(result.error());
+        }
+        if (result.value() != sizeof(Type)) {
+            return tl::unexpected(error::insufficient_data);
         }
         return value;
     }
@@ -99,11 +109,10 @@ class input_stream {
      * @return The decoded value.
      */
     template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
-    std::optional<Type> read_be() {
-        if (auto value = read_ne<Type>()) {
-            return byte_order::swap_if_le(*value);
-        }
-        return std::nullopt;
+    [[nodiscard]] tl::expected<Type, error> read_be() {
+        return read_ne<Type>().map([](Type value) {
+            return byte_order::swap_if_le(value);
+        });
     }
 
     /**
@@ -112,11 +121,10 @@ class input_stream {
      * @return The decoded value.
      */
     template<typename Type, std::enable_if_t<std::is_trivially_copyable_v<Type>, bool> = true>
-    std::optional<Type> read_le() {
-        if (auto value = read_ne<Type>()) {
-            return byte_order::swap_if_be(*value);
-        }
-        return std::nullopt;
+    [[nodiscard]] tl::expected<Type, error> read_le() {
+        return read_ne<Type>().map([](Type value) {
+            return byte_order::swap_if_be(value);
+        });
     }
 };
 

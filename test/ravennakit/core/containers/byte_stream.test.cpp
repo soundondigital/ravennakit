@@ -16,10 +16,10 @@ TEST_CASE("byte_stream", "[byte_stream]") {
     SECTION("Read") {
         rav::byte_stream stream;
 
-        stream.write_ne<uint32_t>(1);
-        stream.write_ne<uint16_t>(2);
-        stream.write_ne<uint8_t>(3);
-        stream.write_ne<int64_t>(4);
+        REQUIRE(stream.write_ne<uint32_t>(1));
+        REQUIRE(stream.write_ne<uint16_t>(2));
+        REQUIRE(stream.write_ne<uint8_t>(3));
+        REQUIRE(stream.write_ne<int64_t>(4));
 
         REQUIRE(stream.get_read_position() == 0);
 
@@ -33,7 +33,7 @@ TEST_CASE("byte_stream", "[byte_stream]") {
 
     SECTION("Set read position") {
         rav::byte_stream stream;
-        stream.write_ne<uint32_t>(1);
+        REQUIRE(stream.write_ne<uint32_t>(1));
 
         REQUIRE(stream.read_ne<uint32_t>() == 1);
         REQUIRE(stream.set_read_position(0) == true);
@@ -43,32 +43,35 @@ TEST_CASE("byte_stream", "[byte_stream]") {
 
     SECTION("Get read position") {
         rav::byte_stream stream;
-        stream.write_ne<uint32_t>(1);
+        REQUIRE(stream.write_ne<uint32_t>(1));
         REQUIRE(stream.get_read_position() == 0);
-        stream.read_ne<uint32_t>();
+        REQUIRE(stream.read_ne<uint32_t>());
         REQUIRE(stream.get_read_position() == 4);
     }
 
     SECTION("Get read position") {
         rav::byte_stream stream;
         REQUIRE(stream.size() == 0);
-        stream.write_ne<uint32_t>(1);
+        REQUIRE(stream.write_ne<uint32_t>(1));
         REQUIRE(stream.size() == 4);
     }
 
     SECTION("Set write position") {
         rav::byte_stream stream;
-        stream.write_ne<uint32_t>(1);
+        REQUIRE(stream.write_ne<uint32_t>(1));
         REQUIRE(stream.set_write_position(0));
-        stream.write_ne<uint32_t>(1);
-        REQUIRE(stream.set_write_position(5) == false);
-        REQUIRE(stream.get_write_position() == 4);
+        REQUIRE(stream.write_ne<uint32_t>(1));
+        REQUIRE(stream.set_write_position(10));
+        REQUIRE(stream.get_write_position() == 10);
         REQUIRE(stream.size() == 4);
+        REQUIRE(stream.write_ne<uint32_t>(1));
+        REQUIRE(stream.size() == 14);
+        REQUIRE(stream.get_write_position() == 14);
     }
 
     SECTION("Flush") {
         rav::byte_stream stream;
-        stream.write_ne<uint32_t>(1);
+        REQUIRE(stream.write_ne<uint32_t>(1));
         stream.flush();
     }
 

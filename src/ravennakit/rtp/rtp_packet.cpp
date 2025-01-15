@@ -36,42 +36,31 @@ void rav::rtp_packet::ssrc(const uint32_t value) {
     ssrc_ = value;
 }
 
-bool rav::rtp_packet::encode(const uint8_t* payload_data, size_t payload_size, output_stream& stream) const {
+tl::expected<void, rav::output_stream::error>
+rav::rtp_packet::encode(const uint8_t* payload_data, const size_t payload_size, output_stream& stream) const {
     uint8_t v_p_x_cc = 0;
     v_p_x_cc |= 0b10000000;  // Version 2.
     v_p_x_cc |= 0b00000000;  // No padding.
     v_p_x_cc |= 0b00000000;  // No extension.
     v_p_x_cc |= 0b00000000;  // CSRC count of 0.
-    if (stream.write_be(v_p_x_cc) != 1) {
-        return false;
-    }
+    OK_OR_RETURN(stream.write_be(v_p_x_cc));
 
     uint8_t m_pt = 0;
     m_pt |= 0b00000000;  // No marker bit.
     m_pt |= payload_type_ & 0b01111111;
-    if (stream.write_be(m_pt) != 1) {
-        return false;
-    }
+    OK_OR_RETURN(stream.write_be(m_pt));
 
     // Sequence number
-    if (stream.write_be(sequence_number_) != 2) {
-        return false;
-    }
+    OK_OR_RETURN(stream.write_be(sequence_number_));
 
     // Timestamp
-    if (stream.write_be(timestamp_) != 4) {
-        return false;
-    }
+    OK_OR_RETURN(stream.write_be(timestamp_));
 
     // SSRC
-    if (stream.write_be(ssrc_) != 4) {
-        return false;
-    }
+    OK_OR_RETURN(stream.write_be(ssrc_));
 
     // Payload
-    if (stream.write(payload_data, payload_size) != payload_size) {
-        return false;
-    }
+    OK_OR_RETURN(stream.write(payload_data, payload_size));
 
-    return true;
+    return {};
 }

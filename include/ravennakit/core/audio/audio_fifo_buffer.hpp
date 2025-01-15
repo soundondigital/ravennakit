@@ -20,16 +20,16 @@
 namespace rav {
 
 template<class T, class F = fifo::single>
-class circular_audio_buffer {
+class audio_fifo_buffer {
   public:
-    circular_audio_buffer() = default;
+    audio_fifo_buffer() = default;
 
     /**
      * Constructs a queue with a given number of elements.
      * @param num_channels The number of channels in the buffer.
      * @param num_frames The number of frames in the buffer.
      */
-    explicit circular_audio_buffer(const size_t num_channels, const size_t num_frames) {
+    explicit audio_fifo_buffer(const size_t num_channels, const size_t num_frames) {
         resize(num_channels, num_frames);
     }
 

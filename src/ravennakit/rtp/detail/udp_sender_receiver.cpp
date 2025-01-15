@@ -138,9 +138,14 @@ class rav::udp_sender_receiver::impl: public std::enable_shared_from_this<impl> 
     void stop();
 
     void async_receive();
+    void send(const uint8_t* data, size_t size, const asio::ip::udp::endpoint& endpoint);
 
     subscription
     join_multicast_group(const asio::ip::address& multicast_address, const asio::ip::address& interface_address);
+
+    [[nodiscard]] asio::error_code set_multicast_outbound_interface(const asio::ip::address_v4& interface_address);
+
+    asio::error_code set_multicast_loopback(bool enable);
 
   private:
     asio::ip::udp::socket socket_;
@@ -149,6 +154,36 @@ class rav::udp_sender_receiver::impl: public std::enable_shared_from_this<impl> 
     handler_type handler_;
     std::vector<multicast_group> multicast_groups_;
 };
+
+asio::error_code rav::udp_sender_receiver::impl::set_multicast_loopback(const bool enable) {
+    asio::error_code ec;
+    socket_.set_option(asio::ip::multicast::enable_loopback(enable), ec);
+    return ec;
+}
+
+asio::error_code
+rav::udp_sender_receiver::impl::set_multicast_outbound_interface(const asio::ip::address_v4& interface_address) {
+    asio::error_code ec;
+    socket_.set_option(asio::ip::multicast::outbound_interface(interface_address), ec);
+    return ec;
+}
+
+void rav::udp_sender_receiver::impl::send(
+    const uint8_t* data, const size_t size, const asio::ip::udp::endpoint& endpoint
+) {
+    RAV_ASSERT(data != nullptr, "Data must not be null");
+    RAV_ASSERT(size > 0, "Size must be greater than 0");
+    asio::error_code ec;
+    const auto sent = socket_.send_to(asio::buffer(data, size), endpoint, 0, ec);
+    if (ec) {
+        RAV_ERROR("Failed to send data: {}", ec.message());
+        return;
+    }
+    if (sent != size) {
+        RAV_ERROR("Failed to send all data");
+        return;
+    }
+}
 
 void rav::udp_sender_receiver::impl::stop() {
     if (handler_ == nullptr) {
@@ -189,6 +224,12 @@ void rav::udp_sender_receiver::start(handler_type handler) const {
     impl_->start(std::move(handler));
 }
 
+void rav::udp_sender_receiver::send(
+    const uint8_t* data, const size_t size, const asio::ip::udp::endpoint& endpoint
+) const {
+    impl_->send(data, size, endpoint);
+}
+
 rav::subscription rav::udp_sender_receiver::join_multicast_group(
     const asio::ip::address& multicast_address, const asio::ip::address& interface_address
 ) const {
@@ -197,6 +238,23 @@ rav::subscription rav::udp_sender_receiver::join_multicast_group(
         return {};
     }
     return impl_->join_multicast_group(multicast_address, interface_address);
+}
+
+asio::error_code
+rav::udp_sender_receiver::set_multicast_outbound_interface(const asio::ip::address_v4& interface_address) const {
+    if (impl_ == nullptr) {
+        RAV_WARNING("No implementation available");
+        return {};
+    }
+    return impl_->set_multicast_outbound_interface(interface_address);
+}
+
+asio::error_code rav::udp_sender_receiver::set_multicast_loopback(const bool enable) const {
+    if (impl_ == nullptr) {
+        RAV_WARNING("No implementation available");
+        return {};
+    }
+    return impl_->set_multicast_loopback(enable);
 }
 
 rav::udp_sender_receiver::impl::impl(asio::io_context& io_context, const asio::ip::udp::endpoint& endpoint) :

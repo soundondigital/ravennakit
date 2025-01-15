@@ -89,7 +89,7 @@ class network_interface {
     }
 
     /**
-     * @return The MAC address of the network interface, or nullopt if the MAC address could not be found.
+     * @return The MAC address of the network interface, or nullopt if the interface does not have a MAC address.
      */
     [[nodiscard]] const std::optional<mac_address>& get_mac_address() const {
         return mac_address_;

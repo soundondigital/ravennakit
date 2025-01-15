@@ -12,7 +12,7 @@
 
 #include <string_view>
 
-#include "ravennakit/core/fraction.hpp"
+#include "ravennakit/core/math/fraction.hpp"
 #include "ravennakit/core/result.hpp"
 
 #include <tl/expected.hpp>

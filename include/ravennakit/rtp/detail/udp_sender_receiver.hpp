@@ -63,6 +63,14 @@ class udp_sender_receiver {
     void start(handler_type handler) const;
 
     /**
+     * Sends a datagram to the given endpoint.
+     * @param data The data to send.
+     * @param size The size of the data. Must be smaller than MTU.
+     * @param endpoint The endpoint to send the data to.
+     */
+    void send(const uint8_t* data, size_t size, const asio::ip::udp::endpoint& endpoint) const;
+
+    /**
      * Join a multicast group. A group can be joined multiple times as the group will be counted internally. Only when
      * the last subscription is removed will the group be left.
      * @param multicast_address The multicast address to join.
@@ -71,6 +79,20 @@ class udp_sender_receiver {
      */
     [[nodiscard]] subscription
     join_multicast_group(const asio::ip::address& multicast_address, const asio::ip::address& interface_address) const;
+
+    /**
+     * Set the outbound interface for multicast packets.
+     * @param interface_address The address of the interface to use.
+     * @return True if the operation was successful, false otherwise.
+     */
+    [[nodiscard]] asio::error_code set_multicast_outbound_interface(const asio::ip::address_v4& interface_address) const;
+
+    /**
+     * Set the multicast loopback option.
+     * @param enable True to enable multicast loopback, false to disable.
+     * @return True if the operation was successful, false otherwise.
+     */
+    [[nodiscard]] asio::error_code set_multicast_loopback(bool enable) const;
 
   private:
     class impl;

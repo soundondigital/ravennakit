@@ -9,7 +9,7 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include <ravennakit/core/containers/circular_buffer.hpp>
+#include <ravennakit/core/containers/fifo_buffer.hpp>
 #include <ravennakit/core/containers/detail/fifo.hpp>
 #include <ravennakit/core/log.hpp>
 #include <thread>
@@ -21,7 +21,7 @@ constexpr int num_writer_threads = 4;
 constexpr int num_writes_per_thread = 10'000;
 
 template<typename T, typename F, size_t S>
-void test_circular_buffer_read_write() {
+void test_fifo_buffer_read_write() {
     std::array<T, S> src {};
 
     // Fill source data
@@ -29,7 +29,7 @@ void test_circular_buffer_read_write() {
         src[i] = static_cast<T>(i + 1);  // NOLINT
     }
 
-    rav::circular_buffer<T, F> buffer(S);
+    rav::fifo_buffer<T, F> buffer(S);
 
     REQUIRE(buffer.write(src.data(), src.size()));
     REQUIRE_FALSE(buffer.write(&src[0], 1));
@@ -55,59 +55,59 @@ void test_circular_buffer_read_write() {
 
 }  // namespace
 
-TEST_CASE("circular_buffer test basic reading writing") {
+TEST_CASE("fifo_buffer test basic reading writing") {
     SECTION("Test basic reading and writing") {
         constexpr size_t size = 10;
-        test_circular_buffer_read_write<uint8_t, rav::fifo::single, size>();
-        test_circular_buffer_read_write<uint16_t, rav::fifo::single, size>();
-        test_circular_buffer_read_write<uint32_t, rav::fifo::single, size>();
-        test_circular_buffer_read_write<uint64_t, rav::fifo::single, size>();
-        test_circular_buffer_read_write<int8_t, rav::fifo::single, size>();
-        test_circular_buffer_read_write<int16_t, rav::fifo::single, size>();
-        test_circular_buffer_read_write<int32_t, rav::fifo::single, size>();
-        test_circular_buffer_read_write<int64_t, rav::fifo::single, size>();
+        test_fifo_buffer_read_write<uint8_t, rav::fifo::single, size>();
+        test_fifo_buffer_read_write<uint16_t, rav::fifo::single, size>();
+        test_fifo_buffer_read_write<uint32_t, rav::fifo::single, size>();
+        test_fifo_buffer_read_write<uint64_t, rav::fifo::single, size>();
+        test_fifo_buffer_read_write<int8_t, rav::fifo::single, size>();
+        test_fifo_buffer_read_write<int16_t, rav::fifo::single, size>();
+        test_fifo_buffer_read_write<int32_t, rav::fifo::single, size>();
+        test_fifo_buffer_read_write<int64_t, rav::fifo::single, size>();
 
-        test_circular_buffer_read_write<uint8_t, rav::fifo::spsc, size>();
-        test_circular_buffer_read_write<uint16_t, rav::fifo::spsc, size>();
-        test_circular_buffer_read_write<uint32_t, rav::fifo::spsc, size>();
-        test_circular_buffer_read_write<uint64_t, rav::fifo::spsc, size>();
-        test_circular_buffer_read_write<int8_t, rav::fifo::spsc, size>();
-        test_circular_buffer_read_write<int16_t, rav::fifo::spsc, size>();
-        test_circular_buffer_read_write<int32_t, rav::fifo::spsc, size>();
-        test_circular_buffer_read_write<int64_t, rav::fifo::spsc, size>();
+        test_fifo_buffer_read_write<uint8_t, rav::fifo::spsc, size>();
+        test_fifo_buffer_read_write<uint16_t, rav::fifo::spsc, size>();
+        test_fifo_buffer_read_write<uint32_t, rav::fifo::spsc, size>();
+        test_fifo_buffer_read_write<uint64_t, rav::fifo::spsc, size>();
+        test_fifo_buffer_read_write<int8_t, rav::fifo::spsc, size>();
+        test_fifo_buffer_read_write<int16_t, rav::fifo::spsc, size>();
+        test_fifo_buffer_read_write<int32_t, rav::fifo::spsc, size>();
+        test_fifo_buffer_read_write<int64_t, rav::fifo::spsc, size>();
 
-        test_circular_buffer_read_write<uint8_t, rav::fifo::mpsc, size>();
-        test_circular_buffer_read_write<uint16_t, rav::fifo::mpsc, size>();
-        test_circular_buffer_read_write<uint32_t, rav::fifo::mpsc, size>();
-        test_circular_buffer_read_write<uint64_t, rav::fifo::mpsc, size>();
-        test_circular_buffer_read_write<int8_t, rav::fifo::mpsc, size>();
-        test_circular_buffer_read_write<int16_t, rav::fifo::mpsc, size>();
-        test_circular_buffer_read_write<int32_t, rav::fifo::mpsc, size>();
-        test_circular_buffer_read_write<int64_t, rav::fifo::mpsc, size>();
+        test_fifo_buffer_read_write<uint8_t, rav::fifo::mpsc, size>();
+        test_fifo_buffer_read_write<uint16_t, rav::fifo::mpsc, size>();
+        test_fifo_buffer_read_write<uint32_t, rav::fifo::mpsc, size>();
+        test_fifo_buffer_read_write<uint64_t, rav::fifo::mpsc, size>();
+        test_fifo_buffer_read_write<int8_t, rav::fifo::mpsc, size>();
+        test_fifo_buffer_read_write<int16_t, rav::fifo::mpsc, size>();
+        test_fifo_buffer_read_write<int32_t, rav::fifo::mpsc, size>();
+        test_fifo_buffer_read_write<int64_t, rav::fifo::mpsc, size>();
 
-        test_circular_buffer_read_write<uint8_t, rav::fifo::spmc, size>();
-        test_circular_buffer_read_write<uint16_t, rav::fifo::spmc, size>();
-        test_circular_buffer_read_write<uint32_t, rav::fifo::spmc, size>();
-        test_circular_buffer_read_write<uint64_t, rav::fifo::spmc, size>();
-        test_circular_buffer_read_write<int8_t, rav::fifo::spmc, size>();
-        test_circular_buffer_read_write<int16_t, rav::fifo::spmc, size>();
-        test_circular_buffer_read_write<int32_t, rav::fifo::spmc, size>();
-        test_circular_buffer_read_write<int64_t, rav::fifo::spmc, size>();
+        test_fifo_buffer_read_write<uint8_t, rav::fifo::spmc, size>();
+        test_fifo_buffer_read_write<uint16_t, rav::fifo::spmc, size>();
+        test_fifo_buffer_read_write<uint32_t, rav::fifo::spmc, size>();
+        test_fifo_buffer_read_write<uint64_t, rav::fifo::spmc, size>();
+        test_fifo_buffer_read_write<int8_t, rav::fifo::spmc, size>();
+        test_fifo_buffer_read_write<int16_t, rav::fifo::spmc, size>();
+        test_fifo_buffer_read_write<int32_t, rav::fifo::spmc, size>();
+        test_fifo_buffer_read_write<int64_t, rav::fifo::spmc, size>();
 
-        test_circular_buffer_read_write<uint8_t, rav::fifo::mpmc, size>();
-        test_circular_buffer_read_write<uint16_t, rav::fifo::mpmc, size>();
-        test_circular_buffer_read_write<uint32_t, rav::fifo::mpmc, size>();
-        test_circular_buffer_read_write<uint64_t, rav::fifo::mpmc, size>();
-        test_circular_buffer_read_write<int8_t, rav::fifo::mpmc, size>();
-        test_circular_buffer_read_write<int16_t, rav::fifo::mpmc, size>();
-        test_circular_buffer_read_write<int32_t, rav::fifo::mpmc, size>();
-        test_circular_buffer_read_write<int64_t, rav::fifo::mpmc, size>();
+        test_fifo_buffer_read_write<uint8_t, rav::fifo::mpmc, size>();
+        test_fifo_buffer_read_write<uint16_t, rav::fifo::mpmc, size>();
+        test_fifo_buffer_read_write<uint32_t, rav::fifo::mpmc, size>();
+        test_fifo_buffer_read_write<uint64_t, rav::fifo::mpmc, size>();
+        test_fifo_buffer_read_write<int8_t, rav::fifo::mpmc, size>();
+        test_fifo_buffer_read_write<int16_t, rav::fifo::mpmc, size>();
+        test_fifo_buffer_read_write<int32_t, rav::fifo::mpmc, size>();
+        test_fifo_buffer_read_write<int64_t, rav::fifo::mpmc, size>();
     }
 
     SECTION("Test single producer single consumer") {
         int64_t expected_total = 0;
 
-        rav::circular_buffer<int64_t, rav::fifo::spsc> buffer(10);
+        rav::fifo_buffer<int64_t, rav::fifo::spsc> buffer(10);
 
         std::thread writer([&] {
             for (int i = 0; i < num_writes_per_thread; i++) {
@@ -147,7 +147,7 @@ TEST_CASE("circular_buffer test basic reading writing") {
     SECTION("Test multi producer single consumer") {
         std::atomic<int64_t> expected_total = 0;
 
-        rav::circular_buffer<int64_t, rav::fifo::mpsc> buffer(10);
+        rav::fifo_buffer<int64_t, rav::fifo::mpsc> buffer(10);
 
         std::vector<std::thread> writers;
         writers.reserve(num_writer_threads);
@@ -194,7 +194,7 @@ TEST_CASE("circular_buffer test basic reading writing") {
     SECTION("Test single producer multi consumer") {
         int64_t expected_total = 0;
 
-        rav::circular_buffer<int64_t, rav::fifo::spmc> buffer(10);
+        rav::fifo_buffer<int64_t, rav::fifo::spmc> buffer(10);
 
         std::thread writer([&] {
             for (int i = 0; i < num_writes_per_thread; i++) {
@@ -241,7 +241,7 @@ TEST_CASE("circular_buffer test basic reading writing") {
     SECTION("Test multi producer multi consumer") {
         std::atomic<int64_t> expected_total = 0;
 
-        rav::circular_buffer<int64_t, rav::fifo::mpmc> buffer(10);
+        rav::fifo_buffer<int64_t, rav::fifo::mpmc> buffer(10);
 
         std::vector<std::thread> writers;
         writers.reserve(num_writer_threads);
@@ -293,26 +293,26 @@ TEST_CASE("circular_buffer test basic reading writing") {
     }
 }
 
-static_assert(!std::is_move_constructible_v<rav::circular_buffer<int, rav::fifo::single>>);
-static_assert(!std::is_move_constructible_v<rav::circular_buffer<int, rav::fifo::spsc>>);
-static_assert(!std::is_move_constructible_v<rav::circular_buffer<int, rav::fifo::mpsc>>);
-static_assert(!std::is_move_constructible_v<rav::circular_buffer<int, rav::fifo::spmc>>);
-static_assert(!std::is_move_constructible_v<rav::circular_buffer<int, rav::fifo::mpmc>>);
+static_assert(!std::is_move_constructible_v<rav::fifo_buffer<int, rav::fifo::single>>);
+static_assert(!std::is_move_constructible_v<rav::fifo_buffer<int, rav::fifo::spsc>>);
+static_assert(!std::is_move_constructible_v<rav::fifo_buffer<int, rav::fifo::mpsc>>);
+static_assert(!std::is_move_constructible_v<rav::fifo_buffer<int, rav::fifo::spmc>>);
+static_assert(!std::is_move_constructible_v<rav::fifo_buffer<int, rav::fifo::mpmc>>);
 
-static_assert(!std::is_move_assignable_v<rav::circular_buffer<int, rav::fifo::single>>);
-static_assert(!std::is_move_assignable_v<rav::circular_buffer<int, rav::fifo::spsc>>);
-static_assert(!std::is_move_assignable_v<rav::circular_buffer<int, rav::fifo::mpsc>>);
-static_assert(!std::is_move_assignable_v<rav::circular_buffer<int, rav::fifo::spmc>>);
-static_assert(!std::is_move_assignable_v<rav::circular_buffer<int, rav::fifo::mpmc>>);
+static_assert(!std::is_move_assignable_v<rav::fifo_buffer<int, rav::fifo::single>>);
+static_assert(!std::is_move_assignable_v<rav::fifo_buffer<int, rav::fifo::spsc>>);
+static_assert(!std::is_move_assignable_v<rav::fifo_buffer<int, rav::fifo::mpsc>>);
+static_assert(!std::is_move_assignable_v<rav::fifo_buffer<int, rav::fifo::spmc>>);
+static_assert(!std::is_move_assignable_v<rav::fifo_buffer<int, rav::fifo::mpmc>>);
 
-static_assert(!std::is_copy_constructible_v<rav::circular_buffer<int, rav::fifo::single>>);
-static_assert(!std::is_copy_constructible_v<rav::circular_buffer<int, rav::fifo::spsc>>);
-static_assert(!std::is_copy_constructible_v<rav::circular_buffer<int, rav::fifo::mpsc>>);
-static_assert(!std::is_copy_constructible_v<rav::circular_buffer<int, rav::fifo::spmc>>);
-static_assert(!std::is_copy_constructible_v<rav::circular_buffer<int, rav::fifo::mpmc>>);
+static_assert(!std::is_copy_constructible_v<rav::fifo_buffer<int, rav::fifo::single>>);
+static_assert(!std::is_copy_constructible_v<rav::fifo_buffer<int, rav::fifo::spsc>>);
+static_assert(!std::is_copy_constructible_v<rav::fifo_buffer<int, rav::fifo::mpsc>>);
+static_assert(!std::is_copy_constructible_v<rav::fifo_buffer<int, rav::fifo::spmc>>);
+static_assert(!std::is_copy_constructible_v<rav::fifo_buffer<int, rav::fifo::mpmc>>);
 
-static_assert(!std::is_copy_assignable_v<rav::circular_buffer<int, rav::fifo::single>>);
-static_assert(!std::is_copy_assignable_v<rav::circular_buffer<int, rav::fifo::spsc>>);
-static_assert(!std::is_copy_assignable_v<rav::circular_buffer<int, rav::fifo::mpsc>>);
-static_assert(!std::is_copy_assignable_v<rav::circular_buffer<int, rav::fifo::spmc>>);
-static_assert(!std::is_copy_assignable_v<rav::circular_buffer<int, rav::fifo::mpmc>>);
+static_assert(!std::is_copy_assignable_v<rav::fifo_buffer<int, rav::fifo::single>>);
+static_assert(!std::is_copy_assignable_v<rav::fifo_buffer<int, rav::fifo::spsc>>);
+static_assert(!std::is_copy_assignable_v<rav::fifo_buffer<int, rav::fifo::mpsc>>);
+static_assert(!std::is_copy_assignable_v<rav::fifo_buffer<int, rav::fifo::spmc>>);
+static_assert(!std::is_copy_assignable_v<rav::fifo_buffer<int, rav::fifo::mpmc>>);

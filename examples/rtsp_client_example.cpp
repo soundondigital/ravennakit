@@ -15,6 +15,10 @@
 
 #include <CLI/App.hpp>
 
+/**
+ * This example shows how to create a RTSP client.
+ */
+
 int main(int const argc, char* argv[]) {
     rav::log::set_level_from_env();
     rav::system::do_system_checks();

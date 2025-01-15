@@ -12,6 +12,10 @@
 #include "ravennakit/core/system.hpp"
 #include "ravennakit/core/net/interfaces/network_interface.hpp"
 
+/**
+ * This example shows the available network interfaces on the system.
+ */
+
 int main() {
     rav::log::set_level_from_env();
     rav::system::do_system_checks();

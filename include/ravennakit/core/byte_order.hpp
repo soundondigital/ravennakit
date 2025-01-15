@@ -54,8 +54,6 @@ static constexpr bool big_endian = false;
 
 namespace rav::byte_order {
 
-
-
 /**
  * Swaps given amount of bytes in the given data, in place.
  * @param data The data to swap.

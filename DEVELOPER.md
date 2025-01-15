@@ -12,39 +12,37 @@ Include headers in the following order:
 
 Each block separated by a space (to not have the include order changed by clang-format).
 
-### Exception policy
+## Guidelines for exception safety and error handling in the library
 
-This library adopts exceptions as the primary mechanism for error handling. Exceptions provide a clean, structured way
-to manage error conditions, allowing the separation of normal code paths from error-handling logic. By utilizing
-exceptions, the library aims to improve code readability and maintainability, while ensuring robust error management.
+1. **Ensure exception-safe code**
 
-All exceptions are used to signal error conditions, and the library encourages developers to handle exceptions at
-appropriate levels of abstraction. This ensures that resources are properly released and errors are dealt with in a way
-that minimizes disruption to the overall application.
+   - All code within the library must be exception-safe.
+   - Resources must be managed using RAII (Resource Acquisition Is Initialization) or equivalent techniques to guarantee proper cleanup, even in the presence of exceptions.
+   - Assume that any non-`noexcept` function can throw an exception.
+   - Be aware that many components of the C++ standard library and other third-party libraries rely on exceptions for error handling, making it impractical to avoid exceptions entirely.
 
-Key principles for using exceptions:
+2. **Use both return values and exceptions for error handling**
 
-Use exceptions for error conditions: Exceptions should be thrown when an operation fails and cannot continue normally.
-This allows the caller to handle the error without cluttering the code with manual error checks.
+   - Use return values wherever possible to signal errors. For example, leverage `tl::expected` to encapsulate the result of an operation that might fail.
+      - `tl::expected` allows the caller to handle errors explicitly as return values, providing a more flexible mechanism for error handling.
+      - This approach gives the caller the choice to process errors using custom logic or convert them into exceptions when appropriate.
+   - Throw exceptions where return values are not feasible, such as in constructors.
+      - A constructor should throw an exception if it fails to establish the invariants required for an object’s proper functionality.
+      - Ensure any partially initialized resources are cleaned up properly to avoid leaks when an exception occurs.
 
-Avoid using exceptions for control flow: Exceptions should represent truly exceptional circumstances, not be used for
-routine operations or logic control. They should be reserved for scenarios where normal execution cannot proceed.
+3. **Prioritize explicit error handling**
 
-Ensure exception safety: All code must be exception-safe. Resources must be managed using RAII (Resource Acquisition Is
-Initialization) or other techniques that guarantee proper cleanup, even in the presence of exceptions. This ensures that
-no resources are leaked during error conditions.
+   - Make error handling as explicit as possible, ensuring that the code’s behavior in error scenarios is predictable and clear.
+   - Avoid relying on exceptions solely because of stack unwinding. Instead, use exceptions to signal critical failures that cannot be represented with return values.
+   - Provide clear and detailed documentation for all error-handling paths, whether they involve return values or exceptions.
 
-Document thrown exceptions: Functions and methods should clearly document which exceptions may be thrown and under what
-conditions, allowing users of the library to understand potential error scenarios and handle them appropriately.
+4. **Avoid using exceptions or return values for control flow**
 
-Catch exceptions where it makes sense: Exceptions should be caught and handled at a level where meaningful recovery can
-occur. If recovery is impossible, exceptions should propagate up to higher layers, where the application can decide how
-to respond.
-
-In some cases, the library uses return values for error handling. This approach is appropriate when failures are
-expected and common, or when using exceptions would cause issues with stack unwinding. By returning error codes or
-status values, the library can handle scenarios where predictable failures occur without triggering the overhead of
-exception handling.
+   - Both exceptions and error return values must be reserved for truly exceptional circumstances. They should not be used to control routine program logic or handle non-critical events.
+   - Examples of misuse:
+      - Using exceptions for looping conditions or state transitions.
+      - Using error codes for predictable outcomes (e.g., checking if a file exists).
+   - Ensure normal operations are handled with predictable, clear, and performant logic without relying on exceptions or error propagation mechanisms.
 
 ## Quick commands
 

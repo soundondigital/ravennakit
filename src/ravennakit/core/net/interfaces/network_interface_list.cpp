@@ -62,6 +62,17 @@ const rav::network_interface* rav::network_interface_list::find_by_string(const 
     return nullptr;
 }
 
+const rav::network_interface* rav::network_interface_list::find_by_address(const asio::ip::address& address) const {
+    for (auto& interface : interfaces_) {
+        for (const auto& addr : interface.addresses()) {
+            if (addr == address) {
+                return &interface;
+            }
+        }
+    }
+    return nullptr;
+}
+
 void rav::network_interface_list::refresh() {
     auto result = network_interface::get_all();
     if (!result) {

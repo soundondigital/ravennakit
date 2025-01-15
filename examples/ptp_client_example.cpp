@@ -9,16 +9,23 @@
  */
 
 #include "ravennakit/core/system.hpp"
+#include "ravennakit/ptp/ptp_instance.hpp"
+#include "ravennakit/ptp/messages/ptp_announce_message.hpp"
+#include "ravennakit/ptp/messages/ptp_message_header.hpp"
 #include "ravennakit/rtp/detail/udp_sender_receiver.hpp"
 
 #include <CLI/App.hpp>
 #include <asio/io_context.hpp>
 
+/**
+ * This example shows how to create a PTP client.
+ */
+
 int main(int const argc, char* argv[]) {
     rav::log::set_level_from_env();
     rav::system::do_system_checks();
 
-    CLI::App app {"RAVENNA Receiver example"};
+    CLI::App app {"PTP Client example"};
     argv = app.ensure_utf8(argv);
 
     std::string interface_address = "0.0.0.0";
@@ -29,23 +36,12 @@ int main(int const argc, char* argv[]) {
     std::vector<rav::subscription> subscriptions;
     asio::io_context io_context;
 
-    const auto ptp_multicast_address = asio::ip::make_address("224.0.1.129");
-    const rav::udp_sender_receiver ptp_event_socket(io_context, asio::ip::address_v4(), 319);
-    const rav::udp_sender_receiver ptp_general_socket(io_context, asio::ip::address_v4(), 320);
-
-    subscriptions.push_back(ptp_event_socket.join_multicast_group(
-        ptp_multicast_address, asio::ip::make_address(interface_address)
-    ));
-    subscriptions.push_back(ptp_general_socket.join_multicast_group(
-        ptp_multicast_address, asio::ip::make_address(interface_address)
-    ));
-
-    ptp_event_socket.start([](const rav::udp_sender_receiver::recv_event& event) {
-        RAV_TRACE("PTP time messages received");
-    });
-    ptp_general_socket.start([](const rav::udp_sender_receiver::recv_event& event) {
-        RAV_TRACE("PTP event messages received");
-    });
+    rav::ptp_instance ptp_instance(io_context);
+    auto result = ptp_instance.add_port(asio::ip::make_address(interface_address));
+    if (!result) {
+        RAV_TRACE("PTP Error: {}", static_cast<std::underlying_type_t<rav::ptp_error>>(result.error()));
+        return 1;
+    }
 
     io_context.run();
 

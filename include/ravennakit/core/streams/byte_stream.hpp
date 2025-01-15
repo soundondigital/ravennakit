@@ -31,15 +31,15 @@ class byte_stream final: public input_stream, public output_stream {
     void reset();
 
     // input_stream overrides
-    size_t read(uint8_t* buffer, size_t size) override;
-    bool set_read_position(size_t position) override;
+    [[nodiscard]] tl::expected<size_t, input_stream::error> read(uint8_t* buffer, size_t size) override;
+    [[nodiscard]] bool set_read_position(size_t position) override;
     [[nodiscard]] size_t get_read_position() override;
     [[nodiscard]] std::optional<size_t> size() const override;
     [[nodiscard]] bool exhausted() const override;
 
     // output_stream overrides
-    size_t write(const uint8_t* buffer, size_t size) override;
-    bool set_write_position(size_t position) override;
+    [[nodiscard]] tl::expected<void, output_stream::error> write(const uint8_t* buffer, size_t size) override;
+    [[nodiscard]] tl::expected<void, output_stream::error> set_write_position(size_t position) override;
     [[nodiscard]] size_t get_write_position() override;
     void flush() override;
 

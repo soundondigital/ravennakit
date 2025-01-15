@@ -18,7 +18,7 @@
 
 namespace {
 std::string generate_random_reg_type() {
-    auto random_string = rav::random::generate_random_string(20);
+    auto random_string = rav::random().generate_random_string(20);
     return fmt::format("_{}._tcp.", random_string);
 }
 }  // namespace

@@ -52,13 +52,14 @@ rav::network_interface::type functional_type_for_interface(const char* name) {
         return rav::network_interface::type::undefined;
     }
 
+    rav::defer close_socket([&] {
+        close(fd);
+    });
+
     ifreq ifr = {};
     strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 
     const bool success = ioctl(fd, SIOCGIFFUNCTIONALTYPE, &ifr) >= 0;
-
-    const int junk = close(fd);
-    assert(junk == 0);
 
     if (!success) {
         return rav::network_interface::type::undefined;

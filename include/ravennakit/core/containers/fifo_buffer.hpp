@@ -18,24 +18,24 @@
 namespace rav {
 
 /**
- * A classic circular buffer implementation.
+ * A classic FIFO buffer implementation with different strategies F.
  */
 template<class T, class F>
-class circular_buffer {
+class fifo_buffer {
   public:
     /**
      * Constructs a queue with a given number of elements.
      * @param capacity The number of elements the queue can hold.
      */
-    explicit circular_buffer(const size_t capacity) {
+    explicit fifo_buffer(const size_t capacity) {
         resize(capacity);
     }
 
-    circular_buffer(const circular_buffer& other) = delete;
-    circular_buffer& operator=(const circular_buffer& other) = delete;
+    fifo_buffer(const fifo_buffer& other) = delete;
+    fifo_buffer& operator=(const fifo_buffer& other) = delete;
 
-    circular_buffer(circular_buffer&& other) noexcept = delete;
-    circular_buffer& operator=(circular_buffer&& other) noexcept = delete;
+    fifo_buffer(fifo_buffer&& other) noexcept = delete;
+    fifo_buffer& operator=(fifo_buffer&& other) noexcept = delete;
 
     /**
      * Writes data to the buffer.

@@ -69,7 +69,8 @@ class rtp_packet {
      * @param stream The stream to write to.
      * @return true if the packet was successfully encoded and written, or false otherwise.
      */
-    bool encode(const uint8_t* payload_data, size_t payload_size, output_stream& stream) const;
+    [[nodiscard]] tl::expected<void, output_stream::error>
+    encode(const uint8_t* payload_data, size_t payload_size, output_stream& stream) const;
 
   private:
     uint8_t payload_type_ {0};

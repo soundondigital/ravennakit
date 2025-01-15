@@ -10,10 +10,11 @@
 
 #pragma once
 
-#include "ravennakit/core/fraction.hpp"
 #include "ravennakit/core/platform.hpp"
+#include "ravennakit/core/math/fraction.hpp"
 
 #include <cstdint>
+#include <ctime>
 
 #if RAV_APPLE
     #include <mach/mach_time.h>
@@ -42,9 +43,9 @@ class high_resolution_clock {
         QueryPerformanceCounter(&counter);
         return static_cast<uint64_t>((counter.QuadPart * 1'000'000'000) / clock.frequency_.QuadPart);
 #elif RAV_POSIX
-        struct timespec ts;
+        timespec ts{};
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        return static_cast<uint64_t>(ts.tv_sec) * 1'000'000'000 + ts.tv_nsec;
+        return static_cast<uint64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<uint64_t>(ts.tv_nsec);
 #else
     #error "high_resolution_clock is not implemented for this platform."
         return 0;

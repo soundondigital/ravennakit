@@ -16,7 +16,7 @@
 #include <type_traits>
 
 #include "ravennakit/core/assert.hpp"
-#include "ravennakit/core/int24.hpp"
+#include "ravennakit/core/types/int24.hpp"
 #include "ravennakit/core/byte_order.hpp"
 
 namespace rav::audio_data {

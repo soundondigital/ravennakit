@@ -20,6 +20,12 @@
 #include <asio/io_context.hpp>
 #include <utility>
 
+/**
+ * This examples demonstrates how to receive audio streams from a RAVENNA device. It sets up a RAVENNA sink that listens
+ * for announcements from a RAVENNA device and starts receiving audio data. It will play the audio to the selected audio
+ * device using portaudio.
+ */
+
 constexpr int k_block_size = 256;
 
 class portaudio {
@@ -158,11 +164,6 @@ class portaudio_stream {
     }
 };
 
-/**
- * This examples demonstrates how to receive audio streams from a RAVENNA device. It sets up a RAVENNA sink that listens
- * for announcements from a RAVENNA device and starts receiving audio data. It will play the audio to the selected audio
- * device using portaudio.
- */
 class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber {
   public:
     explicit ravenna_receiver_example(

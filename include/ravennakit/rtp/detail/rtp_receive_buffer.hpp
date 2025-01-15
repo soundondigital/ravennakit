@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "ravennakit/core/containers/circular_buffer.hpp"
+#include "ravennakit/core/containers/fifo_buffer.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
 #include "ravennakit/core/log.hpp"
 
@@ -85,7 +85,7 @@ class rtp_receive_buffer {
      * @param buffer_size The size of the buffer in bytes.
      * @returns true if buffer_size bytes were read, or false if buffer_size bytes couldn't be read.
      */
-    bool read(const size_t at_timestamp, uint8_t* buffer, const size_t buffer_size) {
+    bool read(const size_t at_timestamp, uint8_t* buffer, const size_t buffer_size) const {
         RAV_ASSERT(buffer != nullptr, "Buffer must not be nullptr.");
         RAV_ASSERT(buffer_size > 0, "Buffer size must be greater than 0.");
 

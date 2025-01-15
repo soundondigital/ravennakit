@@ -13,6 +13,7 @@
 #include <map>
 #include <string>
 #include <optional>
+#include <cstdint>
 
 namespace rav {
 

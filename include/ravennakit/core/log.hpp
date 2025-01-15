@@ -91,6 +91,9 @@
 
 #endif
 
+// Shorthand for debug logging
+#define DBG(...) RAV_DEBUG(__VA_ARGS__)
+
 #define CATCH_LOG_UNCAUGHT_EXCEPTIONS                                                                          \
     catch (const rav::exception& e) {                                                                          \
         RAV_CRITICAL(                                                                                          \

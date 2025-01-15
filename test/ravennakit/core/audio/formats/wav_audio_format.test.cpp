@@ -39,7 +39,7 @@ TEST_CASE("wav_audio_format | Write wav file", "[wav_audio_format]") {
     rav::byte_stream bytes;
     {
         rav::wav_audio_format::writer writer(bytes, rav::wav_audio_format::format_code::pcm, 44100, 2, 16);
-        writer.write_audio_data(sin_1ms_wav.data() + sin_1ms_wav_header_size, sin_1ms_wav_audio_data_size);
+        REQUIRE(writer.write_audio_data(sin_1ms_wav.data() + sin_1ms_wav_header_size, sin_1ms_wav_audio_data_size));
         // Let writer go out of scope to let it finalize the file (in the destructor).
     }
 
@@ -63,7 +63,10 @@ TEST_CASE("wav_audio_format | Write wav file", "[wav_audio_format]") {
 
     std::vector<uint8_t> read_audio_data(1764, 0);
     REQUIRE(bytes.read(read_audio_data.data(), read_audio_data.size()) == 1764);
-    REQUIRE(std::equal(
-        sin_1ms_wav.begin() + sin_1ms_wav_header_size, sin_1ms_wav.end(), read_audio_data.begin(), read_audio_data.end()
-    ));
+    REQUIRE(
+        std::equal(
+            sin_1ms_wav.begin() + sin_1ms_wav_header_size, sin_1ms_wav.end(), read_audio_data.begin(),
+            read_audio_data.end()
+        )
+    );
 }

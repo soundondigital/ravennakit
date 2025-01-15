@@ -9,6 +9,7 @@
  */
 
 #pragma once
+
 #include "output_stream.hpp"
 #include "ravennakit/core/file.hpp"
 
@@ -31,14 +32,14 @@ class file_output_stream final: public output_stream {
     ~file_output_stream() override = default;
 
     // output_stream overrides
-    size_t write(const uint8_t* buffer, size_t size) override {
+    tl::expected<void, error> write(const uint8_t* buffer, const size_t size) override {
         ofstream_.write(reinterpret_cast<const char*>(buffer), static_cast<std::streamsize>(size));
-        return size;
+        return {};
     }
 
-    bool set_write_position(const size_t position) override {
+    tl::expected<void, error> set_write_position(const size_t position) override {
         ofstream_.seekp(static_cast<std::streamsize>(position));
-        return false;
+        return {};
     }
 
     [[nodiscard]] size_t get_write_position() override {
