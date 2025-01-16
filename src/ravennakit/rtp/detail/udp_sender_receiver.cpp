@@ -11,6 +11,7 @@
 #include "ravennakit/rtp/detail/udp_sender_receiver.hpp"
 #include "ravennakit/core/tracy.hpp"
 #include "ravennakit/core/platform/windows/wsa_recv_msg_function.hpp"
+#include "ravennakit/core/platform/windows/qos_flow.hpp"
 
 #if RAV_APPLE
     #define IP_RECVDSTADDR_PKTINFO IP_RECVDSTADDR
@@ -161,11 +162,29 @@ class rav::udp_sender_receiver::impl: public std::enable_shared_from_this<impl> 
     std::array<uint8_t, 1500> recv_data_ {};
     handler_type handler_;
     std::vector<multicast_group> multicast_groups_;
+
+#if RAV_WINDOWS
+    qos_flow qos_flow_;
+#endif
 };
 
 void rav::udp_sender_receiver::impl::set_dscp_value(const int value) {
+#if RAV_WINDOWS
+    if (!qos_flow_.has_socket()) {
+        if (!qos_flow_.add_socket_to_flow(socket_)) {
+            RAV_ERROR("Failed to add socket to flow");
+            return;
+        }
+    }
+
+    if (!qos_flow_.set_dscp_value(value)) {
+        RAV_ERROR("Failed to set DSCP value on flow");
+        return;
+    }
+#else
     // Note: this does not work on Windows, unfortunately. It's a whole other story to get this going on Windows...
     socket_.set_option(asio::detail::socket_option::integer<IPPROTO_IP, IP_TOS>(value << 2));
+#endif
 }
 
 asio::error_code rav::udp_sender_receiver::impl::set_multicast_loopback(const bool enable) {
@@ -376,8 +395,6 @@ asio::error_code rav::udp_sender_receiver::set_multicast_loopback(const bool ena
     }
     return impl_->set_multicast_loopback(enable);
 }
-
-
 
 rav::udp_sender_receiver::udp_sender_receiver(asio::io_context& io_context, const asio::ip::udp::endpoint& endpoint) :
     impl_(std::make_shared<impl>(io_context, endpoint)) {}
