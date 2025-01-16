@@ -22,7 +22,7 @@
 namespace rav {
 
 /**
- * A wrapper around Window's tedious QOS api...
+ * A wrapper around Window's tedious QOS api... As alternative to IP_TOS.
  */
 class qos_flow {
   public:
