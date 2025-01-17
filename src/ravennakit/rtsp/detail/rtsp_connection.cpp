@@ -105,6 +105,7 @@ void rav::rtsp_connection::async_read_some() {
         asio::buffer(buffer.data(), buffer.size_bytes()),
         [self](const asio::error_code ec, const std::size_t length) mutable {
             if (ec) {
+                self->subscriber_->on_disconnect(*self);
                 if (ec == asio::error::operation_aborted) {
                     RAV_TRACE("Operation aborted");
                     return;

@@ -30,9 +30,7 @@ uint16_t rav::rtsp_server::port() const {
     return acceptor_.local_endpoint().port();
 }
 
-void rav::rtsp_server::register_handler(
-    const std::string& path, const std::function<void(rtsp_connection::request_event)>& handler
-) {
+void rav::rtsp_server::register_handler(const std::string& path, const request_handler& handler) {
     if (handler == nullptr) {
         request_handlers_.erase(path);
     }
@@ -77,6 +75,19 @@ void rav::rtsp_server::on_request(rtsp_connection& connection, const rtsp_reques
 
 void rav::rtsp_server::on_response(rtsp_connection& connection, const rtsp_response& response) {
     RAV_TRACE("Received response: {}", response.to_debug_string(false));
+}
+
+void rav::rtsp_server::on_disconnect(rtsp_connection& connection) {
+    RAV_TRACE("Connection closed: {}", connection.remote_endpoint().address().to_string());
+    connections_.erase(
+        std::remove_if(
+            connections_.begin(), connections_.end(),
+            [&connection](const auto& c) {
+                return c.get() == &connection;
+            }
+        ),
+        connections_.end()
+    );
 }
 
 void rav::rtsp_server::async_accept() {

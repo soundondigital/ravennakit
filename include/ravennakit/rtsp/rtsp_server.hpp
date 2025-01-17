@@ -26,15 +26,7 @@ namespace rav {
  */
 class rtsp_server final: rtsp_connection::subscriber {
   public:
-    using events_type =
-        events<rtsp_connection::connect_event, rtsp_connection::request_event, rtsp_connection::response_event>;
-
-    class request_handler {
-      public:
-        virtual ~request_handler() = default;
-
-        virtual void on_request([[maybe_unused]] rtsp_connection::request_event) {}
-    };
+    using request_handler = std::function<void(rtsp_connection::request_event)>;
 
     rtsp_server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint);
     rtsp_server(asio::io_context& io_context, const char* address, uint16_t port);
@@ -51,7 +43,7 @@ class rtsp_server final: rtsp_connection::subscriber {
      * @param handler The handler to set. If the handler is nullptr it will remove any previously registered handler for
      * path.
      */
-    void register_handler(const std::string& path, const std::function<void(rtsp_connection::request_event)>& handler);
+    void register_handler(const std::string& path, const request_handler& handler);
 
     /**
      * Closes the listening socket. Implies cancellation.
@@ -67,11 +59,12 @@ class rtsp_server final: rtsp_connection::subscriber {
     void on_connect(rtsp_connection& connection) override;
     void on_request(rtsp_connection& connection, const rtsp_request& request) override;
     void on_response(rtsp_connection& connection, const rtsp_response& response) override;
+    void on_disconnect(rtsp_connection& connection) override;
 
   private:
     asio::ip::tcp::acceptor acceptor_;
     std::vector<std::shared_ptr<rtsp_connection>> connections_;
-    std::unordered_map<std::string, std::function<void(rtsp_connection::request_event)>> request_handlers_;
+    std::unordered_map<std::string, request_handler> request_handlers_;
 
     void async_accept();
 };

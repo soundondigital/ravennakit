@@ -74,6 +74,14 @@ class rtsp_connection final: public std::enable_shared_from_this<rtsp_connection
             std::ignore = connection;
             std::ignore = response;
         }
+
+        /**
+         * Called when a connection is disconnected.
+         * @param connection The connection that was disconnected.
+         */
+        virtual void on_disconnect(rtsp_connection& connection) {
+            std::ignore = connection;
+        }
     };
 
     static std::shared_ptr<rtsp_connection> create(asio::ip::tcp::socket socket) {
