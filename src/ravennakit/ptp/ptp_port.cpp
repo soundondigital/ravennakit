@@ -536,11 +536,11 @@ void rav::ptp_port::handle_sync_message(ptp_sync_message sync_message, buffer_vi
     }
 
     if (sync_message.header.flags.two_step_flag) {
-        sync_messages_.push_back(sync_message);
-        return;  // Wait for a follow-up message
+        sync_messages_.push_back(sync_message); // Wait for a follow-up message
+    } else {
+        parent_.update_local_ptp_clock(calculate_offset_from_master(sync_message));
     }
 
-    parent_.update_local_ptp_clock(calculate_offset_from_master(sync_message));
     process_request_response_delay_sequence();
 }
 

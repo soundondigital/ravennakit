@@ -35,7 +35,7 @@ class ptp_local_ptp_clock {
      * @return The current system time as a PTP timestamp. The timestamp is based on the high resolution clock and bears
      * no relation to wallclock time (UTC or TAI).
      */
-    static ptp_timestamp system_clock_now() {
+    static ptp_timestamp system_monotonic_now() {
         return ptp_timestamp(high_resolution_clock::now());
     }
 
@@ -57,7 +57,7 @@ class ptp_local_ptp_clock {
      */
     [[nodiscard]] ptp_timestamp now() const {
         TRACY_ZONE_SCOPED;
-        return system_to_ptp_time(system_clock_now());
+        return system_to_ptp_time(system_monotonic_now());
     }
 
     /**
@@ -84,7 +84,7 @@ class ptp_local_ptp_clock {
     void adjust(const ptp_measurement<double>& measurement) {
         TRACY_ZONE_SCOPED;
 
-        const auto system_now = system_clock_now();
+        const auto system_now = system_monotonic_now();
         shift_ = now().total_seconds_double() - system_now.total_seconds_double();
         last_sync_ = system_now;
 
@@ -95,7 +95,7 @@ class ptp_local_ptp_clock {
 
         // Filter out outliers, allowing a maximum per non-filtered outliers to avoid getting in a loop where all
         // measurements are filtered out and no adjustment is made anymore.
-        if (is_calibrated() && offset_stats_.is_outlier_zscore(measurement.offset_from_master, 1.8)) {
+        if (is_calibrated() && offset_stats_.is_outlier_zscore(measurement.offset_from_master, 1.75)) {
             RAV_WARNING("Ignoring outlier in offset from master: {}", measurement.offset_from_master * 1000.0);
             TRACY_PLOT("Offset from master outliers", measurement.offset_from_master * 1000.0);
             TRACY_MESSAGE("Ignoring outlier in offset from master");
@@ -103,14 +103,17 @@ class ptp_local_ptp_clock {
         }
         TRACY_PLOT("Offset from master outliers", 0.0);
 
-        const auto filtered_offset = offset_filter_.update(measurement.offset_from_master);
-        TRACY_PLOT("Filtered offset from master (ms)", filtered_offset * 1000.0);
+        TRACY_PLOT("Filtered offset from master (ms)", measurement.offset_from_master * 1000.0);
+
+        filtered_offset_stats_.add(measurement.offset_from_master);
+        TRACY_PLOT("Filtered offset from master median (ms)", filtered_offset_stats_.median() * 1000.0);
 
         if (is_locked()) {
             constexpr double base = 1.5;         // The higher the value, the faster the clock will adjust (>= 1.0)
             constexpr double max_ratio = 0.5;    // +/-
             constexpr double max_step = 0.0001;  // Maximum step size
-            const auto nominal_ratio = std::clamp(std::pow(base, -filtered_offset), 1.0 - max_ratio, 1 + max_ratio);
+            const auto nominal_ratio =
+                std::clamp(std::pow(base, -measurement.offset_from_master), 1.0 - max_ratio, 1 + max_ratio);
 
             if (std::fabs(nominal_ratio - frequency_ratio_) > max_step) {
                 if (frequency_ratio_ < nominal_ratio) {
@@ -129,7 +132,7 @@ class ptp_local_ptp_clock {
         TRACY_PLOT("Frequency ratio", frequency_ratio_);
 
         RAV_TRACE(
-            "Adjusting clock: offset_from_master={}, ratio={}", filtered_offset * 1000.0,
+            "Adjusting clock: offset_from_master={}, ratio={}", measurement.offset_from_master * 1000.0,
             frequency_ratio_
         );
     }
@@ -141,7 +144,7 @@ class ptp_local_ptp_clock {
     void step_clock(const double offset_from_master_seconds) {
         TRACY_ZONE_SCOPED;
 
-        last_sync_ = system_clock_now();
+        last_sync_ = system_monotonic_now();
         shift_ += -offset_from_master_seconds;
         offset_stats_.reset();
         frequency_ratio_ = 1.0;
@@ -176,7 +179,7 @@ class ptp_local_ptp_clock {
     void force_update_time(const ptp_timestamp timestamp_seconds) {
         TRACY_ZONE_SCOPED;
 
-        last_sync_ = system_clock_now();
+        last_sync_ = system_monotonic_now();
         shift_ = timestamp_seconds.total_seconds_double() - last_sync_.total_seconds_double();
         offset_stats_.reset();
         frequency_ratio_ = 1.0;
@@ -188,12 +191,12 @@ class ptp_local_ptp_clock {
     constexpr static double k_calibrated_threshold = 0.0018;
     constexpr static int64_t k_clock_step_threshold_seconds = 1;
 
-    ptp_timestamp last_sync_ = system_clock_now();
+    ptp_timestamp last_sync_ = system_monotonic_now();
     double shift_ {};
     double frequency_ratio_ = 1.0;
     sliding_stats offset_stats_ {51};
+    sliding_stats filtered_offset_stats_ {51};
     size_t adjustments_since_last_step_ {};
-    ptp_basic_filter offset_filter_ {0.1};
 };
 
 }  // namespace rav
