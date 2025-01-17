@@ -13,7 +13,7 @@
 #include "ravennakit/core/tracy.hpp"
 #include "ravennakit/dnssd/bonjour/bonjour_browser.hpp"
 #include "ravennakit/ravenna/ravenna_rtsp_client.hpp"
-#include "ravennakit/ravenna/ravenna_sink.hpp"
+#include "ravennakit/ravenna/ravenna_receiver.hpp"
 
 #include <portaudio.h>
 #include <CLI/App.hpp>
@@ -184,7 +184,7 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber {
         config.interface_address = asio::ip::make_address(interface_address);
         rtp_receiver_ = std::make_unique<rav::rtp_receiver>(io_context_, config);
 
-        ravenna_sink_ = std::make_unique<rav::ravenna_sink>(*rtsp_client_, *rtp_receiver_, stream_name);
+        ravenna_sink_ = std::make_unique<rav::ravenna_receiver>(*rtsp_client_, *rtp_receiver_, stream_name);
         ravenna_sink_->add_subscriber(this);
     }
 
@@ -231,7 +231,7 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber {
     std::unique_ptr<rav::dnssd::dnssd_browser> node_browser_;
     std::unique_ptr<rav::ravenna_rtsp_client> rtsp_client_;
     std::unique_ptr<rav::rtp_receiver> rtp_receiver_;
-    std::unique_ptr<rav::ravenna_sink> ravenna_sink_;
+    std::unique_ptr<rav::ravenna_receiver> ravenna_sink_;
     std::string audio_device_name_;
     portaudio_stream portaudio_stream_;
     rav::audio_format audio_format_;

@@ -8,23 +8,23 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/ravenna/ravenna_sink.hpp"
+#include "ravennakit/ravenna/ravenna_receiver.hpp"
 #include "ravennakit/core/util/todo.hpp"
 #include "ravennakit/ravenna/ravenna_constants.hpp"
 #include "ravennakit/rtp/detail/rtp_filter.hpp"
 
-rav::ravenna_sink::ravenna_sink(
+rav::ravenna_receiver::ravenna_receiver(
     ravenna_rtsp_client& rtsp_client, rtp_receiver& rtp_receiver, std::string session_name
 ) :
     rtp_stream_receiver(rtp_receiver), rtsp_client_(rtsp_client) {
     set_session_name(std::move(session_name));
 }
 
-rav::ravenna_sink::~ravenna_sink() {
+rav::ravenna_receiver::~ravenna_receiver() {
     stop();
 }
 
-void rav::ravenna_sink::on_announced(const ravenna_rtsp_client::announced_event& event) {
+void rav::ravenna_receiver::on_announced(const ravenna_rtsp_client::announced_event& event) {
     try {
         RAV_ASSERT(event.session_name == session_name_, "Expecting session_name to match");
         update_sdp(event.sdp);
@@ -34,7 +34,7 @@ void rav::ravenna_sink::on_announced(const ravenna_rtsp_client::announced_event&
     }
 }
 
-void rav::ravenna_sink::start() {
+void rav::ravenna_receiver::start() {
     if (started_) {
         RAV_WARNING("ravenna_sink already started");
         return;
@@ -45,16 +45,16 @@ void rav::ravenna_sink::start() {
     started_ = true;
 }
 
-void rav::ravenna_sink::stop() {
+void rav::ravenna_receiver::stop() {
     unsubscribe_from_ravenna_rtsp_client();
     started_ = false;
 }
 
-void rav::ravenna_sink::set_session_name(std::string session_name) {
+void rav::ravenna_receiver::set_session_name(std::string session_name) {
     session_name_ = std::move(session_name);
     subscribe_to_ravenna_rtsp_client(rtsp_client_, session_name_);
 }
 
-std::string rav::ravenna_sink::get_session_name() const {
+std::string rav::ravenna_receiver::get_session_name() const {
     return session_name_;
 }

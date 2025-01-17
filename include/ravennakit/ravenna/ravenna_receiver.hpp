@@ -18,16 +18,16 @@
 
 namespace rav {
 
-class ravenna_sink: public rtp_stream_receiver, ravenna_rtsp_client::subscriber {
+class ravenna_receiver: public rtp_stream_receiver, ravenna_rtsp_client::subscriber {
   public:
-    explicit ravenna_sink(ravenna_rtsp_client& rtsp_client, rtp_receiver& rtp_receiver, std::string session_name);
-    ~ravenna_sink() override;
+    explicit ravenna_receiver(ravenna_rtsp_client& rtsp_client, rtp_receiver& rtp_receiver, std::string session_name);
+    ~ravenna_receiver() override;
 
-    ravenna_sink(const ravenna_sink&) = delete;
-    ravenna_sink& operator=(const ravenna_sink&) = delete;
+    ravenna_receiver(const ravenna_receiver&) = delete;
+    ravenna_receiver& operator=(const ravenna_receiver&) = delete;
 
-    ravenna_sink(ravenna_sink&&) noexcept = delete;
-    ravenna_sink& operator=(ravenna_sink&&) noexcept = delete;
+    ravenna_receiver(ravenna_receiver&&) noexcept = delete;
+    ravenna_receiver& operator=(ravenna_receiver&&) noexcept = delete;
 
     void start();
     void stop();
