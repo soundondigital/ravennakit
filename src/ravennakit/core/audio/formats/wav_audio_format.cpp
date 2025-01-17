@@ -69,6 +69,45 @@ tl::expected<size_t, rav::output_stream::error> rav::wav_audio_format::fmt_chunk
     return ostream.get_write_position() - start_pos;
 }
 
+std::optional<rav::audio_format> rav::wav_audio_format::fmt_chunk::to_audio_format() const {
+    switch (format) {
+        case format_code::pcm: {
+            if (bits_per_sample == 8) {
+                return audio_format {
+                    .encoding = audio_encoding::pcm_u8, .sample_rate = sample_rate, .num_channels = num_channels
+                };
+            }
+            if (bits_per_sample == 16) {
+                return audio_format {
+                    .encoding = audio_encoding::pcm_s16, .sample_rate = sample_rate, .num_channels = num_channels
+                };
+            }
+            if (bits_per_sample == 24) {
+                return audio_format {
+                    .encoding = audio_encoding::pcm_s24, .sample_rate = sample_rate, .num_channels = num_channels
+                };
+            }
+        }
+        case format_code::ieee_float: {
+            if (bits_per_sample == 32) {
+                return audio_format {
+                    .encoding = audio_encoding::pcm_float, .sample_rate = sample_rate, .num_channels = num_channels
+                };
+            }
+            if (bits_per_sample == 64) {
+                return audio_format {
+                    .encoding = audio_encoding::pcm_double, .sample_rate = sample_rate, .num_channels = num_channels
+                };
+            }
+        }
+        case format_code::alaw:
+        case format_code::mulaw:
+        case format_code::extensible:
+        default:
+            return std::nullopt;
+    }
+}
+
 bool rav::wav_audio_format::data_chunk::read(input_stream& istream, const uint32_t chunk_size) {
     data_begin = istream.get_read_position();
     data_size = chunk_size;
@@ -185,6 +224,13 @@ double rav::wav_audio_format::reader::sample_rate() const {
 
 size_t rav::wav_audio_format::reader::num_channels() const {
     return fmt_chunk_.value().num_channels;
+}
+
+std::optional<rav::audio_format> rav::wav_audio_format::reader::get_audio_format() const {
+    if (!fmt_chunk_.has_value()) {
+        return std::nullopt;
+    }
+    return fmt_chunk_->to_audio_format();
 }
 
 rav::wav_audio_format::writer::writer(

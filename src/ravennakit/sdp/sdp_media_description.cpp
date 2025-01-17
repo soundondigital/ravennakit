@@ -437,12 +437,12 @@ tl::expected<std::string, std::string> rav::sdp::media_description::to_string(co
 
     // ptime
     if (ptime_) {
-        fmt::format_to(std::back_inserter(result), "a=ptime:{}{}", *ptime_, newline);
+        fmt::format_to(std::back_inserter(result), "a=ptime:{:.2f}{}", *ptime_, newline);
     }
 
     // max_ptime
     if (max_ptime_) {
-        fmt::format_to(std::back_inserter(result), "a=maxptime:{}{}", *max_ptime_, newline);
+        fmt::format_to(std::back_inserter(result), "a=maxptime:{:.2f}{}", *max_ptime_, newline);
     }
 
     // Media direction

@@ -23,7 +23,7 @@ rav::dnssd::bonjour_advertiser::bonjour_advertiser(asio::io_context& io_context)
     async_process_results();
 }
 
-rav::util::id rav::dnssd::bonjour_advertiser::register_service(
+rav::id rav::dnssd::bonjour_advertiser::register_service(
     const std::string& reg_type, const char* name, const char* domain, uint16_t port, const txt_record& txt_record,
     const bool auto_rename, const bool local_only
 ) {
@@ -56,7 +56,7 @@ rav::util::id rav::dnssd::bonjour_advertiser::register_service(
     return id;
 }
 
-void rav::dnssd::bonjour_advertiser::unregister_service(util::id id) {
+void rav::dnssd::bonjour_advertiser::unregister_service(id id) {
     registered_services_.erase(
         std::remove_if(
             registered_services_.begin(), registered_services_.end(),
@@ -119,7 +119,7 @@ void rav::dnssd::bonjour_advertiser::register_service_callback(
 }
 
 rav::dnssd::bonjour_advertiser::registered_service*
-rav::dnssd::bonjour_advertiser::find_registered_service(const util::id id) {
+rav::dnssd::bonjour_advertiser::find_registered_service(const id id) {
     for (auto& service : registered_services_) {
         if (service.id == id) {
             return &service;
@@ -129,7 +129,7 @@ rav::dnssd::bonjour_advertiser::find_registered_service(const util::id id) {
     return nullptr;
 }
 
-void rav::dnssd::bonjour_advertiser::update_txt_record(const util::id id, const txt_record& txt_record) {
+void rav::dnssd::bonjour_advertiser::update_txt_record(const id id, const txt_record& txt_record) {
     const auto* const service = find_registered_service(id);
     if (service == nullptr) {
         RAV_THROW_EXCEPTION("Service not found");

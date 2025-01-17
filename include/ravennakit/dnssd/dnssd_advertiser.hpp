@@ -57,7 +57,7 @@ class dnssd_advertiser {
      * @param local_only When true, service will only be advertised on the local machine.
      * @throws When an error occurs during registration.
      */
-    virtual util::id register_service(
+    virtual id register_service(
         const std::string& reg_type, const char* name, const char* domain, uint16_t port, const txt_record& txt_record,
         bool auto_rename, bool local_only
     ) = 0;
@@ -70,13 +70,13 @@ class dnssd_advertiser {
      * @param txt_record The new TXT record.
      * @throws When an error occurs during updating.
      */
-    virtual void update_txt_record(util::id id, const txt_record& txt_record) = 0;
+    virtual void update_txt_record(id id, const txt_record& txt_record) = 0;
 
     /**
      * Unregisters this service from the mDnsResponder, after which the service will no longer be found on the network.
      * Function is not thread safe.
      */
-    virtual void unregister_service(util::id id) = 0;
+    virtual void unregister_service(id id) = 0;
 
     /**
      * Creates the most appropriate dnssd_advertiser implementation for the platform.

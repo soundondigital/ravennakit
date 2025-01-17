@@ -23,13 +23,14 @@
 
 #include <CLI/App.hpp>
 #include <asio/io_context.hpp>
+#include <utility>
 
 class ravenna_player_example {
   public:
     explicit ravenna_player_example(
-        asio::io_context& io_context, const asio::ip::address_v4& interface_address, const uint16_t port_num
+        asio::io_context& io_context, asio::ip::address_v4 interface_address, const uint16_t port_num
     ) :
-        interface_address_(interface_address),
+        interface_address_(std::move(interface_address)),
         rtsp_server_(io_context, asio::ip::tcp::endpoint(asio::ip::address_v4::any(), port_num)) {
         advertiser_ = rav::dnssd::dnssd_advertiser::create(io_context);
         // TODO: Should the RTSP server only bind to the interface address?
@@ -53,6 +54,14 @@ class ravenna_player_example {
         auto file_input_stream = std::make_unique<rav::file_input_stream>(file);
         auto reader = rav::wav_audio_format::reader(std::move(file_input_stream));
 
+        const auto format = reader.get_audio_format();
+        if (!format) {
+            throw std::runtime_error("Failed to read audio format from file: " + file.path().string());
+        }
+        if (!transmitter->set_audio_format(*format)) {
+            throw std::runtime_error("Unsupported audio format for transmitter: " + file.path().string());
+        }
+
         sources_.push_back({std::move(reader), std::move(transmitter)});
     }
 
@@ -65,7 +74,7 @@ class ravenna_player_example {
     asio::ip::address_v4 interface_address_;
     std::unique_ptr<rav::dnssd::dnssd_advertiser> advertiser_;
     rav::rtsp_server rtsp_server_;
-    rav::util::id::generator id_generator_ {};
+    rav::id::generator id_generator_ {};
     std::vector<source> sources_;
 };
 
@@ -84,7 +93,7 @@ int main(int const argc, char* argv[]) {
 
     CLI11_PARSE(app, argc, argv);
 
-    auto interface_address = asio::ip::make_address_v4(interface_address_string);
+    const auto interface_address = asio::ip::make_address_v4(interface_address_string);
 
     asio::io_context io_context;
     ravenna_player_example player_example(io_context, interface_address, 5005);

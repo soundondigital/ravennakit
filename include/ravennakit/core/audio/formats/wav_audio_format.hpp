@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ravennakit/core/file.hpp"
+#include "ravennakit/core/audio/audio_format.hpp"
 #include "ravennakit/core/streams/file_input_stream.hpp"
 #include "ravennakit/core/streams/input_stream.hpp"
 #include "ravennakit/core/streams/output_stream.hpp"
@@ -65,6 +66,11 @@ struct fmt_chunk {
      * @return The number of bytes written.
      */
     [[nodiscard]] tl::expected<size_t, output_stream::error> write(output_stream& ostream) const;
+
+    /**
+     * @return The audio format represented by the fmt chunk.
+     */
+    [[nodiscard]] std::optional<audio_format> to_audio_format() const;
 };
 
 /**
@@ -122,6 +128,11 @@ class reader {
      * @return The number of channels in the audio data.
      */
     [[nodiscard]] size_t num_channels() const;
+
+    /**
+     * @return The audio format of the audio data.
+     */
+    [[nodiscard]] std::optional<audio_format> get_audio_format() const;
 
   private:
     std::unique_ptr<input_stream> istream_;

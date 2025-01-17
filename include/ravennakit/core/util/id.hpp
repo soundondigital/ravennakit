@@ -13,7 +13,7 @@
 
 #include <cstdint>
 
-namespace rav::util {
+namespace rav {
 
 /**
  * A class which represents a unique identifier. How unique the identifier is depends on how this class is used. The id
@@ -48,6 +48,7 @@ class id {
 
     id(const id& other) = default;
     id(id&& other) noexcept = default;
+
     id& operator=(const id& other) = default;
     id& operator=(id&& other) noexcept = default;
 
@@ -59,9 +60,16 @@ class id {
     }
 
     /**
+     * @return The integer value of the ID.
+     */
+    [[nodiscard]] uint64_t value() const {
+        return id_;
+    }
+
+    /**
      * @return The integer value of the ID as string.
      */
-    std::string to_string() const {
+    [[nodiscard]] std::string to_string() const {
         return std::to_string(id_);
     }
 
