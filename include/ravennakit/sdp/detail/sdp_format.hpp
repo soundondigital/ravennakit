@@ -21,7 +21,7 @@ namespace rav::sdp {
  * Holds the information of an RTP map.
  */
 struct format {
-    int8_t payload_type {-1};
+    uint8_t payload_type {};
     std::string encoding_name;
     uint32_t clock_rate {};
     uint32_t num_channels {};

@@ -18,7 +18,7 @@ void rav::rtp_packet::sequence_number(const uint16_t value) {
     sequence_number_ = value;
 }
 
-uint16_t rav::rtp_packet::sequence_number_inc(const uint16_t value) {
+rav::sequence_number<unsigned short> rav::rtp_packet::sequence_number_inc(const uint16_t value) {
     sequence_number_ += value;
     return sequence_number_;
 }
@@ -27,7 +27,7 @@ void rav::rtp_packet::timestamp(const uint32_t value) {
     timestamp_ = value;
 }
 
-uint32_t rav::rtp_packet::timestamp_inc(const uint32_t value) {
+rav::sequence_number<unsigned> rav::rtp_packet::timestamp_inc(const uint32_t value) {
     timestamp_ += value;
     return timestamp_;
 }

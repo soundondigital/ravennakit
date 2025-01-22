@@ -10,11 +10,14 @@
 
 #pragma once
 
+#include "ravennakit/aes67/aes67_packet_time.hpp"
+
 #include <utility>
 
 #include "ravennakit/core/uri.hpp"
 #include "ravennakit/core/containers/fifo_buffer.hpp"
 #include "ravennakit/dnssd/dnssd_advertiser.hpp"
+#include "ravennakit/ptp/ptp_instance.hpp"
 #include "ravennakit/ptp/types/ptp_timestamp.hpp"
 #include "ravennakit/rtp/rtp_packet.hpp"
 #include "ravennakit/rtp/detail/rtp_transmitter.hpp"
@@ -27,53 +30,11 @@ class ravenna_transmitter: public ptp_instance::subscriber {
   public:
     ravenna_transmitter(
         asio::io_context& io_context, dnssd::dnssd_advertiser& advertiser, rtsp_server& rtsp_server,
-        ptp_instance& ptp_instance, rtp_transmitter& rtp_transmitter, const id id, std::string session_name,
+        ptp_instance& ptp_instance, rtp_transmitter& rtp_transmitter, id id, std::string session_name,
         asio::ip::address_v4 interface_address
-    ) :
-        advertiser_(advertiser),
-        rtsp_server_(rtsp_server),
-        ptp_instance_(ptp_instance),
-        rtp_transmitter_(rtp_transmitter),
-        id_(id),
-        session_name_(std::move(session_name)),
-        interface_address_(std::move(interface_address)),
-        timer_(io_context) {
-        RAV_ASSERT(!interface_address_.is_unspecified(), "Address should be specified");
+    );
 
-        // Construct a multicast address from the interface address
-        const auto interface_address_bytes = interface_address_.to_bytes();
-        destination_address_ = asio::ip::address_v4(
-            {239, interface_address_bytes[2], interface_address_bytes[3], static_cast<uint8_t>(id.value() % 0xff)}
-        );
-
-        // Register handlers for the paths
-        path_by_name_ = fmt::format("/by-name/{}", session_name_);
-        path_by_id_ = fmt::format("/by-id/{}", id_.to_string());
-        auto handler = [this](const rtsp_connection::request_event event) {
-            on_request_event(event);
-        };
-        rtsp_server_.register_handler(path_by_name_, handler);
-        rtsp_server_.register_handler(path_by_id_, handler);
-
-        advertisement_id_ = advertiser_.register_service(
-            "_rtsp._tcp,_ravenna_session", session_name_.c_str(), nullptr, rtsp_server.port(), {}, false, false
-        );
-
-        ptp_instance_.add_subscriber(this);
-    }
-
-    ~ravenna_transmitter() override {
-        timer_.cancel();
-
-        ptp_instance_.remove_subscriber(this);
-
-        if (advertisement_id_.is_valid()) {
-            advertiser_.unregister_service(advertisement_id_);
-        }
-
-        rtsp_server_.register_handler(path_by_name_, nullptr);
-        rtsp_server_.register_handler(path_by_id_, nullptr);
-    }
+    ~ravenna_transmitter() override;
 
     ravenna_transmitter(const ravenna_transmitter& other) = delete;
     ravenna_transmitter& operator=(const ravenna_transmitter& other) = delete;
@@ -84,269 +45,99 @@ class ravenna_transmitter: public ptp_instance::subscriber {
     /**
      * @return The transmitter ID.
      */
-    [[nodiscard]] id get_id() const {
-        return id_;
-    }
+    [[nodiscard]] id get_id() const;
 
     /**
      * @return The session name.
      */
-    [[nodiscard]] std::string session_name() const {
-        return session_name_;
-    }
+    [[nodiscard]] std::string session_name() const;
 
     /**
      * Sets the audio format for the transmitter.
      * @param format The audio format to set.
      * @return True if the audio format is supported, false otherwise.
      */
-    bool set_audio_format(const audio_format format) {
-        const auto sdp_format = sdp::format::from_audio_format(format);
-        if (!sdp_format) {
-            RAV_ERROR("Failed to convert audio format to SDP format");
-            return false;
-        }
-
-        if (format == audio_format_) {
-            return true;  // Nothing to be done here
-        }
-
-        audio_format_ = format;
-        sdp_format_ = *sdp_format;
-        rtp_packet_.ssrc(
-            random().get_random_int(0, std::numeric_limits<int>::max())  // TODO: Implement SSRC generation
-        );
-
-        return true;
-    }
+    bool set_audio_format(audio_format format);
 
     /**
-     * Sets the packet time for 48kHz and 96kHz audio. The packet time will be corrected for other sample rates.
-     * @param packet_time The packet time in seconds.
+     * Sets the packet time.
+     * @param packet_time The packet time.
      */
-    void set_packet_time(const float packet_time) {
-        ptime_ = packet_time;
-    }
+    void set_packet_time(aes67_packet_time packet_time);
+
+    /**
+     * @return The packet time in milliseconds as signaled using SDP. If the packet time is 1ms and the sample
+     * rat 44.1kHz, then the signaled packet time is 1.09.
+     */
+    float get_signaled_ptime() const;
 
     /**
      * Start the streaming.
-     * @param timestamp The timestamp at which to start the streaming.
+     * @param timestamp The timestamp at which to send the first packet.
      */
-    void start(const ptp_timestamp timestamp) {
-        if (running_) {
-            return;
-        }
-        running_ = true;
-        start_time_ = timestamp;
-        start_timer();
-    }
+    void start(ptp_timestamp timestamp);
 
     /**
      * Stops the streaming.
      */
-    void stop() {
-        if (!running_) {
-            return;
-        }
-        running_ = false;
-        start_time_ = {};
-    }
+    void stop();
 
     /**
      * @return True if the transmitter is running, false otherwise.
      */
-    [[nodiscard]] bool is_running() const {
-        return running_;
-    }
+    [[nodiscard]] bool is_running() const;
 
     /**
      * Feeds audio data to the transmitter.
      * @param data The audio data.
      * @param size The size of the audio data.
      */
-    void feed_audio_date(const uint8_t* data, const size_t size) {
-        RAV_ASSERT(data != nullptr, "Data is null");
-        RAV_ASSERT(size > 0, "Size is 0");
-        fifo_buffer_.write(data, size);
-    }
+    void feed_audio_date(const uint8_t* data, size_t size);
+
+    /**
+     * @return The packet size in number of frames.
+     */
+    uint32_t get_framecount() const;
 
     // ptp_instance::subscriber overrides
-    void on_parent_changed(const ptp_parent_ds& parent) override {
-        if (grandmaster_identity_ == parent.grandmaster_identity) {
-            return;
-        }
-        grandmaster_identity_ = parent.grandmaster_identity;
-        send_announce();
-    }
+    void on_parent_changed(const ptp_parent_ds& parent) override;
 
   private:
+    static constexpr auto k_fifo_buffer_multiplier_packet_times = 4;
+
     dnssd::dnssd_advertiser& advertiser_;
     rtsp_server& rtsp_server_;
     ptp_instance& ptp_instance_;
     rtp_transmitter& rtp_transmitter_;
+
     id id_;
     std::string session_name_;
     asio::ip::address_v4 interface_address_;
-    id advertisement_id_;
+    asio::ip::address_v4 destination_address_;
     std::string path_by_name_;
     std::string path_by_id_;
+    id advertisement_id_;
     int32_t clock_domain_ {};
     audio_format audio_format_;
     sdp::format sdp_format_;
-    asio::ip::address_v4 destination_address_;
-    float ptime_ {1.0f};
+    aes67_packet_time ptime_ {aes67_packet_time::ms_1()};
     bool running_ {false};
-    ptp_timestamp start_time_;
     ptp_clock_identity grandmaster_identity_;
-    asio::high_resolution_timer timer_;
     rtp_packet rtp_packet_;
-    fifo_buffer<uint8_t, fifo::spsc> fifo_buffer_ {1024 /* sr * channels * bit_depth */};
+    fifo_buffer<uint8_t, fifo::spsc> fifo_buffer_;
     std::vector<uint8_t> packet_intermediate_buffer_;
-    ptp_timestamp next_packet_time_;
+    asio::high_resolution_timer timer_;
 
-    void on_request_event(const rtsp_connection::request_event event) const {
-        const auto sdp = build_sdp();  // Should the SDP be cached and updated on changes?
-        RAV_TRACE("SDP:\n{}", sdp.to_string("\n").value());
-        const auto encoded = sdp.to_string();
-        if (!encoded) {
-            RAV_ERROR("Failed to encode SDP");
-            return;
-        }
-        const auto response = rtsp_response(200, "OK", *encoded);
-        response.headers["content-type"] = "application/sdp";
-        event.connection.async_send_response(response);
-    }
+    void on_request_event(rtsp_connection::request_event event) const;
 
     /**
      * Sends an announce request to all connected clients.
      */
-    void send_announce() const {
-        auto sdp = build_sdp().to_string();
-        if (!sdp) {
-            RAV_ERROR("Failed to encode SDP: {}", sdp.error());
-            return;
-        }
-        rtsp_request request;
-        request.method = "ANNOUNCE";
-        request.headers["content-type"] = "application/sdp";
-        request.data = std::move(sdp.value());
-        request.uri = uri::encode(
-            "rtsp://", interface_address_.to_string() + ":" + std::to_string(rtsp_server_.port()), path_by_name_
-        );
-        rtsp_server_.send_request(path_by_name_, request);
-        request.uri = uri::encode(
-            "rtsp://", interface_address_.to_string() + ":" + std::to_string(rtsp_server_.port()), path_by_id_
-        );
-        rtsp_server_.send_request(path_by_name_, request);
-    }
-
-    [[nodiscard]] sdp::session_description build_sdp() const {
-        // Connection info
-        const sdp::connection_info_field connection_info {
-            sdp::netw_type::internet, sdp::addr_type::ipv4, destination_address_.to_string(), 15, {}
-        };
-
-        // Source filter
-        sdp::source_filter filter(
-            sdp::filter_mode::include, sdp::netw_type::internet, sdp::addr_type::ipv4, destination_address_.to_string(),
-            {interface_address_.to_string()}
-        );
-
-        // Reference clock
-        const sdp::reference_clock ref_clock {
-            sdp::reference_clock::clock_source::ptp, sdp::reference_clock::ptp_ver::IEEE_1588_2008,
-            grandmaster_identity_.to_string(), clock_domain_
-        };
-
-        // Media clock
-        // ST 2110-30:2017 defines a constraint to use a zero offset exclusively.
-        sdp::media_clock_source media_clk {sdp::media_clock_source::clock_mode::direct, 0, {}};
-
-        sdp::ravenna_clock_domain clock_domain {sdp::ravenna_clock_domain::sync_source::ptp_v2, clock_domain_};
-
-        sdp::media_description media;
-        media.add_connection_info(connection_info);
-        media.set_media_type("audio");
-        media.set_port(5004);
-        media.set_protocol("RTP/AVP");
-        media.add_format(sdp_format_);
-        media.add_source_filter(filter);
-        media.set_clock_domain(clock_domain);
-        media.set_sync_time(0);
-        media.set_ref_clock(ref_clock);
-        media.set_direction(sdp::media_direction::recvonly);
-
-        float ptime = ptime_;
-        if (auto remainder = 48000 / (sdp_format_.clock_rate % 48000); remainder > 0) {
-            ptime = static_cast<float>(48000) / static_cast<float>(sdp_format_.clock_rate);
-        }
-        media.set_ptime(ptime);
-        media.set_framecount(
-            static_cast<uint32_t>(std::round(ptime * static_cast<float>(sdp_format_.clock_rate) / 1000.0))
-        );
-
-        sdp::session_description sdp;
-
-        // Origin
-        const sdp::origin_field origin {
-            "-", id_.to_string(), 0, sdp::netw_type::internet, sdp::addr_type::ipv4, interface_address_.to_string()
-        };
-        sdp.set_origin(origin);
-
-        // Session name
-        sdp.set_session_name(session_name_);
-        sdp.set_connection_info(connection_info);
-        sdp.set_clock_domain(clock_domain);
-        sdp.set_ref_clock(ref_clock);
-        sdp.set_media_clock(media_clk);
-        sdp.add_media_description(media);
-
-        return sdp;
-    }
-
-    void start_timer() {
-        TRACY_ZONE_SCOPED;
-
-        timer_.expires_after(
-            std::chrono::microseconds(static_cast<int64_t>(ptime_ * 1'000 / 10))  // A tenth of the packet time
-        );
-        timer_.async_wait([this](const asio::error_code ec) {
-            if (ec == asio::error::operation_aborted) {
-                return;
-            }
-            if (ec) {
-                RAV_ERROR("Timer error: {}", ec.message());
-                return;
-            }
-            send_data();
-            start_timer();
-        });
-    }
-
-    void send_data() {
-        TRACY_ZONE_SCOPED;
-
-        if (!running_) {
-            return;
-        }
-
-        const auto framecount =
-            static_cast<uint32_t>(std::round(ptime_ * static_cast<float>(audio_format_.sample_rate)));
-        const auto required_amount_of_data = framecount * audio_format_.bytes_per_frame();
-
-        if (fifo_buffer_.size() < required_amount_of_data) {
-            return;
-        }
-
-        packet_intermediate_buffer_.resize(required_amount_of_data);
-        fifo_buffer_.read(packet_intermediate_buffer_.data(), required_amount_of_data);
-
-        rtp_packet_.sequence_number_inc(1);
-        rtp_packet_.timestamp_inc(framecount);
-        rtp_packet_.payload_type(sdp_format_.payload_type);
-        byte_buffer buffer;
-        rtp_packet_.encode(packet_intermediate_buffer_.data(), required_amount_of_data, buffer);
-    }
+    void send_announce() const;
+    [[nodiscard]] sdp::session_description build_sdp() const;
+    void start_timer();
+    void send_data();
+    void resize_internal_buffers();
 };
 
 }  // namespace rav

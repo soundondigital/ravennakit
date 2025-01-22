@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <cmath>
+#include <tuple>
 
 namespace rav {
 
@@ -90,6 +91,14 @@ class aes67_packet_time {
      */
     static aes67_packet_time ms_4() {
         return aes67_packet_time {4, 1};
+    }
+
+    friend bool operator==(const aes67_packet_time& lhs, const aes67_packet_time& rhs) {
+        return lhs.fraction_ == rhs.fraction_;
+    }
+
+    friend bool operator!=(const aes67_packet_time& lhs, const aes67_packet_time& rhs) {
+        return !(lhs == rhs);
     }
 
   private:

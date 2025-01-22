@@ -77,7 +77,7 @@ TEST_CASE("media_description | media_description") {
     }
 
     SECTION("Test media field with multiple formats and an invalid one") {
-        auto result = rav::sdp::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100 128");
+        auto result = rav::sdp::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100 256");
         REQUIRE(result.is_err());
     }
 

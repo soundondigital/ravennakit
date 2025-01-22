@@ -63,7 +63,7 @@ rav::sdp::format::parse_result<rav::sdp::format> rav::sdp::format::parse_new(con
 
     format map;
 
-    if (const auto payload_type = parser.read_int<int8_t>()) {
+    if (const auto payload_type = parser.read_int<uint8_t>()) {
         map.payload_type = *payload_type;
         if (!parser.skip(' ')) {
             return parse_result<format>::err("rtpmap: expecting space after payload type");
