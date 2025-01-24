@@ -50,7 +50,7 @@ void rav::ravenna_rtsp_client::subscriber::unsubscribe_from_ravenna_rtsp_client(
     if (auto* owner = node_->second) {
         owner->do_maintenance();
     }
-    node_.reset();
+    node_.reset_value();
 }
 
 rav::ravenna_rtsp_client::ravenna_rtsp_client(asio::io_context& io_context, dnssd::dnssd_browser& browser) :

@@ -232,8 +232,16 @@ class linked_node {
     /**
      * Resets the data stored in the linked node to its default value. Does not unlink the node.
      */
-    void reset() {
+    void reset_value() {
         value_ = T();
+    }
+
+    /**
+     * Unlinks this node and resets the value it holds.
+     */
+    void reset() {
+        unlink();
+        reset_value();
     }
 
     /**
