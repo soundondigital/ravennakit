@@ -27,6 +27,10 @@ void rav::fifo::position::update(const size_t timestamp, const size_t capacity, 
     }
 }
 
+size_t rav::fifo::spmc::size() const {
+    return size_;
+}
+
 rav::fifo::single::lock rav::fifo::single::prepare_for_write(const size_t number_of_elements) {
     if (size() + number_of_elements > capacity_) {
         return {};
@@ -91,6 +95,10 @@ rav::fifo::spsc::lock rav::fifo::spsc::prepare_for_read(const size_t number_of_e
     return read_lock;
 }
 
+size_t rav::fifo::spsc::size() const {
+    return size_;
+}
+
 void rav::fifo::spsc::resize(const size_t capacity) {
     reset();
     capacity_ = capacity;
@@ -131,6 +139,10 @@ rav::fifo::mpsc::lock rav::fifo::mpsc::prepare_for_read(const size_t number_of_e
     });
     read_lock.position.update(read_ts_, capacity_, number_of_elements);
     return read_lock;
+}
+
+size_t rav::fifo::mpsc::size() const {
+    return size_;
 }
 
 void rav::fifo::mpsc::resize(const size_t capacity) {
@@ -221,6 +233,11 @@ rav::fifo::mpmc::lock rav::fifo::mpmc::prepare_for_read(const size_t number_of_e
     read_lock.position.update(read_ts_, capacity_, number_of_elements);
     return read_lock;
 }
+
+size_t rav::fifo::mpmc::size() const {
+    return size_;
+}
+
 
 void rav::fifo::mpmc::resize(const size_t capacity) {
     reset();

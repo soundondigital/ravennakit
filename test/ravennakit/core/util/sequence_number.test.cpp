@@ -96,7 +96,7 @@ void test_sequence_number() {
         REQUIRE(rhs <= lhs);
 
         lhs = std::numeric_limits<T>::max();
-        rhs = std::numeric_limits<T>::max() / 2; // Until half of max, rhs is newer
+        rhs = std::numeric_limits<T>::max() / 2;  // Until half of max, rhs is newer
 
         REQUIRE(rhs > lhs);
         REQUIRE(rhs >= lhs);
@@ -104,7 +104,7 @@ void test_sequence_number() {
         REQUIRE_FALSE(rhs <= lhs);
 
         lhs = std::numeric_limits<T>::max();
-        rhs = std::numeric_limits<T>::max() / 2 + 1; // After half of max, lhs is newer
+        rhs = std::numeric_limits<T>::max() / 2 + 1;  // After half of max, lhs is newer
 
         REQUIRE_FALSE(rhs > lhs);
         REQUIRE_FALSE(rhs >= lhs);
@@ -123,6 +123,10 @@ void test_sequence_number() {
 
         auto seq2 = seq + 1;
         REQUIRE(seq2 == 1);
+
+        seq = std::numeric_limits<T>::max() - 1;
+        seq += 3;
+        REQUIRE(seq == 1);
     }
 
     SECTION("Sub") {
@@ -136,6 +140,10 @@ void test_sequence_number() {
 
         auto seq2 = seq - 1;
         REQUIRE(seq2 == std::numeric_limits<T>::max() - 1);
+
+        seq = 1;
+        seq -= 3;
+        REQUIRE(seq == std::numeric_limits<T>::max() - 1);
     }
 
     SECTION("Set next") {
@@ -162,11 +170,11 @@ void test_sequence_number() {
         REQUIRE(seq == std::numeric_limits<T>::max() / 2);
 
         seq = std::numeric_limits<T>::max() / 2;
-        REQUIRE(seq.set_next(0) == 0); // Value is too old
+        REQUIRE(seq.set_next(0) == 0);  // Value is too old
         REQUIRE(seq == std::numeric_limits<T>::max() / 2);
 
         seq = std::numeric_limits<T>::max() / 2;
-        REQUIRE(seq.set_next(std::numeric_limits<T>::max() / 2 - 1) == 0); // Value is too old.
+        REQUIRE(seq.set_next(std::numeric_limits<T>::max() / 2 - 1) == 0);  // Value is too old.
         REQUIRE(seq == std::numeric_limits<T>::max() / 2);
 
         seq = std::numeric_limits<T>::max() / 2 + 1;

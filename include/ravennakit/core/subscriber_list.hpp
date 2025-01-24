@@ -16,8 +16,8 @@
 namespace rav {
 
 /**
- * Super basic list of subscribers. It is not thread safe.
- * Also, make sure that the subscriber is not destroyed while it is in the list.
+ * Super basic list of subscribers. Can optionally store a context with each subscriber.
+ * This class is not thread save and make sure that the subscriber is not destroyed while it is in the list.
  * @tparam T The type of the subscriber.
  */
 template<class T, class C = void>

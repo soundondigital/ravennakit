@@ -177,7 +177,7 @@ endif ()
 ############
 
 if (${BUILD_EXAMPLES})
-    file(GLOB RAVENNAKIT_EXAMPLES "examples/*.cpp")
+    file(GLOB_RECURSE RAVENNAKIT_EXAMPLES "examples/*.cpp")
 
     # Build example targets based on the .cpp files in the examples subfolder
     foreach (FILE ${RAVENNAKIT_EXAMPLES})

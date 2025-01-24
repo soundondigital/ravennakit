@@ -68,7 +68,7 @@ class input_stream {
     /**
      * @return True if the stream has no more data to read.
      */
-    [[nodiscard]] virtual bool exhausted() const = 0;
+    [[nodiscard]] virtual bool exhausted() = 0;
 
     /**
      * Skips size amount of bytes in the stream.
@@ -125,6 +125,20 @@ class input_stream {
         return read_ne<Type>().map([](Type value) {
             return byte_order::swap_if_be(value);
         });
+    }
+
+    /**
+     * @param e The error to convert to a string.
+     * @return The string representation of the error.
+     */
+    static const char* to_string(const error e) {
+        switch (e) {
+            case error::insufficient_data:
+                return "insufficient data";
+            case error::failed_to_set_read_position:
+                return "failed to set read position";
+        }
+        return "unknown error";
     }
 };
 

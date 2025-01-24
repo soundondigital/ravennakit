@@ -46,6 +46,25 @@ struct ptp_timestamp {
     ptp_timestamp(const uint64_t seconds, const uint32_t nanoseconds) : seconds_(seconds), nanoseconds_(nanoseconds) {}
 
     /**
+     * Get a timestamp for given amount of years since epoch (whatever that is in the callers context).
+     * Not counting leap years.
+     * @param years The number of years.
+     * @return The timestamp.
+     */
+    static ptp_timestamp from_years(const uint64_t years) {
+        return {years * 365 * 24 * 60 * 60, 0};
+    }
+
+    /**
+     * Get a timestamp for given amount of days since epoch (whatever that is in the callers context).
+     * @param seconds The number of days.
+     * @return The timestamp.
+     */
+    static ptp_timestamp from_seconds(const uint64_t seconds) {
+        return {seconds, 0};
+    }
+
+    /**
      * Adds two ptp_timestamps together.
      * @param other The timestamp to add.
      * @return The sum of the two timestamps.
@@ -186,14 +205,14 @@ struct ptp_timestamp {
     /**
      * @return The seconds part of this timestamp (does not include the nanoseconds).
      */
-    [[nodiscard]] uint64_t seconds() const {
+    [[nodiscard]] uint64_t raw_seconds() const {
         return seconds_;
     }
 
     /**
      * @return The nanoseconds part of this timestamp (does not include the seconds).
      */
-    [[nodiscard]] uint32_t nanoseconds() const {
+    [[nodiscard]] uint32_t raw_nanoseconds() const {
         return nanoseconds_;
     }
 
@@ -235,6 +254,19 @@ struct ptp_timestamp {
     }
 
     /**
+     * Converts the timestamp to samples at the given sample rate.
+     * @param sample_rate The sample rate to convert to.
+     * @return The number of samples.
+     */
+    [[nodiscard]] uint64_t to_samples(const uint32_t sample_rate) const {
+        RAV_ASSERT(
+            seconds_ + 1 <= std::numeric_limits<decltype(seconds_)>::max() / sample_rate,
+            "Overflow in seconds_ * sample_rate"
+        );
+        return seconds_ * sample_rate + static_cast<uint64_t>(nanoseconds_) * sample_rate / 1'000'000'000;
+    }
+
+    /**
      * @return True if the timestamp is valid, false otherwise. The timestamp is considered valid when it is not zero.
      */
     [[nodiscard]] bool valid() const {
@@ -243,7 +275,7 @@ struct ptp_timestamp {
 
   private:
     uint64_t seconds_ {};      // 6 bytes (48 bits) on the wire
-    uint32_t nanoseconds_ {};  // 4 bytes (32 bits) on the wire, should be 1'000'000'000 or less.
+    uint32_t nanoseconds_ {};  // 4 bytes (32 bits) on the wire [0, 1'000'000'000).
 };
 
 }  // namespace rav

@@ -30,25 +30,25 @@ class bonjour_advertiser: public dnssd_advertiser {
      */
     explicit bonjour_advertiser(asio::io_context& io_context);
 
-    util::id register_service(
+    id register_service(
         const std::string& reg_type, const char* name, const char* domain, uint16_t port, const txt_record& txt_record,
         bool auto_rename, bool local_only
     ) override;
 
-    void update_txt_record(util::id id, const txt_record& txt_record) override;
-    void unregister_service(util::id id) override;
+    void update_txt_record(id id, const txt_record& txt_record) override;
+    void unregister_service(id id) override;
 
     void subscribe(subscriber& s) override;
 
   private:
     struct registered_service {
-        util::id id;
+        id id;
         bonjour_scoped_dns_service_ref service_ref;
     };
 
     asio::ip::tcp::socket service_socket_;
     bonjour_shared_connection shared_connection_;
-    util::id::generator id_generator_;
+    id::generator id_generator_;
     std::vector<registered_service> registered_services_;
     size_t process_results_failed_attempts_ = 0;
     subscriber subscribers_;
@@ -60,7 +60,7 @@ class bonjour_advertiser: public dnssd_advertiser {
         const char* reg_type, const char* reply_domain, void* context
     );
 
-    registered_service* find_registered_service(util::id id);
+    registered_service* find_registered_service(id id);
 
     /**
      * Emits fiven event to all subscribers.

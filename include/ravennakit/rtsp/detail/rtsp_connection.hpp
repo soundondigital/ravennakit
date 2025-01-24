@@ -24,13 +24,13 @@ class rtsp_connection final: public std::enable_shared_from_this<rtsp_connection
     };
 
     struct request_event {
-        const rtsp_request& request;
         rtsp_connection& connection;
+        const rtsp_request& request;
     };
 
     struct response_event {
-        const rtsp_response& response;
         rtsp_connection& connection;
+        const rtsp_response& response;
     };
 
     /**
@@ -57,22 +57,30 @@ class rtsp_connection final: public std::enable_shared_from_this<rtsp_connection
 
         /**
          * Called when a request is received.
-         * @param request The request that was received.
          * @param connection The connection on which the request was received.
+         * @param request The request that was received.
          */
-        virtual void on_request(const rtsp_request& request, rtsp_connection& connection) {
+        virtual void on_request(rtsp_connection& connection, const rtsp_request& request) {
             std::ignore = connection;
             std::ignore = request;
         }
 
         /**
          * Called when a response is received.
-         * @param response The response that was received.
          * @param connection The connection on which the response was received.
+         * @param response The response that was received.
          */
-        virtual void on_response(const rtsp_response& response, rtsp_connection& connection) {
+        virtual void on_response(rtsp_connection& connection, const rtsp_response& response) {
             std::ignore = connection;
             std::ignore = response;
+        }
+
+        /**
+         * Called when a connection is disconnected.
+         * @param connection The connection that was disconnected.
+         */
+        virtual void on_disconnect(rtsp_connection& connection) {
+            std::ignore = connection;
         }
     };
 
@@ -120,10 +128,22 @@ class rtsp_connection final: public std::enable_shared_from_this<rtsp_connection
      */
     void set_subscriber(subscriber* subscriber_to_set);
 
+    /**
+     * Connects to the given host and port.
+     */
     void async_connect(const asio::ip::tcp::resolver::results_type& results);
+
+    /**
+     * Sends data to the server. Function is async and will return immediately.
+     * @param data The data to send. The data is expected to be properly formatted as RTSP request or response.
+     */
     void async_send_data(const std::string& data);
-    void async_write();
-    void async_read_some();
+
+    /**
+     * @return The remote endpoint of the connection.
+     * @throws If the connection is not established.
+     */
+    asio::ip::tcp::endpoint remote_endpoint() const;
 
   private:
     asio::ip::tcp::socket socket_;
@@ -133,6 +153,9 @@ class rtsp_connection final: public std::enable_shared_from_this<rtsp_connection
     subscriber* subscriber_ {};
 
     explicit rtsp_connection(asio::ip::tcp::socket socket);
+
+    void async_write();
+    void async_read_some();
 };
 
 }  // namespace rav

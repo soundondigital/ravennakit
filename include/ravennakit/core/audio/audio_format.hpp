@@ -45,12 +45,16 @@ struct audio_format {
         return fmt::format("{}/{}/{}", audio_encoding_to_string(encoding), sample_rate, num_channels);
     }
 
-    bool operator==(const audio_format& other) {
-        return std::tie(encoding, sample_rate, num_channels)
-            == std::tie(other.encoding, other.sample_rate, other.num_channels);
+    [[nodiscard]] bool is_valid() const {
+        return encoding != audio_encoding::undefined && sample_rate != 0 && num_channels != 0;
     }
 
-    bool operator!=(const audio_format& rhs) {
+    bool operator==(const audio_format& other) const {
+        return std::tie(encoding, sample_rate, num_channels, byte_order)
+            == std::tie(other.encoding, other.sample_rate, other.num_channels, byte_order);
+    }
+
+    bool operator!=(const audio_format& rhs) const {
         return !(*this == rhs);
     }
 };

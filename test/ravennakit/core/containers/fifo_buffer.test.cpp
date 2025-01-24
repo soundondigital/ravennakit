@@ -33,6 +33,7 @@ void test_fifo_buffer_read_write() {
 
     REQUIRE(buffer.write(src.data(), src.size()));
     REQUIRE_FALSE(buffer.write(&src[0], 1));
+    REQUIRE(buffer.size() == src.size());
 
     std::array<T, S> dst {};
 

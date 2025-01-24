@@ -69,6 +69,38 @@ tl::expected<size_t, rav::output_stream::error> rav::wav_audio_format::fmt_chunk
     return ostream.get_write_position() - start_pos;
 }
 
+std::optional<rav::audio_format> rav::wav_audio_format::fmt_chunk::to_audio_format() const {
+    switch (format) {
+        case format_code::pcm: {
+            if (bits_per_sample == 8) {
+                return audio_format {audio_encoding::pcm_u8, sample_rate, num_channels};
+            }
+            if (bits_per_sample == 16) {
+                return audio_format {audio_encoding::pcm_s16, sample_rate, num_channels};
+            }
+            if (bits_per_sample == 24) {
+                return audio_format {audio_encoding::pcm_s24, sample_rate, num_channels};
+            }
+            break;
+        }
+        case format_code::ieee_float: {
+            if (bits_per_sample == 32) {
+                return audio_format {audio_encoding::pcm_float, sample_rate, num_channels};
+            }
+            if (bits_per_sample == 64) {
+                return audio_format {audio_encoding::pcm_double, sample_rate, num_channels};
+            }
+            break;
+        }
+        case format_code::alaw:
+        case format_code::mulaw:
+        case format_code::extensible:
+        default:
+            return std::nullopt;
+    }
+    return std::nullopt;
+}
+
 bool rav::wav_audio_format::data_chunk::read(input_stream& istream, const uint32_t chunk_size) {
     data_begin = istream.get_read_position();
     data_size = chunk_size;
@@ -88,15 +120,17 @@ rav::wav_audio_format::data_chunk::write(output_stream& ostream, const size_t da
     return data_begin - pos;
 }
 
-rav::wav_audio_format::reader::reader(input_stream& istream) : istream_(istream) {
+rav::wav_audio_format::reader::reader(std::unique_ptr<input_stream> istream) : istream_(std::move(istream)) {
+    RAV_ASSERT(istream_, "Invalid input stream");
+
     // RIFF header
-    const auto riff_header = istream.read_as_string(4);
+    const auto riff_header = istream_->read_as_string(4);
     if (riff_header != "RIFF") {
         RAV_THROW_EXCEPTION("expecting RIFF header");
     }
 
     // RIFF size
-    const auto riff_size = istream.read_le<uint32_t>();
+    const auto riff_size = istream_->read_le<uint32_t>();
     if (!riff_size.has_value()) {
         RAV_THROW_EXCEPTION("failed to read RIFF size");
     }
@@ -104,46 +138,55 @@ rav::wav_audio_format::reader::reader(input_stream& istream) : istream_(istream)
     // TODO: Check (validate?) RIFF size
 
     // WAVE header
-    const auto wave_header = istream.read_as_string(4);
+    const auto wave_header = istream_->read_as_string(4);
     if (wave_header != "WAVE") {
         RAV_THROW_EXCEPTION("expecting WAVE header");
     }
 
     // Loop through chunks
-    while (!istream.exhausted()) {
-        auto chunk_id = istream.read_as_string(4);
+    while (!istream_->exhausted()) {
+        if (istream_->get_read_position() % 2 == 1) {
+            if (!istream_->skip(1)) {
+                RAV_THROW_EXCEPTION("failed to skip padding byte");
+            }
+            if (istream_->exhausted()) {
+                break;
+            }
+        }
+
+        auto chunk_id = istream_->read_as_string(4);
         if (chunk_id.value().size() != 4) {
             RAV_THROW_EXCEPTION("failed to read chunk id");
         }
 
-        const auto chunk_size = istream.read_le<uint32_t>();
+        const auto chunk_size = istream_->read_le<uint32_t>();
         if (!chunk_size.has_value()) {
             RAV_THROW_EXCEPTION("failed to read chunk size");
         }
 
         if (chunk_id == "fmt ") {
             fmt_chunk_.emplace();
-            fmt_chunk_->read(istream, chunk_size.value());
+            fmt_chunk_->read(*istream_, chunk_size.value());
             continue;
         }
 
         if (chunk_id == "data") {
             data_chunk_.emplace();
-            if (!data_chunk_->read(istream, chunk_size.value())) {
+            if (!data_chunk_->read(*istream_, chunk_size.value())) {
                 RAV_THROW_EXCEPTION("failed to read data chunk");
             }
             continue;
         }
 
         // Skip unknown chunk
-        if (!istream.skip(chunk_size.value())) {
+        if (!istream_->skip(chunk_size.value())) {
             RAV_THROW_EXCEPTION("failed to skip chunk");
         }
     }
 }
 
 tl::expected<size_t, rav::input_stream::error>
-rav::wav_audio_format::reader::read_audio_data(uint8_t* buffer, const size_t size) const {
+rav::wav_audio_format::reader::read_audio_data(uint8_t* buffer, const size_t size) {
     if (!data_chunk_.has_value()) {
         return 0;
     }
@@ -153,11 +196,11 @@ rav::wav_audio_format::reader::read_audio_data(uint8_t* buffer, const size_t siz
         return 0;
     }
 
-    if (!istream_.set_read_position(data_chunk_->data_begin + data_read_position_)) {
+    if (!istream_->set_read_position(data_chunk_->data_begin + data_read_position_)) {
         return tl::unexpected(input_stream::error::failed_to_set_read_position);
     }
 
-    auto read = istream_.read(buffer, bytes_to_read);
+    auto read = istream_->read(buffer, bytes_to_read);
     if (!read) {
         return read;
     }
@@ -165,7 +208,18 @@ rav::wav_audio_format::reader::read_audio_data(uint8_t* buffer, const size_t siz
         return tl::unexpected(input_stream::error::insufficient_data);
     }
 
+    data_read_position_ += bytes_to_read;
+
     return bytes_to_read;
+}
+
+size_t rav::wav_audio_format::reader::remaining_audio_data() const {
+    RAV_ASSERT(data_read_position_ <= data_chunk_->data_size, "Invalid read position");
+    return data_chunk_->data_size - data_read_position_;
+}
+
+void rav::wav_audio_format::reader::set_read_position(const size_t position) {
+    data_read_position_ = position;
 }
 
 double rav::wav_audio_format::reader::sample_rate() const {
@@ -174,6 +228,13 @@ double rav::wav_audio_format::reader::sample_rate() const {
 
 size_t rav::wav_audio_format::reader::num_channels() const {
     return fmt_chunk_.value().num_channels;
+}
+
+std::optional<rav::audio_format> rav::wav_audio_format::reader::get_audio_format() const {
+    if (!fmt_chunk_.has_value()) {
+        return std::nullopt;
+    }
+    return fmt_chunk_->to_audio_format();
 }
 
 rav::wav_audio_format::writer::writer(

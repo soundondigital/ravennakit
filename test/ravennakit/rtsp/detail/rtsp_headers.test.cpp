@@ -15,9 +15,9 @@
 TEST_CASE("rtsp_headers", "[rtsp_headers]") {
     SECTION("Find header") {
         rav::rtsp_headers headers;
-        REQUIRE(headers.find_header("CSeq") == nullptr);
+        REQUIRE(headers.get("CSeq") == nullptr);
         headers.push_back({"CSeq", "1"});
-        auto* header = headers.find_header("CSeq");
+        auto* header = headers.get("CSeq");
         REQUIRE(header != nullptr);
         REQUIRE(header->value == "1");
     }
@@ -42,7 +42,7 @@ TEST_CASE("rtsp_headers", "[rtsp_headers]") {
         headers.emplace_back({"CSeq", "1"});
         headers.emplace_back({"CSeq", "2"});
         REQUIRE(headers.size() == 1);
-        REQUIRE(headers[0].value == "2");
+        REQUIRE(headers.get_or_default("CSeq") == "2");
     }
 
     SECTION("Add header, make sure existing header gets updated using emplace_back case insensitive") {

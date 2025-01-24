@@ -18,19 +18,33 @@
 TEST_CASE("wav_audio_format | Read wav file", "[wav_audio_format]") {
     REQUIRE(sin_1ms_wav.size() == 1808);
 
-    rav::byte_stream bytes(sin_1ms_wav);
-    REQUIRE(bytes.size().value() == 1808);
+    auto bytes = std::make_unique<rav::byte_stream>(sin_1ms_wav);
+    REQUIRE(bytes->size().value() == 1808);
 
-    rav::wav_audio_format::reader reader(bytes);
+    rav::wav_audio_format::reader reader(std::move(bytes));
     REQUIRE(reader.num_channels() == 2);
     REQUIRE(rav::util::is_within(reader.sample_rate(), 44100.0, 0.00001));
 
     std::vector<uint8_t> read_audio_data(1764, 0);
-    const auto read = reader.read_audio_data(read_audio_data.data(), read_audio_data.size());
-    REQUIRE(read == 1764);
 
-    // Compare whether the audio data is the same
-    REQUIRE(std::equal(sin_1ms_wav.begin() + 44, sin_1ms_wav.end(), read_audio_data.begin(), read_audio_data.end()));
+    SECTION("Read all data in one go") {
+        const auto read = reader.read_audio_data(read_audio_data.data(), read_audio_data.size());
+        REQUIRE(read == 1764);
+
+        // Compare whether the audio data is the same
+        REQUIRE(std::equal(sin_1ms_wav.begin() + 44, sin_1ms_wav.end(), read_audio_data.begin(), read_audio_data.end()));
+    }
+
+    SECTION("Read in two parts") {
+        const auto read1 = reader.read_audio_data(read_audio_data.data(), read_audio_data.size() / 2);
+        REQUIRE(read1 == 1764 / 2);
+
+        const auto read2 = reader.read_audio_data(read_audio_data.data() + read1.value(), read_audio_data.size() - read1.value());
+        REQUIRE(read2 == read_audio_data.size() - read1.value());
+
+        // Compare whether the audio data is the same
+        REQUIRE(std::equal(sin_1ms_wav.begin() + 44, sin_1ms_wav.end(), read_audio_data.begin(), read_audio_data.end()));
+    }
 }
 
 TEST_CASE("wav_audio_format | Write wav file", "[wav_audio_format]") {

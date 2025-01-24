@@ -194,12 +194,14 @@ class media_description {
     void set_session_information(std::string session_information);
 
     /**
-     * @return The sync-time of the stream. This is a RAVENNA-specific attribute extension.
+     * @return The sync-time of the stream. This is a RAVENNA-specific attribute extension and redundant to
+     * mediaclk:direct.
      */
     [[nodiscard]] std::optional<uint32_t> sync_time() const;
 
     /**
-     * Sets the sync-time of the stream. This is a RAVENNA-specific attribute extension.
+     * Sets the sync-time of the stream. This is a RAVENNA-specific attribute extension and redundant to
+     * mediaclk:direct.
      * @param sync_time The sync-time to set.
      */
     void set_sync_time(std::optional<uint32_t> sync_time);
@@ -240,14 +242,14 @@ class media_description {
     void set_framecount(std::optional<uint32_t> framecount);
 
     /**
-     * Returns the clock domain attribute. This is a RAVENNA-specific attribute.
+     * Returns the clock domain attribute. This is a RAVENNA-specific attribute and redundant to a=ts-refclk.
      * @return The clock domain of the media description.
      */
     [[nodiscard]]
     std::optional<ravenna_clock_domain> clock_domain() const;
 
     /**
-     * Sets the clock domain attribute. This is a RAVENNA-specific attribute.
+     * Sets the clock domain attribute. This is a RAVENNA-specific attribute and redundant to a=ts-refclk.
      * @param clock_domain The clock domain to set.
      */
     void set_clock_domain(ravenna_clock_domain clock_domain);

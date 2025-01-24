@@ -36,7 +36,7 @@ rav::ptp_announce_message::from_data(const ptp_message_header& header, buffer_vi
 std::string rav::ptp_announce_message::to_string() const {
     return fmt::format(
         "{} origin_timestamp={}.{:09d} current_utc_offset={} gm_priority1={} gm_clock_quality=({})", header.to_string(),
-        origin_timestamp.seconds(), origin_timestamp.nanoseconds(), current_utc_offset, grandmaster_priority1,
+        origin_timestamp.raw_seconds(), origin_timestamp.raw_nanoseconds(), current_utc_offset, grandmaster_priority1,
         grandmaster_clock_quality.to_string()
     );
 }

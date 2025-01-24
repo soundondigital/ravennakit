@@ -54,7 +54,7 @@ class input_stream_view: public input_stream {
     [[nodiscard]] bool set_read_position(size_t position) override;
     [[nodiscard]] size_t get_read_position() override;
     [[nodiscard]] std::optional<size_t> size() const override;
-    [[nodiscard]] bool exhausted() const override;
+    [[nodiscard]] bool exhausted() override;
 
   private:
     const uint8_t* data_{};

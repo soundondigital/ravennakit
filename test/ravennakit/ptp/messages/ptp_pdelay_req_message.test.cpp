@@ -19,8 +19,8 @@ TEST_CASE("ptp_pdelay_req_message") {
             0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90,
         };
         auto msg = rav::ptp_pdelay_req_message::from_data(rav::buffer_view(data)).value();
-        REQUIRE(msg.origin_timestamp.seconds() == 0x123456789012);
-        REQUIRE(msg.origin_timestamp.nanoseconds() == 0x34567890);
+        REQUIRE(msg.origin_timestamp.raw_seconds() == 0x123456789012);
+        REQUIRE(msg.origin_timestamp.raw_nanoseconds() == 0x34567890);
     }
 
     SECTION("Pack") {

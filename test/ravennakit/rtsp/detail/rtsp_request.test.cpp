@@ -18,19 +18,19 @@ TEST_CASE("rtsp_request", "[rtsp_request]") {
         request.headers.push_back(rav::rtsp_headers::header {"Content-Length", "123"});
         request.headers.push_back({"Content-Type", "application/sdp"});
 
-        if (const auto* header = request.headers.find_header("Content-Length"); header) {
+        if (const auto* header = request.headers.get("Content-Length"); header) {
             REQUIRE(header->value == "123");
         } else {
             FAIL("Content-Length header not found");
         }
 
-        if (const auto* header = request.headers.find_header("Content-Type"); header) {
+        if (const auto* header = request.headers.get("Content-Type"); header) {
             REQUIRE(header->value == "application/sdp");
         } else {
             FAIL("Content-Type header not found");
         }
 
-        REQUIRE(request.headers.find_header("Content-Size") == nullptr);
+        REQUIRE(request.headers.get("Content-Size") == nullptr);
     }
 
     SECTION("Get content length") {

@@ -35,7 +35,7 @@ class byte_stream final: public input_stream, public output_stream {
     [[nodiscard]] bool set_read_position(size_t position) override;
     [[nodiscard]] size_t get_read_position() override;
     [[nodiscard]] std::optional<size_t> size() const override;
-    [[nodiscard]] bool exhausted() const override;
+    [[nodiscard]] bool exhausted() override;
 
     // output_stream overrides
     [[nodiscard]] tl::expected<void, output_stream::error> write(const uint8_t* buffer, size_t size) override;

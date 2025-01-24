@@ -14,25 +14,25 @@
 
 TEST_CASE("id", "[id]") {
     SECTION("Invalid id") {
-        constexpr rav::util::id invalid_id;
+        constexpr rav::id invalid_id;
         REQUIRE_FALSE(invalid_id.is_valid());
     }
 
     SECTION("Invalid id 2") {
-        rav::util::id invalid_id(0);
+        rav::id invalid_id(0);
         REQUIRE_FALSE(invalid_id.is_valid());
     }
 
     SECTION("Generator") {
-        rav::util::id::generator gen;
+        rav::id::generator gen;
         REQUIRE(gen.next() == 1);
         REQUIRE(gen.next() == 2);
         REQUIRE(gen.next() == 3);
     }
 
     SECTION("Process-wide id") {
-        REQUIRE(rav::util::id::next_process_wide_unique_id() == 1);
-        REQUIRE(rav::util::id::next_process_wide_unique_id() == 2);
-        REQUIRE(rav::util::id::next_process_wide_unique_id() == 3);
+        REQUIRE(rav::id::next_process_wide_unique_id() == 1);
+        REQUIRE(rav::id::next_process_wide_unique_id() == 2);
+        REQUIRE(rav::id::next_process_wide_unique_id() == 3);
     }
 }

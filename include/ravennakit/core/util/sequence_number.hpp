@@ -10,9 +10,8 @@
 
 #pragma once
 
-#include "ravennakit/core/assert.hpp"
-
 #include <limits>
+#include <type_traits>
 
 namespace rav {
 

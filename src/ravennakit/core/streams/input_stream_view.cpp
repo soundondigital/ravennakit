@@ -50,6 +50,6 @@ std::optional<size_t> rav::input_stream_view::size() const {
     return size_;
 }
 
-bool rav::input_stream_view::exhausted() const {
+bool rav::input_stream_view::exhausted() {
     return read_position_ >= size_;
 }

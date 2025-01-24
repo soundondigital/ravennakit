@@ -23,6 +23,8 @@ namespace rav {
 template<class T, class F>
 class fifo_buffer {
   public:
+    fifo_buffer() = default;
+
     /**
      * Constructs a queue with a given number of elements.
      * @param capacity The number of elements the queue can hold.

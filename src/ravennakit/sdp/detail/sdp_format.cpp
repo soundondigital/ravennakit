@@ -30,12 +30,40 @@ std::optional<rav::audio_format> rav::sdp::format::to_audio_format() const {
     return std::nullopt;
 }
 
+std::optional<rav::sdp::format> rav::sdp::format::from_audio_format(const audio_format& input_format) {
+    format output_format;
+
+    switch (input_format.encoding) {
+        case audio_encoding::undefined:
+        case audio_encoding::pcm_s8:
+        case audio_encoding::pcm_s32:
+        case audio_encoding::pcm_float:
+        case audio_encoding::pcm_double:
+            return std::nullopt;
+        case audio_encoding::pcm_u8:
+            output_format.encoding_name = "L8";  // https://datatracker.ietf.org/doc/html/rfc3551#section-4.5.10
+        break;
+        case audio_encoding::pcm_s16:
+            output_format.encoding_name = "L16";  // https://datatracker.ietf.org/doc/html/rfc3551#section-4.5.11
+        break;
+        case audio_encoding::pcm_s24:
+            output_format.encoding_name = "L24";  // https://datatracker.ietf.org/doc/html/rfc3190#section-4
+        break;
+    }
+
+    output_format.clock_rate = input_format.sample_rate;
+    output_format.num_channels = input_format.num_channels;
+    output_format.payload_type = 98;
+
+    return output_format;
+}
+
 rav::sdp::format::parse_result<rav::sdp::format> rav::sdp::format::parse_new(const std::string_view line) {
     string_parser parser(line);
 
     format map;
 
-    if (const auto payload_type = parser.read_int<int8_t>()) {
+    if (const auto payload_type = parser.read_int<uint8_t>()) {
         map.payload_type = *payload_type;
         if (!parser.skip(' ')) {
             return parse_result<format>::err("rtpmap: expecting space after payload type");

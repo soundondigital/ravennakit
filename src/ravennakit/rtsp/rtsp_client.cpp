@@ -39,8 +39,8 @@ void rav::rtsp_client::async_describe(const std::string& path, std::string data)
     rtsp_request request;
     request.method = "DESCRIBE";
     request.uri = uri::encode("rtsp", host_, path);
-    request.headers["CSeq"] = "15";
-    request.headers["Accept"] = "application/sdp";
+    request.headers.set("CSeq", "15");
+    request.headers.set("Accept", "application/sdp");
     request.data = std::move(data);
 
     connection_->async_send_request(request);
@@ -54,8 +54,8 @@ void rav::rtsp_client::async_setup(const std::string& path) const {
     rtsp_request request;
     request.method = "SETUP";
     request.uri = uri::encode("rtsp", host_, path);
-    request.headers["CSeq"] = "15";
-    request.headers["Transport"] = "RTP/AVP;unicast;client_port=5004-5005";
+    request.headers.set("CSeq", "15");
+    request.headers.set("Transport", "RTP/AVP;unicast;client_port=5004-5005");
 
     connection_->async_send_request(request);
 }
@@ -68,8 +68,8 @@ void rav::rtsp_client::async_play(const std::string& path) const {
     rtsp_request request;
     request.method = "PLAY";
     request.uri = uri::encode("rtsp", host_, path);
-    request.headers["CSeq"] = "15";
-    request.headers["Transport"] = "RTP/AVP;unicast;client_port=5004-5005";
+    request.headers.set("CSeq", "15");
+    request.headers.set("Transport", "RTP/AVP;unicast;client_port=5004-5005");
 
     connection_->async_send_request(request);
 }
@@ -82,7 +82,7 @@ void rav::rtsp_client::async_teardown(const std::string& path) const {
     rtsp_request request;
     request.method = "TEARDOWN";
     request.uri = uri::encode("rtsp", host_, path);
-    request.headers["CSeq"] = "15";
+    request.headers.set("CSeq", "15");
 
     connection_->async_send_request(request);
 }
@@ -96,15 +96,15 @@ void rav::rtsp_client::async_send_request(const rtsp_request& request) const {
 }
 
 void rav::rtsp_client::on_connect(rtsp_connection& connection) {
-    emit(rtsp_connection::connect_event {connection});
+    events_.emit(rtsp_connection::connect_event {connection});
 }
 
-void rav::rtsp_client::on_request(const rtsp_request& request, rtsp_connection& connection) {
-    emit(rtsp_connection::request_event {request, connection});
+void rav::rtsp_client::on_request(rtsp_connection& connection, const rtsp_request& request) {
+    events_.emit(rtsp_connection::request_event {connection, request});
 }
 
-void rav::rtsp_client::on_response(const rtsp_response& response, rtsp_connection& connection) {
-    emit(rtsp_connection::response_event {response, connection});
+void rav::rtsp_client::on_response(rtsp_connection& connection, const rtsp_response& response) {
+    events_.emit(rtsp_connection::response_event {connection, response});
 }
 
 void rav::rtsp_client::async_resolve_connect(

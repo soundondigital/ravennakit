@@ -36,7 +36,7 @@ class rtsp_headers {
      * @param name The name of the header.
      * @return The value of the header if found, otherwise nullptr.
      */
-    [[nodiscard]] const header* find_header(const std::string& name) const {
+    [[nodiscard]] const header* get(const std::string& name) const {
         for (auto& h : headers_) {
             if (string_compare_case_insensitive(h.name, name)) {
                 return &h;
@@ -46,10 +46,25 @@ class rtsp_headers {
     }
 
     /**
+     * Finds a header by name and returns its value. The name is case-insensitive. If the header doesn't exist, the
+     * default value is returned.
+     * @param name The name of the header.
+     * @return The value of the header if found, otherwise the default value.
+     */
+    [[nodiscard]] std::string get_or_default(const std::string& name) const {
+        for (auto& h : headers_) {
+            if (string_compare_case_insensitive(h.name, name)) {
+                return h.value;
+            }
+        }
+        return {};
+    }
+
+    /**
      * @returns Tries to find the Content-Length header and returns its value as integer.
      */
     [[nodiscard]] std::optional<size_t> get_content_length() const {
-        if (const auto* h = find_header("content-length"); h) {
+        if (const auto* h = get("content-length"); h) {
             return rav::ston<size_t>(h->value);
         }
         return std::nullopt;
@@ -74,22 +89,54 @@ class rtsp_headers {
     }
 
     /**
-     * Finds a header by name and returns its value. If header is not found, an empty string will be returned.
-     * @param name The name of the header.
-     * @return The value of the header if found, otherwise an empty string.
-     */
-    std::string operator[](const char* name) const {
-        if (const auto* h = find_header(name); h) {
-            return h->value;
-        }
-        return "";
-    }
-
-    /**
      * @return The headers.
      */
     [[nodiscard]] const std::vector<header>& headers() const {
         return headers_;
+    }
+
+    /**
+     * Sets a header value. If the header does not exist, it will be created.
+     * @param name The name of the header.
+     * @param value The value of the header.
+     */
+    void set(const char* name, const char* value) {
+        for (auto& h : headers_) {
+            if (string_compare_case_insensitive(h.name, name)) {
+                h.value = value;
+                return;
+            }
+        }
+        headers_.push_back({name, value});
+    }
+
+    /**
+     * Sets a header value. If the header does not exist, it will be created.
+     * @param name The name of the header.
+     * @param value The value of the header.
+     */
+    void set(const std::string& name, std::string value) {
+        for (auto& h : headers_) {
+            if (string_compare_case_insensitive(h.name, name)) {
+                h.value = std::move(value);
+                return;
+            }
+        }
+        headers_.push_back({name, std::move(value)});
+    }
+
+    /**
+     * Sets a header value, updating the value if the header already exists, or creating it if it does not.
+     * @param new_header The header to set.
+     */
+    void set(const header& new_header) {
+        for (auto& h : headers_) {
+            if (string_compare_case_insensitive(h.name, new_header.name)) {
+                h.value = new_header.value;
+                return;
+            }
+        }
+        headers_.push_back({new_header.name, new_header.value});
     }
 
     /**
@@ -111,21 +158,6 @@ class rtsp_headers {
      */
     [[nodiscard]] size_t size() const {
         return headers_.size();
-    }
-
-    /**
-     * Sets an existing header value, or creates a new header entry.
-     * @param name The name of the header.
-     * @param value The value of the header.
-     */
-    void set(const char* name, const char* value) {
-        for (auto& h : headers_) {
-            if (h.name == name) {
-                h.value = value;
-                return;
-            }
-        }
-        headers_.push_back({name, value});
     }
 
     /**

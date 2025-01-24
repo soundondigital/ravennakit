@@ -10,6 +10,9 @@
 
 #pragma once
 
+#include "ravennakit/core/file.hpp"
+#include "ravennakit/core/audio/audio_format.hpp"
+#include "ravennakit/core/streams/file_input_stream.hpp"
 #include "ravennakit/core/streams/input_stream.hpp"
 #include "ravennakit/core/streams/output_stream.hpp"
 
@@ -63,6 +66,11 @@ struct fmt_chunk {
      * @return The number of bytes written.
      */
     [[nodiscard]] tl::expected<size_t, output_stream::error> write(output_stream& ostream) const;
+
+    /**
+     * @return The audio format represented by the fmt chunk.
+     */
+    [[nodiscard]] std::optional<audio_format> to_audio_format() const;
 };
 
 /**
@@ -97,7 +105,14 @@ struct data_chunk {
  */
 class reader {
   public:
-    explicit reader(input_stream& istream);
+    /**
+     * Constructs a new reader.
+     * @param istream The input stream to read from. Must be valid.
+     */
+    explicit reader(std::unique_ptr<input_stream> istream);
+
+    reader(reader&&) noexcept = default;
+    reader& operator=(reader&&) noexcept = default;
 
     /**
      * Reads audio data from the input stream.
@@ -105,7 +120,18 @@ class reader {
      * @param size The number of bytes to read.
      * @return The number of bytes read.
      */
-    [[nodiscard]] tl::expected<size_t, input_stream::error> read_audio_data(uint8_t* buffer, size_t size) const;
+    [[nodiscard]] tl::expected<size_t, input_stream::error> read_audio_data(uint8_t* buffer, size_t size);
+
+    /**
+     * @return The number of bytes of audio data remaining in the stream.
+     */
+    [[nodiscard]] size_t remaining_audio_data() const;
+
+    /**
+     * Sets the read position of the reader. This is the position in the audio data, not the entire file.
+     * @param position The position to set the read position to.
+     */
+    void set_read_position(size_t position);
 
     /**
      * @return The sample rate of the audio data.
@@ -117,8 +143,13 @@ class reader {
      */
     [[nodiscard]] size_t num_channels() const;
 
+    /**
+     * @return The audio format of the audio data.
+     */
+    [[nodiscard]] std::optional<audio_format> get_audio_format() const;
+
   private:
-    input_stream& istream_;
+    std::unique_ptr<input_stream> istream_;
     std::optional<fmt_chunk> fmt_chunk_;
     std::optional<data_chunk> data_chunk_;
     size_t data_read_position_ {};
@@ -139,7 +170,7 @@ class writer {
      * @param size The number of bytes to write.
      * @return The number of bytes written.
      */
-    [[nodiscard]] tl::expected<void, rav::output_stream::error> write_audio_data(const uint8_t* buffer, size_t size);
+    [[nodiscard]] tl::expected<void, output_stream::error> write_audio_data(const uint8_t* buffer, size_t size);
 
     /**
      * Finalizes the WAVE file by writing the header and flushing the output stream.

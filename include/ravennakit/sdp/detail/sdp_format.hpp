@@ -21,7 +21,7 @@ namespace rav::sdp {
  * Holds the information of an RTP map.
  */
 struct format {
-    int8_t payload_type {-1};
+    uint8_t payload_type {};
     std::string encoding_name;
     uint32_t clock_rate {};
     uint32_t num_channels {};
@@ -36,6 +36,11 @@ struct format {
      * @return The format as audio_format, or nullopt if the format is not supported or cannot be converted.
      */
     [[nodiscard]] std::optional<audio_format> to_audio_format() const;
+
+    /**
+     * @return The format as audio_format, or nullopt if the format is not supported or cannot be converted.
+     */
+    [[nodiscard]] static std::optional<format> from_audio_format(const audio_format& input_format) ;
 
     /**
      * Parses a format from a string.

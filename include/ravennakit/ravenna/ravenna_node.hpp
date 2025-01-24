@@ -11,7 +11,7 @@
 #pragma once
 
 #include "ravenna_rtsp_client.hpp"
-#include "ravenna_sink.hpp"
+#include "ravenna_receiver.hpp"
 #include "ravennakit/dnssd/dnssd_browser.hpp"
 
 #include <string>
@@ -31,7 +31,7 @@ private:
     std::unique_ptr<dnssd::dnssd_browser> node_browser_;
     std::unique_ptr<dnssd::dnssd_browser> session_browser_;
     // ravenna_rtsp_client ravenna_rtsp_client_{io_context_};
-    std::vector<ravenna_sink> sinks_;
+    std::vector<ravenna_receiver> sinks_;
 };
 
 }

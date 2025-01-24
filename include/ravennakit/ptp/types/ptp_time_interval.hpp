@@ -251,10 +251,10 @@ class ptp_time_interval {
      */
     static int64_t to_fractional_interval(const double seconds) {
         const auto scaled = seconds * 1'000'000'000 * k_fractional_scale;
-        if (scaled < std::numeric_limits<int64_t>::min()) {
+        if (scaled < static_cast<double>(std::numeric_limits<int64_t>::min())) {
             return std::numeric_limits<int64_t>::min();
         }
-        if (scaled > std::numeric_limits<int64_t>::max()) {
+        if (scaled > static_cast<double>(std::numeric_limits<int64_t>::max())) {
             return std::numeric_limits<int64_t>::max();
         }
         return static_cast<int64_t>(scaled);
@@ -262,11 +262,11 @@ class ptp_time_interval {
 
   private:
     int64_t seconds_ {};  // 48 bits on the wire
-    int64_t nanos_ {};    // [0, 1'000'000'000) including 16-bit fraction
+    int64_t nanos_ {};    // [0, 1e9) including 16-bit fraction
 
     /**
      * Normalizes the time interval such that:
-     * - nanos_ is always in the range [0, 1'000'000'000 * k_fractional_scale).
+     * - nanos_ is always in the range [0, 1e9 * k_fractional_scale).
      * - Adjusts seconds_ accordingly.
      */
     void normalize() {

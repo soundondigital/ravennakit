@@ -60,7 +60,7 @@ rav::sdp::media_description::parse_new(const std::string_view line) {
 
     // Formats
     while (const auto format_str = parser.split(' ')) {
-        if (const auto value = rav::ston<int8_t>(*format_str)) {
+        if (const auto value = rav::ston<uint8_t>(*format_str)) {
             media.formats_.push_back({*value, {}, {}, {}});
         } else {
             return parse_result<media_description>::err("media: format integer parsing failed");
@@ -437,12 +437,12 @@ tl::expected<std::string, std::string> rav::sdp::media_description::to_string(co
 
     // ptime
     if (ptime_) {
-        fmt::format_to(std::back_inserter(result), "a=ptime:{}{}", *ptime_, newline);
+        fmt::format_to(std::back_inserter(result), "a=ptime:{:.3g}{}", *ptime_, newline);
     }
 
     // max_ptime
     if (max_ptime_) {
-        fmt::format_to(std::back_inserter(result), "a=maxptime:{}{}", *max_ptime_, newline);
+        fmt::format_to(std::back_inserter(result), "a=maxptime:{:.3g}{}", *max_ptime_, newline);
     }
 
     // Media direction

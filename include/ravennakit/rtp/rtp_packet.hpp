@@ -10,9 +10,8 @@
 
 #pragma once
 
-#include "ravennakit/core/streams/output_stream.hpp"
-
-#include <vector>
+#include "ravennakit/core/containers/byte_buffer.hpp"
+#include "ravennakit/core/util/sequence_number.hpp"
 
 namespace rav {
 
@@ -31,16 +30,16 @@ class rtp_packet {
 
     /**
      * Sets the sequence number.
-     * @param value The sequence number.
+     * @param value The value to set.
      */
     void sequence_number(uint16_t value);
 
     /**
      * Increases the sequence number by the given value.
-     * @param value The value to add.
+     * @param value The value to increment with.
      * @return The new sequence number.
      */
-    uint16_t sequence_number_inc(uint16_t value);
+    rav::sequence_number<uint16_t> sequence_number_inc(uint16_t value);
 
     /**
      * Sets the timestamp.
@@ -53,7 +52,14 @@ class rtp_packet {
      * @param value The value to add.
      * @return The new timestamp.
      */
-    uint32_t timestamp_inc(uint32_t value);
+    rav::sequence_number<uint32_t> timestamp_inc(uint32_t value);
+
+    /**
+     * @return The timestamp.
+     */
+    [[nodiscard]] rav::sequence_number<uint32_t> timestamp() const {
+        return timestamp_;
+    }
 
     /**
      * Sets the synchronization source identifier.
@@ -65,17 +71,16 @@ class rtp_packet {
      * Encodes the RTP packet into given stream. This method writes to the stream as-is, the caller is responsible to
      * prepare the stream (reset it after previous calls).
      * @param payload_data The payload to encode.
-     * @param payload_size
-     * @param stream The stream to write to.
+     * @param payload_size The size of the payload in bytes.
+     * @param buffer The buffer to write to.
      * @return true if the packet was successfully encoded and written, or false otherwise.
      */
-    [[nodiscard]] tl::expected<void, output_stream::error>
-    encode(const uint8_t* payload_data, size_t payload_size, output_stream& stream) const;
+    void encode(const uint8_t* payload_data, size_t payload_size, byte_buffer& buffer) const;
 
   private:
     uint8_t payload_type_ {0};
-    uint16_t sequence_number_ {0};
-    uint32_t timestamp_ {0};
+    rav::sequence_number<uint16_t> sequence_number_ {0};
+    rav::sequence_number<uint32_t> timestamp_ {0};
     uint32_t ssrc_ {0};
 };
 

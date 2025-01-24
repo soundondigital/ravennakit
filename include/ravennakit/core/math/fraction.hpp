@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <tuple>
+
 namespace rav {
 
 /**
@@ -20,6 +22,14 @@ template<class T>
 struct fraction {
     T numerator;
     T denominator;
+
+    friend bool operator==(const fraction& lhs, const fraction& rhs) {
+        return std::tie(lhs.numerator, lhs.denominator) == std::tie(rhs.numerator, rhs.denominator);
+    }
+
+    friend bool operator!=(const fraction& lhs, const fraction& rhs) {
+        return !(lhs == rhs);
+    }
 };
 
 }

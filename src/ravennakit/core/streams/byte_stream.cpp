@@ -43,7 +43,7 @@ std::optional<size_t> rav::byte_stream::size() const {
     return data_.size();
 }
 
-bool rav::byte_stream::exhausted() const {
+bool rav::byte_stream::exhausted() {
     return read_position_ >= data_.size();
 }
 

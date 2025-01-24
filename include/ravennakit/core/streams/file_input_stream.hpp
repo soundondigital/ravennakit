@@ -30,7 +30,9 @@ class file_input_stream final: public input_stream {
             }
             RAV_THROW_EXCEPTION("Failed to open file");
         }
-        file_size_ = fstream_.tellg();
+        const auto file_size = fstream_.tellg();
+        RAV_ASSERT(file_size != -1, "Failed to get file size");
+        file_size_ = static_cast<size_t>(fstream_.tellg());
         fstream_.seekg(0);
 
         RAV_ASSERT(f.size() == file_size_, "File reports a different size than the stream");
@@ -70,8 +72,8 @@ class file_input_stream final: public input_stream {
         return file_size_;
     }
 
-    [[nodiscard]] bool exhausted() const override {
-        return fstream_.eof();
+    [[nodiscard]] bool exhausted() override {
+        return fstream_.eof() || fstream_.peek() == std::ifstream::traits_type::eof();
     }
 
   private:

@@ -15,7 +15,7 @@
 #include "ravennakit/core/streams/file_output_stream.hpp"
 #include "ravennakit/dnssd/bonjour/bonjour_browser.hpp"
 #include "ravennakit/ravenna/ravenna_rtsp_client.hpp"
-#include "ravennakit/ravenna/ravenna_sink.hpp"
+#include "ravennakit/ravenna/ravenna_receiver.hpp"
 
 #include <CLI/App.hpp>
 #include <asio/io_context.hpp>
@@ -32,7 +32,7 @@
  */
 class stream_recorder: public rav::rtp_stream_receiver::subscriber {
   public:
-    explicit stream_recorder(std::unique_ptr<rav::ravenna_sink> sink) : sink_(std::move(sink)) {
+    explicit stream_recorder(std::unique_ptr<rav::ravenna_receiver> sink) : sink_(std::move(sink)) {
         if (sink_) {
             sink_->start();
             sink_->add_subscriber(this);
@@ -89,7 +89,7 @@ class stream_recorder: public rav::rtp_stream_receiver::subscriber {
     }
 
   private:
-    std::unique_ptr<rav::ravenna_sink> sink_;
+    std::unique_ptr<rav::ravenna_receiver> sink_;
     std::unique_ptr<rav::file_output_stream> file_output_stream_;
     std::unique_ptr<rav::wav_audio_format::writer> wav_writer_;
     std::vector<uint8_t> audio_data_;
@@ -119,7 +119,7 @@ class ravenna_recorder_example {
     void add_stream(const std::string& stream_name) {
         recorders_.emplace_back(
             std::make_unique<stream_recorder>(
-                std::make_unique<rav::ravenna_sink>(*rtsp_client_, *rtp_receiver_, stream_name)
+                std::make_unique<rav::ravenna_receiver>(*rtsp_client_, *rtp_receiver_, stream_name)
             )
         );
     }
@@ -155,19 +155,19 @@ int main(int const argc, char* argv[]) {
 
     CLI11_PARSE(app, argc, argv);
 
-    ravenna_recorder_example receiver_example(interface_address);
+    ravenna_recorder_example recorder_example(interface_address);
 
     for (auto& stream_name : stream_names) {
-        receiver_example.add_stream(stream_name);
+        recorder_example.add_stream(stream_name);
     }
 
-    std::thread cin_thread([&receiver_example] {
+    std::thread cin_thread([&recorder_example] {
         fmt::println("Press return key to stop...");
         std::cin.get();
-        receiver_example.stop();
+        recorder_example.stop();
     });
 
-    receiver_example.start();
+    recorder_example.start();
     cin_thread.join();
 
     return 0;

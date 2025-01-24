@@ -12,6 +12,7 @@
 
 #include "platform.hpp"
 #include "env.hpp"
+#include "string.hpp"
 
 #include <cstdlib>
 
@@ -129,19 +130,19 @@ namespace rav::log {
 inline void set_level_from_env(const char* env_var = "RAV_LOG_LEVEL") {
     if (const auto env_value = rav::env::get(env_var)) {
 #if RAV_ENABLE_SPDLOG
-        if (env_value == "TRACE") {
+        if (string_compare_case_insensitive(*env_value, "TRACE")) {
             spdlog::set_level(spdlog::level::trace);
-        } else if (env_value == "DEBUG") {
+        } else if (string_compare_case_insensitive(*env_value, "DEBUG")) {
             spdlog::set_level(spdlog::level::debug);
-        } else if (env_value == "INFO") {
+        } else if (string_compare_case_insensitive(*env_value, "INFO")) {
             spdlog::set_level(spdlog::level::info);
-        } else if (env_value == "WARN") {
+        } else if (string_compare_case_insensitive(*env_value, "WARN")) {
             spdlog::set_level(spdlog::level::warn);
-        } else if (env_value == "ERROR") {
+        } else if (string_compare_case_insensitive(*env_value, "ERROR")) {
             spdlog::set_level(spdlog::level::err);
-        } else if (env_value == "CRITICAL") {
+        } else if (string_compare_case_insensitive(*env_value, "CRITICAL")) {
             spdlog::set_level(spdlog::level::critical);
-        } else if (env_value == "CRITICAL") {
+        } else if (string_compare_case_insensitive(*env_value, "CRITICAL")) {
             spdlog::set_level(spdlog::level::off);
         } else {
             fmt::println("Invalid value for {}: {}. Setting log level to info.", env_var, *env_value);

@@ -201,6 +201,8 @@ void rav::ptp_port::set_state(const ptp_state new_state) {
     port_ds_.port_state = new_state;
 
     RAV_INFO("Switching port {} to {}", port_ds_.port_identity.port_number, to_string(new_state));
+
+    parent_.on_port_changed_state({*this});
 }
 
 rav::ptp_measurement<double> rav::ptp_port::calculate_offset_from_master(const ptp_sync_message& sync_message) const {
@@ -536,7 +538,7 @@ void rav::ptp_port::handle_sync_message(ptp_sync_message sync_message, buffer_vi
     }
 
     if (sync_message.header.flags.two_step_flag) {
-        sync_messages_.push_back(sync_message); // Wait for a follow-up message
+        sync_messages_.push_back(sync_message);  // Wait for a follow-up message
     } else {
         parent_.update_local_ptp_clock(calculate_offset_from_master(sync_message));
     }
@@ -623,7 +625,7 @@ void rav::ptp_port::handle_delay_resp_message(
             if (mean_delay_stats_.count() > 10 && mean_delay_stats_.is_outlier_median(mean_delay, 0.001)) {
                 TRACY_PLOT("Mean delay outliers", mean_delay * 1000.0);
                 TRACY_MESSAGE("Ignoring outlier mean delay");
-                RAV_TRACE("Ignoring outlier mean delay: {}", mean_delay * 1000.0);
+                RAV_WARNING("Ignoring outlier mean delay: {}", mean_delay * 1000.0);
                 return;
             }
             TRACY_PLOT("Mean delay outliers", 0.0);

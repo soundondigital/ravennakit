@@ -19,7 +19,7 @@
 namespace rav {
 
 /**
- * Maintains connections to zero or more RAVENNA RTSP servers, upon request.
+ * Maintains connections to one or more RAVENNA RTSP servers, upon request.
  */
 class ravenna_rtsp_client {
   public:

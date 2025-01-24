@@ -30,8 +30,8 @@ TEST_CASE("ptp_announce_message") {
 
         auto announce = rav::ptp_announce_message::from_data({}, rav::buffer_view(data));
         REQUIRE(announce);
-        REQUIRE(announce->origin_timestamp.seconds() == 0x010203040506);
-        REQUIRE(announce->origin_timestamp.nanoseconds() == 0x0708090a);
+        REQUIRE(announce->origin_timestamp.raw_seconds() == 0x010203040506);
+        REQUIRE(announce->origin_timestamp.raw_nanoseconds() == 0x0708090a);
         REQUIRE(announce->current_utc_offset == 0x0b0c);
         REQUIRE(announce->grandmaster_priority1 == 0x0d);
         REQUIRE(announce->grandmaster_clock_quality.clock_class == 0x0e);

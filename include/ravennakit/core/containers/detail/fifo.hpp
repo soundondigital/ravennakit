@@ -189,6 +189,13 @@ struct spsc {
     lock prepare_for_read(size_t number_of_elements);
 
     /**
+     * Thread safe: no
+     * Realtime safe: yes
+     * @return The number of elements in the buffer.
+     */
+    [[nodiscard]] size_t size() const;
+
+    /**
      * Resizes the buffer. Implies a reset.
      * Thread safe: no
      * Realtime safe: no
@@ -271,6 +278,13 @@ struct mpsc {
      * @return A valid lock if sufficient data is available; otherwise, an invalid lock.
      */
     lock prepare_for_read(size_t number_of_elements);
+
+    /**
+     * Thread safe: no
+     * Realtime safe: yes
+     * @return The number of elements in the buffer.
+     */
+    [[nodiscard]] size_t size() const;
 
     /**
      * Resizes the buffer. Implies a reset.
@@ -358,6 +372,13 @@ struct spmc {
     lock prepare_for_read(size_t number_of_elements);
 
     /**
+     * Thread safe: no
+     * Realtime safe: yes
+     * @return The number of elements in the buffer.
+     */
+    [[nodiscard]] size_t size() const;
+
+    /**
      * Resizes the buffer. Implies a reset.
      * Thread safe: no
      * Realtime safe: no
@@ -439,6 +460,13 @@ struct mpmc {
      * @return A valid lock if sufficient data is available; otherwise, an invalid lock.
      */
     lock prepare_for_read(size_t number_of_elements);
+
+    /**
+     * Thread safe: no
+     * Realtime safe: yes
+     * @return The number of elements in the buffer.
+     */
+    [[nodiscard]] size_t size() const;
 
     /**
      * Resizes the buffer. Implies a reset.

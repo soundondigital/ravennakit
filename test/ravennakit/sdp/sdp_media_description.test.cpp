@@ -77,7 +77,7 @@ TEST_CASE("media_description | media_description") {
     }
 
     SECTION("Test media field with multiple formats and an invalid one") {
-        auto result = rav::sdp::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100 128");
+        auto result = rav::sdp::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100 256");
         REQUIRE(result.is_err());
     }
 
@@ -173,9 +173,21 @@ TEST_CASE("media_description | To string") {
         REQUIRE(md.to_string().value() == expected);
     }
 
+    SECTION("ptime") {
+        md.set_ptime(1.0880808);
+        expected += "a=ptime:1.09\r\n";
+        REQUIRE(md.to_string().value() == expected);
+    }
+
     SECTION("max_ptime") {
         md.set_max_ptime(60);
         expected += "a=maxptime:60\r\n";
+        REQUIRE(md.to_string().value() == expected);
+    }
+
+    SECTION("max_ptime") {
+        md.set_max_ptime(1.0880808);
+        expected += "a=maxptime:1.09\r\n";
         REQUIRE(md.to_string().value() == expected);
     }
 

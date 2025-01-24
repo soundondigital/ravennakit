@@ -15,13 +15,13 @@ rav::rtsp_connection::~rtsp_connection() = default;
 rav::rtsp_connection::rtsp_connection(asio::ip::tcp::socket socket) : socket_(std::move(socket)) {
     parser_.on<rtsp_request>([this](const rtsp_request& request) {
         if (subscriber_) {
-            subscriber_->on_request(request, *this);
+            subscriber_->on_request(*this, request);
         }
     });
 
     parser_.on<rtsp_response>([this](const rtsp_response& response) {
         if (subscriber_) {
-            subscriber_->on_response(response, *this);
+            subscriber_->on_response(*this, response);
         }
     });
 }
@@ -105,6 +105,7 @@ void rav::rtsp_connection::async_read_some() {
         asio::buffer(buffer.data(), buffer.size_bytes()),
         [self](const asio::error_code ec, const std::size_t length) mutable {
             if (ec) {
+                self->subscriber_->on_disconnect(*self);
                 if (ec == asio::error::operation_aborted) {
                     RAV_TRACE("Operation aborted");
                     return;
@@ -128,4 +129,8 @@ void rav::rtsp_connection::async_read_some() {
             self->async_read_some();
         }
     );
+}
+
+asio::ip::tcp::endpoint rav::rtsp_connection::remote_endpoint() const {
+    return socket_.remote_endpoint();
 }

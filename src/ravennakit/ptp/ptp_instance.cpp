@@ -102,13 +102,8 @@ bool rav::ptp_instance::set_recommended_state(
             return false;
         }
 
-        bool log_new_parent = false;
-        if (parent_ds_.parent_port_identity != announce_message->header.source_port_identity) {
-            log_new_parent = true;
-        }
-        if (parent_ds_.grandmaster_identity != announce_message->grandmaster_identity) {
-            log_new_parent = true;
-        }
+        const auto parent_changed = parent_ds_.parent_port_identity != announce_message->header.source_port_identity;
+        const auto gm_changed = parent_ds_.grandmaster_identity != announce_message->grandmaster_identity;
 
         current_ds_.steps_removed = 1 + announce_message->steps_removed;
         parent_ds_.parent_port_identity = announce_message->header.source_port_identity;
@@ -125,8 +120,9 @@ bool rav::ptp_instance::set_recommended_state(
         time_properties_ds_.ptp_timescale = announce_message->header.flags.ptp_timescale;
         time_properties_ds_.time_source = announce_message->time_source;
 
-        if (log_new_parent) {
+        if (parent_changed || gm_changed) {
             RAV_INFO("{}", parent_ds_.to_string());
+            on_parent_changed({parent_ds_});
         }
 
         return true;

@@ -17,6 +17,9 @@
 #include "datasets/ptp_default_ds.hpp"
 #include "datasets/ptp_parent_ds.hpp"
 #include "datasets/ptp_time_properties_ds.hpp"
+#include "ravennakit/core/events.hpp"
+#include "ravennakit/core/subscriber_list.hpp"
+#include "ravennakit/core/events/event_emitter.hpp"
 #include "ravennakit/core/net/interfaces/network_interface_list.hpp"
 
 #include <asio/ip/address.hpp>
@@ -29,6 +32,17 @@ namespace rav {
  */
 class ptp_instance {
   public:
+    struct parent_changed_event {
+        const ptp_parent_ds& parent;
+    };
+
+    struct port_changed_state_event {
+        const ptp_port& port;
+    };
+
+    event_emitter<parent_changed_event> on_parent_changed;
+    event_emitter<port_changed_state_event> on_port_changed_state;
+
     /**
      * Constructs a PTP instance.
      * @param io_context The asio io context to use for networking and timers. Should be a single-threaded context,
