@@ -26,7 +26,7 @@
 
 namespace rav {
 
-class ravenna_transmitter: public ptp_instance::subscriber, public rtsp_server::handler {
+class ravenna_transmitter: public ptp_instance::subscriber, public rtsp_server::path_handler {
   public:
     struct on_data_requested_event {
         buffer_view<uint8_t> buffer;

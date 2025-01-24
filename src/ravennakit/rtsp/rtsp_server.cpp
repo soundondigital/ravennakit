@@ -32,7 +32,7 @@ uint16_t rav::rtsp_server::port() const {
     return acceptor_.local_endpoint().port();
 }
 
-void rav::rtsp_server::register_handler(const std::string& path, handler* handler) {
+void rav::rtsp_server::register_handler(const std::string& path, path_handler* handler) {
     if (handler == nullptr) {
         const auto found = paths_.find(path);
         if (found == paths_.end()) {
@@ -48,7 +48,7 @@ void rav::rtsp_server::register_handler(const std::string& path, handler* handle
     path_ctx.handler = handler;
 }
 
-void rav::rtsp_server::unregister_handler(const handler* handler_to_remove) {
+void rav::rtsp_server::unregister_handler(const path_handler* handler_to_remove) {
     for (auto it = paths_.begin(); it != paths_.end();) {
         if (it->second.handler == handler_to_remove) {
             it->second.handler = nullptr;

@@ -28,9 +28,12 @@ class rtsp_server final: rtsp_connection::subscriber {
   public:
     using request_handler = std::function<void(rtsp_connection::request_event)>;
 
-    class handler {
+    /**
+     * Baseclass for other classes which need to handle requests for specific paths.
+     */
+    class path_handler {
     public:
-        virtual ~handler() = default;
+        virtual ~path_handler() = default;
 
         /**
          * Called when a request is received.
@@ -60,12 +63,12 @@ class rtsp_server final: rtsp_connection::subscriber {
      * @param handler The handler to set. If the handler is nullptr it will remove any previously registered handler for
      * path.
      */
-    void register_handler(const std::string& path, handler* handler);
+    void register_handler(const std::string& path, path_handler* handler);
 
     /**
      * Removes given handler from all paths.
      */
-    void unregister_handler(const handler* handler_to_remove);
+    void unregister_handler(const path_handler* handler_to_remove);
 
     /**
      * Sends a request to all connected clients. The path will determine which clients will receive the request.
@@ -94,7 +97,7 @@ class rtsp_server final: rtsp_connection::subscriber {
     static constexpr auto k_special_path_all = "/all";
 
     struct path_context {
-        handler* handler;
+        path_handler* handler;
         std::vector<std::shared_ptr<rtsp_connection>> connections;
     };
 
