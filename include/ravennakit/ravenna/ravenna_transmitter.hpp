@@ -29,6 +29,7 @@ namespace rav {
 class ravenna_transmitter: public rtsp_server::path_handler {
   public:
     struct on_data_requested_event {
+        uint32_t timestamp; // RTP timestamp
         buffer_view<uint8_t> buffer;
     };
 
@@ -76,6 +77,12 @@ class ravenna_transmitter: public rtsp_server::path_handler {
      * rate is 44.1kHz, then the signaled packet time is 1.09.
      */
     [[nodiscard]] float get_signaled_ptime() const;
+
+    /**
+     * Start the streaming.
+     * @param timestamp_samples The RTP timestamp in samples at which to send the first packet.
+     */
+    void start(uint32_t timestamp_samples);
 
     /**
      * Start the streaming.

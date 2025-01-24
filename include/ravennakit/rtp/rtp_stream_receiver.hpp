@@ -36,6 +36,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
 
     void update_sdp(const sdp::session_description& sdp);
     void set_delay(uint32_t delay);
+    [[nodiscard]] uint32_t get_delay() const;
 
     bool add_subscriber(subscriber* subscriber_to_add);
     bool remove_subscriber(subscriber* subscriber_to_remove);
@@ -47,7 +48,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
      * @param buffer_size The size of the buffer in bytes.
      * @return true if buffer_size bytes were read, or false if buffer_size bytes couldn't be read.
      */
-    bool read_data(size_t at_timestamp, uint8_t* buffer, size_t buffer_size);
+    bool read_data(size_t at_timestamp, uint8_t* buffer, size_t buffer_size) const;
 
     // rtp_receiver::subscriber overrides
     void on_rtp_packet(const rtp_receiver::rtp_packet_event& rtp_event) override;
@@ -70,7 +71,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     audio_format selected_format_;
     rtp_receive_buffer receiver_buffer_;
     std::vector<stream_info> streams_;
-    uint32_t delay_ = 4800;  // 100ms at 48KHz
+    uint32_t delay_ = 480;  // 100ms at 48KHz
     subscriber_list<subscriber> subscribers_;
 
     /// Restarts the streaming

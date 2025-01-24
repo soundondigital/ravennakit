@@ -118,14 +118,18 @@ float rav::ravenna_transmitter::get_signaled_ptime() const {
     return ptime_.signaled_ptime(audio_format_.sample_rate);
 }
 
-void rav::ravenna_transmitter::start(const ptp_timestamp timestamp) {
+void rav::ravenna_transmitter::start(const uint32_t timestamp_samples) {
     if (running_) {
         return;
     }
     running_ = true;
-    rtp_packet_.timestamp(static_cast<uint32_t>(timestamp.to_samples(audio_format_.sample_rate)));
+    rtp_packet_.timestamp(timestamp_samples);
     resize_internal_buffers();
     start_timer();
+}
+
+void rav::ravenna_transmitter::start(const ptp_timestamp timestamp) {
+    start(static_cast<uint32_t>(timestamp.to_samples(audio_format_.sample_rate)));
 }
 
 void rav::ravenna_transmitter::stop() {
@@ -278,7 +282,9 @@ void rav::ravenna_transmitter::send_data() {
             break;
         }
 
-        events_.emit(on_data_requested_event {buffer_view(packet_intermediate_buffer_)});
+        events_.emit(
+            on_data_requested_event {rtp_packet_.timestamp().value(), buffer_view(packet_intermediate_buffer_)}
+        );
 
         if (audio_format_.byte_order == audio_format::byte_order::le) {
             byte_order::swap_bytes(

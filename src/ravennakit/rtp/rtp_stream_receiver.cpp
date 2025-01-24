@@ -196,6 +196,10 @@ void rav::rtp_stream_receiver::set_delay(const uint32_t delay) {
     restart();
 }
 
+uint32_t rav::rtp_stream_receiver::get_delay() const {
+    return delay_;
+}
+
 bool rav::rtp_stream_receiver::add_subscriber(subscriber* subscriber_to_add) {
     // TODO: call subscriber with current state
     if (!subscribers_.add(subscriber_to_add)) {
@@ -208,11 +212,15 @@ bool rav::rtp_stream_receiver::remove_subscriber(subscriber* subscriber_to_remov
     return subscribers_.remove(subscriber_to_remove);
 }
 
-bool rav::rtp_stream_receiver::read_data(const size_t at_timestamp, uint8_t* buffer, const size_t buffer_size) {
+bool rav::rtp_stream_receiver::read_data(const size_t at_timestamp, uint8_t* buffer, const size_t buffer_size) const {
     return receiver_buffer_.read(at_timestamp, buffer, buffer_size);
 }
 
 void rav::rtp_stream_receiver::restart() {
+    if (!selected_format_.is_valid()) {
+        return;
+    }
+
     rtp_receiver_.unsubscribe(*this);  // This unsubscribes `this` from all sessions
 
     const auto bytes_per_frame = selected_format_.bytes_per_frame();
