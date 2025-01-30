@@ -268,15 +268,15 @@ void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_vie
 
     TRACY_PLOT("RTP Timestamp", static_cast<int64_t>(packet.timestamp()));
 
-    if (stream.sequence_number != 0 && packet.sequence_number() > stream.sequence_number + 1) {
+    const auto step = stream.seq.set_next(packet.sequence_number());
+    if (step > 1) {
         RAV_TRACE(
-            "Packets dropped: [{}, {}] total: {}", stream.sequence_number, packet.sequence_number() - 1,
-            packet.sequence_number() - stream.sequence_number - 1
+            "Packets dropped: [{}, {}] total: {}", stream.seq.value(), packet.sequence_number() - 1,
+            step - 1
         );
     }
 
-    if (packet.sequence_number() > stream.sequence_number) {
-        stream.sequence_number = packet.sequence_number();
+    if (step >= 1) {
         if (packet.timestamp() - delay_ >= *stream.first_packet_timestamp) {
             for (const auto& s : subscribers_) {
                 s->on_data_available(packet.timestamp() - delay_);

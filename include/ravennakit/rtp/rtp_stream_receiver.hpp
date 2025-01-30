@@ -13,6 +13,7 @@
 #include "detail/rtp_filter.hpp"
 #include "detail/rtp_receive_buffer.hpp"
 #include "detail/rtp_receiver.hpp"
+#include "ravennakit/core/util/sequence_number.hpp"
 #include "ravennakit/sdp/sdp_session_description.hpp"
 
 namespace rav {
@@ -60,7 +61,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
 
         rtp_session session;
         rtp_filter filter;
-        uint32_t sequence_number = 0; // TODO: Make this a sequence_number type
+        sequence_number<uint16_t> seq;
         uint32_t packet_time_frames = 0;
         std::optional<uint32_t> first_packet_timestamp;
     };
