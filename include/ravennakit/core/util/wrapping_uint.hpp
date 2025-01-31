@@ -211,4 +211,16 @@ class wrapping_uint {
     }
 };
 
+/// 8-bit wrapping unsigned integer.
+using wrapping_uint8 = wrapping_uint<uint8_t>;
+
+/// 16-bit wrapping unsigned integer.
+using wrapping_uint16 = wrapping_uint<uint16_t>;
+
+/// 32-bit wrapping unsigned integer.
+using wrapping_uint32 = wrapping_uint<uint32_t>;
+
+/// 64-bit wrapping unsigned integer.
+using wrapping_uint64 = wrapping_uint<uint64_t>;
+
 }  // namespace rav

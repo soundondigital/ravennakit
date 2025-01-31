@@ -253,7 +253,7 @@ void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_vie
     receiver_buffer_.clear_until(packet.timestamp());
 
     // Discard packet if it's too old
-    if (packet.timestamp() + stream.packet_time_frames < receiver_buffer_.next_ts() - delay_) {
+    if (wrapping_uint32(packet.timestamp()) + stream.packet_time_frames < receiver_buffer_.next_ts() - delay_) {
         RAV_WARNING("Dropping packet because it's too old");
         return;
     }
