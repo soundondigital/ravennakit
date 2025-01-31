@@ -18,6 +18,9 @@
 
 namespace rav {
 
+/**
+ * A class that receives RTP packets and buffers them for playback.
+ */
 class rtp_stream_receiver: public rtp_receiver::subscriber {
   public:
     class subscriber {

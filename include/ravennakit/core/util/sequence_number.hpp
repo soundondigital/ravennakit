@@ -39,15 +39,15 @@ class sequence_number {
     explicit sequence_number(const T value) : value_(value) {}
 
     /**
-     * Sets a next value in the sequence. The number of steps taken from the previous value to the next value
-     * will be returned, taking into account wraparound. If the value is too old, it will be discarded. This number can
-     * be used to detect gaps.
+     * Updates the value in the sequence. The number of steps taken from the previous value to the next value
+     * will be returned, taking into account wraparound. If the value is too old, it will be silently discarded. This
+     * number can be used to detect gaps.
      *
      * @param value The value to set.
      * @return The difference between the given value and the current value, taking into account wraparound. If the
      * value is equal to the current value, or too old, 0 will be returned.
      */
-    T set_next(const T value) {
+    T update(const T value) {
         if (is_older_than(value, value_)) {
             return 0;  // Value too old
         }

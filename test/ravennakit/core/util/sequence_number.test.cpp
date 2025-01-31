@@ -148,45 +148,45 @@ void test_sequence_number() {
 
     SECTION("Set next") {
         rav::sequence_number<T> seq(0);
-        REQUIRE(seq.set_next(1) == 1);
+        REQUIRE(seq.update(1) == 1);
         REQUIRE(seq == 1);
 
-        REQUIRE(seq.set_next(1) == 0);
+        REQUIRE(seq.update(1) == 0);
         REQUIRE(seq == 1);
 
-        REQUIRE(seq.set_next(3) == 2);
+        REQUIRE(seq.update(3) == 2);
         REQUIRE(seq == 3);
 
         seq = std::numeric_limits<T>::max();
-        REQUIRE(seq.set_next(0) == 1);
+        REQUIRE(seq.update(0) == 1);
         REQUIRE(seq == 0);
 
         seq = std::numeric_limits<T>::max() - 1;
-        REQUIRE(seq.set_next(1) == 3);
+        REQUIRE(seq.update(1) == 3);
         REQUIRE(seq == 1);
 
         seq = std::numeric_limits<T>::max() / 2;
-        REQUIRE(seq.set_next(std::numeric_limits<T>::max() / 2) == 0);
+        REQUIRE(seq.update(std::numeric_limits<T>::max() / 2) == 0);
         REQUIRE(seq == std::numeric_limits<T>::max() / 2);
 
         seq = std::numeric_limits<T>::max() / 2;
-        REQUIRE(seq.set_next(0) == 0);  // Value is too old
+        REQUIRE(seq.update(0) == 0);  // Value is too old
         REQUIRE(seq == std::numeric_limits<T>::max() / 2);
 
         seq = std::numeric_limits<T>::max() / 2;
-        REQUIRE(seq.set_next(std::numeric_limits<T>::max() / 2 - 1) == 0);  // Value is too old.
+        REQUIRE(seq.update(std::numeric_limits<T>::max() / 2 - 1) == 0);  // Value is too old.
         REQUIRE(seq == std::numeric_limits<T>::max() / 2);
 
         seq = std::numeric_limits<T>::max() / 2 + 1;
-        REQUIRE(seq.set_next(0) == std::numeric_limits<T>::max() / 2 + 1);
+        REQUIRE(seq.update(0) == std::numeric_limits<T>::max() / 2 + 1);
         REQUIRE(seq == 0);
 
         seq = std::numeric_limits<T>::max() / 2 + 2;
-        REQUIRE(seq.set_next(0) == std::numeric_limits<T>::max() / 2);
+        REQUIRE(seq.update(0) == std::numeric_limits<T>::max() / 2);
         REQUIRE(seq == 0);
 
         seq = std::numeric_limits<T>::max() / 2 + 100;
-        REQUIRE(seq.set_next(0) == std::numeric_limits<T>::max() / 2 - 98);
+        REQUIRE(seq.update(0) == std::numeric_limits<T>::max() / 2 - 98);
         REQUIRE(seq == 0);
     }
 }

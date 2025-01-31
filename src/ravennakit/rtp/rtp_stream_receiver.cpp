@@ -268,7 +268,7 @@ void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_vie
 
     TRACY_PLOT("RTP Timestamp", static_cast<int64_t>(packet.timestamp()));
 
-    const auto step = stream.seq.set_next(packet.sequence_number());
+    const auto step = stream.seq.update(packet.sequence_number());
     if (step > 1) {
         RAV_TRACE(
             "Packets dropped: [{}, {}] total: {}", stream.seq.value(), packet.sequence_number() - 1,
