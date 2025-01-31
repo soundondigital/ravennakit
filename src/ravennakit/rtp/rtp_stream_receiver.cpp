@@ -226,7 +226,7 @@ void rav::rtp_stream_receiver::restart() {
     const auto bytes_per_frame = selected_format_.bytes_per_frame();
     RAV_ASSERT(bytes_per_frame > 0, "bytes_per_frame must be greater than 0");
 
-    receiver_buffer_.resize(delay_ * k_delay_multiplier, bytes_per_frame);
+    receiver_buffer_.resize(std::max(1024u, delay_ * k_delay_multiplier), bytes_per_frame);
 
     for (auto& stream : streams_) {
         rtp_receiver_.subscribe(*this, stream.session, stream.filter);
