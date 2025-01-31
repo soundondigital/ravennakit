@@ -64,12 +64,12 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
 
         rtp_session session;
         rtp_filter filter;
-        wrapping_uint<uint16_t> seq;
+        wrapping_uint16 seq;
         uint32_t packet_time_frames = 0;
         std::optional<wrapping_uint32> first_packet_timestamp;
     };
 
-    static constexpr uint32_t k_delay_multiplier = 2;  // The buffer size is twice the delay.
+    static constexpr uint32_t k_delay_multiplier = 2;  // The buffer size is at least twice the delay.
 
     rtp_receiver& rtp_receiver_;
     audio_format selected_format_;

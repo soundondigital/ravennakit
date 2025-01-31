@@ -61,7 +61,7 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
         // The first acceptable payload format from the beginning of the list SHOULD be used for the session.
         // https://datatracker.ietf.org/doc/html/rfc8866#name-media-descriptions-m
         // TODO: Query subclass for supported formats (by looping the available formats)
-        selected_audio_format.reset();  // Prevent format from previous iteration from being used
+        selected_audio_format.reset();  // Reset format from previous iteration
         for (auto& format : media_description.formats()) {
             selected_audio_format = format.to_audio_format();
             if (!selected_audio_format) {
@@ -250,7 +250,7 @@ rav::rtp_stream_receiver::find_or_create_stream_info(const rtp_session& session)
 void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_view& packet, stream_info& stream) {
     TRACY_ZONE_SCOPED;
 
-    wrapping_uint32 packet_timestamp(packet.timestamp());
+    const wrapping_uint32 packet_timestamp(packet.timestamp());
 
     if (!stream.first_packet_timestamp.has_value()) {
         receiver_buffer_.set_next_ts(packet.timestamp());
