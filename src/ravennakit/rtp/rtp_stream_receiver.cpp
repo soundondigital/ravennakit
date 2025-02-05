@@ -286,9 +286,10 @@ void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_vie
 
     TRACY_PLOT("RTP Timestamp", static_cast<int64_t>(packet.timestamp()));
 
-
-    if (auto counters = stream.packet_stats.update(packet.sequence_number())) {
-        RAV_TRACE("Stats for stream {}: {}", stream.session.to_string(), counters->to_string());
+    if (const auto counters = stream.packet_stats.update(packet.sequence_number())) {
+        if (auto v = stream.packet_stats_throttle.update(*counters)) {
+            RAV_TRACE("Stats for stream {}: {}", stream.session.to_string(), v->to_string());
+        }
     }
 
     if (const auto step = stream.seq.update(packet.sequence_number())) {

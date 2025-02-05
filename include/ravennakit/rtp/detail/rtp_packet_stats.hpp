@@ -66,8 +66,7 @@ class rtp_packet_stats {
     /**
      * Updates the statistics with the given packet.
      * @param sequence_number
-     * @return Returns the total counts if one or more counters changed, but subsequent changes will be coalesced into a
-     * single return value where no more than one per window period will be returned.
+     * @return Returns the total counts if changed.
      */
     std::optional<counters> update(const uint16_t sequence_number) {
         const auto packet_sequence_number = wrapping_uint16(sequence_number);
@@ -78,8 +77,7 @@ class rtp_packet_stats {
 
         if (packet_sequence_number <= *most_recent_sequence_number_ - static_cast<uint16_t>(window_.size())) {
             total_counts_.too_old++;  // Too old for the window
-            should_return_total_counts_ = true;
-            return get_total_counters_if_necessary(sequence_number);
+            return total_counts_;
         }
 
         if (window_.capacity() == 0) {
@@ -87,11 +85,13 @@ class rtp_packet_stats {
             return {};
         }
 
+        bool should_return_total_counts = false;
+
         if (const auto diff = most_recent_sequence_number_->update(sequence_number)) {
             for (uint16_t i = 0; i < *diff; i++) {
                 if (window_.full()) {
                     if (collect_packet()) {
-                        should_return_total_counts_ = true;
+                        should_return_total_counts = true;
                     }
                 }
                 std::ignore = window_.push_back({});
@@ -103,7 +103,7 @@ class rtp_packet_stats {
             packet.times_received++;
         }
 
-        return get_total_counters_if_necessary(sequence_number);
+        return should_return_total_counts ? std::make_optional(total_counts_) : std::nullopt;
     }
 
     /**
@@ -190,9 +190,10 @@ class rtp_packet_stats {
     std::optional<wrapping_uint16> most_recent_sequence_number_ {};
     ring_buffer<packet> window_ {};
     counters total_counts_ {};
-    std::optional<wrapping_uint16> prev_sent_total_counts_ {};
-    bool should_return_total_counts_ {};
 
+    /**
+     * @return true if the statistics changed.
+     */
     [[nodiscard]] bool collect_packet() {
         const auto pkt = window_.pop_front();
         RAV_ASSERT(pkt.has_value(), "No packet to collect");
@@ -216,26 +217,6 @@ class rtp_packet_stats {
         }
 
         return changed;
-    }
-
-    std::optional<counters> get_total_counters_if_necessary(const uint16_t sequence_number) {
-        if (prev_sent_total_counts_.has_value()
-            && *prev_sent_total_counts_ + static_cast<uint16_t>(window_.capacity())
-                > wrapping_uint16(sequence_number)) {
-            return {};  // Not yet time to return something
-        }
-
-        if (should_return_total_counts_) {
-            prev_sent_total_counts_ = sequence_number;
-            should_return_total_counts_ = false;
-            return total_counts_;
-        }
-
-        // Clear the previously sent time to prevent a long wait when the sequence number wraps around and
-        // sequence_number becomes < prev_sent_total_counts_.
-        prev_sent_total_counts_.reset();
-
-        return {};
     }
 };
 
