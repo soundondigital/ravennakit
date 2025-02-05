@@ -341,7 +341,7 @@ TEST_CASE("rtp_packet_stats") {
 
     SECTION("Continuous window updates with wraparound") {
         stats.reset(4);
-        for (int i = 0; i < 10; i++) {
+        for (uint16_t i = 0; i < 10; i++) {
             stats.update(0xfff0 + i * 2);
         }
         auto counts = stats.get_total_counts();
