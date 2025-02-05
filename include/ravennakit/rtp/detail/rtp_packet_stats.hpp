@@ -51,8 +51,8 @@ class rtp_packet_stats {
     /**
      * @param window_size The window size in number of packets. Max value is 65535 (0xffff).
      */
-    explicit rtp_packet_stats(const size_t window_size) : window_(window_size) {
-        RAV_ASSERT(window_size <= std::numeric_limits<uint16_t>::max(), "Window size too large");
+    explicit rtp_packet_stats(const size_t window_size) {
+        reset(window_size);
     }
 
     /**
@@ -63,31 +63,31 @@ class rtp_packet_stats {
     void update(const uint16_t sequence_number) {
         const auto packet_sequence_number = wrapping_uint16(sequence_number);
 
-        if (!most_recent_sequence_number_.has_value()) {
+        if (!most_recent_sequence_number_) {
             most_recent_sequence_number_ = packet_sequence_number - 1;
         }
 
-        const auto diff = most_recent_sequence_number_->update(sequence_number);
-        for (uint16_t i = 0; i < diff; ++i) {
-            if (window_.full()) {
-                collect_packet_counts();
-            }
-            window_.push_back({});
-        }
-
-        const auto idx = window_.size() - 1 - (*most_recent_sequence_number_ - sequence_number).value();
-
-        if (idx >= window_.size()) {
+        if (packet_sequence_number <= *most_recent_sequence_number_ - static_cast<uint16_t>(window2_.size())) {
             total_counts_.too_old++;
             return;  // Too old for the window
         }
 
-        auto& packet = window_[idx];
-        packet.times_received++;
+        auto& packet = window2_[sequence_number % window2_.size()];
 
-        if (packet_sequence_number < *most_recent_sequence_number_) {
+        if (const auto diff = most_recent_sequence_number_->update(sequence_number)) {
+            if (count_ + *diff > window2_.size()) {
+                for (size_t i = 0; i < count_ + *diff - window2_.size(); i++) {
+                    collect_packet((*most_recent_sequence_number_ - static_cast<uint16_t>(i) - static_cast<uint16_t>(window2_.size())).value()
+                    );
+                    count_--;
+                }
+            }
+            count_ += *diff;
+        } else {
             packet.times_out_of_order++;  // Packet out of order
         }
+
+        packet.times_received++;
     }
 
     /**
@@ -95,12 +95,17 @@ class rtp_packet_stats {
      * @return The collected statistics.
      */
     [[nodiscard]] counters get_window_counts() const {
-        if (window_.empty()) {
+        if (count_ == 0) {
             return {};
         }
 
+        if (!most_recent_sequence_number_) {
+            return {};  // No packets received yet
+        }
+
         counters result {};
-        for (const auto& packet : window_) {
+        for (auto i = *most_recent_sequence_number_ - count_ + 1; i <= *most_recent_sequence_number_; i += 1) {
+            const auto& packet = window2_[i.value() % window2_.size()];
             if (packet.times_received == 0) {
                 result.dropped++;
             } else if (packet.times_received > 1) {
@@ -120,37 +125,27 @@ class rtp_packet_stats {
     }
 
     /**
-     * Collects the statistics for the current window, resets the window and returns the collected statistics. After
-     * calling this function you probably want to call reset() because subsequent updates will result in wrong numbers.
-     * @return The collected statistics.
-     */
-    counters collect_total_counts() {
-        while (collect_packet_counts()) {}
-        return total_counts_;
-    }
-
-    /**
      * Marks a packet as too late which means it didn't arrive in time for the consumer.
      */
     void mark_packet_too_late(const uint16_t sequence_number) {
         if (!most_recent_sequence_number_) {
             return;  // Can't mark a packet too late which never arrived
         }
-        if (sequence_number > most_recent_sequence_number_->value()) {
+        const auto packet_sequence_number = wrapping_uint16(sequence_number);
+        if (packet_sequence_number > *most_recent_sequence_number_) {
             return;  // Can't mark a packet too late which is newer than the most recent packet
         }
-        const auto offset = (*most_recent_sequence_number_ - sequence_number).value();
-        if (offset >= window_.size()) {
+        if (packet_sequence_number <= *most_recent_sequence_number_ - count_) {
             return;  // Too old for the window
         }
-        window_[window_.size() - 1 - offset].times_too_late++;
+        window2_[sequence_number % window2_.size()].times_too_late++;
     }
 
     /**
      * @return The number of packets in the window.
      */
-    [[nodiscard]] size_t size() const {
-        return window_.size();
+    [[nodiscard]] size_t count() const {
+        return count_;
     }
 
     /**
@@ -159,9 +154,14 @@ class rtp_packet_stats {
      */
     void reset(const std::optional<uint16_t> window_size = {}) {
         if (window_size.has_value()) {
-            RAV_ASSERT(*window_size <= std::numeric_limits<uint16_t>::max(), "Window size too large");
+            RAV_ASSERT(
+                window_size <= std::numeric_limits<uint16_t>::max(),
+                "Since a sequence number will wrap around at 0xffff, the window size can't be larger than that"
+            );
+            window2_.resize(*window_size);
         }
-        window_.reset(window_size);
+        std::fill(window2_.begin(), window2_.end(), packet {});
+        count_ = 0;
         most_recent_sequence_number_ = {};
         total_counts_ = {};
     }
@@ -174,26 +174,25 @@ class rtp_packet_stats {
     };
 
     std::optional<wrapping_uint16> most_recent_sequence_number_ {};
+    std::vector<packet> window2_ {};
+    uint16_t count_ {};  // Number of values currently in the window
     counters total_counts_ {};
-    ring_buffer<packet> window_ {32};
 
-    bool collect_packet_counts() {
-        const auto pkt = window_.pop_front();
-        if (!pkt.has_value()) {
-            return false;
-        }
-        if (pkt->times_received == 0) {
+    bool collect_packet(const uint16_t sequence_number) {
+        auto& pkt = window2_[sequence_number % window2_.size()];
+        if (pkt.times_received == 0) {
             total_counts_.dropped++;
         }
-        if (pkt->times_received > 1) {
-            total_counts_.duplicates += pkt->times_received - 1;
+        if (pkt.times_received > 1) {
+            total_counts_.duplicates += pkt.times_received - 1;
         }
-        if (pkt->times_out_of_order > 0) {
-            total_counts_.out_of_order += pkt->times_out_of_order;
+        if (pkt.times_out_of_order > 0) {
+            total_counts_.out_of_order += pkt.times_out_of_order;
         }
-        if (pkt->times_too_late > 0) {
-            total_counts_.too_late += pkt->times_too_late;
+        if (pkt.times_too_late > 0) {
+            total_counts_.too_late += pkt.times_too_late;
         }
+        pkt = {};
         return true;
     }
 };

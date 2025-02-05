@@ -13,6 +13,7 @@
 #include <limits>
 #include <type_traits>
 #include <cstdint>
+#include <optional>
 
 namespace rav {
 
@@ -41,19 +42,20 @@ class wrapping_uint {
 
     /**
      * Updates the value in the sequence. The number of steps taken from the previous value to the next value
-     * will be returned, taking into account wraparound. If the value is too old, it will be silently discarded. This
-     * number can be used to detect gaps.
+     * will be returned, taking into account wraparound. The current (internal) value will only progress forward, if the
+     * value is older than the current value, it will return std::nullopt. The returned value can be used to detect
+     * gaps (when value > 1).
      *
      * @param value The value to set.
      * @return The difference between the given value and the current value, taking into account wraparound. If the
-     * value is equal to the current value, or too old, 0 will be returned.
+     * value is older than the current value, std::nullopt will be returned.
      */
-    T update(const T value) {
+    std::optional<T> update(const T value) {
         if (is_older_than(value, value_)) {
-            return 0;  // Value too old
+            return std::nullopt;  // Value too old
         }
 
-        auto diff = value - value_;
+        const auto diff = value - value_;
         value_ = value;
         return static_cast<T>(diff);
     }

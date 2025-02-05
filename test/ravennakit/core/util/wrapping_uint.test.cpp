@@ -146,7 +146,7 @@ void test_wrapping_uint() {
         REQUIRE(seq == std::numeric_limits<T>::max() - 1);
     }
 
-    SECTION("Set next") {
+    SECTION("Update") {
         rav::wrapping_uint<T> seq(0);
         REQUIRE(seq.update(1) == 1);
         REQUIRE(seq == 1);
@@ -155,6 +155,9 @@ void test_wrapping_uint() {
         REQUIRE(seq == 1);
 
         REQUIRE(seq.update(3) == 2);
+        REQUIRE(seq == 3);
+
+        REQUIRE(seq.update(2) == std::nullopt);  // Value is older than current
         REQUIRE(seq == 3);
 
         seq = std::numeric_limits<T>::max();
@@ -170,15 +173,15 @@ void test_wrapping_uint() {
         REQUIRE(seq == std::numeric_limits<T>::max() / 2);
 
         seq = std::numeric_limits<T>::max() / 2;
-        REQUIRE(seq.update(0) == 0);  // Value is too old
+        REQUIRE(seq.update(0) == std::nullopt);  // Value is older than current
         REQUIRE(seq == std::numeric_limits<T>::max() / 2);
 
         seq = std::numeric_limits<T>::max() / 2;
-        REQUIRE(seq.update(std::numeric_limits<T>::max() / 2 - 1) == 0);  // Value is too old.
+        REQUIRE(seq.update(std::numeric_limits<T>::max() / 2 - 1) == std::nullopt);  // Value is older than current.
         REQUIRE(seq == std::numeric_limits<T>::max() / 2);
 
         seq = std::numeric_limits<T>::max() / 2 + 1;
-        REQUIRE(seq.update(0) == std::numeric_limits<T>::max() / 2 + 1);
+        REQUIRE(seq.update(0).value() == std::numeric_limits<T>::max() / 2 + 1);
         REQUIRE(seq == 0);
 
         seq = std::numeric_limits<T>::max() / 2 + 2;
