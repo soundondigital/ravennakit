@@ -209,9 +209,8 @@ struct spsc {
     void reset();
 
   private:
-    size_t read_ts_ = 0;            // Consumer timestamp
-    size_t write_ts_ = 0;           // Producer timestamp
-    std::atomic<size_t> size_ = 0;  // Number of elements in the buffer
+    std::atomic<size_t> read_ts_ = 0;            // Consumer timestamp
+    std::atomic<size_t> write_ts_ = 0;           // Producer timestamp
     size_t capacity_ = 0;
 };
 
@@ -300,10 +299,9 @@ struct mpsc {
     void reset();
 
   private:
-    size_t read_ts_ = 0;   // Consumer timestamp
-    size_t write_ts_ = 0;  // Producer timestamp
+    std::atomic<size_t> read_ts_ = 0;   // Consumer timestamp
+    std::atomic<size_t> write_ts_ = 0;  // Producer timestamp
     size_t capacity_ = 0;
-    std::atomic<size_t> size_ = 0;  // Number of elements in the buffer
     std::mutex mutex_;
 };
 
@@ -392,10 +390,9 @@ struct spmc {
     void reset();
 
   private:
-    size_t read_ts_ = 0;   // Consumer timestamp
-    size_t write_ts_ = 0;  // Producer timestamp
+    std::atomic<size_t> read_ts_ = 0;   // Consumer timestamp
+    std::atomic<size_t> write_ts_ = 0;  // Producer timestamp
     size_t capacity_ = 0;
-    std::atomic<size_t> size_ = 0;  // Number of elements in the buffer
     std::mutex mutex_;
 };
 
@@ -485,7 +482,6 @@ struct mpmc {
     size_t read_ts_ = 0;   // Consumer timestamp
     size_t write_ts_ = 0;  // Producer timestamp
     size_t capacity_ = 0;
-    size_t size_ = 0;  // Number of elements in the buffer
     std::mutex mutex_;
 };
 
