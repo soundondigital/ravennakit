@@ -19,15 +19,15 @@
 namespace rav {
 
 struct audio_format {
-    enum class byte_order {
+    enum class byte_order : uint8_t {
         le,
         be,
     };
 
+    byte_order byte_order {byte_order::le};
     audio_encoding encoding {};
     uint32_t sample_rate {};
     uint32_t num_channels {};
-    byte_order byte_order {byte_order::le};
 
     [[nodiscard]] uint8_t bytes_per_sample() const {
         return audio_encoding_bytes_per_sample(encoding);

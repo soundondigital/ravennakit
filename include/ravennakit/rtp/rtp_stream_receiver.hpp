@@ -91,11 +91,22 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     uint32_t delay_ = 480;  // 100ms at 48KHz
     subscriber_list<subscriber> subscribers_;
 
+    /**
+     * Used for copying received packets to the realtime context.
+     */
+    struct intermediate_packet {
+        uint32_t timestamp;
+        uint16_t seq;
+        uint16_t len;
+        std::array<uint8_t, 1500> data;  // MTU
+    };
+
     struct {
         rtp_receive_buffer receiver_buffer;
-        fifo_buffer<uint8_t, fifo::spsc> fifo;
+        fifo_buffer<intermediate_packet, fifo::spsc> fifo;
         std::optional<wrapping_uint32> first_packet_timestamp;
-        std::vector<uint8_t> buffer;
+        wrapping_uint32 next_ts;
+        audio_format selected_audio_format;
     } realtime_context_;
 
     /// Restarts the streaming

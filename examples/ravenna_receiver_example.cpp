@@ -185,7 +185,7 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber {
         rtp_receiver_ = std::make_unique<rav::rtp_receiver>(io_context_, config);
 
         ravenna_receiver_ = std::make_unique<rav::ravenna_receiver>(*rtsp_client_, *rtp_receiver_, stream_name);
-        ravenna_receiver_->set_delay(960);
+        ravenna_receiver_->set_delay(480);
         ravenna_receiver_->add_subscriber(this);
     }
 

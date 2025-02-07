@@ -13,7 +13,7 @@
 
 namespace rav {
 
-enum class audio_encoding {
+enum class audio_encoding : uint8_t {
     undefined,
     pcm_s8,
     pcm_u8,
