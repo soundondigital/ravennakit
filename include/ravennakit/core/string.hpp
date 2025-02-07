@@ -220,7 +220,7 @@ std::optional<Type> ston(std::string_view string, const bool strict = false, con
  * @param str String to convert.
  * @return The converted float, or an empty optional if the conversion failed.
  */
-inline std::optional<double> stof(const std::string& str) {
+inline std::optional<float> stof(const std::string& str) {
     try {
         return std::stof(str);
     } catch (...) {

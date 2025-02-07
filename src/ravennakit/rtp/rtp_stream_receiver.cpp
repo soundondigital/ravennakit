@@ -164,12 +164,10 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
     stream.session = session;
     stream.filter = filter;
     stream.packet_time_frames = packet_time_frames;
-    stream.packet_stats.reset(
-        std::ceil(
-            k_stats_window_size_ms * static_cast<float>(selected_audio_format->sample_rate) / 1000.0
-            / packet_time_frames
-        )
+    auto window_size_rounded = std::ceil(
+        k_stats_window_size_ms * static_cast<float>(selected_audio_format->sample_rate) / 1000.0 / packet_time_frames
     );
+    stream.packet_stats.reset(static_cast<size_t>(window_size_rounded));
 
     if (selected_format_ != *selected_audio_format) {
         should_restart = true;
@@ -316,7 +314,6 @@ void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_vie
     // }
     //
     // TRACY_PLOT("RTP Timestamp", static_cast<int64_t>(packet.timestamp()));
-
 }
 
 void rav::rtp_stream_receiver::on_rtp_packet(const rtp_receiver::rtp_packet_event& rtp_event) {

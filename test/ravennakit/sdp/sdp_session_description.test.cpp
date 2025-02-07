@@ -522,8 +522,8 @@ TEST_CASE("session_description | To string") {
     md1.set_protocol("RTP/AVP");
     md1.add_format({98, "L16", 44100, 2});
     md1.add_connection_info({rav::sdp::netw_type::internet, rav::sdp::addr_type::ipv4, "192.168.1.1", 15, {}});
-    md1.set_ptime(20);
-    md1.set_max_ptime(60);
+    md1.set_ptime(20.f);
+    md1.set_max_ptime(60.f);
     md1.set_direction(rav::sdp::media_direction::recvonly);
     md1.set_ref_clock(
         {rav::sdp::reference_clock::clock_source::ptp, rav::sdp::reference_clock::ptp_ver::IEEE_1588_2008, "gmid", 1}

@@ -14,6 +14,7 @@
 
 #include <vector>
 #include <cstring>
+#include <optional>
 
 namespace rav {
 

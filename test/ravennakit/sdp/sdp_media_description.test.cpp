@@ -168,25 +168,25 @@ TEST_CASE("media_description | To string") {
     REQUIRE(md.to_string().value() == expected);
 
     SECTION("ptime") {
-        md.set_ptime(20);
+        md.set_ptime(20.f);
         expected += "a=ptime:20\r\n";
         REQUIRE(md.to_string().value() == expected);
     }
 
     SECTION("ptime") {
-        md.set_ptime(1.0880808);
+        md.set_ptime(1.0880808f);
         expected += "a=ptime:1.09\r\n";
         REQUIRE(md.to_string().value() == expected);
     }
 
     SECTION("max_ptime") {
-        md.set_max_ptime(60);
+        md.set_max_ptime(60.f);
         expected += "a=maxptime:60\r\n";
         REQUIRE(md.to_string().value() == expected);
     }
 
     SECTION("max_ptime") {
-        md.set_max_ptime(1.0880808);
+        md.set_max_ptime(1.0880808f);
         expected += "a=maxptime:1.09\r\n";
         REQUIRE(md.to_string().value() == expected);
     }
