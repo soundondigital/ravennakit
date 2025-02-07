@@ -56,7 +56,7 @@ void test_fifo_buffer_read_write() {
 
 }  // namespace
 
-TEST_CASE("fifo_buffer test basic reading writing") {
+TEST_CASE("fifo_buffer") {
     SECTION("Test basic reading and writing") {
         constexpr size_t size = 10;
         test_fifo_buffer_read_write<uint8_t, rav::fifo::single, size>();
@@ -143,6 +143,36 @@ TEST_CASE("fifo_buffer test basic reading writing") {
         reader.join();
 
         REQUIRE(total == expected_total);
+    }
+
+    SECTION("Test single producer single consumer with string") {
+        rav::fifo_buffer<std::string, rav::fifo::spsc> buffer(10);
+
+        std::thread writer([&] {
+            for (int i = 0; i < num_writes_per_thread; i++) {
+                while (!buffer.push(std::to_string(i))) {}
+            }
+        });
+
+        int64_t total = 0;
+
+        std::atomic writer_done = false;
+        std::thread reader([&] {
+            std::string dst;
+
+            while (!writer_done) {
+                if (auto v = buffer.pop()) {
+                    REQUIRE(v == std::to_string(total));
+                    total++;
+                }
+            }
+        });
+
+        writer.join();
+        writer_done = true;
+        reader.join();
+
+        REQUIRE(total == num_writes_per_thread);
     }
 
     SECTION("Test multi producer single consumer") {

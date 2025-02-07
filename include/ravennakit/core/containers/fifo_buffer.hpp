@@ -40,11 +40,40 @@ class fifo_buffer {
     fifo_buffer& operator=(fifo_buffer&& other) noexcept = delete;
 
     /**
+     * Pushes a value to the buffer.
+     * @param value The value to push.
+     * @return True if the value was pushed, false if the buffer is full.
+     */
+    bool push(T value) {
+        if (auto lock = fifo_.prepare_for_write(1)) {
+            lock.position.size1 > 0 ? buffer_[lock.position.index1] = std::move(value) : buffer_[0] = std::move(value);
+            lock.commit();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Pops a value from the buffer.
+     * @return The value that was popped, or std::nullopt if the buffer is empty.
+     */
+    std::optional<T> pop() {
+        if (auto lock = fifo_.prepare_for_read(1)) {
+            T value;
+            lock.position.size1 > 0 ? value = std::move(buffer_[lock.position.index1]) : value = std::move(buffer_[0]);
+            lock.commit();
+            return value;
+        }
+        return std::nullopt;
+    }
+
+    /**
      * Writes data to the buffer.
      * @param src The source data to write to the buffer.
      * @param number_of_elements The number of elements to write (not bytes).
      * @return True if writing was successful, false if there was not enough space to write all data.
      */
+    template<typename U = T, std::enable_if_t<std::is_trivially_copyable_v<U>, int> = 0>
     bool write(const T* src, const size_t number_of_elements) {
         if (auto lock = fifo_.prepare_for_write(number_of_elements)) {
             std::memcpy(buffer_.data() + lock.position.index1, src, lock.position.size1 * sizeof(T));
@@ -67,6 +96,7 @@ class fifo_buffer {
      * @param number_of_elements The number of elements to read (not bytes).
      * @return True if reading was successful, false if there was not enough data to read.
      */
+    template<typename U = T, std::enable_if_t<std::is_trivially_copyable_v<U>, int> = 0>
     bool read(T* dst, const size_t number_of_elements) {
         if (auto lock = fifo_.prepare_for_read(number_of_elements)) {
             std::memcpy(dst, buffer_.data() + lock.position.index1, lock.position.size1 * sizeof(T));
