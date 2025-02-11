@@ -264,9 +264,7 @@ bool rav::rtp_stream_receiver::read_data(const uint32_t at_timestamp, uint8_t* b
         }
     }
 
-    const auto in = realtime_context_.receiver_buffer.next_ts();
-    const auto out = realtime_context_.next_ts;
-    TRACY_PLOT("available_frames", static_cast<int64_t>(out.diff(in)));
+    TRACY_PLOT("available_frames", static_cast<int64_t>(realtime_context_.next_ts.diff(realtime_context_.receiver_buffer.next_ts())));
 
     realtime_context_.next_ts = at_timestamp + num_frames;
     return realtime_context_.receiver_buffer.read(at_timestamp, buffer, buffer_size);
@@ -365,7 +363,7 @@ void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_vie
             // Make sure to call with the correct timestamps for the missing packets
             for (uint16_t i = 0; i < *diff; ++i) {
                 for (const auto& s : subscribers_) {
-                    s->on_data_ready(packet_timestamp - delay_ - (*diff - 1 - i) * stream.packet_time_frames);
+                    s->on_data_ready(packet_timestamp - delay_ - (*diff - 1u - i) * stream.packet_time_frames);
                 }
             }
         }
