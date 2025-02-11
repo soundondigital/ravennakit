@@ -10,14 +10,10 @@
 
 #pragma once
 
-#include "ravennakit/core/subscription.hpp"
 #include "ravennakit/core/tracy.hpp"
 #include "ravennakit/core/containers/ring_buffer.hpp"
-#include "ravennakit/core/containers/detail/fifo.hpp"
 #include "ravennakit/core/util/wrapping_uint.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
-
-#include <utility>
 
 namespace rav {
 
@@ -35,8 +31,6 @@ class rtp_packet_stats {
         uint32_t dropped {};
         /// The number of packets which were too late for consumer.
         uint32_t too_late {};
-        /// The number of packets which were outside the window.
-        uint32_t outside_window {};
 
         [[nodiscard]] auto tie() const {
             return std::tie(out_of_order, too_late, duplicates, dropped);
@@ -56,26 +50,18 @@ class rtp_packet_stats {
             result.too_late += other.too_late;
             result.duplicates += other.duplicates;
             result.dropped += other.dropped;
-            result.outside_window += other.outside_window;
             return result;
         }
 
         std::string to_string() {
             return fmt::format(
-                "out_of_order: {}, duplicates: {}, dropped: {}, too_late: {}, outside_window: {}", out_of_order,
-                duplicates, dropped, too_late, outside_window
+                "out_of_order: {}, duplicates: {}, dropped: {}, too_late: {}", out_of_order, duplicates, dropped,
+                too_late
             );
         }
     };
 
     explicit rtp_packet_stats() = default;
-
-    /**
-     * @param window_size The window size in number of packets. Max value is 32766 (0x7fff).
-     */
-    explicit rtp_packet_stats(const uint16_t window_size) {
-        reset(window_size);
-    }
 
     /**
      * Updates the statistics with the given packet.
@@ -90,38 +76,33 @@ class rtp_packet_stats {
             return std::nullopt;
         }
 
-        RAV_ASSERT(window_size_ > 0, "Window size must be greater than zero");
-
         if (packet_sequence_number <= most_recent_sequence_number_) {
-            if (!remove_skipped(sequence_number)) {
-                totals_.duplicates++;
+            if (remove_dropped(sequence_number)) {
+                --totals_.dropped;
+                ++totals_.out_of_order;
             } else {
-                totals_.out_of_order++;
+                ++totals_.duplicates;
             }
             dirty_ = false;
             return totals_;
         }
 
         if (const auto diff = most_recent_sequence_number_->update(sequence_number)) {
+            clear_outdated_dropped_packets();
+
             for (uint16_t i = 1; i < *diff; i++) {
-                skipped_packets_.push_back(sequence_number - i);
+                ++totals_.dropped;
+                dropped_packets_.push_back(sequence_number - i);
+                dirty_ = true;
             }
-        } else {
-            auto window_start = *most_recent_sequence_number_ - window_size_;
-            if (packet_sequence_number <= window_start) {
-                totals_.outside_window++;  // Too old for the window
+
+            if (dirty_) {
                 dirty_ = false;
                 return totals_;
             }
-
-            totals_.out_of_order++;  // Packet out of order
         }
 
-        if (const auto skipped = count_remove_skipped(); skipped > 0) {
-            totals_.dropped += skipped;
-            dirty_ = true;
-        }
-
+        // mark_packet_too_late might have set the dirty flag
         if (std::exchange(dirty_, false)) {
             return totals_;
         }
@@ -138,10 +119,7 @@ class rtp_packet_stats {
         }
         const auto packet_sequence_number = wrapping_uint16(sequence_number);
         if (packet_sequence_number > *most_recent_sequence_number_) {
-            return;  // Can't mark a packet too late which is newer than the most recent packet
-        }
-        if (packet_sequence_number < *most_recent_sequence_number_ - window_size_) {
-            return;  // Too old for the window
+            return;  // Packet is newer, or older than half the range of uint16
         }
         totals_.too_late++;
         dirty_ = true;
@@ -156,12 +134,8 @@ class rtp_packet_stats {
 
     /**
      * Resets to the initial state.
-     * @param window_size The window size in number of packets. Max value is 32766 (0x7fff).
      */
-    void reset(const std::optional<uint16_t> window_size = {}) {
-        if (window_size.has_value()) {
-            window_size_ = *window_size;
-        }
+    void reset() {
         most_recent_sequence_number_ = {};
         totals_ = {};
     }
@@ -170,14 +144,13 @@ class rtp_packet_stats {
     std::optional<wrapping_uint16> most_recent_sequence_number_ {};
     counters totals_ {};
     bool dirty_ {};
-    uint16_t window_size_ {};
-    std::vector<uint16_t> skipped_packets_ {};
+    std::vector<uint16_t> dropped_packets_ {};
 
-    bool remove_skipped(const uint16_t sequence_number) {
+    bool remove_dropped(const uint16_t sequence_number) {
         // TODO: Update with swap + delete trick
-        for (auto it = skipped_packets_.begin(); it != skipped_packets_.end(); ++it) {
+        for (auto it = dropped_packets_.begin(); it != dropped_packets_.end(); ++it) {
             if (*it == sequence_number) {
-                skipped_packets_.erase(it);
+                dropped_packets_.erase(it);
                 return true;
             }
         }
@@ -185,18 +158,16 @@ class rtp_packet_stats {
         return false;
     }
 
-    uint16_t count_remove_skipped() {
-        const auto outdated = *most_recent_sequence_number_ - window_size_;
-        uint16_t count = 0;
-        for (auto it = skipped_packets_.begin(); it != skipped_packets_.end();) {
-            if (wrapping_uint16(*it) <= outdated) {
-                it = skipped_packets_.erase(it);
-                count++;
+    void clear_outdated_dropped_packets() {
+        const auto most_recent = *most_recent_sequence_number_;
+        for (auto it = dropped_packets_.begin(); it != dropped_packets_.end();) {
+            // If a packet is newer than the most recent packet, it's older than half the range of uint16.
+            if (wrapping_uint16(*it) > most_recent) {
+                it = dropped_packets_.erase(it);
             } else {
                 ++it;
             }
         }
-        return count;
     }
 };
 
