@@ -83,4 +83,44 @@ class throttle {
     std::chrono::milliseconds interval_ {100};
 };
 
+/**
+ * Specialization for void, which doesn't store a value.
+ */
+template<>
+class throttle<void> {
+public:
+    throttle() = default;
+
+    /**
+     * Constructs the throttle with the given interval.
+     * @param interval The interval to throttle the value to.
+     */
+    explicit throttle(const std::chrono::milliseconds interval) : interval_(interval) {}
+
+    /**
+     * @param interval The interval to throttle the value to.
+     */
+    void set_interval(const std::chrono::milliseconds interval) {
+        interval_ = interval;
+    }
+
+    /**
+     * Updates the value and if the interval has passed since the last update returns the new value. If the value is
+     * equal to the current value, nothing will happen and the function will return an empty optional.
+     * @return The value if changed and the interval was passed, otherwise an empty optional.
+     */
+    bool update() {
+        const auto now = std::chrono::steady_clock::now();
+        if (now > last_update_ + interval_) {
+            last_update_ = now;
+            return true;
+        }
+        return false;
+    }
+
+private:
+    std::chrono::steady_clock::time_point last_update_ {};
+    std::chrono::milliseconds interval_ {100};
+};
+
 }  // namespace rav
