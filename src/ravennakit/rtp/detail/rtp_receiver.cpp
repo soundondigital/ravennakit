@@ -181,7 +181,7 @@ void rav::rtp_receiver::handle_incoming_rtp_data(const udp_sender_receiver::recv
     for (auto& context : sessions_contexts_) {
         if (context.session.connection_address == event.dst_endpoint.address()
             && context.session.rtp_port == event.dst_endpoint.port()) {
-            const rtp_packet_event rtp_event {packet, context.session, event.src_endpoint};
+            const rtp_packet_event rtp_event {packet, context.session, event.src_endpoint, event.recv_time};
 
             bool did_find_stream = false;
 

@@ -34,6 +34,7 @@ class rtp_receiver {
         const rtp_packet_view& packet;
         const rtp_session& session;
         const asio::ip::udp::endpoint& src_endpoint;
+        uint64_t recv_time;  // Monotonically increasing time in nanoseconds with arbitrary starting point.
     };
 
     struct rtcp_packet_event {

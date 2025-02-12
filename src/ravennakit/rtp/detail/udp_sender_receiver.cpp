@@ -10,6 +10,7 @@
 
 #include "ravennakit/rtp/detail/udp_sender_receiver.hpp"
 #include "ravennakit/core/tracy.hpp"
+#include "ravennakit/core/chrono/high_resolution_clock.hpp"
 #include "ravennakit/core/platform/windows/wsa_recv_msg_function.hpp"
 #include "ravennakit/core/platform/windows/qos_flow.hpp"
 
@@ -24,7 +25,7 @@ namespace {
 #if RAV_WINDOWS
 size_t receive_from_socket(
     asio::ip::udp::socket& socket, std::array<uint8_t, 1500>& data_buf, asio::ip::udp::endpoint& src_endpoint,
-    asio::ip::udp::endpoint& dst_endpoint, asio::error_code& ec
+    asio::ip::udp::endpoint& dst_endpoint, uint64_t& recv_time, asio::error_code& ec
 ) {
     TRACY_ZONE_SCOPED;
     // Set up the message structure
@@ -50,6 +51,7 @@ size_t receive_from_socket(
         ec = asio::error_code(WSAGetLastError(), asio::system_category());
         return 0;
     }
+    recv_time = rav::high_resolution_clock::now();
 
     if (src_addr.sa_family == AF_INET) {
         const auto* addr_in = reinterpret_cast<const sockaddr_in*>(&src_addr);
@@ -82,7 +84,7 @@ size_t receive_from_socket(
 #else
 size_t receive_from_socket(
     asio::ip::udp::socket& socket, std::array<uint8_t, 1500>& data_buf, asio::ip::udp::endpoint& src_endpoint,
-    asio::ip::udp::endpoint& dst_endpoint, asio::error_code& ec
+    asio::ip::udp::endpoint& dst_endpoint, uint64_t& recv_time, asio::error_code& ec
 ) {
     TRACY_ZONE_SCOPED;
     sockaddr_in src_addr {};
@@ -101,9 +103,8 @@ size_t receive_from_socket(
     msg.msg_controllen = sizeof(ctrl_buf);
     msg.msg_flags = 0;
 
-    rav::tracy_point();
-
     const ssize_t received_bytes = recvmsg(socket.native_handle(), &msg, 0);
+    recv_time = rav::high_resolution_clock::now();
     if (received_bytes < 0) {
         ec = asio::error_code(errno, asio::system_category());
         return 0;
@@ -118,12 +119,8 @@ size_t receive_from_socket(
         }
     }
 
-    rav::tracy_point();
-
     src_endpoint =
         asio::ip::udp::endpoint(asio::ip::address_v4(ntohl(src_addr.sin_addr.s_addr)), ntohs(src_addr.sin_port));
-
-    rav::tracy_point();
 
     return static_cast<size_t>(received_bytes);
 }
@@ -290,9 +287,9 @@ void rav::udp_sender_receiver::impl::async_receive() {
 
             asio::ip::udp::endpoint src_endpoint;
             asio::ip::udp::endpoint dst_endpoint;
-
+            uint64_t recv_time = 0;
             const auto bytes_received =
-                receive_from_socket(self->socket_, self->recv_data_, src_endpoint, dst_endpoint, ec);
+                receive_from_socket(self->socket_, self->recv_data_, src_endpoint, dst_endpoint, recv_time, ec);
 
             if (ec) {
                 RAV_ERROR("Read error: {}. Closing connection.", ec.message());
@@ -303,7 +300,7 @@ void rav::udp_sender_receiver::impl::async_receive() {
             }
 
             if (self->handler_) {
-                self->handler_({self->recv_data_.data(), bytes_received, src_endpoint, dst_endpoint});
+                self->handler_({self->recv_data_.data(), bytes_received, src_endpoint, dst_endpoint, recv_time});
             } else {
                 RAV_ERROR("No handler available. Closing connection.");
                 return;

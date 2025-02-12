@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ravennakit/core/containers/ring_buffer.hpp"
+#include "ravennakit/core/util.hpp"
 
 #include <vector>
 #include <algorithm>

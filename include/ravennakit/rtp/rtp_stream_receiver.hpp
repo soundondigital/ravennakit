@@ -14,6 +14,7 @@
 #include "detail/rtp_packet_stats.hpp"
 #include "detail/rtp_receive_buffer.hpp"
 #include "detail/rtp_receiver.hpp"
+#include "ravennakit/core/math/sliding_stats.hpp"
 #include "ravennakit/core/util/throttle.hpp"
 #include "ravennakit/core/util/wrapping_uint.hpp"
 #include "ravennakit/sdp/sdp_session_description.hpp"
@@ -120,7 +121,10 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
         uint16_t packet_time_frames = 0;
         std::optional<wrapping_uint32> first_packet_timestamp;
         rtp_packet_stats packet_stats;
-        throttle<rtp_packet_stats::counters> packet_stats_throttle {std::chrono::seconds(2)};
+        throttle<rtp_packet_stats::counters> packet_stats_throttle {std::chrono::seconds(5)};
+        wrapping_uint64 last_packet_time_ns;
+        sliding_stats packet_interval_stats {1000};
+        throttle<void> packet_interval_throttle {std::chrono::seconds(10)};
     };
 
     static constexpr uint32_t k_delay_multiplier = 2;        // The buffer size is at least twice the delay.
@@ -162,7 +166,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     void restart();
 
     stream_info& find_or_create_stream_info(const rtp_session& session);
-    void handle_rtp_packet_for_stream(const rtp_packet_view& packet, stream_info& stream);
+    void handle_rtp_packet_event_for_stream(const rtp_receiver::rtp_packet_event& event, stream_info& stream);
 };
 
 }  // namespace rav

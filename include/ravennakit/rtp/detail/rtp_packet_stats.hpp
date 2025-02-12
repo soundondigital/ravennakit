@@ -117,8 +117,7 @@ class rtp_packet_stats {
         if (!most_recent_sequence_number_) {
             return;  // Can't mark a packet too late which never arrived
         }
-        const auto packet_sequence_number = wrapping_uint16(sequence_number);
-        if (packet_sequence_number > *most_recent_sequence_number_) {
+        if (wrapping_uint16(sequence_number) > *most_recent_sequence_number_) {
             return;  // Packet is newer, or older than half the range of uint16
         }
         totals_.too_late++;

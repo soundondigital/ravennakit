@@ -301,17 +301,20 @@ rav::rtp_stream_receiver::find_or_create_stream_info(const rtp_session& session)
     return streams_.emplace_back(session);
 }
 
-void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_view& packet, stream_info& stream) {
+void rav::rtp_stream_receiver::handle_rtp_packet_event_for_stream(
+    const rtp_receiver::rtp_packet_event& event, stream_info& stream
+) {
     TRACY_ZONE_SCOPED;
 
-    const wrapping_uint32 packet_timestamp(packet.timestamp());
+    const wrapping_uint32 packet_timestamp(event.packet.timestamp());
 
     if (!stream.first_packet_timestamp.has_value()) {
-        stream.seq = packet.sequence_number();
-        stream.first_packet_timestamp = packet.timestamp();
+        stream.seq = event.packet.sequence_number();
+        stream.first_packet_timestamp = event.packet.timestamp();
+        stream.last_packet_time_ns = event.recv_time;
     }
 
-    const auto payload = packet.payload_data();
+    const auto payload = event.packet.payload_data();
     if (payload.size_bytes() == 0) {
         RAV_WARNING("Received packet with empty payload");
         return;
@@ -322,10 +325,19 @@ void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_vie
         return;
     }
 
+    if (const auto interval = stream.last_packet_time_ns.update(event.recv_time)) {
+        TRACY_PLOT("packet interval (ms)", static_cast<double>(*interval) / 1'000'000.0);
+        stream.packet_interval_stats.add(static_cast<double>(*interval) / 1'000'000.0);
+    }
+
+    if (stream.packet_interval_throttle.update()) {
+        RAV_TRACE("Packet interval stats: {}", stream.packet_interval_stats.to_string());
+    }
+
     if (consumer_active_) {
         intermediate_packet intermediate {};
-        intermediate.timestamp = packet.timestamp();
-        intermediate.seq = packet.sequence_number();
+        intermediate.timestamp = event.packet.timestamp();
+        intermediate.seq = event.packet.sequence_number();
         intermediate.data_len = static_cast<uint16_t>(payload.size_bytes());
         intermediate.packet_time_frames = stream.packet_time_frames;
         std::memcpy(intermediate.data.data(), payload.data(), intermediate.data_len);
@@ -341,13 +353,13 @@ void rav::rtp_stream_receiver::handle_rtp_packet_for_stream(const rtp_packet_vie
         stream.packet_stats.mark_packet_too_late(*seq);
     }
 
-    if (const auto stats = stream.packet_stats.update(packet.sequence_number())) {
+    if (const auto stats = stream.packet_stats.update(event.packet.sequence_number())) {
         if (auto v = stream.packet_stats_throttle.update(*stats)) {
             RAV_WARNING("Stats for stream {}: {}", stream.session.to_string(), v->to_string());
         }
     }
 
-    if (const auto diff = stream.seq.update(packet.sequence_number())) {
+    if (const auto diff = stream.seq.update(event.packet.sequence_number())) {
         if (diff >= 1) {
             // Only call back with monotonically increasing sequence numbers
             for (const auto& s : subscribers_) {
@@ -379,7 +391,7 @@ void rav::rtp_stream_receiver::on_rtp_packet(const rtp_receiver::rtp_packet_even
 
     for (auto& stream : streams_) {
         if (rtp_event.session == stream.session) {
-            handle_rtp_packet_for_stream(rtp_event.packet, stream);
+            handle_rtp_packet_event_for_stream(rtp_event, stream);
             return;
         }
     }

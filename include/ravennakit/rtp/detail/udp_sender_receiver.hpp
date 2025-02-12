@@ -29,6 +29,7 @@ class udp_sender_receiver {
         size_t size;
         const asio::ip::udp::endpoint& src_endpoint;
         const asio::ip::udp::endpoint& dst_endpoint;
+        uint64_t recv_time; // Monotonically increasing time in nanoseconds with arbitrary starting point.
     };
 
     using handler_type = std::function<void(const recv_event& event)>;
