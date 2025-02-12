@@ -17,6 +17,7 @@
 #include "ravennakit/core/chrono/high_resolution_clock.hpp"
 #include "ravennakit/core/math/running_average.hpp"
 #include "ravennakit/core/math/sliding_stats.hpp"
+#include "ravennakit/core/util/throttle.hpp"
 #include "types/ptp_timestamp.hpp"
 
 #include <cstdint>
@@ -131,10 +132,12 @@ class ptp_local_ptp_clock {
 
         TRACY_PLOT("Frequency ratio", frequency_ratio_);
 
-        RAV_TRACE(
-            "Adjusting clock: offset_from_master={}, ratio={}", measurement.offset_from_master * 1000.0,
-            frequency_ratio_
-        );
+        if (trace_adjustments_throttle_.update()) {
+            RAV_TRACE(
+                "Clock stats: offset from master=[{}], ratio={}", filtered_offset_stats_.to_string(1000.0),
+                frequency_ratio_
+            );
+        }
     }
 
     /**
@@ -197,6 +200,7 @@ class ptp_local_ptp_clock {
     sliding_stats offset_stats_ {51};
     sliding_stats filtered_offset_stats_ {51};
     size_t adjustments_since_last_step_ {};
+    throttle<void> trace_adjustments_throttle_ {std::chrono::seconds(5)};
 };
 
 }  // namespace rav

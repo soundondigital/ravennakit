@@ -70,7 +70,21 @@ class sliding_stats {
      * @return The standard deviation of the values in the window.
      */
     [[nodiscard]] double standard_deviation() const {
-        return std::sqrt(variance());
+        return standard_deviation(variance());
+    }
+
+    /**
+     * @return The minimum value in the window.
+     */
+    [[nodiscard]] double min() const {
+        return min_;
+    }
+
+    /**
+     * @return The maximum value in the window.
+     */
+    [[nodiscard]] double max() const {
+        return max_;
     }
 
     /**
@@ -105,10 +119,23 @@ class sliding_stats {
      */
     [[nodiscard]] bool is_outlier_zscore(const double value, const double threshold) const {
         const auto stddev = standard_deviation();
-        if (util::is_within(stddev,0.0, 0.0)) {
+        if (util::is_within(stddev, 0.0, 0.0)) {
             return false;
         }
         return std::fabs((value - average_) / stddev) > threshold;
+    }
+
+    /**
+     * @param multiply_factor The factor to multiply the values with.
+     * @return The values in the window as a string.
+     */
+    [[nodiscard]] std::string to_string(const double multiply_factor = 1.0) const {
+        const auto v = variance();
+        return fmt::format(
+            "average={}, median={}, min={}, max={}, variance={}, stddev={}, count={}", average_ * multiply_factor,
+            median_ * multiply_factor, min_ * multiply_factor, max_ * multiply_factor, v * multiply_factor,
+            standard_deviation(v) * multiply_factor, window_.size()
+        );
     }
 
     /**
@@ -119,13 +146,24 @@ class sliding_stats {
         sorted_data_.clear();
         median_ = {};
         average_ = {};
+        min_ = {};
+        max_ = {};
     }
 
   private:
     ring_buffer<double> window_;
     std::vector<double> sorted_data_;
-    double average_ {};  // Last average value
-    double median_ {};   // Last median value
+    double average_ {};  // Last calculated average value
+    double median_ {};   // Last calculated median value
+    double min_ {};      // Last calculated minimum value
+    double max_ {};      // Last calculated maximum value
+
+    /**
+     * @return The standard deviation of the values in the window.
+     */
+    [[nodiscard]] static double standard_deviation(const double variance) {
+        return std::sqrt(variance);
+    }
 
     void recalculate() {
         if (window_.empty()) {
@@ -133,11 +171,15 @@ class sliding_stats {
             average_ = 0.0;
             return;
         }
+        min_ = window_.front();
+        max_ = window_.front();
         double sum = 0.0;
         sorted_data_.clear();
         for (auto& e : window_) {
             sum += e;
             sorted_data_.push_back(e);
+            min_ = std::min(min_, e);
+            max_ = std::max(max_, e);
         }
         average_ = sum / static_cast<double>(window_.size());
         std::sort(sorted_data_.begin(), sorted_data_.end());
