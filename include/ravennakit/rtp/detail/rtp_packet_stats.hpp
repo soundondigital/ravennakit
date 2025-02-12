@@ -147,10 +147,10 @@ class rtp_packet_stats {
     std::vector<uint16_t> dropped_packets_ {};
 
     bool remove_dropped(const uint16_t sequence_number) {
-        // TODO: Update with swap + delete trick
-        for (auto it = dropped_packets_.begin(); it != dropped_packets_.end(); ++it) {
-            if (*it == sequence_number) {
-                dropped_packets_.erase(it);
+        for (auto& s : dropped_packets_) {
+            if (s == sequence_number) {
+                s = dropped_packets_.back();
+                dropped_packets_.pop_back();
                 return true;
             }
         }
