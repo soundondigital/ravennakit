@@ -164,10 +164,6 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
     stream.session = session;
     stream.filter = filter;
     stream.packet_time_frames = packet_time_frames;
-    const auto window_size_rounded = std::ceil(
-        k_stats_window_size_ms * static_cast<float>(selected_audio_format->sample_rate) / 1000.0 / packet_time_frames
-    );
-    stream.packet_stats.reset(static_cast<size_t>(window_size_rounded));
 
     if (selected_format_ != *selected_audio_format) {
         should_restart = true;

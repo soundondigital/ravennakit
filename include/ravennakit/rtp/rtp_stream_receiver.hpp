@@ -124,7 +124,6 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     };
 
     static constexpr uint32_t k_delay_multiplier = 2;        // The buffer size is at least twice the delay.
-    static constexpr float k_stats_window_size_ms = 1000.f;  // 1 second time for packets to arrive
 
     rtp_receiver& rtp_receiver_;
     audio_format selected_format_;
