@@ -82,9 +82,10 @@ add_library(ravennakit STATIC ${RAVENNAKIT_HEADER_FILES} ${RAVENNAKIT_SOURCE_FIL
 target_include_directories(ravennakit PUBLIC include)
 
 target_link_libraries(ravennakit
-        PRIVATE
+        PRIVATE # We don't want force consumers of ravennakit to use our strict set of warnings
         rav_recommended_warning_flags
         rav_recommended_lto_flags
+        PUBLIC
         asio::asio
         fmt::fmt
         $<$<BOOL:${RAV_ENABLE_SPDLOG}>:spdlog::spdlog>
