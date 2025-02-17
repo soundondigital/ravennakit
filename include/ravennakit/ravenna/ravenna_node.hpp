@@ -38,13 +38,12 @@ class ravenna_node {
     };
 
     ravenna_node();
+    ~ravenna_node();
+
     void create_receiver(const std::string& ravenna_session_name);
 
     bool subscribe(subscriber* s);
     bool unsubscribe(subscriber* s);
-
-    void start();
-    void stop();
 
   private:
     asio::io_context io_context_;

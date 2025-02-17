@@ -17,13 +17,24 @@ rav::ravenna_node::ravenna_node() {
 
     session_browser_subscriber_->on<dnssd::dnssd_browser::service_resolved>([this](const auto& event) {
         for (auto& s : subscribers_) {
-            s->ravenna_stream_discovered(event);
+            s->ravenna_session_discovered(event);
         }
     });
     session_browser_->subscribe(session_browser_subscriber_);
 
     node_browser_->browse_for("_rtsp._tcp,_ravenna");
     session_browser_->browse_for("_rtsp._tcp,_ravenna_session");
+
+    maintenance_thread_ = std::thread([this] {
+        io_context_.run();
+    });
+}
+
+rav::ravenna_node::~ravenna_node() {
+    io_context_.stop();
+    if (maintenance_thread_.joinable()) {
+        maintenance_thread_.join();
+    }
 }
 
 void rav::ravenna_node::create_receiver(const std::string& ravenna_session_name) {
@@ -53,17 +64,4 @@ bool rav::ravenna_node::unsubscribe(subscriber* s) {
     });
 
     return future.get();
-}
-
-void rav::ravenna_node::start() {
-    maintenance_thread_ = std::thread([this] {
-        io_context_.run();
-    });
-}
-
-void rav::ravenna_node::stop() {
-    if (maintenance_thread_.joinable()) {
-        io_context_.stop();
-        maintenance_thread_.join();
-    }
 }
