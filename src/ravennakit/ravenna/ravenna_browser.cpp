@@ -30,11 +30,21 @@ rav::ravenna_browser::ravenna_browser(asio::io_context& io_context) {
             s->ravenna_node_discovered(event);
         }
     });
+    node_browser_subscriber_->on<dnssd::dnssd_browser::service_removed>([this](const auto& event) {
+        for (auto* s : subscribers_) {
+            s->ravenna_node_removed(event);
+        }
+    });
     node_browser_->subscribe(node_browser_subscriber_);
 
     session_browser_subscriber_->on<dnssd::dnssd_browser::service_resolved>([this](const auto& event) {
         for (auto* s : subscribers_) {
             s->ravenna_session_discovered(event);
+        }
+    });
+    session_browser_subscriber_->on<dnssd::dnssd_browser::service_removed>([this](const auto& event) {
+        for (auto* s : subscribers_) {
+            s->ravenna_session_removed(event);
         }
     });
     session_browser_->subscribe(session_browser_subscriber_);
