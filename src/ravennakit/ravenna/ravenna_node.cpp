@@ -25,7 +25,7 @@ rav::ravenna_node::~ravenna_node() {
 
 std::future<rav::id> rav::ravenna_node::create_receiver(const std::string& session_name) {
     return asio::dispatch(
-        io_context_, std::packaged_task<rav::id()>([this, session_name]() mutable {
+        io_context_, asio::use_future([this, session_name]() mutable {
             const auto& it = receivers_.emplace_back(std::make_unique<ravenna_receiver>(rtsp_client_, rtp_receiver_));
             it->set_session_name(session_name);
             for (const auto& s : subscribers_) {
@@ -37,13 +37,13 @@ std::future<rav::id> rav::ravenna_node::create_receiver(const std::string& sessi
 }
 
 std::future<void> rav::ravenna_node::subscribe_to_browser(ravenna_browser::subscriber* subscriber) {
-    return asio::dispatch(io_context_, std::packaged_task<void()>([this, subscriber] {
+    return asio::dispatch(io_context_, asio::use_future([this, subscriber] {
                               browser_.subscribe(subscriber);
                           }));
 }
 
 std::future<void> rav::ravenna_node::unsubscribe_from_browser(ravenna_browser::subscriber* subscriber) {
-    return asio::dispatch(io_context_, std::packaged_task<void()>([this, subscriber] {
+    return asio::dispatch(io_context_, asio::use_future([this, subscriber] {
                               browser_.unsubscribe(subscriber);
                           }));
 }
