@@ -202,7 +202,7 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber, rav
         portaudio_stream_.stop();
     }
 
-    void on_audio_format_changed(
+    void audio_format_changed(
         const rav::audio_format& new_format, [[maybe_unused]] uint32_t packet_time_frames
     ) override {
         audio_format_ = new_format;

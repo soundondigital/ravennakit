@@ -19,6 +19,7 @@ namespace rav {
  * Super basic list of subscribers. Can optionally store a context with each subscriber.
  * This class is not thread save and make sure that the subscriber is not destroyed while it is in the list.
  * @tparam T The type of the subscriber.
+ * @tparam C The type of the context to store with each subscriber. If void, no context will be stored.
  */
 template<class T, class C = void>
 class subscriber_list {

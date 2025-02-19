@@ -60,7 +60,7 @@ class stream_recorder: public rav::rtp_stream_receiver::subscriber, public rav::
         }
     }
 
-    void on_audio_format_changed(const rav::audio_format& new_format, const uint32_t packet_time_frames) override {
+    void audio_format_changed(const rav::audio_format& new_format, const uint32_t packet_time_frames) override {
         close();
         if (receiver_ == nullptr) {
             RAV_ERROR("No sink available");

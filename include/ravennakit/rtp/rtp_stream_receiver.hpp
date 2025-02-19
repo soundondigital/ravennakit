@@ -31,7 +31,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
      * Baseclass for other classes which want to receive changes to the stream.
      */
     class subscriber {
-    public:
+      public:
         virtual ~subscriber() = default;
 
         /**
@@ -39,14 +39,25 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
          * @param new_format The new audio format.
          * @param packet_time_frames The number of frames per packet.
          */
-        virtual void on_audio_format_changed(
+        virtual void audio_format_changed(
             [[maybe_unused]] const audio_format& new_format, [[maybe_unused]] uint32_t packet_time_frames
+        ) {}
+
+        /**
+         * Called when the RTP session has changed.
+         * @param new_session The new session.
+         * @param filter The filter to use for the session.
+         */
+        virtual void rtp_session_changed(
+            [[maybe_unused]] const rtp_session& new_session, [[maybe_unused]] const rtp_filter& filter
         ) {}
     };
 
     /**
      * Baseclass for other classes which want to receive data from the stream receiver.
      * Callbacks are called from the network receive thread, which might need to be synchronized.
+     * Using this callback class is not mandatory as the rtp_stream_receiver allow to pull data from the buffer using
+     * the `read_data` method.
      */
     class data_callback {
       public:
@@ -228,7 +239,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     /// Restarts the stream if it is running, otherwise does nothing.
     void restart();
 
-    media_stream& find_or_create_media_stream(const rtp_session& session);
+    std::pair<rav::rtp_stream_receiver::media_stream*, bool> find_or_create_media_stream(const rtp_session& session);
     void handle_rtp_packet_event_for_session(const rtp_receiver::rtp_packet_event& event, media_stream& stream);
 };
 

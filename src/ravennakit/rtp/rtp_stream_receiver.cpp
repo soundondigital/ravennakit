@@ -42,7 +42,8 @@ bool rav::rtp_stream_receiver::add_subscriber(subscriber* subscriber_to_add) {
     }
     if (subscribers_.add(subscriber_to_add)) {
         for (auto& stream : media_streams_) {
-            subscriber_to_add->on_audio_format_changed(stream.selected_format, stream.packet_time_frames);
+            subscriber_to_add->audio_format_changed(stream.selected_format, stream.packet_time_frames);
+            subscriber_to_add->rtp_session_changed(stream.session, stream.filter);
         }
         return true;
     }
@@ -176,26 +177,31 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
 
     bool should_restart = false;
 
-    auto& stream = find_or_create_media_stream(session);
+    auto [stream, was_created] = find_or_create_media_stream(session);
 
+    RAV_ASSERT(stream != nullptr, "Stream must not be nullptr");
+    
     // Session
-    if (stream.session != session) {
+    if (stream->session != session || was_created) {
         should_restart = true;
-        stream.session = session;
-    }
-    stream.session = session;
-    stream.filter = filter;
-    stream.packet_time_frames = packet_time_frames;
+        stream->session = session;
 
-    if (stream.selected_format != *selected_audio_format) {
+        for (const auto& s : subscribers_) {
+            s->rtp_session_changed(session, filter);
+        }
+    }
+    stream->filter = filter;
+    stream->packet_time_frames = packet_time_frames;
+
+    if (stream->selected_format != *selected_audio_format) {
         should_restart = true;
         RAV_TRACE(
-            "Audio format changed from {} to {}", stream.selected_format.to_string(), selected_audio_format->to_string()
+            "Audio format changed from {} to {}", stream->selected_format.to_string(), selected_audio_format->to_string()
         );
         for (const auto& s : subscribers_) {
-            s->on_audio_format_changed(*selected_audio_format, stream.packet_time_frames);
+            s->audio_format_changed(*selected_audio_format, stream->packet_time_frames);
         }
-        stream.selected_format = *selected_audio_format;
+        stream->selected_format = *selected_audio_format;
     }
 
     // Delete all streams that are not in the SDP anymore
@@ -356,15 +362,15 @@ void rav::rtp_stream_receiver::restart() {
     RAV_TRACE("(Re)Started rtp_stream_receiver");
 }
 
-rav::rtp_stream_receiver::media_stream&
+std::pair<rav::rtp_stream_receiver::media_stream*, bool>
 rav::rtp_stream_receiver::find_or_create_media_stream(const rtp_session& session) {
     for (auto& stream : media_streams_) {
         if (stream.session == session) {
-            return stream;
+            return std::make_pair(&stream, false);
         }
     }
 
-    return media_streams_.emplace_back(session);
+    return std::make_pair(&media_streams_.emplace_back(session), true);
 }
 
 void rav::rtp_stream_receiver::handle_rtp_packet_event_for_session(

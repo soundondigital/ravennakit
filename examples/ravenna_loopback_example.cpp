@@ -79,7 +79,7 @@ class loopback_example: public rav::rtp_stream_receiver::subscriber, public rav:
         ravenna_receiver_->remove_data_callback(this);
     }
 
-    void on_audio_format_changed(const rav::audio_format& new_format, const uint32_t packet_time_frames) override {
+    void audio_format_changed(const rav::audio_format& new_format, const uint32_t packet_time_frames) override {
         buffer_.resize(new_format.bytes_per_frame() * packet_time_frames);
         if (!transmitter_->set_audio_format(new_format)) {
             RAV_ERROR("Format not supported by transmitter");
