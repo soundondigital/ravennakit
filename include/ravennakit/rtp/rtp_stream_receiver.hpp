@@ -174,13 +174,14 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     /**
      * Context for a stream identified by the session.
      */
-    struct stream_state {
-        explicit stream_state(rtp_session session_) : session(std::move(session_)) {}
+    struct media_stream {
+        explicit media_stream(rtp_session session_) : session(std::move(session_)) {}
 
         rtp_session session;
         rtp_filter filter;
-        wrapping_uint16 seq;
+        audio_format selected_format;
         uint16_t packet_time_frames = 0;
+        wrapping_uint16 seq;
         std::optional<wrapping_uint32> first_packet_timestamp;
         rtp_packet_stats packet_stats;
         throttle<rtp_packet_stats::counters> packet_stats_throttle {std::chrono::seconds(5)};
@@ -193,9 +194,8 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
 
     rtp_receiver& rtp_receiver_;
     id id_ {id::next_process_wide_unique_id()};
-    audio_format selected_format_;
-    std::vector<stream_state> streams_;
     uint32_t delay_ = 480;  // 100ms at 48KHz
+    std::vector<media_stream> media_streams_;
     subscriber_list<subscriber> subscribers_;
     subscriber_list<data_callback> data_callbacks_;
 
@@ -214,8 +214,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     };
 
     /**
-     * A struct to hold the realtime context which are variables which may be only be accesses by the consuming thread
-     * (except for members which synchronize, like the fifo).
+     * Bundles variables which will be accessed by the realtime thread.
      */
     struct {
         rtp_receive_buffer receiver_buffer;
@@ -229,8 +228,8 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     /// Restarts the stream if it is running, otherwise does nothing.
     void restart();
 
-    stream_state& find_or_create_stream_info(const rtp_session& session);
-    void handle_rtp_packet_event_for_stream(const rtp_receiver::rtp_packet_event& event, stream_state& stream);
+    media_stream& find_or_create_media_stream(const rtp_session& session);
+    void handle_rtp_packet_event_for_session(const rtp_receiver::rtp_packet_event& event, media_stream& stream);
 };
 
 }  // namespace rav
