@@ -24,6 +24,16 @@ namespace rav {
  */
 class sliding_stats {
   public:
+    struct stats {
+        double average {};
+        double median {};
+        double min {};
+        double max {};
+        double variance {};
+        double stddev {};
+        size_t count {};
+    };
+
     /**
      * Constructor.
      * @param size The amount of elements to hold.
@@ -100,6 +110,14 @@ class sliding_stats {
      */
     [[nodiscard]] bool full() const {
         return window_.full();
+    }
+
+    /**
+     * @return The statistics of the values in the window as a struct. Convenient when data needs to be copied.
+     */
+    stats get_stats() const {
+        const auto var = variance();
+        return {average_, median_, min_, max_, var, standard_deviation(var), window_.size()};
     }
 
     /**

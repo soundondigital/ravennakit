@@ -273,11 +273,29 @@ bool rav::rtp_stream_receiver::read_data(const uint32_t at_timestamp, uint8_t* b
     return realtime_context_.receiver_buffer.read(at_timestamp, buffer, buffer_size);
 }
 
+rav::rtp_stream_receiver::stream_stats rav::rtp_stream_receiver::get_session_stats() const {
+    if (streams_.empty()) {
+        return {};
+    }
+    stream_stats s;
+    const auto& stream = streams_.front();
+    s.packet_stats = stream.packet_stats.get_total_counts();
+    s.packet_interval_stats = stream.packet_interval_stats.get_stats();
+    return s;
+}
+
 rav::rtp_packet_stats::counters rav::rtp_stream_receiver::get_packet_stats() const {
     if (streams_.empty()) {
         return {};
     }
     return streams_.front().packet_stats.get_total_counts();
+}
+
+rav::sliding_stats::stats rav::rtp_stream_receiver::get_packet_interval_stats() const {
+    if (streams_.empty()) {
+        return {};
+    }
+    return streams_.front().packet_interval_stats.get_stats();
 }
 
 void rav::rtp_stream_receiver::restart() {
@@ -304,7 +322,7 @@ void rav::rtp_stream_receiver::restart() {
     RAV_TRACE("(Re)Started rtp_stream_receiver");
 }
 
-rav::rtp_stream_receiver::stream_info&
+rav::rtp_stream_receiver::stream_state&
 rav::rtp_stream_receiver::find_or_create_stream_info(const rtp_session& session) {
     for (auto& stream : streams_) {
         if (stream.session == session) {
@@ -316,7 +334,7 @@ rav::rtp_stream_receiver::find_or_create_stream_info(const rtp_session& session)
 }
 
 void rav::rtp_stream_receiver::handle_rtp_packet_event_for_stream(
-    const rtp_receiver::rtp_packet_event& event, stream_info& stream
+    const rtp_receiver::rtp_packet_event& event, stream_state& stream
 ) {
     TRACY_ZONE_SCOPED;
 

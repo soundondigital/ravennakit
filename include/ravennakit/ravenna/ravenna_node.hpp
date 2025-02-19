@@ -68,7 +68,7 @@ class ravenna_node {
      * @param stream_id The ID of the stream to get the packet statistics for.
      * @return The packet statistics for the stream, or an empty structure if the stream doesn't exist.
      */
-    std::future<rtp_packet_stats::counters> get_packet_stats_for_stream(id stream_id);
+    std::future<rtp_stream_receiver::stream_stats> get_stats_for_stream(id stream_id);
 
   private:
     asio::io_context io_context_;

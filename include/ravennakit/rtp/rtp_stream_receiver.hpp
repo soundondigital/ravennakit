@@ -65,6 +65,16 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
         virtual void on_data_ready([[maybe_unused]] wrapping_uint32 timestamp) {}
     };
 
+    /**
+     * A struct to hold the packet statistics for a stream.
+     */
+    struct stream_stats {
+        /// The packet interval statistics.
+        sliding_stats::stats packet_interval_stats;
+        /// The packet statistics.
+        rtp_packet_stats::counters packet_stats;
+    };
+
     explicit rtp_stream_receiver(rtp_receiver& receiver);
 
     ~rtp_stream_receiver() override;
@@ -118,7 +128,17 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     /**
      * @return The packet statistics for the first stream, if it exists, otherwise an empty structure.
      */
+    stream_stats get_session_stats() const;
+
+    /**
+     * @return The packet statistics for the first stream, if it exists, otherwise an empty structure.
+     */
     rtp_packet_stats::counters get_packet_stats() const;
+
+    /**
+     * @return The packet interval statistics for the first stream, if it exists, otherwise an empty structure.
+     */
+    sliding_stats::stats get_packet_interval_stats() const;
 
     // rtp_receiver::subscriber overrides
     void on_rtp_packet(const rtp_receiver::rtp_packet_event& rtp_event) override;
@@ -128,8 +148,8 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     /**
      * Context for a stream identified by the session.
      */
-    struct stream_info {
-        explicit stream_info(rtp_session session_) : session(std::move(session_)) {}
+    struct stream_state {
+        explicit stream_state(rtp_session session_) : session(std::move(session_)) {}
 
         rtp_session session;
         rtp_filter filter;
@@ -148,7 +168,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     rtp_receiver& rtp_receiver_;
     id id_ {id::next_process_wide_unique_id()};
     audio_format selected_format_;
-    std::vector<stream_info> streams_;
+    std::vector<stream_state> streams_;
     uint32_t delay_ = 480;  // 100ms at 48KHz
     subscriber_list<subscriber> subscribers_;
 
@@ -182,8 +202,8 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     /// Restarts the stream if it is running, otherwise does nothing.
     void restart();
 
-    stream_info& find_or_create_stream_info(const rtp_session& session);
-    void handle_rtp_packet_event_for_stream(const rtp_receiver::rtp_packet_event& event, stream_info& stream);
+    stream_state& find_or_create_stream_info(const rtp_session& session);
+    void handle_rtp_packet_event_for_stream(const rtp_receiver::rtp_packet_event& event, stream_state& stream);
 };
 
 }  // namespace rav

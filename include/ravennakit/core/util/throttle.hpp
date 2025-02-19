@@ -62,8 +62,7 @@ class throttle {
         if (!value_.has_value()) {
             return {};
         }
-        const auto now = std::chrono::steady_clock::now();
-        if (now > last_update_ + interval_) {
+        if (const auto now = std::chrono::steady_clock::now(); now > last_update_ + interval_) {
             last_update_ = now;
             return value_;
         }
