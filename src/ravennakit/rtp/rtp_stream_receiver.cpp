@@ -41,6 +41,8 @@ bool rav::rtp_stream_receiver::add_subscriber(subscriber* subscriber_to_add) {
         return false;
     }
     if (subscribers_.add(subscriber_to_add)) {
+        subscriber_to_add->state_changed(state_);
+        subscriber_to_add->stream_changed(make_changed_event());
         for (auto& stream : media_streams_) {
             subscriber_to_add->audio_format_changed(stream.selected_format, stream.packet_time_frames);
             subscriber_to_add->rtp_session_changed(stream.session, stream.filter);
@@ -52,6 +54,19 @@ bool rav::rtp_stream_receiver::add_subscriber(subscriber* subscriber_to_add) {
 
 bool rav::rtp_stream_receiver::remove_subscriber(subscriber* subscriber_to_remove) {
     return subscribers_.remove(subscriber_to_remove);
+}
+
+const char* rav::rtp_stream_receiver::to_string(const receiver_state state) {
+    switch (state) {
+        case receiver_state::idle:
+            return "idle";
+        case receiver_state::running:
+            return "running";
+        case receiver_state::inactive:
+            return "inactive";
+        default:
+            return "unknown";
+    }
 }
 
 rav::rtp_stream_receiver::rtp_stream_receiver(rtp_receiver& receiver) : rtp_receiver_(receiver) {}
@@ -175,12 +190,12 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
         }
     }
 
-    bool should_restart = false;
-
+    bool should_restart = false;  // Implies was_changed
+    auto was_changed = false;
     auto [stream, was_created] = find_or_create_media_stream(session);
 
     RAV_ASSERT(stream != nullptr, "Stream must not be nullptr");
-    
+
     // Session
     if (stream->session != session || was_created) {
         should_restart = true;
@@ -190,13 +205,22 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
             s->rtp_session_changed(session, filter);
         }
     }
-    stream->filter = filter;
-    stream->packet_time_frames = packet_time_frames;
+
+    if (stream->filter != filter) {
+        was_changed = true;
+        stream->filter = filter;
+    }
+
+    if (stream->packet_time_frames != packet_time_frames) {
+        was_changed = true;
+        stream->packet_time_frames = packet_time_frames;
+    }
 
     if (stream->selected_format != *selected_audio_format) {
         should_restart = true;
         RAV_TRACE(
-            "Audio format changed from {} to {}", stream->selected_format.to_string(), selected_audio_format->to_string()
+            "Audio format changed from {} to {}", stream->selected_format.to_string(),
+            selected_audio_format->to_string()
         );
         for (const auto& s : subscribers_) {
             s->audio_format_changed(*selected_audio_format, stream->packet_time_frames);
@@ -216,6 +240,13 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
 
     if (should_restart) {
         restart();
+    }
+
+    if (should_restart || was_changed) {
+        auto event = make_changed_event();
+        for (auto& s : subscribers_) {
+            s->stream_changed(event);
+        }
     }
 }
 
@@ -240,6 +271,8 @@ bool rav::rtp_stream_receiver::remove_data_callback(data_callback* callback) {
 }
 
 bool rav::rtp_stream_receiver::read_data(const uint32_t at_timestamp, uint8_t* buffer, const size_t buffer_size) {
+    // TODO: Synchronize with restart()
+
     TRACY_ZONE_SCOPED;
 
     RAV_ASSERT(buffer_size != 0, "Buffer size must be greater than 0");
@@ -248,7 +281,7 @@ bool rav::rtp_stream_receiver::read_data(const uint32_t at_timestamp, uint8_t* b
     const auto num_frames =
         static_cast<uint32_t>(buffer_size) / realtime_context_.selected_audio_format.bytes_per_frame();
 
-    if (consumer_active_.exchange(true) == false) {
+    if (realtime_context_.consumer_active_.exchange(true) == false) {
         realtime_context_.fifo.pop_all();
     }
 
@@ -319,9 +352,12 @@ rav::sliding_stats::stats rav::rtp_stream_receiver::get_packet_interval_stats() 
 }
 
 void rav::rtp_stream_receiver::restart() {
+    // TODO: Synchronize with read_data()
+
     rtp_receiver_.unsubscribe(*this);  // This unsubscribes `this` from all sessions
 
     if (media_streams_.empty()) {
+        set_state(receiver_state::idle);
         return;
     }
 
@@ -406,7 +442,7 @@ void rav::rtp_stream_receiver::handle_rtp_packet_event_for_session(
         RAV_TRACE("Packet interval stats: {}", stream.packet_interval_stats.to_string());
     }
 
-    if (consumer_active_) {
+    if (realtime_context_.consumer_active_) {
         intermediate_packet intermediate {};
         intermediate.timestamp = event.packet.timestamp();
         intermediate.seq = event.packet.sequence_number();
@@ -416,7 +452,8 @@ void rav::rtp_stream_receiver::handle_rtp_packet_event_for_session(
 
         if (!realtime_context_.fifo.push(intermediate)) {
             RAV_TRACE("Failed to push packet info FIFO, make receiver inactive");
-            consumer_active_ = false;
+            realtime_context_.consumer_active_ = false;
+            set_state(receiver_state::inactive);
             return;
         }
     }
@@ -448,6 +485,34 @@ void rav::rtp_stream_receiver::handle_rtp_packet_event_for_session(
             }
         }
     }
+}
+
+void rav::rtp_stream_receiver::set_state(const receiver_state new_state) {
+    if (state_ == new_state) {
+        return;
+    }
+    state_ = new_state;
+    for (const auto& s : subscribers_) {
+        s->state_changed(state_);
+    }
+}
+
+rav::rtp_stream_receiver::stream_changed_event rav::rtp_stream_receiver::make_changed_event() const {
+    stream_changed_event event;
+    event.stream_id = id_;
+    event.state = state_;
+    event.delay = delay_;
+
+    if (media_streams_.empty()) {
+        return event;
+    }
+
+    auto& stream = media_streams_.front();
+    event.session = stream.session;
+    event.filter = stream.filter;
+    event.selected_format = stream.selected_format;
+    event.packet_time_frames = stream.packet_time_frames;
+    return event;
 }
 
 void rav::rtp_stream_receiver::on_rtp_packet(const rtp_receiver::rtp_packet_event& rtp_event) {

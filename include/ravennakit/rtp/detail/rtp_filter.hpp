@@ -131,10 +131,26 @@ class rtp_filter {
         return filters_.empty();
     }
 
+    friend bool operator==(const rtp_filter& lhs, const rtp_filter& rhs) {
+        return std::tie(lhs.connection_address_, lhs.filters_) == std::tie(rhs.connection_address_, rhs.filters_);
+    }
+
+    friend bool operator!=(const rtp_filter& lhs, const rtp_filter& rhs) {
+        return !(lhs == rhs);
+    }
+
   private:
     struct filter {
         sdp::filter_mode mode {sdp::filter_mode::undefined};
         asio::ip::address address;
+
+        friend bool operator==(const filter& lhs, const filter& rhs) {
+            return std::tie(lhs.mode, lhs.address) == std::tie(rhs.mode, rhs.address);
+        }
+
+        friend bool operator!=(const filter& lhs, const filter& rhs) {
+            return !(lhs == rhs);
+        }
     };
 
     asio::ip::address connection_address_;

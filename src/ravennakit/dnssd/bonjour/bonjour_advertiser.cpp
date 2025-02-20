@@ -1,7 +1,7 @@
 #include "ravennakit/core/rollback.hpp"
 #include "ravennakit/dnssd/bonjour/bonjour.hpp"
 
-#include <asio/dispatch.hpp>
+#include <asio.hpp>
 
 #if RAV_HAS_APPLE_DNSSD
 

@@ -28,11 +28,41 @@ namespace rav {
 class rtp_stream_receiver: public rtp_receiver::subscriber {
   public:
     /**
+     * The state of the stream.
+     */
+    enum class receiver_state {
+        idle,
+        running,
+        inactive,
+    };
+
+    struct stream_changed_event {
+        id stream_id;
+        rtp_session session;
+        rtp_filter filter;
+        audio_format selected_format;
+        uint16_t packet_time_frames = 0;
+        uint32_t delay = 0;
+        receiver_state state = receiver_state::idle;
+    };
+
+    /**
+     * @return A string representation of the state.
+     */
+    [[nodiscard]] static const char* to_string(receiver_state state);
+
+    /**
      * Baseclass for other classes which want to receive changes to the stream.
      */
     class subscriber {
       public:
         virtual ~subscriber() = default;
+
+        /**
+         * Called when the stream has changed.
+         * @param event The event.
+         */
+        virtual void stream_changed([[maybe_unused]] const stream_changed_event& event) {}
 
         /**
          * Called when the audio format changed, in response to receiving an updated SDP.
@@ -51,6 +81,12 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
         virtual void rtp_session_changed(
             [[maybe_unused]] const rtp_session& new_session, [[maybe_unused]] const rtp_filter& filter
         ) {}
+
+        /**
+         * Called when the state of the stream has changed.
+         * @param new_state The new state.
+         */
+        virtual void state_changed([[maybe_unused]] receiver_state new_state) {}
     };
 
     /**
@@ -89,7 +125,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     };
 
     /**
-     * A struct to hold the packet statistics for a stream.
+     * A struct to hold the packet and interval statistics for the stream.
      */
     struct stream_stats {
         /// The packet interval statistics.
@@ -206,12 +242,10 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     rtp_receiver& rtp_receiver_;
     id id_ {id::next_process_wide_unique_id()};
     uint32_t delay_ = 480;  // 100ms at 48KHz
+    receiver_state state_ {receiver_state::idle};
     std::vector<media_stream> media_streams_;
     subscriber_list<subscriber> subscribers_;
     subscriber_list<data_callback> data_callbacks_;
-
-    /// When active data is being consumed. When the FIFO is full, this will be set to false.
-    std::atomic_bool consumer_active_ = true;
 
     /**
      * Used for copying received packets to the realtime context.
@@ -225,7 +259,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     };
 
     /**
-     * Bundles variables which will be accessed by the realtime thread.
+     * Bundles variables which will be accessed by a call to read_data, potentially from a realtime thread.
      */
     struct {
         rtp_receive_buffer receiver_buffer;
@@ -234,13 +268,19 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
         std::optional<wrapping_uint32> first_packet_timestamp;
         wrapping_uint32 next_ts;
         audio_format selected_audio_format;
+        /// When active data is being consumed. When the FIFO is full, this will be set to false.
+        std::atomic_bool consumer_active_ = true;
     } realtime_context_;
 
-    /// Restarts the stream if it is running, otherwise does nothing.
+    /**
+     * Restarts the stream if it is running, otherwise does nothing.
+     */
     void restart();
 
-    std::pair<rav::rtp_stream_receiver::media_stream*, bool> find_or_create_media_stream(const rtp_session& session);
+    std::pair<media_stream*, bool> find_or_create_media_stream(const rtp_session& session);
     void handle_rtp_packet_event_for_session(const rtp_receiver::rtp_packet_event& event, media_stream& stream);
+    void set_state(receiver_state new_state);
+    stream_changed_event make_changed_event() const;
 };
 
 }  // namespace rav

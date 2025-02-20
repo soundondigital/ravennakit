@@ -24,73 +24,77 @@ rav::ravenna_node::~ravenna_node() {
 }
 
 std::future<rav::id> rav::ravenna_node::create_receiver(const std::string& session_name) {
-    return asio::dispatch(
-        io_context_, asio::use_future([this, session_name]() mutable {
-            const auto& it = receivers_.emplace_back(std::make_unique<ravenna_receiver>(rtsp_client_, rtp_receiver_));
-            it->set_session_name(session_name);
-            for (const auto& s : subscribers_) {
-                s->on_receiver_updated(*it);
-            }
-            return it->get_id();
-        })
-    );
+    auto work = [this, session_name]() mutable {
+        const auto& it = receivers_.emplace_back(std::make_unique<ravenna_receiver>(rtsp_client_, rtp_receiver_));
+        it->set_session_name(session_name);
+        for (const auto& s : subscribers_) {
+            s->on_receiver_updated(*it);
+        }
+        return it->get_id();
+    };
+    return asio::dispatch(io_context_, asio::use_future(work));
 }
 
 std::future<void> rav::ravenna_node::add_subscriber(subscriber* subscriber) {
-    return asio::dispatch(io_context_, asio::use_future([this, subscriber] {
-                              if (!subscribers_.add(subscriber)) {
-                                  RAV_WARNING("Already subscribed");
-                              }
-                              browser_.subscribe(subscriber);
-                          }));
+    auto work = [this, subscriber] {
+        if (!subscribers_.add(subscriber)) {
+            RAV_WARNING("Already subscribed");
+        }
+        browser_.subscribe(subscriber);
+    };
+    return asio::dispatch(io_context_, asio::use_future(work));
 }
 
 std::future<void> rav::ravenna_node::remove_subscriber(subscriber* subscriber) {
-    return asio::dispatch(io_context_, asio::use_future([this, subscriber] {
-                              browser_.unsubscribe(subscriber);
-                              if (!subscribers_.remove(subscriber)) {
-                                  RAV_WARNING("Not subscribed");
-                              }
-                          }));
+    auto work = [this, subscriber] {
+        browser_.unsubscribe(subscriber);
+        if (!subscribers_.remove(subscriber)) {
+            RAV_WARNING("Not subscribed");
+        }
+    };
+    return asio::dispatch(io_context_, asio::use_future(work));
 }
 
 std::future<void>
 rav::ravenna_node::add_receiver_subscriber(id stream_id, rtp_stream_receiver::subscriber* subscriber) {
-    return asio::dispatch(io_context_, asio::use_future([this, stream_id, subscriber] {
-                              for (const auto& receiver : receivers_) {
-                                  if (receiver->get_id() == stream_id) {
-                                      if (!receiver->add_subscriber(subscriber)) {
-                                          RAV_WARNING("Already subscribed");
-                                      }
-                                      return;
-                                  }
-                              }
-                              RAV_WARNING("Stream not found");
-                          }));
+    auto work = [this, stream_id, subscriber] {
+        for (const auto& receiver : receivers_) {
+            if (receiver->get_id() == stream_id) {
+                if (!receiver->add_subscriber(subscriber)) {
+                    RAV_WARNING("Already subscribed");
+                }
+                return;
+            }
+        }
+        RAV_WARNING("Stream not found");
+    };
+    return asio::dispatch(io_context_, asio::use_future(work));
 }
 
 std::future<void>
 rav::ravenna_node::remove_stream_subscriber(id stream_id, rtp_stream_receiver::subscriber* subscriber) {
-    return asio::dispatch(io_context_, asio::use_future([this, stream_id, subscriber] {
-                              for (const auto& receiver : receivers_) {
-                                  if (receiver->get_id() == stream_id) {
-                                      if (!receiver->remove_subscriber(subscriber)) {
-                                          RAV_WARNING("Not subscribed");
-                                      }
-                                      return;
-                                  }
-                              }
-                              RAV_WARNING("Stream not found");
-                          }));
+    auto work = [this, stream_id, subscriber] {
+        for (const auto& receiver : receivers_) {
+            if (receiver->get_id() == stream_id) {
+                if (!receiver->remove_subscriber(subscriber)) {
+                    RAV_WARNING("Not subscribed");
+                }
+                return;
+            }
+        }
+        RAV_WARNING("Stream not found");
+    };
+    return asio::dispatch(io_context_, asio::use_future(work));
 }
 
 std::future<rav::rtp_stream_receiver::stream_stats> rav::ravenna_node::get_stats_for_stream(id stream_id) {
-    return asio::dispatch(io_context_, asio::use_future([this, stream_id] {
-                              for (const auto& receiver : receivers_) {
-                                  if (receiver->get_id() == stream_id) {
-                                      return receiver->get_session_stats();
-                                  }
-                              }
-                              return rtp_stream_receiver::stream_stats {};
-                          }));
+    auto work = [this, stream_id] {
+        for (const auto& receiver : receivers_) {
+            if (receiver->get_id() == stream_id) {
+                return receiver->get_session_stats();
+            }
+        }
+        return rtp_stream_receiver::stream_stats {};
+    };
+    return asio::dispatch(io_context_, asio::use_future(work));
 }
