@@ -106,7 +106,6 @@ rav::rtp_receiver::session_context* rav::rtp_receiver::create_new_session_contex
             std::make_shared<udp_sender_receiver>(io_context_, asio::ip::address_v4(), session.rtp_port);
         // Capturing this is valid because rtp_receiver will stop the udp_sender_receiver before it goes out of scope.
         new_session.rtp_sender_receiver->start([this](const udp_sender_receiver::recv_event& event) {
-            TRACY_ZONE_SCOPED;
             handle_incoming_rtp_data(event);
         });
     }
@@ -116,7 +115,6 @@ rav::rtp_receiver::session_context* rav::rtp_receiver::create_new_session_contex
             std::make_shared<udp_sender_receiver>(io_context_, asio::ip::address_v4(), session.rtcp_port);
         // Capturing this is valid because rtp_receiver will stop the udp_sender_receiver before it goes out of scope.
         new_session.rtcp_sender_receiver->start([this](const udp_sender_receiver::recv_event& event) {
-            TRACY_ZONE_SCOPED;
             handle_incoming_rtcp_data(event);
         });
     }

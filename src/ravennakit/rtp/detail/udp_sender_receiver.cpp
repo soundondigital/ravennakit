@@ -279,10 +279,16 @@ void rav::udp_sender_receiver::impl::async_receive() {
             return;
         }
 
-        while (self->socket_.available(ec) > 0) {
+        for (int i = 0; i < 10; ++i) {
+            const auto available = self->socket_.available(ec);
+
             if (ec) {
                 RAV_ERROR("Read error: {}. Closing connection.", ec.message());
                 return;
+            }
+
+            if (available == 0) {
+                break;
             }
 
             asio::ip::udp::endpoint src_endpoint;
