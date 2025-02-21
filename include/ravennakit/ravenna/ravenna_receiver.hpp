@@ -29,6 +29,9 @@ class ravenna_receiver: public rtp_stream_receiver, ravenna_rtsp_client::subscri
     ravenna_receiver(ravenna_receiver&&) noexcept = delete;
     ravenna_receiver& operator=(ravenna_receiver&&) noexcept = delete;
 
+    /**
+     * Stops the receiver.
+     */
     void stop();
 
     /**
@@ -36,6 +39,10 @@ class ravenna_receiver: public rtp_stream_receiver, ravenna_rtsp_client::subscri
      * @param session_name
      */
     void set_session_name(std::string session_name);
+
+    /**
+     * @return The name of the RAVENNA session to receive.
+     */
     [[nodiscard]] std::string get_session_name() const;
 
   private:

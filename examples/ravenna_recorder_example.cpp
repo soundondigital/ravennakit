@@ -60,7 +60,7 @@ class stream_recorder: public rav::rtp_stream_receiver::subscriber, public rav::
         }
     }
 
-    void stream_changed(const rav::rtp_stream_receiver::stream_changed_event& event) override {
+    void stream_updated(const rav::rtp_stream_receiver::stream_updated_event& event) override {
         close();
 
         if (receiver_ == nullptr) {

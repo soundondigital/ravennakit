@@ -39,10 +39,10 @@ class ravenna_node {
         ~subscriber() override = default;
 
         /**
-         * Called when received with id was updated.
+         * Called when a receiver is added to the node, or when subscribing.
          * @param receiver The id of the receiver.
          */
-        virtual void on_receiver_updated([[maybe_unused]] const ravenna_receiver& receiver) {}
+        virtual void ravenna_receiver_added([[maybe_unused]] const ravenna_receiver& receiver) {}
     };
 
     explicit ravenna_node(rtp_receiver::configuration config);

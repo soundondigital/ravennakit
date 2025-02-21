@@ -14,7 +14,7 @@
 
 #include <CLI/App.hpp>
 
-struct ravenna_node_example final: rav::ravenna_node::subscriber {
+struct ravenna_node_example final: rav::ravenna_node::subscriber, rav::rtp_stream_receiver::subscriber {
     explicit ravenna_node_example(const rav::rtp_receiver::configuration& config) : node(config) {
         node.add_subscriber(this).wait();
     }
@@ -39,8 +39,13 @@ struct ravenna_node_example final: rav::ravenna_node::subscriber {
         RAV_INFO("RAVENNA session removed: {}", event.description.to_string());
     }
 
-    void on_receiver_updated(const rav::ravenna_receiver& receiver) override {
-        RAV_INFO("RAVENNA receiver updated: {}", receiver.get_session_name());
+    void ravenna_receiver_added(const rav::ravenna_receiver& receiver) override {
+        RAV_INFO("RAVENNA receiver added for: {}", receiver.get_session_name());
+        node.add_receiver_subscriber(receiver.get_id(), this);
+    }
+
+    void stream_updated(const rav::rtp_stream_receiver::stream_updated_event& event) override {
+        RAV_INFO("Stream changed: {}", event.to_string());
     }
 
     rav::ravenna_node node;

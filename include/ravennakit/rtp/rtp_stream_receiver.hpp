@@ -54,7 +54,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     /**
      * Event for when this receiver changed in some way, containing the updated parameters.
      */
-    struct stream_changed_event {
+    struct stream_updated_event {
         id receiver_id;
         rtp_session session;
         rtp_filter filter;
@@ -62,6 +62,8 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
         uint16_t packet_time_frames = 0;
         uint32_t delay_samples = 0;
         receiver_state state = receiver_state::idle;
+
+        [[nodiscard]] std::string to_string() const;
     };
 
     /**
@@ -75,7 +77,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
          * Called when the stream has changed.
          * @param event The event.
          */
-        virtual void stream_changed([[maybe_unused]] const stream_changed_event& event) {}
+        virtual void stream_updated([[maybe_unused]] const stream_updated_event& event) {}
     };
 
     /**
@@ -270,7 +272,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     std::pair<media_stream*, bool> find_or_create_media_stream(const rtp_session& session);
     void handle_rtp_packet_event_for_session(const rtp_receiver::rtp_packet_event& event, media_stream& stream);
     void set_state(receiver_state new_state, bool notify_subscribers);
-    stream_changed_event make_changed_event() const;
+    stream_updated_event make_changed_event() const;
     void do_maintenance();
 };
 

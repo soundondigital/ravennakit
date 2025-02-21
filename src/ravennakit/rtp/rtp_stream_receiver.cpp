@@ -42,7 +42,7 @@ bool rav::rtp_stream_receiver::add_subscriber(subscriber* subscriber_to_add) {
         return false;
     }
     if (subscribers_.add(subscriber_to_add)) {
-        subscriber_to_add->stream_changed(make_changed_event());
+        subscriber_to_add->stream_updated(make_changed_event());
         return true;
     }
     return false;
@@ -67,6 +67,14 @@ const char* rav::rtp_stream_receiver::to_string(const receiver_state state) {
         default:
             return "unknown";
     }
+}
+
+std::string rav::rtp_stream_receiver::stream_updated_event::to_string() const {
+    return fmt::format(
+        "id={}, session={}, selected_audio_format={}, packet_time_frames={}, delay_samples={}, state={}",
+        receiver_id.value(), session.to_string(), selected_audio_format.to_string(), packet_time_frames, delay_samples,
+        rtp_stream_receiver::to_string(state)
+    );
 }
 
 rav::rtp_stream_receiver::rtp_stream_receiver(rtp_receiver& receiver) :
@@ -244,7 +252,7 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
     if (should_restart || was_changed) {
         auto event = make_changed_event();
         for (auto& s : subscribers_) {
-            s->stream_changed(event);
+            s->stream_updated(event);
         }
     }
 }
@@ -256,7 +264,7 @@ void rav::rtp_stream_receiver::set_delay(const uint32_t delay) {
     delay_ = delay;
     const auto event = make_changed_event();
     for (auto* s : subscribers_) {
-        s->stream_changed(event);
+        s->stream_updated(event);
     }
 }
 
@@ -502,13 +510,13 @@ void rav::rtp_stream_receiver::set_state(const receiver_state new_state, const b
     if (notify_subscribers) {
         const auto event = make_changed_event();
         for (auto* s : subscribers_) {
-            s->stream_changed(event);
+            s->stream_updated(event);
         }
     }
 }
 
-rav::rtp_stream_receiver::stream_changed_event rav::rtp_stream_receiver::make_changed_event() const {
-    stream_changed_event event;
+rav::rtp_stream_receiver::stream_updated_event rav::rtp_stream_receiver::make_changed_event() const {
+    stream_updated_event event;
     event.receiver_id = id_;
     event.state = state_;
     event.delay_samples = delay_;

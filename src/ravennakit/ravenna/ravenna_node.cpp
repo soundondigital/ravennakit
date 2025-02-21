@@ -30,7 +30,7 @@ std::future<rav::id> rav::ravenna_node::create_receiver(const std::string& sessi
         const auto& it = receivers_.emplace_back(std::make_unique<ravenna_receiver>(rtsp_client_, *rtp_receiver_));
         it->set_session_name(session_name);
         for (const auto& s : subscribers_) {
-            s->on_receiver_updated(*it);
+            s->ravenna_receiver_added(*it);
         }
         return it->get_id();
     };
@@ -44,7 +44,7 @@ std::future<void> rav::ravenna_node::add_subscriber(subscriber* subscriber) {
         }
         browser_.subscribe(subscriber);
         for (const auto& receiver : receivers_) {
-            subscriber->on_receiver_updated(*receiver);
+            subscriber->ravenna_receiver_added(*receiver);
         }
     };
     return asio::dispatch(io_context_, asio::use_future(work));
