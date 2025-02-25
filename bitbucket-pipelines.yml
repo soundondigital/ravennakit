@@ -50,6 +50,7 @@ definitions:
           - 'macos'
         name: 'Build distribution package'
         script:
+          - brew install doxygen
           - git submodule update --recursive --init
           - python3 -m pip install pygit2 boto3 requests
           - python3 -u build.py --dist --path-to-build build-dist --build-number $BITBUCKET_BUILD_NUMBER --upload --spaces-key $SPACES_KEY --spaces-secret $SPACES_SECRET
