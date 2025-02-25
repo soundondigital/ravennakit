@@ -1,10 +1,16 @@
 #!/usr/bin/env python3 -u
 import argparse
+import json
 import multiprocessing
 import os
 import platform
+import shutil
 import subprocess
+from datetime import datetime
 from pathlib import Path
+
+import boto3
+import pygit2
 
 from submodules.build_tools.cmake import Config, CMake
 
@@ -15,6 +21,42 @@ ravennakit_tests_target = 'ravennakit_tests'
 # Script location matters, cwd does not
 script_path = Path(__file__)
 script_dir = script_path.parent
+
+# Git version
+repo = pygit2.Repository(path='.')
+git_version = repo.describe(pattern='v*')
+git_branch = repo.head.shorthand
+
+
+def upload_to_spaces(args, file: Path):
+    session = boto3.session.Session()
+
+    key = args.spaces_key
+    secret = args.spaces_secret
+
+    if not key:
+        raise Exception('Need spaces key')
+
+    if not secret:
+        raise Exception('Need spaces secret')
+
+    client = session.client('s3',
+                            endpoint_url="https://ams3.digitaloceanspaces.com",
+                            region_name="ams3",
+                            aws_access_key_id=key,
+                            aws_secret_access_key=secret)
+
+    folder = 'branches/' + git_branch
+
+    if git_branch == 'HEAD':
+        # If we're in head, we're most likely building from a tag in which case we want to archive the artifacts
+        folder = 'archive/' + git_version
+
+    bucket = 'ravennakit'
+    file_name = folder + '/' + file.name
+    client.upload_file(str(file), bucket, file_name)
+
+    print("Uploaded artefacts to {}/{}".format(bucket, file_name))
 
 
 def build_macos(args, build_config: Config, subfolder: str, spdlog: bool = False, asan: bool = False,
@@ -158,10 +200,52 @@ def build_android(args, arch, build_config: Config, subfolder: str, spdlog: bool
     return path_to_build
 
 
+def build_dist(args):
+    path_to_dist = Path(args.path_to_build) / 'dist'
+    path_to_dist.mkdir(parents=True, exist_ok=True)
+
+    # Manually choose the files to copy to prevent accidental leaking of files when the repo changes or is not clean.
+
+    shutil.copytree('include', path_to_dist / 'include', dirs_exist_ok=True)
+    shutil.copytree('src', path_to_dist / 'src', dirs_exist_ok=True)
+    shutil.copytree('test', path_to_dist / 'test', dirs_exist_ok=True)
+    shutil.copytree('docs', path_to_dist / 'docs', dirs_exist_ok=True)
+    shutil.copytree('examples', path_to_dist / 'examples', dirs_exist_ok=True)
+    shutil.copytree('triplets', path_to_dist / 'triplets', dirs_exist_ok=True)
+    shutil.copytree('submodules', path_to_dist / 'submodules', dirs_exist_ok=True)
+    shutil.copy2('.clang-format', path_to_dist)
+    shutil.copy2('.gitignore', path_to_dist)
+    shutil.copy2('CMakeLists.txt', path_to_dist)
+    shutil.copy2('GLOSSARY.md', path_to_dist)
+    shutil.copy2('LICENSE.md', path_to_dist)
+    shutil.copy2('README.md', path_to_dist)
+    shutil.copy2('vcpkg.json', path_to_dist)
+
+    version_data = {
+        "version": git_version,
+        "build_number": args.build_number,
+        "date": str(datetime.now())
+    }
+
+    with open(path_to_dist / 'version.json', 'w') as file:
+        json.dump(version_data, file, indent=4)
+
+    # Create ZIP from archive
+    archive_path = args.path_to_build + '/ravennakit-' + git_version + '-' + args.build_number + '-dist'
+    zip_path = Path(archive_path + '.zip')
+    zip_path.unlink(missing_ok=True)
+
+    shutil.make_archive(archive_path, 'zip', path_to_dist)
+
+    return zip_path
+
+
 def build(args):
     build_config = Config.debug if args.debug else Config.release_with_debug_info
 
     test_report_folder.mkdir(parents=True, exist_ok=True)
+
+    archive = None
 
     def run_test(test_target, report_name):
         print(f'Running test {report_name} ({test_target})')
@@ -176,7 +260,9 @@ def build(args):
             subprocess.run(['arch', '--x86_64'] + cmd, check=True)
 
     if platform.system() == 'Darwin':
-        if args.android:
+        if args.dist:
+            archive = build_dist(args)
+        elif args.android:
             path_to_build = build_android(args, 'arm64-v8a', build_config, 'android_arm64')
             path_to_build = build_android(args, 'arm64-v8a', build_config, 'android_arm64_spdlog', spdlog=True)
 
@@ -216,6 +302,9 @@ def build(args):
 
         # TODO: path_to_build_arm64 = build_linux(args, 'arm64', build_config)
 
+    if archive and args.upload:
+        upload_to_spaces(args, archive)
+
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -227,6 +316,10 @@ def main():
     parser.add_argument("--path-to-build",
                         help="The folder to build the project in",
                         default="build")
+
+    parser.add_argument("--dist",
+                        help="Prepare the source code for distribution",
+                        action='store_true')
 
     parser.add_argument("--build-number",
                         help="Specifies the build number",
@@ -298,6 +391,7 @@ def main():
         parser.add_argument("--windows-code-sign-identity",
                             help="Specify the code signing identity (Windows only)",
                             default="431e889eeb203c2db5dd01da91d56186b20d1880")  # GlobalSign cert
+
         parser.add_argument("--windows-version",
                             help="Specify the minimum supported version of Windows",
                             default="0x0A00") # Windows 10

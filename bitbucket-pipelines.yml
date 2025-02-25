@@ -44,6 +44,17 @@ definitions:
           - git submodule update --recursive --init
           - python -m pip install pygit2 boto3
           - python -u build.py --path-to-build build-windows --build-number "$env:BITBUCKET_BUILD_NUMBER"
+    - step: &build-dist
+        runs-on:
+          - 'self.hosted'
+          - 'macos'
+        name: 'Build distribution package'
+        script:
+          - git submodule update --recursive --init
+          - python3 -m pip install pygit2 boto3 requests
+          - python3 -u build.py --dist --path-to-build build-dist --build-number $BITBUCKET_BUILD_NUMBER --upload --spaces-key $SPACES_KEY --spaces-secret $SPACES_SECRET
+        artifacts:
+          - build-dist/*.zip
     - step: &deploy-to-production
         runs-on:
           - 'self.hosted'
@@ -62,6 +73,7 @@ pipelines:
           - step: *build-windows
           - step: *build-linux
           - step: *build-android
+          - step: *build-dist
   tags:
     'v*':
       - parallel:
@@ -69,6 +81,7 @@ pipelines:
           - step: *build-windows
           - step: *build-linux
           - step: *build-android
+          - step: *build-dist
       - step: *deploy-to-production
   branches:
     main:
@@ -77,6 +90,7 @@ pipelines:
           - step: *build-windows
           - step: *build-linux
           - step: *build-android
+          - step: *build-dist
   custom:
     all:
       - parallel:
@@ -84,6 +98,7 @@ pipelines:
           - step: *build-windows
           - step: *build-linux
           - step: *build-android
+          - step: *build-dist
     macos:
       - step: *build-macos
     windows:
@@ -92,3 +107,5 @@ pipelines:
       - step: *build-linux
     android:
       - step: *build-android
+    dist:
+      - step: *build-dist
