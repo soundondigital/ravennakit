@@ -205,6 +205,9 @@ def build_dist(args):
     path_to_dist = Path(args.path_to_build) / 'dist'
     path_to_dist.mkdir(parents=True, exist_ok=True)
 
+    # Generate html docs
+    subprocess.run(['doxygen', 'Doxyfile'], cwd=Path('docs'), check=True)
+
     # Manually choose the files to copy to prevent accidental leaking of files when the repo changes or is not clean.
 
     shutil.copytree('cmake', path_to_dist / 'cmake', dirs_exist_ok=True)
