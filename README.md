@@ -51,14 +51,6 @@ Install build.py dependencies:
 pip install pygit2
 ```
 
-## How to clone the project
-
-```
-git clone --recursive git@gitlab.com:soundondigital/ravennakit.git
-cd ravennakit
-git submodule update --init --recursive
-```
-
 ## How to build the project using build.py
 
 In the root you'll find a script called build.py. This script builds the project in all supported configurations and runs the unit test. This script is considered the single source of truth on how to build, pack and distribute the library and is supposed to be called by a CI script.
