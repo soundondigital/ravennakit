@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-include(submodules/build_tools/cmake/git_version.cmake)
+include(cmake/version.cmake)
 
 project(ravennakit VERSION ${GIT_VERSION_MAJOR}.${GIT_VERSION_MINOR}.${GIT_VERSION_PATCH} LANGUAGES C CXX)
 
