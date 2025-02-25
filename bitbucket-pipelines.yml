@@ -63,8 +63,10 @@ definitions:
         name: Deploy to production
         deployment: production
         trigger: manual
+        depends-on:
+          - build-dist
         script:
-          - echo "Not yet implemented"
+          - python3 scripts/deploy.py --path-to-dist build-dist/dist --repo-path ravennakit.com --repo-access-token $RAVENNAKIT_COM_ACCESS_TOKEN
 
 pipelines:
   pull-requests:
