@@ -56,17 +56,21 @@ definitions:
           - python3 -u build.py --dist --path-to-build build-dist --build-number $BITBUCKET_BUILD_NUMBER --upload --spaces-key $SPACES_KEY --spaces-secret $SPACES_SECRET
         artifacts:
           - build-dist/*.zip
-    - step: &deploy-to-production
+    - step: &upload-docs-to-webhost
         runs-on:
           - 'self.hosted'
           - 'linux'
-        name: Deploy to production
+        image: atlassian/default-image:4
+        name: Upload docs to webhost
         deployment: production
         trigger: manual
         depends-on:
           - build-dist
         script:
-          - python3 scripts/deploy.py --path-to-dist build-dist/dist --repo-path ravennakit.com --repo-access-token $RAVENNAKIT_COM_ACCESS_TOKEN
+          - apt-get update -y
+          - apt-get -y install python3-pip
+          - python3 -m pip install pygit2
+          - python3 scripts/upload_docs.py --path-to-build build-dist --username $RAVENNAKIT_COM_USER --hostname $RAVENNAKIT_COM_HOST --remote-path /home/$RAVENNAKIT_COM_USER/public_html/docs
 
 pipelines:
   pull-requests:
@@ -77,7 +81,6 @@ pipelines:
           - step: *build-linux
           - step: *build-android
           - step: *build-dist
-      - step: *deploy-to-production
   tags:
     'v*':
       - parallel:
@@ -86,7 +89,7 @@ pipelines:
           - step: *build-linux
           - step: *build-android
           - step: *build-dist
-      - step: *deploy-to-production
+      - step: *upload-docs-to-webhost
   branches:
     main:
       - parallel:
