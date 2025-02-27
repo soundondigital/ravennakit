@@ -260,7 +260,7 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber, rav
 
         const auto timestamp = realtime_context_.stream_ts_.value();
 
-        if (!ravenna_receiver_->read_data(timestamp.value(), static_cast<uint8_t*>(output), buffer_size)) {
+        if (!ravenna_receiver_->realtime_read_data(timestamp.value(), static_cast<uint8_t*>(output), buffer_size)) {
             std::memset(output, audio_format_.ground_value(), buffer_size);
             RAV_WARNING("Failed to read data for timestamp: {}", timestamp.value());
         }

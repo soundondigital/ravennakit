@@ -280,7 +280,7 @@ bool rav::rtp_stream_receiver::remove_data_callback(data_callback* callback) {
     return data_callbacks_.remove(callback);
 }
 
-bool rav::rtp_stream_receiver::read_data(const uint32_t at_timestamp, uint8_t* buffer, const size_t buffer_size) {
+bool rav::rtp_stream_receiver::realtime_read_data(const uint32_t at_timestamp, uint8_t* buffer, const size_t buffer_size) {
     // TODO: Synchronize with restart()
 
     TRACY_ZONE_SCOPED;

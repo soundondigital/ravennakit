@@ -68,7 +68,7 @@ class loopback_example: public rav::rtp_stream_receiver::subscriber, public rav:
         );
 
         transmitter_->on<rav::ravenna_transmitter::on_data_requested_event>([this](auto event) {
-            ravenna_receiver_->read_data(
+            ravenna_receiver_->realtime_read_data(
                 event.timestamp - ravenna_receiver_->get_delay(), event.buffer.data(), event.buffer.size()
             );
         });

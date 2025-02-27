@@ -182,12 +182,15 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
 
     /**
      * Reads data from the buffer at the given timestamp.
+     *
+     * Calling this function is realtime safe and thread safe when called from a single arbitrary thread.
+     *
      * @param at_timestamp The timestamp to read from.
      * @param buffer The destination to write the data to.
      * @param buffer_size The size of the buffer in bytes.
      * @return true if buffer_size bytes were read, or false if buffer_size bytes couldn't be read.
      */
-    bool read_data(uint32_t at_timestamp, uint8_t* buffer, size_t buffer_size);
+    bool realtime_read_data(uint32_t at_timestamp, uint8_t* buffer, size_t buffer_size);
 
     /**
      * @return The packet statistics for the first stream, if it exists, otherwise an empty structure.
