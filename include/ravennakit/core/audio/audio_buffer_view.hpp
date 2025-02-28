@@ -242,7 +242,7 @@ class audio_buffer_view {
      * @param num_frames The number of frames.
      */
     void update(T* const* channels, const size_t num_channels, const size_t num_frames) {
-        channels_ = channels;
+        channels_ = num_channels > 0 && num_frames > 0 ? channels : nullptr;
         num_channels_ = num_channels;
         num_frames_ = num_frames;
     }

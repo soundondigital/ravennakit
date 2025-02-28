@@ -123,10 +123,9 @@ class audio_buffer: public audio_buffer_view<T> {
         for (size_t i = 0; i < channels_.size(); ++i) {
             channels_[i] = data_.data() + i * data_.size() / channels_.size();
         }
-        audio_buffer_view<T>::update(channels_.data(), channels_.size(), data_.size() / channels_.size());
+        const auto num_frames = channels_.empty() ? 0 : data_.size() / channels_.size();
+        audio_buffer_view<T>::update(channels_.data(), channels_.size(), num_frames);
     }
-
-
 };
 
 }  // namespace rav
