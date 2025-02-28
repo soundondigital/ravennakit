@@ -205,7 +205,7 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber, rav
         audio_format_ = event.selected_audio_format;
         const auto sample_format = get_sample_format_for_audio_format(audio_format_);
         if (!sample_format.has_value()) {
-            RAV_ERROR("Unsupported audio format: {}", audio_format_.to_string());
+            RAV_TRACE("Skipping stream update because audio format is invalid: {}", audio_format_.to_string());
             return;
         }
         portaudio_stream_.open_output_stream(

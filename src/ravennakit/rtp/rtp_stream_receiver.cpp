@@ -12,7 +12,9 @@
 
 #include "ravennakit/aes67/aes67_packet_time.hpp"
 #include "ravennakit/core/tracy.hpp"
+#include "ravennakit/core/audio/audio_data.hpp"
 #include "ravennakit/core/chrono/high_resolution_clock.hpp"
+#include "ravennakit/core/util/todo.hpp"
 
 namespace {
 
@@ -42,7 +44,7 @@ bool rav::rtp_stream_receiver::add_subscriber(subscriber* subscriber_to_add) {
         return false;
     }
     if (subscribers_.add(subscriber_to_add)) {
-        subscriber_to_add->stream_updated(make_changed_event());
+        subscriber_to_add->stream_updated(make_updated_event());
         return true;
     }
     return false;
@@ -250,7 +252,7 @@ void rav::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
     }
 
     if (should_restart || was_changed) {
-        auto event = make_changed_event();
+        auto event = make_updated_event();
         for (auto& s : subscribers_) {
             s->stream_updated(event);
         }
@@ -262,7 +264,7 @@ void rav::rtp_stream_receiver::set_delay(const uint32_t delay) {
         return;
     }
     delay_ = delay;
-    const auto event = make_changed_event();
+    const auto event = make_updated_event();
     for (auto* s : subscribers_) {
         s->stream_updated(event);
     }
@@ -280,7 +282,9 @@ bool rav::rtp_stream_receiver::remove_data_callback(data_callback* callback) {
     return data_callbacks_.remove(callback);
 }
 
-bool rav::rtp_stream_receiver::realtime_read_data(const uint32_t at_timestamp, uint8_t* buffer, const size_t buffer_size) {
+bool rav::rtp_stream_receiver::realtime_read_data(
+    const uint32_t at_timestamp, uint8_t* buffer, const size_t buffer_size
+) {
     // TODO: Synchronize with restart()
 
     TRACY_ZONE_SCOPED;
@@ -288,52 +292,23 @@ bool rav::rtp_stream_receiver::realtime_read_data(const uint32_t at_timestamp, u
     RAV_ASSERT(buffer_size != 0, "Buffer size must be greater than 0");
     RAV_ASSERT(buffer != nullptr, "Buffer must not be nullptr");
 
+    do_realtime_maintenance();
+
     const auto num_frames =
         static_cast<uint32_t>(buffer_size) / realtime_context_.selected_audio_format.bytes_per_frame();
 
-    if (realtime_context_.consumer_active_.exchange(true) == false) {
-        realtime_context_.fifo.pop_all();
-    }
-
-    while (const auto packet = realtime_context_.fifo.pop()) {
-        wrapping_uint32 packet_timestamp(packet->timestamp);
-        if (!realtime_context_.first_packet_timestamp) {
-            RAV_TRACE("First packet timestamp: {}", packet->timestamp);
-            realtime_context_.first_packet_timestamp = packet_timestamp;
-            realtime_context_.receiver_buffer.set_next_ts(packet->timestamp);
-            realtime_context_.next_ts = packet_timestamp;
-        }
-
-        // Determine whether whole packet is too old
-        if (packet_timestamp + packet->packet_time_frames <= realtime_context_.next_ts) {
-            RAV_WARNING("Packet too late: seq={}, ts={}", packet->seq, packet->timestamp);
-            TRACY_MESSAGE("Packet too late - skipping");
-            realtime_context_.packets_too_old.push(packet->seq);
-            continue;
-        }
-
-        // Determine whether packet contains outdated data
-        if (packet_timestamp < realtime_context_.next_ts) {
-            RAV_WARNING("Packet partly too late: seq={}, ts={}", packet->seq, packet->timestamp);
-            TRACY_MESSAGE("Packet partly too late - not skipping");
-            realtime_context_.packets_too_old.push(packet->seq);
-            // Still process the packet since it contains data that is not outdated
-        }
-
-        realtime_context_.receiver_buffer.clear_until(packet->timestamp);
-
-        if (!realtime_context_.receiver_buffer.write(packet->timestamp, {packet->data.data(), packet->data_len})) {
-            RAV_ERROR("Packet not written to buffer");
-        }
-    }
-
-    TRACY_PLOT(
-        "available_frames",
-        static_cast<int64_t>(realtime_context_.next_ts.diff(realtime_context_.receiver_buffer.next_ts()))
-    );
-
     realtime_context_.next_ts = at_timestamp + num_frames;
     return realtime_context_.receiver_buffer.read(at_timestamp, buffer, buffer_size);
+}
+
+bool rav::rtp_stream_receiver::realtime_read_data(
+    uint32_t at_timestamp, float* const* output_channel_data, const int num_output_channels, const int num_samples
+) {
+    RAV_ASSERT(output_channel_data != nullptr, "Buffer must not be nullptr");
+    RAV_ASSERT(num_output_channels > 0, "Number of output channels must be greater than 0");
+    RAV_ASSERT(num_samples > 0, "Number of samples must be greater than 0");
+
+
 }
 
 rav::rtp_stream_receiver::stream_stats rav::rtp_stream_receiver::get_session_stats() const {
@@ -508,14 +483,14 @@ void rav::rtp_stream_receiver::set_state(const receiver_state new_state, const b
     }
     state_ = new_state;
     if (notify_subscribers) {
-        const auto event = make_changed_event();
+        const auto event = make_updated_event();
         for (auto* s : subscribers_) {
             s->stream_updated(event);
         }
     }
 }
 
-rav::rtp_stream_receiver::stream_updated_event rav::rtp_stream_receiver::make_changed_event() const {
+rav::rtp_stream_receiver::stream_updated_event rav::rtp_stream_receiver::make_updated_event() const {
     stream_updated_event event;
     event.receiver_id = id_;
     event.state = state_;
@@ -555,6 +530,49 @@ void rav::rtp_stream_receiver::do_maintenance() {
         }
         do_maintenance();
     });
+}
+
+void rav::rtp_stream_receiver::do_realtime_maintenance() {
+    if (realtime_context_.consumer_active_.exchange(true) == false) {
+        realtime_context_.fifo.pop_all();
+    }
+
+    while (const auto packet = realtime_context_.fifo.pop()) {
+        wrapping_uint32 packet_timestamp(packet->timestamp);
+        if (!realtime_context_.first_packet_timestamp) {
+            RAV_TRACE("First packet timestamp: {}", packet->timestamp);
+            realtime_context_.first_packet_timestamp = packet_timestamp;
+            realtime_context_.receiver_buffer.set_next_ts(packet->timestamp);
+            realtime_context_.next_ts = packet_timestamp;
+        }
+
+        // Determine whether whole packet is too old
+        if (packet_timestamp + packet->packet_time_frames <= realtime_context_.next_ts) {
+            RAV_WARNING("Packet too late: seq={}, ts={}", packet->seq, packet->timestamp);
+            TRACY_MESSAGE("Packet too late - skipping");
+            realtime_context_.packets_too_old.push(packet->seq);
+            continue;
+        }
+
+        // Determine whether packet contains outdated data
+        if (packet_timestamp < realtime_context_.next_ts) {
+            RAV_WARNING("Packet partly too late: seq={}, ts={}", packet->seq, packet->timestamp);
+            TRACY_MESSAGE("Packet partly too late - not skipping");
+            realtime_context_.packets_too_old.push(packet->seq);
+            // Still process the packet since it contains data that is not outdated
+        }
+
+        realtime_context_.receiver_buffer.clear_until(packet->timestamp);
+
+        if (!realtime_context_.receiver_buffer.write(packet->timestamp, {packet->data.data(), packet->data_len})) {
+            RAV_ERROR("Packet not written to buffer");
+        }
+    }
+
+    TRACY_PLOT(
+        "available_frames",
+        static_cast<int64_t>(realtime_context_.next_ts.diff(realtime_context_.receiver_buffer.next_ts()))
+    );
 }
 
 void rav::rtp_stream_receiver::on_rtp_packet(const rtp_receiver::rtp_packet_event& rtp_event) {

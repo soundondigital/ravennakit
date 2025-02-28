@@ -38,8 +38,8 @@ class rtp_receive_buffer {
             return;  // Nothing to do here
         }
         bytes_per_frame_ = bytes_per_frame;
-        buffer_.resize(buffer_capacity_frames * bytes_per_frame_, 0);  // TODO: Make clear value configurable
-        std::fill(buffer_.begin(), buffer_.end(), 0);                  // TODO: Make fill value configurable
+        buffer_.resize(buffer_capacity_frames * bytes_per_frame_, clear_value_);
+        std::fill(buffer_.begin(), buffer_.end(), clear_value_);
     }
 
     /**
@@ -174,6 +174,7 @@ class rtp_receive_buffer {
      * "Receivers should have a buffer capacity at least 20 times the packet time or 20 ms, whichever is smaller."
      * @param packet_time_ms The time per packet in milliseconds.
      * @return The suggested buffer length in milliseconds.
+     * TODO: Move to aes67_packet_time.hpp
      */
     static double get_aes67_suggested_buffer_length_ms(const double packet_time_ms) {
         return std::min(20.0, packet_time_ms * 20.0);
@@ -185,6 +186,7 @@ class rtp_receive_buffer {
      * @param packet_time_ms The time per packet in frames.
      * @param clock_rate The clock rate in Hz.
      * @return The suggested buffer length in frames.
+     * TODO: Move to aes67_packet_time.hpp
      */
     static double get_aes67_suggested_buffer_length_frames(const double packet_time_ms, const double clock_rate) {
         return std::round(get_aes67_suggested_buffer_length_ms(packet_time_ms) * clock_rate / 1000.0);
@@ -196,7 +198,7 @@ class rtp_receive_buffer {
     uint32_t bytes_per_frame_ = 0;  // Number of bytes (octets) per frame
     wrapping_uint32 next_ts_;       // Producer ts
     std::vector<uint8_t> buffer_;   // Stores the actual data
-    uint8_t clear_value_ = 0;       // Value to clear the buffer with
+    uint8_t clear_value_ = 0;       // Value to clear the buffer with. TODO: Make configurable
 };
 
 }  // namespace rav

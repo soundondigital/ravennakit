@@ -275,8 +275,9 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     std::pair<media_stream*, bool> find_or_create_media_stream(const rtp_session& session);
     void handle_rtp_packet_event_for_session(const rtp_receiver::rtp_packet_event& event, media_stream& stream);
     void set_state(receiver_state new_state, bool notify_subscribers);
-    stream_updated_event make_changed_event() const;
+    stream_updated_event make_updated_event() const;
     void do_maintenance();
+    void do_realtime_maintenance();
 };
 
 }  // namespace rav

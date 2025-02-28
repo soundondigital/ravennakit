@@ -222,7 +222,7 @@ class audio_buffer {
     }
 
     /**
-     * Copies data from all channels of src into this all channels of this buffer.
+     * Copies data from all channels of src into all channels of this buffer.
      * @param dst_start_frame The index of the start frame.
      * @param num_frames_to_copy The number of frames to copy.
      * @param src The source data to copy from.

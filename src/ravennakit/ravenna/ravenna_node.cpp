@@ -14,7 +14,11 @@ rav::ravenna_node::ravenna_node(rtp_receiver::configuration config) {
     rtp_receiver_ = std::make_unique<rtp_receiver>(io_context_, std::move(config));
 
     maintenance_thread_ = std::thread([this] {
-        io_context_.run();
+        try {
+            io_context_.run();
+        } catch (const std::exception& e) {
+            RAV_ERROR("Exception in maintenance thread: {}", e.what());
+        }
     });
 }
 
@@ -41,10 +45,10 @@ std::future<void> rav::ravenna_node::remove_receiver(id receiver_id) {
     auto work = [this, receiver_id]() mutable {
         for (auto it = receivers_.begin(); it != receivers_.end(); ++it) {
             if ((*it)->get_id() == receiver_id) {
+                receivers_.erase(it);
                 for (const auto& s : subscribers_) {
                     s->ravenna_receiver_removed(receiver_id);
                 }
-                receivers_.erase(it);
                 return;
             }
         }
