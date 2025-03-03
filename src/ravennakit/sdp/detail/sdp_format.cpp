@@ -46,8 +46,8 @@ std::optional<rav::sdp::format> rav::sdp::format::from_audio_format(const audio_
         case audio_encoding::undefined:
         case audio_encoding::pcm_s8:
         case audio_encoding::pcm_s32:
-        case audio_encoding::pcm_float:
-        case audio_encoding::pcm_double:
+        case audio_encoding::pcm_f32:
+        case audio_encoding::pcm_f64:
             return std::nullopt;
         case audio_encoding::pcm_u8:
             output_format.encoding_name = "L8";  // https://datatracker.ietf.org/doc/html/rfc3551#section-4.5.10

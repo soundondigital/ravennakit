@@ -48,20 +48,34 @@ struct audio_format {
     }
 
     [[nodiscard]] std::string to_string() const {
-        return fmt::format("{}/{}/{}", audio_encoding_to_string(encoding), sample_rate, num_channels);
+        return fmt::format(
+            "{}/{}/{}/{}/{}", audio_encoding_to_string(encoding), sample_rate, num_channels, to_string(ordering),
+            to_string(byte_order)
+        );
+    }
+
+    static const char* to_string(const enum byte_order order) {
+        return order == byte_order::le ? "le" : "be";
+    }
+
+    static const char* to_string(const channel_ordering order) {
+        return order == channel_ordering::interleaved ? "interleaved" : "noninterleaved";
     }
 
     [[nodiscard]] bool is_valid() const {
         return encoding != audio_encoding::undefined && sample_rate != 0 && num_channels != 0;
     }
 
-    bool operator==(const audio_format& other) const {
-        return std::tie(encoding, sample_rate, num_channels, byte_order)
-            == std::tie(other.encoding, other.sample_rate, other.num_channels, byte_order);
+    [[nodiscard]] auto tie() const {
+        return std::tie(encoding, sample_rate, num_channels, byte_order, ordering);
     }
 
-    bool operator!=(const audio_format& rhs) const {
-        return !(*this == rhs);
+    bool operator==(const audio_format& other) const {
+        return tie() == other.tie();
+    }
+
+    bool operator!=(const audio_format& other) const {
+        return tie() != other.tie();
     }
 };
 

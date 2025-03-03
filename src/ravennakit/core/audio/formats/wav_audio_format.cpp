@@ -95,13 +95,13 @@ std::optional<rav::audio_format> rav::wav_audio_format::fmt_chunk::to_audio_form
         case format_code::ieee_float: {
             if (bits_per_sample == 32) {
                 return audio_format {
-                    audio_format::byte_order::le, audio_encoding::pcm_float, sample_rate, num_channels,
+                    audio_format::byte_order::le, audio_encoding::pcm_f32, sample_rate, num_channels,
                     audio_format::channel_ordering::interleaved
                 };
             }
             if (bits_per_sample == 64) {
                 return audio_format {
-                    audio_format::byte_order::le, audio_encoding::pcm_double, sample_rate, num_channels,
+                    audio_format::byte_order::le, audio_encoding::pcm_f64, sample_rate, num_channels,
                     audio_format::channel_ordering::interleaved
                 };
             }

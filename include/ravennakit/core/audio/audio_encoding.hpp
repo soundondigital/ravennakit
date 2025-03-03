@@ -20,8 +20,8 @@ enum class audio_encoding : uint8_t {
     pcm_s16,
     pcm_s24,
     pcm_s32,
-    pcm_float,
-    pcm_double,
+    pcm_f32,
+    pcm_f64,
 };
 
 /**
@@ -37,9 +37,9 @@ inline uint8_t audio_encoding_bytes_per_sample(const audio_encoding encoding) {
         case audio_encoding::pcm_s24:
             return 3;
         case audio_encoding::pcm_s32:
-        case audio_encoding::pcm_float:
+        case audio_encoding::pcm_f32:
             return 4;
-        case audio_encoding::pcm_double:
+        case audio_encoding::pcm_f64:
             return 8;
         case audio_encoding::undefined:
         default:
@@ -58,8 +58,8 @@ inline uint8_t audio_encoding_ground_value(const audio_encoding encoding) {
         case audio_encoding::pcm_s16:
         case audio_encoding::pcm_s24:
         case audio_encoding::pcm_s32:
-        case audio_encoding::pcm_float:
-        case audio_encoding::pcm_double:
+        case audio_encoding::pcm_f32:
+        case audio_encoding::pcm_f64:
         case audio_encoding::undefined:
         default:
             return 0;
@@ -80,10 +80,10 @@ inline const char* audio_encoding_to_string(const audio_encoding encoding) {
             return "pcm_s24";
         case audio_encoding::pcm_s32:
             return "pcm_s32";
-        case audio_encoding::pcm_float:
-            return "pcm_float";
-        case audio_encoding::pcm_double:
-            return "pcm_double";
+        case audio_encoding::pcm_f32:
+            return "pcm_f32";
+        case audio_encoding::pcm_f64:
+            return "pcm_f64";
         default:
             return "unknown";
     }
