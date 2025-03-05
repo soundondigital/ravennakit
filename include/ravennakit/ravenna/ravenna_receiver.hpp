@@ -17,7 +17,7 @@
 
 namespace rav {
 
-class ravenna_receiver: public rtp_stream_receiver, ravenna_rtsp_client::subscriber {
+class ravenna_receiver: public rtp_stream_receiver, public ravenna_rtsp_client::subscriber {
   public:
     explicit ravenna_receiver(ravenna_rtsp_client& rtsp_client, rtp_receiver& rtp_receiver);
     ~ravenna_receiver() override;
@@ -55,11 +55,12 @@ class ravenna_receiver: public rtp_stream_receiver, ravenna_rtsp_client::subscri
      */
     [[nodiscard]] std::optional<std::string> get_sdp_text() const;
 
+    // ravenna_rtsp_client::subscriber overrides
+    void on_announced(const ravenna_rtsp_client::announced_event& event) override;
+
   private:
     ravenna_rtsp_client& rtsp_client_;
     std::string session_name_;
-
-    void on_announced(const ravenna_rtsp_client::announced_event& event) override;
 };
 
 }  // namespace rav

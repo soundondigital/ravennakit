@@ -97,13 +97,13 @@ class rtp_receiver {
      * @param session The session to subscribe to.
      * @param filter
      */
-    void subscribe(subscriber& subscriber_to_add, const rtp_session& session, const rtp_filter& filter);
+    void add_subscriber(subscriber& subscriber_to_add, const rtp_session& session, const rtp_filter& filter);
 
     /**
      * Unsubscribes given subscriber from all sessions it's subscribed to.
      * @param subscriber_to_remove The subscriber to remove.
      */
-    void unsubscribe(const subscriber& subscriber_to_remove);
+    void remove_subscriber(const subscriber& subscriber_to_remove);
 
     /**
      * @return The io_context used by this receiver.

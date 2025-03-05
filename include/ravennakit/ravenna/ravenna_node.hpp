@@ -83,22 +83,6 @@ class ravenna_node {
     [[nodiscard]] std::future<void> remove_subscriber(subscriber* subscriber);
 
     /**
-     * Adds a subscriber to the receiver with the given id.
-     * @param receiver_id The id of the stream to add the subscriber to.
-     * @param subscriber The subscriber to add.
-     * @return A future that will be set when the operation is complete.
-     */
-    std::future<void> add_receiver_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber);
-
-    /**
-     * Removes a subscriber from the receiver with the given id.
-     * @param receiver_id The id of the stream to remove the subscriber from.
-     * @param subscriber The subscriber to remove.
-     * @return A future that will be set when the operation is complete.
-     */
-    std::future<void> remove_receiver_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber);
-
-    /**
      * Adds a data callback to the receiver with the given id.
      * @param receiver_id The id of the receiver to add the callback to.
      * @param callback The callback to add.

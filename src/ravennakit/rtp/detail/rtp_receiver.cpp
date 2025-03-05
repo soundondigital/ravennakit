@@ -38,7 +38,9 @@ typedef BOOL(PASCAL* LPFN_WSARECVMSG)(
 rav::rtp_receiver::rtp_receiver(asio::io_context& io_context, configuration config) :
     io_context_(io_context), config_(std::move(config)) {}
 
-void rav::rtp_receiver::subscribe(subscriber& subscriber_to_add, const rtp_session& session, const rtp_filter& filter) {
+void rav::rtp_receiver::add_subscriber(
+    subscriber& subscriber_to_add, const rtp_session& session, const rtp_filter& filter
+) {
     auto* context = find_or_create_session_context(session);
 
     if (context == nullptr) {
@@ -51,7 +53,7 @@ void rav::rtp_receiver::subscribe(subscriber& subscriber_to_add, const rtp_sessi
     context->subscribers.add_or_update_context(&subscriber_to_add, subscriber_context {filter});
 }
 
-void rav::rtp_receiver::unsubscribe(const subscriber& subscriber_to_remove) {
+void rav::rtp_receiver::remove_subscriber(const subscriber& subscriber_to_remove) {
     for (auto it = sessions_contexts_.begin(); it != sessions_contexts_.end();) {
         if (it->subscribers.remove(&subscriber_to_remove) && it->subscribers.empty()) {
             it = sessions_contexts_.erase(it);

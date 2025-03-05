@@ -107,7 +107,6 @@ class ravenna_rtsp_client: public ravenna_browser::subscriber {
 
     asio::io_context& io_context_;
     ravenna_browser& browser_;
-    dnssd::dnssd_browser::subscriber browser_subscriber_;
     std::vector<session_context> sessions_;
     std::vector<connection_context> connections_;
 

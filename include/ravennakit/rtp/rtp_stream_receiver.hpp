@@ -71,13 +71,22 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
      */
     class subscriber {
       public:
-        virtual ~subscriber() = default;
+        virtual ~subscriber();
 
         /**
          * Called when the stream has changed.
          * @param event The event.
          */
         virtual void stream_updated([[maybe_unused]] const stream_updated_event& event) {}
+
+        /**
+         * Set the rtp stream receiver, subscribing to the receiver.
+         * @param receiver The receiver to set.
+         */
+        void set_rtp_stream_receiver(rtp_stream_receiver* receiver);
+
+      private:
+        rtp_stream_receiver* receiver_ {nullptr};
     };
 
     /**
@@ -151,20 +160,6 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
      * @return The delay in samples.
      */
     [[nodiscard]] uint32_t get_delay() const;
-
-    /**
-     * Adds a subscriber to the receiver.
-     * @param subscriber_to_add The subscriber to add.
-     * @return true if the subscriber was added, or false if it was already added.
-     */
-    bool add_subscriber(subscriber* subscriber_to_add);
-
-    /**
-     * Removes a subscriber from the receiver.
-     * @param subscriber_to_remove The subscriber to remove.
-     * @return true if the subscriber was removed, or false if it wasn't found.
-     */
-    bool remove_subscriber(subscriber* subscriber_to_remove);
 
     /**
      * Adds a callback to the receiver.

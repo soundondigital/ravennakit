@@ -38,22 +38,6 @@ bool is_connection_info_valid(const rav::sdp::connection_info_field& conn) {
 
 }  // namespace
 
-bool rav::rtp_stream_receiver::add_subscriber(subscriber* subscriber_to_add) {
-    if (subscriber_to_add == nullptr) {
-        RAV_ERROR("Subscriber is nullptr");
-        return false;
-    }
-    if (subscribers_.add(subscriber_to_add)) {
-        subscriber_to_add->stream_updated(make_updated_event());
-        return true;
-    }
-    return false;
-}
-
-bool rav::rtp_stream_receiver::remove_subscriber(subscriber* subscriber_to_remove) {
-    return subscribers_.remove(subscriber_to_remove);
-}
-
 const char* rav::rtp_stream_receiver::to_string(const receiver_state state) {
     switch (state) {
         case receiver_state::idle:
@@ -79,11 +63,28 @@ std::string rav::rtp_stream_receiver::stream_updated_event::to_string() const {
     );
 }
 
+rav::rtp_stream_receiver::subscriber::~subscriber() {
+    RAV_ASSERT(receiver_ == nullptr, "Please call set_rtp_stream_receiver(nullptr) before destruction");
+}
+
+void rav::rtp_stream_receiver::subscriber::set_rtp_stream_receiver(rtp_stream_receiver* receiver) {
+    if (receiver_ == receiver) {
+        return;
+    }
+    if (receiver_ != nullptr) {
+        receiver_->subscribers_.remove(this);
+    }
+    receiver_ = receiver;
+    if (receiver_ != nullptr && receiver_->subscribers_.add(this)) {
+        stream_updated(receiver_->make_updated_event());
+    }
+}
+
 rav::rtp_stream_receiver::rtp_stream_receiver(rtp_receiver& receiver) :
     rtp_receiver_(receiver), maintenance_timer_(receiver.get_io_context()) {}
 
 rav::rtp_stream_receiver::~rtp_stream_receiver() {
-    rtp_receiver_.unsubscribe(*this);
+    rtp_receiver_.remove_subscriber(*this);
     maintenance_timer_.cancel();
 }
 
@@ -329,7 +330,7 @@ rav::sliding_stats::stats rav::rtp_stream_receiver::get_packet_interval_stats() 
 void rav::rtp_stream_receiver::restart() {
     // TODO: Synchronize with read_data()
 
-    rtp_receiver_.unsubscribe(*this);  // This unsubscribes `this` from all sessions
+    rtp_receiver_.remove_subscriber(*this);  // This unsubscribes `this` from all sessions
 
     if (media_streams_.empty()) {
         set_state(receiver_state::idle, true);
@@ -367,7 +368,7 @@ void rav::rtp_stream_receiver::restart() {
     for (auto& stream : media_streams_) {
         stream.first_packet_timestamp.reset();
         stream.packet_stats.reset();
-        rtp_receiver_.subscribe(*this, stream.session, stream.filter);
+        rtp_receiver_.add_subscriber(*this, stream.session, stream.filter);
     }
 
     do_maintenance();

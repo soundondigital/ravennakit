@@ -36,7 +36,7 @@ class loopback_example: public rav::rtp_stream_receiver::subscriber, public rav:
         ravenna_receiver_ = std::make_unique<rav::ravenna_receiver>(*rtsp_client_, *rtp_receiver_);
         ravenna_receiver_->set_delay(480);  // 10ms @ 48kHz
         ravenna_receiver_->add_data_callback(this);
-        ravenna_receiver_->add_subscriber(this);
+        set_rtp_stream_receiver(ravenna_receiver_.get());
         ravenna_receiver_->set_session_name(stream_name_);
 
         advertiser_ = rav::dnssd::dnssd_advertiser::create(io_context_);
@@ -75,7 +75,7 @@ class loopback_example: public rav::rtp_stream_receiver::subscriber, public rav:
     }
 
     ~loopback_example() override {
-        ravenna_receiver_->remove_subscriber(this);
+        set_rtp_stream_receiver(nullptr);
         ravenna_receiver_->remove_data_callback(this);
     }
 
