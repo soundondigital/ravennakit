@@ -96,7 +96,7 @@ class ravenna_node {
      * @param subscriber The subscriber to remove.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<void> remove_stream_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber);
+    std::future<void> remove_receiver_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber);
 
     /**
      * Get the packet statistics for the given stream, if the stream for the given ID exists.
@@ -127,6 +127,16 @@ class ravenna_node {
      * @return The SDP text for the receiver.
      */
     std::future<std::optional<std::string>> get_sdp_text_for_receiver(id receiver_id);
+
+    /**
+     * Reads the data from the receiver with the given id.
+     * @param receiver_id The id of the receiver to read data from.
+     * @param at_timestamp The timestamp to read at.
+     * @param buffer The buffer to read the data into.
+     * @param buffer_size The size of the buffer.
+     * @return True if the data was read, or false if the data couldn't be read.
+     */
+    bool realtime_read_data(id receiver_id, uint32_t at_timestamp, uint8_t* buffer, size_t buffer_size);
 
   private:
     asio::io_context io_context_;

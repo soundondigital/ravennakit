@@ -11,6 +11,7 @@
 #pragma once
 
 #include "audio_encoding.hpp"
+#include "ravennakit/core/byte_order.hpp"
 
 #include <string>
 #include <tuple>
@@ -31,9 +32,9 @@ struct audio_format {
 
     byte_order byte_order {byte_order::le};
     audio_encoding encoding {};
+    channel_ordering ordering {channel_ordering::interleaved};
     uint32_t sample_rate {};
     uint32_t num_channels {};
-    channel_ordering ordering {channel_ordering::interleaved};
 
     [[nodiscard]] uint8_t bytes_per_sample() const {
         return audio_encoding_bytes_per_sample(encoding);
@@ -54,14 +55,6 @@ struct audio_format {
         );
     }
 
-    static const char* to_string(const enum byte_order order) {
-        return order == byte_order::le ? "le" : "be";
-    }
-
-    static const char* to_string(const channel_ordering order) {
-        return order == channel_ordering::interleaved ? "interleaved" : "noninterleaved";
-    }
-
     [[nodiscard]] bool is_valid() const {
         return encoding != audio_encoding::undefined && sample_rate != 0 && num_channels != 0;
     }
@@ -76,6 +69,18 @@ struct audio_format {
 
     bool operator!=(const audio_format& other) const {
         return tie() != other.tie();
+    }
+
+    [[nodiscard]] bool is_native_byte_order() const {
+        return little_endian == (byte_order == byte_order::le);
+    }
+
+    static const char* to_string(const enum byte_order order) {
+        return order == byte_order::le ? "le" : "be";
+    }
+
+    static const char* to_string(const channel_ordering order) {
+        return order == channel_ordering::interleaved ? "interleaved" : "noninterleaved";
     }
 };
 

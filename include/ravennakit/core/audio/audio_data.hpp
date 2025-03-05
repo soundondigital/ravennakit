@@ -18,6 +18,7 @@
 #include "ravennakit/core/assert.hpp"
 #include "ravennakit/core/types/int24.hpp"
 #include "ravennakit/core/byte_order.hpp"
+#include "ravennakit/core/containers/buffer_view.hpp"
 
 namespace rav::audio_data {
 
@@ -264,7 +265,8 @@ convert(const SrcType* src, const size_t src_size, DstType* dst, const size_t ds
     RAV_ASSERT(num_channels > 0, "num_channels should be greater than 0");
 
     // Shortcut for when no conversion is needed
-    if constexpr (std::is_same_v<SrcType, DstType> && std::is_same_v<SrcByteOrder, DstByteOrder> && std::is_same_v<SrcInterleaving, DstInterleaving>) {
+    if constexpr (std::is_same_v<SrcType, DstType> && std::is_same_v<SrcByteOrder, DstByteOrder>
+                  && std::is_same_v<SrcInterleaving, DstInterleaving>) {
         if (src_size == 0 || src_size != dst_size) {
             return false;
         }
@@ -274,7 +276,7 @@ convert(const SrcType* src, const size_t src_size, DstType* dst, const size_t ds
         RAV_ASSERT(src_size == dst_size, "size should be smaller or equal to the size of the type");
         std::copy_n(src, src_size, dst);
         if constexpr (SrcByteOrder::is_little_endian == DstByteOrder::is_little_endian) {
-            return true;  // No need for swapping
+            return true;  // No need for swapping (at this point we already know interleaving is the same)
         }
         for (size_t i = 0; i < dst_size; ++i) {
             dst[i] = rav::byte_order::swap_bytes(dst[i]);
@@ -417,6 +419,73 @@ static bool convert(
     } else {
         RAV_ASSERT_FALSE("Invalid interleaving");
         return false;
+    }
+
+    return true;
+}
+
+/**
+ * Converts interleaved audio data to non-interleaved audio data.
+ * @param input_buffer The input buffer.
+ * @param output_buffer The output buffer.
+ * @param num_channels The number of channels in the audio data.
+ * @param bytes_per_sample The number of bytes per sample.
+ * @return True if the conversion was successful, false otherwise.
+ */
+[[maybe_unused]] static bool de_interleave(
+    const buffer_view<uint8_t> input_buffer, const buffer_view<uint8_t> output_buffer, const size_t num_channels,
+    const size_t bytes_per_sample
+) {
+    RAV_ASSERT(!input_buffer.empty(), "input_buffer shouldn't be empty");
+    RAV_ASSERT(!output_buffer.empty(), "output_buffer shouldn't be empty");
+    RAV_ASSERT(num_channels > 0, "num_channels should be greater than 0");
+    RAV_ASSERT(bytes_per_sample > 0, "bytes_per_sample should be greater than 0");
+    RAV_ASSERT(input_buffer.size() == output_buffer.size(), "input_buffer and output_buffer should have the same size");
+    RAV_ASSERT(input_buffer.size_bytes() % bytes_per_sample == 0, "Invalid input");
+
+    const auto num_frames = input_buffer.size() / (num_channels * bytes_per_sample);
+
+    const size_t frame_size = num_channels * bytes_per_sample;  // Total bytes per frame
+
+    for (size_t frame = 0; frame < num_frames; ++frame) {
+        for (size_t channel = 0; channel < num_channels; ++channel) {
+            const size_t input_index = frame * frame_size + channel * bytes_per_sample;
+            const size_t output_index = channel * num_frames * bytes_per_sample + frame * bytes_per_sample;
+            std::memcpy(&output_buffer[output_index], &input_buffer[input_index], bytes_per_sample);
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Converts non-interleaved audio data to interleaved audio data.
+ * @param input_buffer The input buffer.
+ * @param output_buffer The output buffer.
+ * @param num_channels The number of channels in the audio data.
+ * @param bytes_per_sample The number of bytes per sample.
+ * @param num_frames The number of frames in the input buffer.
+ * @return True if the conversion was successful, false otherwise.
+ */
+[[maybe_unused]] static bool interleave(
+    const buffer_view<uint8_t> input_buffer, const buffer_view<uint8_t> output_buffer, const size_t num_channels,
+    const size_t bytes_per_sample, const size_t num_frames
+) {
+    RAV_ASSERT(!input_buffer.empty(), "input_buffer shouldn't be empty");
+    RAV_ASSERT(!output_buffer.empty(), "output_buffer shouldn't be empty");
+    RAV_ASSERT(num_channels > 0, "num_channels should be greater than 0");
+    RAV_ASSERT(bytes_per_sample > 0, "bytes_per_sample should be greater than 0");
+    RAV_ASSERT(input_buffer.size() == output_buffer.size(), "input_buffer and output_buffer should have the same size");
+    RAV_ASSERT(input_buffer.size_bytes() % bytes_per_sample == 0, "Invalid input");
+
+    const size_t frame_size = num_channels * bytes_per_sample;  // Total bytes per frame
+
+    for (size_t frame = 0; frame < num_frames; ++frame) {
+        for (size_t channel = 0; channel < num_channels; ++channel) {
+            const size_t input_index = channel * num_frames * bytes_per_sample + frame * bytes_per_sample;
+            const size_t output_index = frame * frame_size + channel * bytes_per_sample;
+            std::memcpy(&output_buffer[output_index], &input_buffer[input_index], bytes_per_sample);
+        }
     }
 
     return true;

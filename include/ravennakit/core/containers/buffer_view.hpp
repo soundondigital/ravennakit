@@ -71,7 +71,7 @@ class buffer_view {
      * @param index The index to access.
      * @returns Value for given index, without bounds checking.
      */
-    Type operator[](size_t index) const {
+    Type& operator[](size_t index) const {
         return data_[index];
     }
 

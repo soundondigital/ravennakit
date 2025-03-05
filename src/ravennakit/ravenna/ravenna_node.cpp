@@ -96,7 +96,7 @@ rav::ravenna_node::add_receiver_subscriber(id receiver_id, rtp_stream_receiver::
 }
 
 std::future<void>
-rav::ravenna_node::remove_stream_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber) {
+rav::ravenna_node::remove_receiver_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber) {
     auto work = [this, receiver_id, subscriber] {
         for (const auto& receiver : receivers_) {
             if (receiver->get_id() == receiver_id) {
@@ -161,4 +161,17 @@ std::future<std::optional<std::string>> rav::ravenna_node::get_sdp_text_for_rece
         return std::nullopt;
     };
     return asio::dispatch(io_context_, asio::use_future(work));
+}
+
+bool rav::ravenna_node::realtime_read_data(
+    const id receiver_id, const uint32_t at_timestamp, uint8_t* buffer, const size_t buffer_size
+) {
+    // TODO: Synchronize with maintenance_thread_
+
+    for (const auto& receiver : receivers_) {
+        if (receiver->get_id() == receiver_id) {
+            return receiver->realtime_read_data(at_timestamp, buffer, buffer_size);
+        }
+    }
+    return false;
 }
