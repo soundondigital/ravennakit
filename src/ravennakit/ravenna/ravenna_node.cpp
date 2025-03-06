@@ -88,6 +88,30 @@ std::future<void> rav::ravenna_node::remove_subscriber(subscriber* subscriber) {
     return asio::dispatch(io_context_, asio::use_future(work));
 }
 
+std::future<bool> rav::ravenna_node::add_receiver(ravenna_receiver* receiver) {
+    RAV_ASSERT(receiver != nullptr, "Receiver must be valid");
+    auto work = [this, receiver] {
+        if (receivers_list_.add(receiver)) {
+            receiver->set_ravenna_rtsp_client(&rtsp_client_);
+            return true;
+        }
+        return false;
+    };
+    return asio::dispatch(io_context_, asio::use_future(work));
+}
+
+std::future<bool> rav::ravenna_node::remove_receiver(ravenna_receiver* receiver) {
+    RAV_ASSERT(receiver != nullptr, "Receiver must be valid");
+    auto work = [this, receiver] {
+        if (receivers_list_.remove(receiver)) {
+            receiver->set_ravenna_rtsp_client(nullptr);
+            return true;
+        }
+        return false;
+    };
+    return asio::dispatch(io_context_, asio::use_future(work));
+}
+
 std::future<void>
 rav::ravenna_node::add_receiver_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber) {
     auto work = [this, receiver_id, subscriber] {
@@ -208,6 +232,23 @@ bool rav::ravenna_node::realtime_read_data(
     for (const auto& receiver : receivers_) {
         if (receiver->get_id() == receiver_id) {
             return receiver->realtime_read_data(at_timestamp, buffer, buffer_size);
+        }
+    }
+    return false;
+}
+
+bool rav::ravenna_node::realtime_read_audio_data(
+    const id receiver_id, const std::optional<uint32_t> at_timestamp, const audio_buffer_view<float>& output_buffer
+) {
+    // TODO: Synchronize with maintenance_thread_
+
+    if (!at_timestamp.has_value()) {
+        // TODO: Try to fill the timestamp with the current PTP time
+    }
+
+    for (const auto& receiver : receivers_) {
+        if (receiver->get_id() == receiver_id) {
+            return receiver->realtime_read_audio_data(at_timestamp, output_buffer);
         }
     }
     return false;

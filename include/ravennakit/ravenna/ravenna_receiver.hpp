@@ -29,11 +29,6 @@ class ravenna_receiver: public rtp_stream_receiver, public ravenna_rtsp_client::
     ravenna_receiver& operator=(ravenna_receiver&&) noexcept = delete;
 
     /**
-     * Stops the receiver.
-     */
-    void stop();
-
-    /**
      * @return The SDP for the session.
      */
     std::optional<sdp::session_description> get_sdp() const;

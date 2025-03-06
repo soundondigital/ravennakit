@@ -43,7 +43,7 @@ class stream_recorder: public rav::rtp_stream_receiver::subscriber, public rav::
         set_rtp_stream_receiver(nullptr);
         if (receiver_) {
             receiver_->remove_data_callback(this);
-            receiver_->stop();
+            receiver_->set_ravenna_rtsp_client(nullptr);
         }
         close();
     }

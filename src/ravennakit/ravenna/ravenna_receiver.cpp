@@ -19,7 +19,7 @@ rav::ravenna_receiver::ravenna_receiver(ravenna_rtsp_client& rtsp_client, rtp_re
 }
 
 rav::ravenna_receiver::~ravenna_receiver() {
-    stop();
+    set_ravenna_rtsp_client(nullptr);
 }
 
 void rav::ravenna_receiver::on_announced(const ravenna_rtsp_client::announced_event& event) {
@@ -30,10 +30,6 @@ void rav::ravenna_receiver::on_announced(const ravenna_rtsp_client::announced_ev
     } catch (const std::exception& e) {
         RAV_ERROR("Failed to process SDP for session '{}': {}", get_session_name(), e.what());
     }
-}
-
-void rav::ravenna_receiver::stop() {
-    set_ravenna_rtsp_client(nullptr);
 }
 
 std::optional<rav::sdp::session_description> rav::ravenna_receiver::get_sdp() const {

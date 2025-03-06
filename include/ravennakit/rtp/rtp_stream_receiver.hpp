@@ -14,6 +14,7 @@
 #include "detail/rtp_packet_stats.hpp"
 #include "detail/rtp_receive_buffer.hpp"
 #include "detail/rtp_receiver.hpp"
+#include "ravennakit/core/audio/audio_buffer_view.hpp"
 #include "ravennakit/core/math/sliding_stats.hpp"
 #include "ravennakit/core/util/id.hpp"
 #include "ravennakit/core/util/throttle.hpp"
@@ -29,6 +30,11 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
   public:
     /// The number of milliseconds after which a stream is considered inactive.
     static constexpr uint64_t k_receive_timeout_ms = 1000;
+
+    /// The length of the receiver buffer in milliseconds.
+    /// AES67 specifies at least 20 ms or 20 times the packet time, whichever is smaller, but since we're on desktop
+    /// systems we go a bit higher. Note that this number is not the same as the delay or added latency.
+    static constexpr size_t k_buffer_size_ms = 200;
 
     /**
      * The state of the stream.
@@ -180,12 +186,25 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
      *
      * Calling this function is realtime safe and thread safe when called from a single arbitrary thread.
      *
-     * @param at_timestamp The timestamp to read from.
+     * @param at_timestamp The timestamp to read at.
      * @param buffer The destination to write the data to.
      * @param buffer_size The size of the buffer in bytes.
      * @return true if buffer_size bytes were read, or false if buffer_size bytes couldn't be read.
      */
-    bool realtime_read_data(uint32_t at_timestamp, uint8_t* buffer, size_t buffer_size);
+    bool realtime_read_data(std::optional<uint32_t> at_timestamp, uint8_t* buffer, size_t buffer_size);
+
+    /**
+     * Reads the data from the receiver with the given id.
+     *
+     * Calling this function is realtime safe and thread safe when called from a single arbitrary thread.
+     *
+     * @param at_timestamp The timestamp to read at, or nullopt to read from the most recent timestamp.
+     * @param output_buffer The buffer to read the data into.
+     * @return The timestamp at which the data was read, or an error code.
+     */
+    bool realtime_read_audio_data(
+        std::optional<uint32_t> at_timestamp, audio_buffer_view<float> output_buffer
+    );
 
     /**
      * @return The packet statistics for the first stream, if it exists, otherwise an empty structure.
@@ -226,8 +245,6 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
         throttle<void> packet_interval_throttle {std::chrono::seconds(10)};
     };
 
-    static constexpr uint32_t k_delay_multiplier = 2;  // The buffer size is at least twice the delay.
-
     rtp_receiver& rtp_receiver_;
     id id_ {id::next_process_wide_unique_id()};
     uint32_t delay_ = 480;  // 100ms at 48KHz
@@ -253,6 +270,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
      */
     struct {
         rtp_receive_buffer receiver_buffer;
+        std::vector<uint8_t> read_buffer;
         fifo_buffer<intermediate_packet, fifo::spsc> fifo;
         fifo_buffer<uint16_t, fifo::spsc> packets_too_old;
         std::optional<wrapping_uint32> first_packet_timestamp;

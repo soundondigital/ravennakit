@@ -234,6 +234,14 @@ class audio_buffer_view {
         std::memcpy(dst, channels_[src_channel_index] + src_start_sample, num_samples_to_copy * sizeof(T));
     }
 
+    /**
+     * @return True if the audio buffer view is valid, false otherwise. Valid is when the number of channels and frames
+     * are greater than zero and the channels are not nullptr.
+     */
+    [[nodiscard]] bool is_valid() const {
+        return channels_ != nullptr && num_channels_ > 0 && num_frames_ > 0;
+    }
+
   protected:
     /**
      * Updates the channel pointers, number of channels and number of frames.

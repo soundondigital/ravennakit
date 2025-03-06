@@ -286,7 +286,7 @@ bool rav::rtp_stream_receiver::remove_data_callback(data_callback* callback) {
 }
 
 bool rav::rtp_stream_receiver::realtime_read_data(
-    const uint32_t at_timestamp, uint8_t* buffer, const size_t buffer_size
+    const std::optional<uint32_t> at_timestamp, uint8_t* buffer, const size_t buffer_size
 ) {
     // TODO: Synchronize with restart()
 
@@ -297,11 +297,81 @@ bool rav::rtp_stream_receiver::realtime_read_data(
 
     do_realtime_maintenance();
 
+    if (buffer_size > realtime_context_.read_buffer.size()) {
+        RAV_WARNING("Buffer size is larger than the read buffer size");
+        return false;
+    }
+
+    if (!at_timestamp.has_value()) {
+        // In the future we might consider reading from the most recent timestamp minus the delay
+        RAV_WARNING("No timestamp provided");
+        return false;
+    }
+
     const auto num_frames =
         static_cast<uint32_t>(buffer_size) / realtime_context_.selected_audio_format.bytes_per_frame();
 
-    realtime_context_.next_ts = at_timestamp + num_frames;
-    return realtime_context_.receiver_buffer.read(at_timestamp, buffer, buffer_size);
+    realtime_context_.next_ts = *at_timestamp + num_frames;
+    return realtime_context_.receiver_buffer.read(*at_timestamp, buffer, buffer_size);
+}
+
+bool rav::rtp_stream_receiver::realtime_read_audio_data(
+    const std::optional<uint32_t> at_timestamp, audio_buffer_view<float> output_buffer
+) {
+    // TODO: Synchronize with restart()
+
+    TRACY_ZONE_SCOPED;
+
+    RAV_ASSERT(output_buffer.is_valid(), "Buffer must be valid");
+
+    const auto format = realtime_context_.selected_audio_format;
+
+    if (format.byte_order != audio_format::byte_order::be) {
+        RAV_ERROR("Unexpected byte order");
+        return false;
+    }
+
+    if (format.ordering != audio_format::channel_ordering::interleaved) {
+        RAV_ERROR("Unexpected channel ordering");
+        return false;
+    }
+
+    if (format.num_channels != output_buffer.num_channels()) {
+        RAV_ERROR("Channel mismatch");
+        return false;
+    }
+
+    auto& buffer = realtime_context_.read_buffer;
+    if (!realtime_read_data(*at_timestamp, buffer.data(), output_buffer.num_frames() * format.bytes_per_frame())) {
+        return false;
+    }
+
+    if (format.encoding == audio_encoding::pcm_s16) {
+        const auto ok = audio_data::convert<
+            int16_t, audio_data::byte_order::be, audio_data::interleaving::interleaved, float,
+            audio_data::byte_order::ne>(
+            reinterpret_cast<int16_t*>(buffer.data()), output_buffer.num_frames(), output_buffer.num_channels(),
+            output_buffer.data()
+        );
+        if (!ok) {
+            RAV_WARNING("Failed to convert audio data");
+        }
+    } else if (format.encoding == audio_encoding::pcm_s24) {
+        const auto ok = audio_data::convert<
+            int24_t, audio_data::byte_order::be, audio_data::interleaving::interleaved, float,
+            audio_data::byte_order::ne>(
+            reinterpret_cast<int24_t*>(buffer.data()), output_buffer.num_frames(), output_buffer.num_channels(),
+            output_buffer.data()
+        );
+        if (!ok) {
+            RAV_WARNING("Failed to convert audio data");
+        }
+    } else {
+        RAV_ERROR("Unsupported encoding");
+        return false;
+    }
+
+    return true;
 }
 
 rav::rtp_stream_receiver::stream_stats rav::rtp_stream_receiver::get_session_stats() const {
@@ -340,6 +410,7 @@ void rav::rtp_stream_receiver::restart() {
     }
 
     std::optional<audio_format> selected_format;
+    uint16_t packet_time_frames = 0;
 
     for (auto& stream : media_streams_) {
         if (!stream.selected_format.is_valid()) {
@@ -348,6 +419,7 @@ void rav::rtp_stream_receiver::restart() {
         }
         if (!selected_format.has_value()) {
             selected_format = stream.selected_format;
+            packet_time_frames = stream.packet_time_frames;
         } else if (stream.selected_format != *selected_format) {
             RAV_WARNING("Audio formats are not the same");
             return;
@@ -362,9 +434,12 @@ void rav::rtp_stream_receiver::restart() {
     const auto bytes_per_frame = selected_format->bytes_per_frame();
     RAV_ASSERT(bytes_per_frame > 0, "bytes_per_frame must be greater than 0");
 
-    realtime_context_.receiver_buffer.resize(std::max(1024u, delay_ * k_delay_multiplier), bytes_per_frame);
-    realtime_context_.fifo.resize(delay_);  // TODO: Determine sensible size (maybe this is the sensible size)
-    realtime_context_.packets_too_old.resize(delay_);  // TODO: Determine sensible size
+    const auto buffer_size_frames = std::max(selected_format->sample_rate * k_buffer_size_ms / 1000, 1024ul);
+    realtime_context_.receiver_buffer.resize(selected_format->sample_rate * k_buffer_size_ms / 1000, bytes_per_frame);
+    realtime_context_.read_buffer.resize(buffer_size_frames * bytes_per_frame);
+    const auto buffer_size_packets = buffer_size_frames / packet_time_frames;
+    realtime_context_.fifo.resize(buffer_size_packets);
+    realtime_context_.packets_too_old.resize(buffer_size_packets);
     realtime_context_.selected_audio_format = *selected_format;
 
     for (auto& stream : media_streams_) {
