@@ -35,18 +35,6 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE INTERNAL "")
 endif ()
 
-if (RAV_WITH_ADDRESS_SANITIZER)
-    message("-- -DRAV_WITH_ADDRESS_SANITIZER=ON argument was specified: Enabling Clang's Address Sanitizer")
-    add_compile_options(-fsanitize=address,undefined -g)
-    link_libraries(-fsanitize=address,undefined)
-endif ()
-
-if (RAV_WITH_THREAD_SANITIZER)
-    message("-- -DRAV_WITH_THREAD_SANITIZER=ON argument was specified: Enabling Clang's Thread Sanitizer")
-    add_compile_options(-fsanitize=thread -g)
-    link_libraries(-fsanitize=thread)
-endif ()
-
 #########
 # VCPKG #
 #########
@@ -125,6 +113,18 @@ endif ()
 # Set Windows version define
 if (WIN32)
     target_compile_definitions(ravennakit PUBLIC WINVER=${RAV_WINDOWS_VERSION} _WIN32_WINNT=${RAV_WINDOWS_VERSION})
+endif ()
+
+if (RAV_WITH_ADDRESS_SANITIZER)
+    message("-- -DRAV_WITH_ADDRESS_SANITIZER=ON argument was specified: Enabling Clang's Address Sanitizer")
+    target_compile_options(ravennakit PUBLIC -fsanitize=address,undefined -g)
+    target_link_libraries(ravennakit PUBLIC -fsanitize=address,undefined)
+endif ()
+
+if (RAV_WITH_THREAD_SANITIZER)
+    message("-- -DRAV_WITH_THREAD_SANITIZER=ON argument was specified: Enabling Clang's Thread Sanitizer")
+    target_compile_options(ravennakit PUBLIC -fsanitize=thread -g)
+    target_link_libraries(ravennakit PUBLIC -fsanitize=thread)
 endif ()
 
 #################
