@@ -14,6 +14,7 @@
 #include "detail/rtp_packet_stats.hpp"
 #include "detail/rtp_receive_buffer.hpp"
 #include "detail/rtp_receiver.hpp"
+#include "ravennakit/core/exclusive_access_guard.hpp"
 #include "ravennakit/core/audio/audio_buffer_view.hpp"
 #include "ravennakit/core/math/sliding_stats.hpp"
 #include "ravennakit/core/util/id.hpp"
@@ -255,6 +256,7 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     subscriber_list<subscriber> subscribers_;
     subscriber_list<data_callback> data_callbacks_;
     asio::steady_timer maintenance_timer_;
+    exclusive_access_guard realtime_access_guard_;
 
     /**
      * Used for copying received packets to the realtime context.

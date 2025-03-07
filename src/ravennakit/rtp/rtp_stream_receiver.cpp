@@ -295,6 +295,7 @@ std::optional<uint32_t> rav::rtp_stream_receiver::read_data_realtime(
 
     TRACY_ZONE_SCOPED;
 
+    RAV_ASSERT_EXCLUSIVE_ACCESS(realtime_access_guard_);
     RAV_ASSERT(buffer_size != 0, "Buffer size must be greater than 0");
     RAV_ASSERT(buffer != nullptr, "Buffer must not be nullptr");
 

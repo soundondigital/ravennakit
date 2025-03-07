@@ -218,7 +218,7 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber, rav
         );
     }
 
-    void on_data_ready(rav::wrapping_uint32 timestamp) override {}
+    void on_data_ready([[maybe_unused]] rav::wrapping_uint32 timestamp) override {}
 
   private:
     asio::io_context io_context_;
