@@ -15,38 +15,31 @@
 #include <thread>
 #include <catch2/catch_all.hpp>
 
-namespace {
-
-void violates_exclusive_access() {
-    std::atomic counter {0};
-    const rav::exclusive_access_guard exclusive_access_guard1(counter);
-    const rav::exclusive_access_guard exclusive_access_guard2(counter);
-}
-
-void exclusive_access() {
-    static std::atomic counter {0};
-    const rav::exclusive_access_guard exclusive_access_guard(counter);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));  // Introduce a delay to increase the chance
-}
-
-}  // namespace
-
-TEST_CASE("exclusive_access_guard", "[exclusive_access_guard]") {
+TEST_CASE("exclusive_access_guard") {
     SECTION("Exclusive access violation") {
-        REQUIRE_THROWS(violates_exclusive_access());
+        rav::exclusive_access_guard guard;
+
+        const rav::exclusive_access_guard::lock lock1(guard);
+        const rav::exclusive_access_guard::lock lock2(guard);
+
+        REQUIRE_FALSE(lock1.violated());
+        REQUIRE(lock2.violated());
     }
 
     SECTION("Trigger exclusive access violation by running two threads") {
         std::atomic keep_going {true};
 
-        auto function = [&keep_going]() {
+        rav::exclusive_access_guard guard;
+
+        auto function = [&keep_going, &guard]() {
             while (keep_going) {
-                try {
-                    exclusive_access();
-                } catch (const std::runtime_error&) {
+                const rav::exclusive_access_guard::lock lock(guard);
+                if (lock.violated()) {
                     keep_going = false;
                     return true;
                 }
+                // Introduce a delay to increase the chance of violation
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
             return false;
         };

@@ -20,10 +20,9 @@
  * Helper macro which asserts exclusive access to scope. Whenever 2 different threads access the scope, an assertion
  * will be triggered.
  */
-#define RAV_ASSERT_EXCLUSIVE_ACCESS(counter)                                           \
-    rav::exclusive_access_guard CONCAT(exclusive_access_guard, __LINE__)(counter, [] { \
-        RAV_ASSERT(false, "Exclusive access violation");                               \
-    });
+#define RAV_ASSERT_EXCLUSIVE_ACCESS(guard)                           \
+    rav::exclusive_access_guard::lock CONCAT(lock, __LINE__)(guard); \
+    RAV_ASSERT(!CONCAT(lock, __LINE__).violated(), "exclusive access violation");
 
 #include <atomic>
 #include <stdexcept>
@@ -36,40 +35,41 @@ namespace rav {
 class exclusive_access_guard {
   public:
     /**
-     * Constructs a new exclusive access guard.
-     * @throws rav::exception if exclusive access is violated.
-     * @param counter The counter to guard.
+     * Locks and exclusive access guard.
      */
-    explicit exclusive_access_guard(std::atomic<int32_t>& counter) : counter_(counter) {
-        const auto prev = counter_.fetch_add(1, std::memory_order_relaxed);
-        if (prev != 0) {
-            counter_.fetch_sub(1, std::memory_order_relaxed);
-            throw std::runtime_error("Exclusive access violation");
+    class lock {
+      public:
+        /**
+         * Constructs a new lock.
+         * @throws std::runtime_error if exclusive access is violated.
+         */
+        explicit lock(exclusive_access_guard& access_guard) : exclusive_access_guard_(access_guard) {
+            const auto prev = exclusive_access_guard_.counter_.fetch_add(1, std::memory_order_relaxed);
+            if (prev != 0) {
+                violated_ = true;
+            }
         }
-    }
+
+        ~lock() {
+            exclusive_access_guard_.counter_.fetch_sub(1, std::memory_order_relaxed);
+        }
+
+        /**
+         * @return True if exclusive access is violated.
+         */
+        [[nodiscard]] bool violated() const {
+            return violated_;
+        }
+
+      private:
+        exclusive_access_guard& exclusive_access_guard_;
+        bool violated_ = false;
+    };
 
     /**
      * Constructs a new exclusive access guard.
-     * @throws rav::exception if exclusive access is violated and no on_violation callback is provided.
-     * @param counter The counter to guard.
-     * @param on_violation Callback to be called when exclusive access is violated.
      */
-    explicit exclusive_access_guard(std::atomic<int32_t>& counter, const std::function<void()>& on_violation) :
-        counter_(counter) {
-        const auto prev = counter_.fetch_add(1, std::memory_order_relaxed);
-        if (prev != 0) {
-            if (on_violation) {
-                on_violation();
-            } else {
-                counter_.fetch_sub(1, std::memory_order_relaxed);
-                throw std::runtime_error("Exclusive access violation");
-            }
-        }
-    }
-
-    ~exclusive_access_guard() {
-        counter_.fetch_sub(1, std::memory_order_relaxed);
-    }
+    explicit exclusive_access_guard() = default;
 
     exclusive_access_guard(const exclusive_access_guard&) = delete;
     exclusive_access_guard& operator=(const exclusive_access_guard&) = delete;
@@ -78,7 +78,7 @@ class exclusive_access_guard {
     exclusive_access_guard& operator=(exclusive_access_guard&&) = delete;
 
   private:
-    std::atomic<int32_t>& counter_;
+    std::atomic<int8_t> counter_ {};
 };
 
 }  // namespace rav
