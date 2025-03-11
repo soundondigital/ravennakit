@@ -61,7 +61,10 @@ class rcu {
                 if (reader_->num_locks_ >= 1) {
                     value_ = reader_->owner_.most_recent_value_.load();
                 } else {
-                    reader_->epoch_.store(reader_->owner_.epoch_.load());
+                    auto global_epoch = reader_->owner_.epoch_.load();
+                    // Here is a problem: we think we lock the value for the current epoch, but the value might be
+                    // deleted by the writer before the epoch is visible by the writer thread.
+                    reader_->epoch_.store(global_epoch + 1);
                     // The value we load might belong to a newer epoch than the one we loaded, but this is no problem
                     // because newer values than the oldest used value are never deleted.
                     value_ = reader_->owner_.most_recent_value_.load();
