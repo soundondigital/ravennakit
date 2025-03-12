@@ -92,9 +92,9 @@ def build_macos(args, build_config: Config, subfolder: str, spdlog: bool = False
     if spdlog:
         cmake.option('RAV_ENABLE_SPDLOG', 'ON')
     if asan:
-        cmake.option('WITH_ADDRESS_SANITIZER', 'ON')
+        cmake.option('RAV_WITH_ADDRESS_SANITIZER', 'ON')
     if tsan:
-        cmake.option('WITH_THREAD_SANITIZER', 'ON')
+        cmake.option('RAV_WITH_THREAD_SANITIZER', 'ON')
 
     cmake.configure()
     cmake.build()

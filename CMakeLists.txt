@@ -50,6 +50,18 @@ find_package(portaudio CONFIG REQUIRED)
 find_package(asio CONFIG REQUIRED)
 target_compile_definitions(asio::asio INTERFACE ASIO_NO_DEPRECATED ASIO_NO_DYNAMIC_BUFFER_V1)
 
+if (RAV_WITH_ADDRESS_SANITIZER)
+    message("-- -DRAV_WITH_ADDRESS_SANITIZER=ON argument was specified: Enabling Clang's Address Sanitizer")
+    target_compile_options(asio::asio INTERFACE -fsanitize=address,undefined -g)
+    target_link_libraries(asio::asio INTERFACE -fsanitize=address,undefined)
+endif ()
+
+if (RAV_WITH_THREAD_SANITIZER)
+    message("-- -DRAV_WITH_THREAD_SANITIZER=ON argument was specified: Enabling Clang's Thread Sanitizer")
+    target_compile_options(asio::asio INTERFACE -fsanitize=thread -g)
+    target_link_libraries(asio::asio INTERFACE -fsanitize=thread)
+endif ()
+
 #########
 # Tracy #
 #########

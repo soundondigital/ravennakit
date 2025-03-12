@@ -9,6 +9,7 @@ definitions:
           - 'macos'
         name: 'Build for macOS'
         script:
+          - export ASAN_OPTIONS=detect_container_overflow=0 # Disable ASAN container overflow detection
           - git submodule update --recursive --init
           - brew install pkg-config ninja
           - python3 -m pip install pygit2 boto3
