@@ -48,12 +48,11 @@ TEST_CASE("rcu") {
 
             rcu.update("Hello, World!");
 
-            // As long as the first lock is alive, the value won't be updated for subsequent locks of the same
+            // Even when the first lock is still active, the value should be updated for new locks.
             const auto lock2 = reader.lock();
-            REQUIRE(lock2.get() == nullptr);
+            REQUIRE(*lock2 == "Hello, World!");
         }
 
-        // Once the previous locks are destroyed, the value will be updated for new locks.
         const auto lock3 = reader.lock();
         REQUIRE(*lock3 == "Hello, World!");
     }
@@ -72,7 +71,7 @@ TEST_CASE("rcu") {
         REQUIRE(counter.instances_created == 2);
         REQUIRE(counter.instances_alive == 2);
 
-        rcu.reclaim();
+        REQUIRE(rcu.reclaim() == 1);
 
         REQUIRE(counter.instances_created == 2);
         REQUIRE(counter.instances_alive == 1);
@@ -104,7 +103,7 @@ TEST_CASE("rcu") {
         REQUIRE(lock3.get() != nullptr);
         REQUIRE(lock3->index() == 3);
 
-        rcu.reclaim();
+        REQUIRE(rcu.reclaim() == 2);
 
         REQUIRE(counter.instances_created == 4);
         REQUIRE(counter.instances_alive == 1);
@@ -127,7 +126,7 @@ TEST_CASE("rcu") {
         }
 
         rcu.clear();
-        rcu.reclaim();
+        REQUIRE(rcu.reclaim() == 1);
 
         REQUIRE(counter.instances_created == 1);
         REQUIRE(counter.instances_alive == 0);
@@ -151,7 +150,7 @@ TEST_CASE("rcu") {
         REQUIRE(counter.instances_alive == 1);
 
         // The last value should never be reclaimed
-        rcu.reclaim();
+        REQUIRE(rcu.reclaim() == 0);
 
         REQUIRE(counter.instances_created == 1);
         REQUIRE(counter.instances_alive == 1);
@@ -161,7 +160,7 @@ TEST_CASE("rcu") {
         REQUIRE(counter.instances_created == 2);
         REQUIRE(counter.instances_alive == 2);
 
-        rcu.reclaim();
+        REQUIRE(rcu.reclaim() == 1);
 
         REQUIRE(counter.instances_created == 2);
         REQUIRE(counter.instances_alive == 1);
@@ -189,7 +188,7 @@ TEST_CASE("rcu") {
         REQUIRE(counter.instances_created == 3);
         REQUIRE(counter.instances_alive == 3);
 
-        rcu.reclaim();
+        REQUIRE(rcu.reclaim() == 0);
 
         // Because reader1_lock is still active, no values should be deleted. Not even the 2nd one (which is not in use
         // currently).
@@ -197,7 +196,7 @@ TEST_CASE("rcu") {
         REQUIRE(counter.instances_alive == 3);
 
         reader1_lock.reset();
-        rcu.reclaim();
+        REQUIRE(rcu.reclaim() == 2);
 
         // Now that reader1_lock has been reset, the first 2 objects can be deleted.
         REQUIRE(counter.instances_created == 3);
@@ -287,9 +286,9 @@ TEST_CASE("rcu") {
     }
 
     SECTION("Concurrent reads and writes and reclaims should be thread safe") {
-        static constexpr size_t num_values = 100'0000;
+        static constexpr size_t num_values = 1'000'000;
         static constexpr size_t num_writer_threads = 3;
-        static constexpr size_t num_reader_threads = 3;
+        static constexpr size_t num_reader_threads = 10;
         static constexpr size_t num_reclaim_thread = 3;
 
         // Assign the values we're going to give the rcu object
@@ -304,7 +303,7 @@ TEST_CASE("rcu") {
                 while (num_readers_finished < num_reader_threads) {
                     for (size_t j = 0; j < num_values; ++j) {
                         rcu.update(std::make_pair(j, std::to_string(j + 1)));
-                        rcu.reclaim();
+                        std::ignore = rcu.reclaim();
                         std::this_thread::yield();
                     }
                 }
@@ -344,7 +343,7 @@ TEST_CASE("rcu") {
         for (size_t i = 0; i < num_reclaim_thread; ++i) {
             reclaim_threads.emplace_back([&] {
                 while (num_readers_finished < num_reader_threads) {
-                    rcu.reclaim();
+                    std::ignore = rcu.reclaim();
                     std::this_thread::yield();
                 }
             });
