@@ -24,17 +24,17 @@ static_assert(!std::is_move_constructible_v<rav::rcu<int>::reader>);
 static_assert(!std::is_copy_assignable_v<rav::rcu<int>::reader>);
 static_assert(!std::is_move_assignable_v<rav::rcu<int>::reader>);
 
-static_assert(!std::is_copy_constructible_v<rav::rcu<int>::reader::read_lock>);
-static_assert(!std::is_move_constructible_v<rav::rcu<int>::reader::read_lock>);
-static_assert(!std::is_copy_assignable_v<rav::rcu<int>::reader::read_lock>);
-static_assert(!std::is_move_assignable_v<rav::rcu<int>::reader::read_lock>);
+static_assert(!std::is_copy_constructible_v<rav::rcu<int>::reader::realtime_lock>);
+static_assert(!std::is_move_constructible_v<rav::rcu<int>::reader::realtime_lock>);
+static_assert(!std::is_copy_assignable_v<rav::rcu<int>::reader::realtime_lock>);
+static_assert(!std::is_move_assignable_v<rav::rcu<int>::reader::realtime_lock>);
 
 TEST_CASE("rcu") {
     SECTION("Default state") {
         rav::rcu<int> rcu;
         rav::rcu<int>::reader reader(rcu);
 
-        const auto lock = reader.lock();
+        const auto lock = reader.lock_realtime();
         REQUIRE(lock.get() == nullptr);
     }
 
@@ -43,17 +43,17 @@ TEST_CASE("rcu") {
         rav::rcu<std::string>::reader reader(rcu);
 
         {
-            const auto lock = reader.lock();
+            const auto lock = reader.lock_realtime();
             REQUIRE(lock.get() == nullptr);
 
             rcu.update("Hello, World!");
 
             // Even when the first lock is still active, the value should be updated for new locks.
-            const auto lock2 = reader.lock();
+            const auto lock2 = reader.lock_realtime();
             REQUIRE(*lock2 == "Hello, World!");
         }
 
-        const auto lock3 = reader.lock();
+        const auto lock3 = reader.lock_realtime();
         REQUIRE(*lock3 == "Hello, World!");
     }
 
@@ -78,7 +78,7 @@ TEST_CASE("rcu") {
 
         auto reader = rcu.create_reader();
         {
-            const auto lock1 = reader.lock();
+            const auto lock1 = reader.lock_realtime();
             REQUIRE(lock1.get() != nullptr);
             REQUIRE(lock1->index() == 1);
         }
@@ -89,7 +89,7 @@ TEST_CASE("rcu") {
         REQUIRE(counter.instances_alive == 2);
 
         {
-            const auto lock2 = reader.lock();
+            const auto lock2 = reader.lock_realtime();
             REQUIRE(lock2.get() != nullptr);
             REQUIRE(lock2->index() == 2);
 
@@ -99,7 +99,7 @@ TEST_CASE("rcu") {
             REQUIRE(lock2->index() == 2);
         }
 
-        const auto lock3 = reader.lock();
+        const auto lock3 = reader.lock_realtime();
         REQUIRE(lock3.get() != nullptr);
         REQUIRE(lock3->index() == 3);
 
@@ -120,7 +120,7 @@ TEST_CASE("rcu") {
         REQUIRE(counter.instances_alive == 1);
 
         {
-            auto lock = reader.lock();
+            auto lock = reader.lock_realtime();
             REQUIRE(lock.get() != nullptr);
             REQUIRE(lock->index() == 0);
         }
@@ -132,7 +132,7 @@ TEST_CASE("rcu") {
         REQUIRE(counter.instances_alive == 0);
 
         {
-            auto lock = reader.lock();
+            auto lock = reader.lock_realtime();
             REQUIRE(lock.get() == nullptr);
         }
     }
@@ -174,14 +174,14 @@ TEST_CASE("rcu") {
         auto reader1 = rcu.create_reader();
         auto reader2 = rcu.create_reader();
 
-        auto reader1_lock = reader1.lock();
+        auto reader1_lock = reader1.lock_realtime();
         REQUIRE(reader1_lock.get() != nullptr);
         REQUIRE(reader1_lock->index() == 0);
 
         rcu.update(counter);
         rcu.update(counter);
 
-        auto reader2_lock = reader2.lock();
+        auto reader2_lock = reader2.lock_realtime();
         REQUIRE(reader2_lock.get() != nullptr);
         REQUIRE(reader2_lock->index() == 2);
 
@@ -215,7 +215,7 @@ TEST_CASE("rcu") {
             auto reader = rcu.create_reader();
 
             {
-                auto lock = reader.lock();
+                auto lock = reader.lock_realtime();
                 REQUIRE(lock.get() != nullptr);
                 REQUIRE(*lock == "Hello, World!");
 
@@ -227,7 +227,7 @@ TEST_CASE("rcu") {
                 REQUIRE(*lock == "Hello, World!");
             }
 
-            auto lock = reader.lock();
+            auto lock = reader.lock_realtime();
             REQUIRE(lock.get() != nullptr);
             REQUIRE(*lock == "Updated value");
         });
@@ -257,7 +257,7 @@ TEST_CASE("rcu") {
                 const auto thread_id = num_active_threads.fetch_add(1);
                 while (keep_going) {
                     auto reader = rcu.create_reader();
-                    auto lock = reader.lock();
+                    auto lock = reader.lock_realtime();
                     results[thread_id] = *lock;
                 }
             });
@@ -322,7 +322,7 @@ TEST_CASE("rcu") {
                 auto reader = rcu.create_reader();
 
                 while (num_values_read < num_values) {
-                    const auto lock = reader.lock();
+                    const auto lock = reader.lock_realtime();
                     if (lock.get() == nullptr) {
                         continue;
                     }

@@ -43,7 +43,7 @@ class rcu {
         /**
          * A lock object provides access to the value. Getting and using a lock is wait-free.
          */
-        class read_lock {
+        class realtime_lock {
           public:
             /**
              * Constructs a lock from given reader.
@@ -52,7 +52,7 @@ class rcu {
              * Thread safe: no.
              * @param parent_reader The reader to associate this lock with.
              */
-            explicit read_lock(reader& parent_reader) : reader_(&parent_reader) {
+            explicit realtime_lock(reader& parent_reader) : reader_(&parent_reader) {
                 if (reader_->num_locks_.fetch_add(1) >= 1) {
                     // In this case we're potentially loading a newer value than our the readers epoch, but this has no
                     // negative side effects.
@@ -67,9 +67,14 @@ class rcu {
                 }
             }
 
-            ~read_lock() {
+            ~realtime_lock() {
                 reset();
             }
+
+            realtime_lock(const realtime_lock&) = delete;
+            realtime_lock& operator=(const realtime_lock&) = delete;
+            realtime_lock(realtime_lock&&) = delete;
+            realtime_lock& operator=(realtime_lock&&) = delete;
 
             /**
              * Real-time safe: yes, wait-free.
@@ -90,11 +95,6 @@ class rcu {
                 RAV_ASSERT(value_ != nullptr, "Value is nullptr");
                 return value_;
             }
-
-            read_lock(const read_lock&) = delete;
-            read_lock& operator=(const read_lock&) = delete;
-            read_lock(read_lock&&) = delete;
-            read_lock& operator=(read_lock&&) = delete;
 
             /**
              * Real-time safe: yes, wait-free.
@@ -163,8 +163,8 @@ class rcu {
          * Thread safe: no.
          * @return The lock object.
          */
-        read_lock lock() {
-            return read_lock(*this);
+        realtime_lock lock_realtime() {
+            return realtime_lock(*this);
         }
 
       private:
@@ -257,16 +257,16 @@ class rcu {
         for (auto it = values_.begin(); it != values_.end() - 1;) {
             std::lock_guard readers_lock(readers_mutex_);
             for (const auto* r : readers_) {
-                // r->num_locks_ might be changed by another thread at some point, but this is no problem because in
-                // that case it will load a newer value.
+                // r->num_locks_ might be changed by another thread at some point, but this has no consequence because
+                // in that case it will load a newer value.
                 if (r->num_locks_.load() > 0 && r->epoch_.load() <= it->epoch) {
                     // There is a reader with the epoch of this value, so we can't delete this just yet (or any newer
                     // values).
                     return num_reclaimed;
                 }
             }
-            ++num_reclaimed;
             it = values_.erase(it);
+            ++num_reclaimed;
         }
         return num_reclaimed;
     }
