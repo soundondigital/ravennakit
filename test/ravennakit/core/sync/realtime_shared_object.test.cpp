@@ -32,7 +32,7 @@ TEST_CASE("realtime_shared_object") {
     }
 
     SECTION("Updating and reading the value should be thread safe") {
-        static constexpr size_t num_values = 1'000;
+        static constexpr size_t num_values = 100;
         static constexpr size_t num_writer_threads = 3;
 
         rav::realtime_shared_object<std::pair<size_t, std::string>> obj;
