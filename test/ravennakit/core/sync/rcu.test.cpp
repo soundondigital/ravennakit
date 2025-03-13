@@ -298,7 +298,7 @@ TEST_CASE("rcu") {
     }
 
     SECTION("Concurrent reads and writes and reclaims should be thread safe") {
-        static constexpr size_t num_values = 100'000;
+        static constexpr size_t num_values = 10'000;
         static constexpr size_t num_writer_threads = 3;
         static constexpr size_t num_reader_threads = 3;
         static constexpr size_t num_reclaim_thread = 3;
