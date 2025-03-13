@@ -10,11 +10,12 @@
 
 #include "ravennakit/core/sync/realtime_shared_list.hpp"
 
+#include <future>
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("realtime_shared_list") {
     SECTION("Basic operation") {
-        rav::realtime_shared_list<std::string> list;
+        rav::realtime_shared_list<std::string, 1000> list;
         REQUIRE(list.push_back("Hello world"));
 
         auto lock = list.lock_realtime();
@@ -39,7 +40,7 @@ TEST_CASE("realtime_shared_list") {
     }
 
     SECTION("Clear") {
-        rav::realtime_shared_list<std::string> list;
+        rav::realtime_shared_list<std::string, 1000> list;
         REQUIRE(list.push_back("1"));
         REQUIRE(list.push_back("2"));
 
@@ -83,5 +84,55 @@ TEST_CASE("realtime_shared_list") {
         for ([[maybe_unused]] const auto* v : lock) {
             FAIL("Should not be reached");
         }
+    }
+
+    SECTION("Test thread safety") {
+        static constexpr size_t k_num_elements = 1'000;
+        rav::realtime_shared_list<std::string> list;
+
+        auto result = std::async(std::launch::async, [&list] {
+            while (true) {
+                size_t prev_count = 0;
+
+                {
+                    auto lock = list.lock_realtime();
+
+                    if (lock.size() > prev_count) {
+                        if (lock.size() < prev_count) {
+                            return false; // This should never happen.
+                        }
+
+                        // Check whole array for consistency.
+                        for (size_t i = 0; i < lock.size(); ++i) {
+                            if (lock[i] != std::to_string(i)) {
+                                return false;
+                            }
+                        }
+
+                        // Exit once done
+                        if (lock.size() == k_num_elements) {
+                            return true;
+                        }
+
+                        prev_count = lock.size();
+                    }
+                }
+
+                // Give the writer a chance to write more elements.
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        });
+
+        auto writer = std::async(std::launch::async, [&list] {
+            for (size_t i = 0; i < k_num_elements; ++i) {
+                if (!list.push_back(std::to_string(i))) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        REQUIRE(writer.get());
+        REQUIRE(result.get());
     }
 }

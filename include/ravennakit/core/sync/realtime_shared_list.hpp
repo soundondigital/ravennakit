@@ -21,8 +21,10 @@ namespace rav {
  * This class allows to share a list of objects among a single reader in a realtime safe way (wait-free). The writer
  * side is protected by a mutex. Internally a CAS loop is used to update the value in a thread-safe manner.
  * @tparam T The type of the object to share.
+ * @tparam loop_upper_bound The maximum number of iterations to perform in the CAS loop. If the loop doesn't succeed in
+ * the specified number of iterations, the operation is considered failed. Default is 100'000.
  */
-template<class T>
+template<class T, size_t loop_upper_bound = 100'000>
 class realtime_shared_list {
   public:
     /**
@@ -272,7 +274,7 @@ class realtime_shared_list {
 
         auto* expected = active_ptr_;
 
-        for (size_t i = 0; i < RAV_LOOP_UPPER_BOUND; ++i) {
+        for (size_t i = 0; i < loop_upper_bound; ++i) {
             if (atomic_ptr_.compare_exchange_strong(expected, desired)) {
                 active_ptr_ = desired;
                 return true;
