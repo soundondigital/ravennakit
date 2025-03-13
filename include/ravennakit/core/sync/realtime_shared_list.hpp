@@ -13,6 +13,7 @@
 #include "ravennakit/core/constants.hpp"
 
 #include <vector>
+#include <thread>
 
 namespace rav {
 
