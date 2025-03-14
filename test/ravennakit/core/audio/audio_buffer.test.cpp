@@ -463,4 +463,50 @@ TEST_CASE("audio_buffer") {
             REQUIRE(lhs != rhs);
         }
     }
+
+    SECTION("audio_buffer::add") {
+        constexpr float eps = 0.000001f;
+
+        SECTION("Basic operation") {
+            auto buffer1 = get_test_buffer<float>(2, 5);
+            auto buffer2 = get_test_buffer<float>(2, 5);
+
+            REQUIRE(buffer1.add(buffer2));
+
+            REQUIRE_THAT(buffer1[0][0], Catch::Matchers::WithinRel(2.f, eps));
+            REQUIRE_THAT(buffer1[0][1], Catch::Matchers::WithinRel(4.f, eps));
+            REQUIRE_THAT(buffer1[0][2], Catch::Matchers::WithinRel(6.f, eps));
+            REQUIRE_THAT(buffer1[0][3], Catch::Matchers::WithinRel(8.f, eps));
+            REQUIRE_THAT(buffer1[0][4], Catch::Matchers::WithinRel(10.f, eps));
+            REQUIRE_THAT(buffer1[1][0], Catch::Matchers::WithinRel(12.f, eps));
+            REQUIRE_THAT(buffer1[1][1], Catch::Matchers::WithinRel(14.f, eps));
+            REQUIRE_THAT(buffer1[1][2], Catch::Matchers::WithinRel(16.f, eps));
+            REQUIRE_THAT(buffer1[1][3], Catch::Matchers::WithinRel(18.f, eps));
+            REQUIRE_THAT(buffer1[1][4], Catch::Matchers::WithinRel(20.f, eps));
+        }
+
+        SECTION("Channels frames mismatch 1") {
+            auto buffer1 = get_test_buffer<float>(1, 5);
+            auto buffer2 = get_test_buffer<float>(2, 5);
+            REQUIRE_FALSE(buffer1.add(buffer2));
+        }
+
+        SECTION("Channels frames mismatch 2") {
+            auto buffer1 = get_test_buffer<float>(3, 5);
+            auto buffer2 = get_test_buffer<float>(2, 5);
+            REQUIRE_FALSE(buffer1.add(buffer2));
+        }
+
+        SECTION("Channels frames mismatch 3") {
+            auto buffer1 = get_test_buffer<float>(2, 6);
+            auto buffer2 = get_test_buffer<float>(2, 5);
+            REQUIRE_FALSE(buffer1.add(buffer2));
+        }
+
+        SECTION("Channels frames mismatch 4") {
+            auto buffer1 = get_test_buffer<float>(2, 4);
+            auto buffer2 = get_test_buffer<float>(2, 5);
+            REQUIRE_FALSE(buffer1.add(buffer2));
+        }
+    }
 }

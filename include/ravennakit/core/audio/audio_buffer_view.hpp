@@ -126,7 +126,7 @@ class audio_buffer_view {
     /**
      * Clears the buffer by setting all samples to zero.
      */
-    void clear() {
+    void clear() const {
         for (size_t i = 0; i < num_channels_; ++i) {
             clear_audio_data(channels_[i], channels_[i] + num_frames_);
         }
@@ -136,7 +136,7 @@ class audio_buffer_view {
      * Clears the buffer by setting all samples to the given value.
      * @param value The value to fill the buffer with.
      */
-    void clear(T value) {
+    void clear(T value) const {
         if (channels_ == nullptr) {
             return;
         }
@@ -235,11 +235,50 @@ class audio_buffer_view {
     }
 
     /**
+     * Adds the samples of another audio buffer view to this audio buffer view.
+     * @param other The other audio buffer view.
+     * @return True if the audio buffer view is valid and the number of channels and frames match, false otherwise.
+     */
+    bool add(const audio_buffer_view& other) {
+        static_assert(std::is_floating_point_v<T>, "Not supported for integer types");
+
+        if (num_channels_ != other.num_channels_ || num_frames_ != other.num_frames_) {
+            return false;
+        }
+
+        for (size_t ch = 0; ch < num_channels_; ++ch) {
+            for (size_t frame = 0; frame < num_frames_; ++frame) {
+                channels_[ch][frame] += other.channels_[ch][frame];
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * @return True if the audio buffer view is valid, false otherwise. Valid is when the number of channels and frames
      * are greater than zero and the channels are not nullptr.
      */
     [[nodiscard]] bool is_valid() const {
         return channels_ != nullptr && num_channels_ > 0 && num_frames_ > 0;
+    }
+
+    /**
+     * Returns a copy of this view with given number of channels.
+     * @param num_channels The number of channels.
+     * @return A copy of this view with the given number of channels.
+     */
+    audio_buffer_view with_num_channels(size_t num_channels) {
+        return audio_buffer_view(channels_, num_channels, num_frames_);
+    }
+
+    /**
+     * Returns a copy of this view with given number of frames.
+     * @param num_frames The number of frames.
+     * @return A copy of this view with the given number of frames.
+     */
+    audio_buffer_view with_num_frames(size_t num_frames) {
+        return audio_buffer_view(channels_, num_channels_, num_frames);
     }
 
   protected:
@@ -261,7 +300,7 @@ class audio_buffer_view {
     size_t num_frames_ {};
 
     template<class First, class Last>
-    void clear_audio_data(First first, Last last) {
+    void clear_audio_data(First first, Last last) const {
         if constexpr (std::is_unsigned_v<T>) {
             std::fill(first, last, std::numeric_limits<T>::max() / 2 + 1);
         } else {
