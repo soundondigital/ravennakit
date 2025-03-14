@@ -150,7 +150,8 @@ class realtime_shared_object {
      * Real-time safe: no.
      * Thread safe: yes.
      * @param new_value New value to set.
-     * @return True if the value was successfully updated, false if the value could not be updated.
+     * @return True if the value was successfully updated, false if the value could not be updated (when
+     * loop_upper_bound was exceeded).
      */
     [[nodiscard]] bool update(std::unique_ptr<T> new_value) {
         if (new_value == nullptr) {

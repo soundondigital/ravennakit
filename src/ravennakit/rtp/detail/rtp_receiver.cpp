@@ -58,9 +58,11 @@ bool rav::rtp_receiver::add_subscriber(subscriber* subscriber_to_add, const rtp_
 bool rav::rtp_receiver::remove_subscriber(const subscriber* subscriber_to_remove) {
     size_t count = 0;
     for (auto it = sessions_contexts_.begin(); it != sessions_contexts_.end();) {
-        if (it->subscribers.remove(subscriber_to_remove) && it->subscribers.empty()) {
-            it = sessions_contexts_.erase(it);
+        if (it->subscribers.remove(subscriber_to_remove)) {
             count++;
+        }
+        if (it->subscribers.empty()) {
+            it = sessions_contexts_.erase(it);
         } else {
             ++it;
         }

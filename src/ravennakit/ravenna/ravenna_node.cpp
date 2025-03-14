@@ -224,9 +224,9 @@ std::optional<uint32_t> rav::ravenna_node::read_audio_data_realtime(
 ) {
     TRACY_ZONE_SCOPED;
 
-    const auto lock = realtime_shared_context_.lock_realtime();
+    const auto context = realtime_shared_context_.lock_realtime();
 
-    for (auto* receiver : lock->receivers) {
+    for (auto* receiver : context->receivers) {
         if (receiver->get_id() == receiver_id) {
             return receiver->read_audio_data_realtime(output_buffer, at_timestamp);
         }
