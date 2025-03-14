@@ -45,6 +45,38 @@
     <script type="text/javascript">
         DoxygenAwesomeInteractiveToc.init()
     </script>
+    <style type="text/css">
+        #projectrow td:last-child {
+            text-align: right; /* Aligns second td to the right */
+            width: 100%; /* Helps push content */
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let dropdown = document.getElementById("versionDropdown");
+
+            fetch("/reference/versions.php")
+                .then(response => response.json())
+                .then(data => {
+                    // Populate the dropdown with versions
+                    data.forEach(version => {
+                        let option = document.createElement("option");
+                        option.value = version.version; // Set the value
+                        option.textContent = version.version; // Display text
+                        dropdown.appendChild(option);
+                    });
+                })
+                .catch(error => console.error("Error fetching versions:", error));
+
+            // Listen for change event and redirect immediately
+            dropdown.addEventListener("change", function () {
+                let selectedVersion = dropdown.value;
+                if (selectedVersion) {
+                    window.location.href = "../" + selectedVersion + "/"; // Redirect to the selected version
+                }
+            });
+        });
+    </script>
 </head>
 <body>
 <!--BEGIN DISABLE_INDEX-->
@@ -70,6 +102,11 @@
                         </div>
                         <!--BEGIN PROJECT_BRIEF-->
                         <div id="projectbrief">$projectbrief</div><!--END PROJECT_BRIEF-->
+                    </td>
+                    <td>
+                        <select id="versionDropdown">
+                            <option value="">Select a version...</option>
+                        </select>
                     </td>
                     <!--END PROJECT_NAME-->
                     <!--BEGIN !PROJECT_NAME-->
