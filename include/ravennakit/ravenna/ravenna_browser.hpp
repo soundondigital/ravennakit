@@ -73,14 +73,14 @@ class ravenna_browser {
      * @param subscriber_to_add The subscriber to add.
      * @return true if the subscriber was added, or false if it was already in the list.
      */
-    [[nodiscard]] bool add_subscriber(subscriber* subscriber_to_add);
+    [[nodiscard]] bool subscribe(subscriber* subscriber_to_add);
 
     /**
      * Removes a subscriber from the browser.
      * @param subscriber_to_remove The subscriber to remove.
      * @return true if the subscriber was removed, or false if it wasn't found.
      */
-    [[nodiscard]] bool remove_subscriber(subscriber* subscriber_to_remove);
+    [[nodiscard]] bool unsubscribe(subscriber* subscriber_to_remove);
 
   private:
     std::unique_ptr<dnssd::dnssd_browser> node_browser_;

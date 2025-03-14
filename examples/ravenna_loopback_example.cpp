@@ -35,7 +35,7 @@ class loopback_example: public rav::rtp_stream_receiver::subscriber{
 
         ravenna_receiver_ = std::make_unique<rav::ravenna_receiver>(*rtsp_client_, *rtp_receiver_);
         ravenna_receiver_->set_delay(480);  // 10ms @ 48kHz
-        if (!ravenna_receiver_->add_subscriber(this)) {
+        if (!ravenna_receiver_->subscribe(this)) {
             RAV_WARNING("Failed to add subscriber");
         }
         ravenna_receiver_->subscribe_to_session(stream_name_);
@@ -77,7 +77,7 @@ class loopback_example: public rav::rtp_stream_receiver::subscriber{
 
     ~loopback_example() override {
         if (ravenna_receiver_ != nullptr) {
-            if (!ravenna_receiver_->remove_subscriber(this)) {
+            if (!ravenna_receiver_->unsubscribe(this)) {
                 RAV_WARNING("Failed to remove subscriber");
             }
         }

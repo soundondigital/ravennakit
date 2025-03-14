@@ -90,13 +90,13 @@ std::future<bool> rav::ravenna_node::set_receiver_delay(id receiver_id, uint32_t
     return asio::dispatch(io_context_, asio::use_future(work));
 }
 
-std::future<void> rav::ravenna_node::add_subscriber(subscriber* subscriber_to_add) {
+std::future<void> rav::ravenna_node::subscribe(subscriber* subscriber_to_add) {
     RAV_ASSERT(subscriber_to_add != nullptr, "Subscriber must be valid");
     auto work = [this, subscriber_to_add] {
         if (!subscribers_.add(subscriber_to_add)) {
             RAV_WARNING("Failed to add subscriber to node");
         }
-        if (!browser_.add_subscriber(subscriber_to_add)) {
+        if (!browser_.subscribe(subscriber_to_add)) {
             RAV_WARNING("Failed to add subscriber to browser");
         }
         for (const auto& receiver : receivers_) {
@@ -106,10 +106,10 @@ std::future<void> rav::ravenna_node::add_subscriber(subscriber* subscriber_to_ad
     return asio::dispatch(io_context_, asio::use_future(work));
 }
 
-std::future<void> rav::ravenna_node::remove_subscriber(subscriber* subscriber_to_remove) {
+std::future<void> rav::ravenna_node::unsubscribe(subscriber* subscriber_to_remove) {
     RAV_ASSERT(subscriber_to_remove != nullptr, "Subscriber must be valid");
     auto work = [this, subscriber_to_remove] {
-        if (!browser_.remove_subscriber(subscriber_to_remove)) {
+        if (!browser_.unsubscribe(subscriber_to_remove)) {
             RAV_WARNING("Failed to remove subscriber from browser");
         }
         if (!subscribers_.remove(subscriber_to_remove)) {
@@ -120,11 +120,11 @@ std::future<void> rav::ravenna_node::remove_subscriber(subscriber* subscriber_to
 }
 
 std::future<void>
-rav::ravenna_node::add_receiver_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber_to_add) {
+rav::ravenna_node::subscribe_to_receiver(id receiver_id, rtp_stream_receiver::subscriber* subscriber_to_add) {
     auto work = [this, receiver_id, subscriber_to_add] {
         for (const auto& receiver : receivers_) {
             if (receiver->get_id() == receiver_id) {
-                if (!receiver->add_subscriber(subscriber_to_add)) {
+                if (!receiver->subscribe(subscriber_to_add)) {
                     RAV_WARNING("Already subscribed");
                 }
                 return;
@@ -136,11 +136,11 @@ rav::ravenna_node::add_receiver_subscriber(id receiver_id, rtp_stream_receiver::
 }
 
 std::future<void>
-rav::ravenna_node::remove_receiver_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber_to_remove) {
+rav::ravenna_node::unsubscribe_from_receiver(id receiver_id, rtp_stream_receiver::subscriber* subscriber_to_remove) {
     auto work = [this, receiver_id, subscriber_to_remove] {
         for (const auto& receiver : receivers_) {
             if (receiver->get_id() == receiver_id) {
-                if (!receiver->remove_subscriber(subscriber_to_remove)) {
+                if (!receiver->unsubscribe(subscriber_to_remove)) {
                     RAV_WARNING("Not subscribed");
                 }
                 return;

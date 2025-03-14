@@ -103,14 +103,14 @@ class rtp_receiver {
      * @param filter The filter to apply to the session.
      * @return true if the subscriber was added, or false if it was already in the list.
      */
-    bool add_subscriber(subscriber* subscriber_to_add, const rtp_session& session, const rtp_filter& filter);
+    bool subscribe(subscriber* subscriber_to_add, const rtp_session& session, const rtp_filter& filter);
 
     /**
      * Removes a subscriber from all sessions of the receiver.
      * @param subscriber_to_remove The subscriber to remove.
      * @return true if the subscriber was removed, or false if it wasn't found.
      */
-    bool remove_subscriber(const subscriber* subscriber_to_remove);
+    bool unsubscribe(const subscriber* subscriber_to_remove);
 
   private:
     struct subscriber_context {

@@ -160,14 +160,14 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
      * @param subscriber The subscriber to add.
      * @return true if the subscriber was added, or false if it was already in the list.
      */
-    [[nodiscard]] bool add_subscriber(subscriber* subscriber);
+    [[nodiscard]] bool subscribe(subscriber* subscriber);
 
     /**
      * Removes a subscriber from the receiver.
      * @param subscriber The subscriber to remove.
      * @return true if the subscriber was removed, or false if it wasn't found.
      */
-    [[nodiscard]] bool remove_subscriber(subscriber* subscriber);
+    [[nodiscard]] bool unsubscribe(subscriber* subscriber);
 
     /**
      * Reads data from the buffer at the given timestamp.

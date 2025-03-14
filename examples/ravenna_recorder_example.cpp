@@ -34,7 +34,7 @@ class stream_recorder: public rav::rtp_stream_receiver::subscriber {
   public:
     explicit stream_recorder(std::unique_ptr<rav::ravenna_receiver> sink) : receiver_(std::move(sink)) {
         if (receiver_) {
-            if (!receiver_->add_subscriber(this)) {
+            if (!receiver_->subscribe(this)) {
                 RAV_WARNING("Failed to add subscriber");
             }
         }
@@ -42,7 +42,7 @@ class stream_recorder: public rav::rtp_stream_receiver::subscriber {
 
     ~stream_recorder() override {
         if (receiver_) {
-            if (!receiver_->remove_subscriber(this)) {
+            if (!receiver_->unsubscribe(this)) {
                 RAV_WARNING("Failed to remove subscriber");
             }
         }

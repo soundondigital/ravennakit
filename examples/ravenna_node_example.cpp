@@ -17,11 +17,11 @@
 
 struct ravenna_node_example final: rav::ravenna_node::subscriber, rav::rtp_stream_receiver::subscriber {
     explicit ravenna_node_example(const rav::rtp_receiver::configuration& config) : node(config) {
-        node.add_subscriber(this).wait();
+        node.subscribe(this).wait();
     }
 
     ~ravenna_node_example() override {
-        node.remove_subscriber(this).wait();
+        node.unsubscribe(this).wait();
     }
 
     void ravenna_node_discovered(const rav::dnssd::dnssd_browser::service_resolved& event) override {

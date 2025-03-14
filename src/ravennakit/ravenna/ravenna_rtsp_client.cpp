@@ -12,13 +12,13 @@
 
 rav::ravenna_rtsp_client::ravenna_rtsp_client(asio::io_context& io_context, ravenna_browser& browser) :
     io_context_(io_context), browser_(browser) {
-    if (!browser_.add_subscriber(this)) {
+    if (!browser_.subscribe(this)) {
         RAV_WARNING("Failed to add subscriber to browser");
     }
 }
 
 rav::ravenna_rtsp_client::~ravenna_rtsp_client() {
-    if (!browser_.remove_subscriber(this)) {
+    if (!browser_.unsubscribe(this)) {
         RAV_WARNING("Failed to remove subscriber from browser");
     }
 }

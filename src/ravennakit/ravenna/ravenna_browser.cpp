@@ -65,7 +65,7 @@ const rav::dnssd::service_description* rav::ravenna_browser::find_node(const std
     return node_browser_->find_service(node_name);
 }
 
-bool rav::ravenna_browser::add_subscriber(subscriber* subscriber_to_add) {
+bool rav::ravenna_browser::subscribe(subscriber* subscriber_to_add) {
     if (subscribers_.add(subscriber_to_add)) {
         for (auto& s : node_browser_->get_services()) {
             if (s.host_target.empty()) {
@@ -85,6 +85,6 @@ bool rav::ravenna_browser::add_subscriber(subscriber* subscriber_to_add) {
     return false;
 }
 
-bool rav::ravenna_browser::remove_subscriber(subscriber* subscriber_to_remove) {
+bool rav::ravenna_browser::unsubscribe(subscriber* subscriber_to_remove) {
     return subscribers_.remove(subscriber_to_remove);
 }

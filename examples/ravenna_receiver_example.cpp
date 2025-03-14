@@ -180,7 +180,7 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber {
 
         ravenna_receiver_ = std::make_unique<rav::ravenna_receiver>(*rtsp_client_, *rtp_receiver_);
         ravenna_receiver_->set_delay(480);
-        if (!ravenna_receiver_->add_subscriber(this)) {
+        if (!ravenna_receiver_->subscribe(this)) {
             RAV_WARNING("Failed to add subscriber");
         }
         ravenna_receiver_->subscribe_to_session(stream_name);
@@ -188,7 +188,7 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber {
 
     ~ravenna_receiver_example() override {
         if (ravenna_receiver_) {
-            if (!ravenna_receiver_->remove_subscriber(this)) {
+            if (!ravenna_receiver_->unsubscribe(this)) {
                 RAV_WARNING("Failed to remove subscriber");
             }
         }

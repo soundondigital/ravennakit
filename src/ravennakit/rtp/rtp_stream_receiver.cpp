@@ -67,7 +67,7 @@ rav::rtp_stream_receiver::rtp_stream_receiver(rtp_receiver& receiver) :
     rtp_receiver_(receiver), maintenance_timer_(receiver.get_io_context()) {}
 
 rav::rtp_stream_receiver::~rtp_stream_receiver() {
-    if (!rtp_receiver_.remove_subscriber(this)) {
+    if (!rtp_receiver_.unsubscribe(this)) {
         RAV_ERROR("Failed to remove subscriber");
     }
     maintenance_timer_.cancel();
@@ -263,7 +263,7 @@ uint32_t rav::rtp_stream_receiver::get_delay() const {
     return delay_;
 }
 
-bool rav::rtp_stream_receiver::add_subscriber(subscriber* subscriber) {
+bool rav::rtp_stream_receiver::subscribe(subscriber* subscriber) {
     if (subscribers_.add(subscriber)) {
         subscriber->rtp_stream_receiver_updated(make_updated_event());
         return true;
@@ -271,7 +271,7 @@ bool rav::rtp_stream_receiver::add_subscriber(subscriber* subscriber) {
     return false;
 }
 
-bool rav::rtp_stream_receiver::remove_subscriber(subscriber* subscriber) {
+bool rav::rtp_stream_receiver::unsubscribe(subscriber* subscriber) {
     return subscribers_.remove(subscriber);
 }
 
@@ -405,7 +405,7 @@ rav::sliding_stats::stats rav::rtp_stream_receiver::get_packet_interval_stats() 
 }
 
 void rav::rtp_stream_receiver::restart() {
-    rtp_receiver_.remove_subscriber(this); // This unsubscribes from all sessions
+    rtp_receiver_.unsubscribe(this); // This unsubscribes from all sessions
 
     if (media_streams_.empty()) {
         set_state(receiver_state::idle, true);
@@ -453,7 +453,7 @@ void rav::rtp_stream_receiver::restart() {
     for (auto& stream : media_streams_) {
         stream.first_packet_timestamp.reset();
         stream.packet_stats.reset();
-        if (!rtp_receiver_.add_subscriber(this, stream.session, stream.filter)) {
+        if (!rtp_receiver_.subscribe(this, stream.session, stream.filter)) {
             RAV_ERROR("Failed to add subscriber");
         }
     }

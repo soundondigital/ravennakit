@@ -42,7 +42,7 @@ asio::io_context& rav::rtp_receiver::get_io_context() const {
     return io_context_;
 }
 
-bool rav::rtp_receiver::add_subscriber(subscriber* subscriber_to_add, const rtp_session& session, const rtp_filter& filter) {
+bool rav::rtp_receiver::subscribe(subscriber* subscriber_to_add, const rtp_session& session, const rtp_filter& filter) {
     auto* context = find_or_create_session_context(session);
 
     if (context == nullptr) {
@@ -55,7 +55,7 @@ bool rav::rtp_receiver::add_subscriber(subscriber* subscriber_to_add, const rtp_
     return context->subscribers.add_or_update_context(subscriber_to_add, subscriber_context {filter});
 }
 
-bool rav::rtp_receiver::remove_subscriber(const subscriber* subscriber_to_remove) {
+bool rav::rtp_receiver::unsubscribe(const subscriber* subscriber_to_remove) {
     size_t count = 0;
     for (auto it = sessions_contexts_.begin(); it != sessions_contexts_.end();) {
         if (it->subscribers.remove(subscriber_to_remove)) {

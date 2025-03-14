@@ -93,14 +93,14 @@ class ravenna_node {
      * This method can be called from any thread, and will wait until the operation is complete.
      * @param subscriber_to_add The subscriber to add.
      */
-    [[nodiscard]] std::future<void> add_subscriber(subscriber* subscriber_to_add);
+    [[nodiscard]] std::future<void> subscribe(subscriber* subscriber_to_add);
 
     /**
      * Removes a subscriber from the node.
      * This method can be called from any thread, and will wait until the operation is complete.
      * @param subscriber_to_remove The subscriber to remove.
      */
-    [[nodiscard]] std::future<void> remove_subscriber(subscriber* subscriber_to_remove);
+    [[nodiscard]] std::future<void> unsubscribe(subscriber* subscriber_to_remove);
 
     /**
      * Adds a subscriber to the receiver with the given id.
@@ -108,7 +108,8 @@ class ravenna_node {
      * @param subscriber_to_add The subscriber to add.
      * @return A future that will be set when the operation is complete.
      */
-    [[nodiscard]] std::future<void> add_receiver_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber_to_add);
+    [[nodiscard]] std::future<void>
+    subscribe_to_receiver(id receiver_id, rtp_stream_receiver::subscriber* subscriber_to_add);
 
     /**
      * Removes a subscriber from the receiver with the given id.
@@ -116,7 +117,8 @@ class ravenna_node {
      * @param subscriber_to_remove The subscriber to remove.
      * @return A future that will be set when the operation is complete.
      */
-    [[nodiscard]] std::future<void> remove_receiver_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber_to_remove);
+    [[nodiscard]] std::future<void>
+    unsubscribe_from_receiver(id receiver_id, rtp_stream_receiver::subscriber* subscriber_to_remove);
 
     /**
      * Get the packet statistics for the given stream, if the stream for the given ID exists.
@@ -131,7 +133,8 @@ class ravenna_node {
      * @param receiver_id The id of the receiver to get the receiver for.
      * @param update_function The function to call with the receiver.
      */
-    [[nodiscard]] std::future<bool> get_receiver(id receiver_id, std::function<void(ravenna_receiver&)> update_function);
+    [[nodiscard]] std::future<bool>
+    get_receiver(id receiver_id, std::function<void(ravenna_receiver&)> update_function);
 
     /**
      * Get the SDP for the receiver with the given id.
