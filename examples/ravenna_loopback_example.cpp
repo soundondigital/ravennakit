@@ -25,7 +25,7 @@
 
 #include <CLI/App.hpp>
 
-class loopback_example: public rav::rtp_stream_receiver::subscriber, public rav::rtp_stream_receiver::data_callback {
+class loopback_example: public rav::rtp_stream_receiver::subscriber{
   public:
     explicit loopback_example(std::string stream_name, const asio::ip::address_v4& interface_addr) :
         stream_name_(std::move(stream_name)) {
@@ -35,9 +35,6 @@ class loopback_example: public rav::rtp_stream_receiver::subscriber, public rav:
 
         ravenna_receiver_ = std::make_unique<rav::ravenna_receiver>(*rtsp_client_, *rtp_receiver_);
         ravenna_receiver_->set_delay(480);  // 10ms @ 48kHz
-        if (!ravenna_receiver_->add_data_callback(this)) {
-            RAV_WARNING("Failed to add data callback");
-        }
         if (!ravenna_receiver_->add_subscriber(this)) {
             RAV_WARNING("Failed to add subscriber");
         }
@@ -82,9 +79,6 @@ class loopback_example: public rav::rtp_stream_receiver::subscriber, public rav:
         if (ravenna_receiver_ != nullptr) {
             if (!ravenna_receiver_->remove_subscriber(this)) {
                 RAV_WARNING("Failed to remove subscriber");
-            }
-            if (!ravenna_receiver_->remove_data_callback(this)) {
-                RAV_WARNING("Failed to remove data callback");
             }
         }
     }

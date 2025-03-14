@@ -117,22 +117,6 @@ class ravenna_node {
     [[nodiscard]] std::future<void> remove_receiver_subscriber(id receiver_id, rtp_stream_receiver::subscriber* subscriber_to_remove);
 
     /**
-     * Adds a data callback to the receiver with the given id.
-     * @param receiver_id The id of the receiver to add the callback to.
-     * @param callback The callback to add.
-     * @return A future that will be set when the operation is complete.
-     */
-    [[nodiscard]] std::future<void> add_receiver_data_callback(id receiver_id, rtp_stream_receiver::data_callback* callback);
-
-    /**
-     * Removes a data callback from the receiver with the given id.
-     * @param receiver_id The id of the receiver to remove the callback from.
-     * @param callback The callback to remove.
-     * @return A future that will be set when the operation is complete.
-     */
-    [[nodiscard]] std::future<void> remove_receiver_data_callback(id receiver_id, rtp_stream_receiver::data_callback* callback);
-
-    /**
      * Get the packet statistics for the given stream, if the stream for the given ID exists.
      * @param receiver_id The ID of the stream to get the packet statistics for.
      * @return The packet statistics for the stream, or an empty structure if the stream doesn't exist.

@@ -166,7 +166,7 @@ class portaudio_stream {
     }
 };
 
-class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber, rav::rtp_stream_receiver::data_callback {
+class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber {
   public:
     explicit ravenna_receiver_example(
         const std::string& stream_name, std::string audio_device_name, const std::string& interface_address
@@ -180,9 +180,6 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber, rav
 
         ravenna_receiver_ = std::make_unique<rav::ravenna_receiver>(*rtsp_client_, *rtp_receiver_);
         ravenna_receiver_->set_delay(480);
-        if (!ravenna_receiver_->add_data_callback(this)) {
-            RAV_WARNING("Failed to add data callback");
-        }
         if (!ravenna_receiver_->add_subscriber(this)) {
             RAV_WARNING("Failed to add subscriber");
         }
@@ -193,9 +190,6 @@ class ravenna_receiver_example: public rav::rtp_stream_receiver::subscriber, rav
         if (ravenna_receiver_) {
             if (!ravenna_receiver_->remove_subscriber(this)) {
                 RAV_WARNING("Failed to remove subscriber");
-            }
-            if (!ravenna_receiver_->remove_data_callback(this)) {
-                RAV_WARNING("Failed to remove data callback");
             }
         }
     }

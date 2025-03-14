@@ -83,20 +83,13 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
 
         /**
          * Called when the stream has changed.
+         *
+         * Note: this will be called from the maintenance thread, so you might have to synchronize access to shared
+         * data.
+         *
          * @param event The event.
          */
         virtual void rtp_stream_receiver_updated([[maybe_unused]] const stream_updated_event& event) {}
-    };
-
-    /**
-     * Baseclass for other classes which want to receive data from the stream receiver.
-     * Callbacks are called from the network receive thread, which might need to be synchronized.
-     * Using this callback class is not mandatory as the rtp_stream_receiver allow to pull data from the buffer using
-     * the `read_data` method.
-     */
-    class data_callback {
-      public:
-        virtual ~data_callback() = default;
 
         /**
          * Called when new data has been received.
@@ -114,7 +107,9 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
          * Called when data is ready to be consumed.
          *
          * The timestamp will be the timestamp of the packet which triggered this event, minus the delay. This makes it
-         * convenient for consumers to read data from the buffer when the delay has passed.
+         * convenient for consumers to read data from the buffer when the delay has passed. There will be no gaps in
+         * timestamp as newer packets will trigger this event for lost packets, and out of order packet (which are
+         * basically lost, not lost but late packets) will be ignored.
          *
          * Note: this is called from the network receive thread. You might have to synchronize access to shared data.
          *
@@ -173,20 +168,6 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
      * @return true if the subscriber was removed, or false if it wasn't found.
      */
     [[nodiscard]] bool remove_subscriber(subscriber* subscriber);
-
-    /**
-     * Adds a callback to the receiver.
-     * @param callback The callback to add.
-     * @return true if the callback was added, or false if it was already added.
-     */
-    [[nodiscard]] bool add_data_callback(data_callback* callback);
-
-    /**
-     * Removes a data callback from the receiver.
-     * @param callback The callback to remove.
-     * @return true if the callback was removed, or false if it wasn't found.
-     */
-    [[nodiscard]] bool remove_data_callback(data_callback* callback);
 
     /**
      * Reads data from the buffer at the given timestamp.
@@ -260,7 +241,6 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     receiver_state state_ {receiver_state::idle};
     std::vector<media_stream> media_streams_;
     subscriber_list<subscriber> subscribers_;
-    subscriber_list<data_callback> data_callbacks_;
     asio::steady_timer maintenance_timer_;
     exclusive_access_guard realtime_access_guard_;
 

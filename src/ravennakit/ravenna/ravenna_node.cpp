@@ -143,38 +143,6 @@ rav::ravenna_node::remove_receiver_subscriber(id receiver_id, rtp_stream_receive
     return asio::dispatch(io_context_, asio::use_future(work));
 }
 
-std::future<void>
-rav::ravenna_node::add_receiver_data_callback(id receiver_id, rtp_stream_receiver::data_callback* callback) {
-    auto work = [this, receiver_id, callback] {
-        for (const auto& receiver : receivers_) {
-            if (receiver->get_id() == receiver_id) {
-                if (!receiver->add_data_callback(callback)) {
-                    RAV_WARNING("Already subscribed");
-                }
-                return;
-            }
-        }
-        RAV_WARNING("Stream not found");
-    };
-    return asio::dispatch(io_context_, asio::use_future(work));
-}
-
-std::future<void>
-rav::ravenna_node::remove_receiver_data_callback(id receiver_id, rtp_stream_receiver::data_callback* callback) {
-    auto work = [this, receiver_id, callback] {
-        for (const auto& receiver : receivers_) {
-            if (receiver->get_id() == receiver_id) {
-                if (!receiver->remove_data_callback(callback)) {
-                    RAV_WARNING("Not subscribed");
-                }
-                return;
-            }
-        }
-        // Don't warn about not finding the stream, as the stream might have already been removed.
-    };
-    return asio::dispatch(io_context_, asio::use_future(work));
-}
-
 std::future<rav::rtp_stream_receiver::stream_stats> rav::ravenna_node::get_stats_for_receiver(id receiver_id) {
     auto work = [this, receiver_id] {
         for (const auto& receiver : receivers_) {

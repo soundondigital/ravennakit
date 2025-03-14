@@ -273,14 +273,6 @@ bool rav::rtp_stream_receiver::remove_subscriber(subscriber* subscriber) {
     return subscribers_.remove(subscriber);
 }
 
-bool rav::rtp_stream_receiver::add_data_callback(data_callback* callback) {
-    return data_callbacks_.add(callback);
-}
-
-bool rav::rtp_stream_receiver::remove_data_callback(data_callback* callback) {
-    return data_callbacks_.remove(callback);
-}
-
 std::optional<uint32_t> rav::rtp_stream_receiver::read_data_realtime(
     uint8_t* buffer, const size_t buffer_size, const std::optional<uint32_t> at_timestamp
 ) {
@@ -547,7 +539,7 @@ void rav::rtp_stream_receiver::handle_rtp_packet_event_for_session(
     if (const auto diff = stream.seq.update(event.packet.sequence_number())) {
         if (diff >= 1) {
             // Only call back with monotonically increasing sequence numbers
-            for (const auto& c : data_callbacks_) {
+            for (const auto& c : subscribers_) {
                 c->on_data_received(packet_timestamp);
             }
         }
@@ -555,7 +547,7 @@ void rav::rtp_stream_receiver::handle_rtp_packet_event_for_session(
         if (packet_timestamp - delay_ >= *stream.first_packet_timestamp) {
             // Make sure to call with the correct timestamps for the missing packets
             for (uint16_t i = 0; i < *diff; ++i) {
-                for (const auto& c : data_callbacks_) {
+                for (const auto& c : subscribers_) {
                     c->on_data_ready(packet_timestamp - delay_ - (*diff - 1u - i) * stream.packet_time_frames);
                 }
             }
