@@ -30,7 +30,7 @@ def replace_in_file(source_file, destination_file, old_string, new_string):
 def doxygen_docs():
     replace_in_file(script_dir / 'assets' / 'footer.html.template',
                     script_dir / 'assets' / 'footer.html',
-                    '%CUSTOM_FOOTER_TEXT%', f'RAVENNAKIT version {git_version} on branch {git_branch}')
+                    '%CUSTOM_FOOTER_TEXT%', f'RAVENNAKIT version {git_version}')
     # Generate html docs
     subprocess.run(['doxygen', 'Doxyfile'], cwd=script_dir, check=True)
 
