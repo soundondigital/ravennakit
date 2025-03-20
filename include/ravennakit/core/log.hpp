@@ -107,7 +107,7 @@
         RAV_CRITICAL("unknown exception caucght - please handle your exceptions before reaching this point."); \
     }
 
-namespace rav::log {
+namespace rav {
 
 /**
  * Tries to find given environment variable and set the log level accordingly.
@@ -124,7 +124,7 @@ namespace rav::log {
  * TODO: Implement log level setting for fmt.
  * @param env_var The environment variable to read the log level from.
  */
-inline void set_level_from_env(const char* env_var = "RAV_LOG_LEVEL") {
+inline void set_log_level_from_env(const char* env_var = "RAV_LOG_LEVEL") {
     if (const auto env_value = rav::env::get(env_var)) {
 #if RAV_ENABLE_SPDLOG
         if (string_compare_case_insensitive(*env_value, "TRACE")) {

@@ -13,6 +13,6 @@
 #include "ravennakit/core/log.hpp"
 
 int main(const int argc, char* argv[]) {
-    rav::log::set_level_from_env();
+    rav::set_log_level_from_env();
     return Catch::Session().run(argc, argv);
 }

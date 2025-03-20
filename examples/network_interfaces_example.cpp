@@ -17,7 +17,7 @@
  */
 
 int main() {
-    rav::log::set_level_from_env();
+    rav::set_log_level_from_env();
     rav::do_system_checks();
 
     auto ifaces = rav::network_interface::get_all();

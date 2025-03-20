@@ -27,7 +27,7 @@ static bool parse_txt_record(rav::dnssd::txt_record& txt_record, const std::stri
 }  // namespace examples
 
 int main(int const argc, char* argv[]) {
-    rav::log::set_level_from_env();
+    rav::set_log_level_from_env();
     rav::do_system_checks();
 
     std::vector<std::string> args;

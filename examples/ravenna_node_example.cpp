@@ -56,7 +56,7 @@ struct ravenna_node final: rav::ravenna_node::subscriber, rav::rtp::rtp_stream_r
 }  // namespace examples
 
 int main(int const argc, char* argv[]) {
-    rav::log::set_level_from_env();
+    rav::set_log_level_from_env();
     rav::do_system_checks();
 
     CLI::App app {"RAVENNA Receiver example"};

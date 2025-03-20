@@ -95,7 +95,7 @@ class wav_file_player {
  * a wav file on disk and sending it as multicast audio packets.
  */
 int main(int const argc, char* argv[]) {
-    rav::log::set_level_from_env();
+    rav::set_log_level_from_env();
     rav::do_system_checks();
 
     CLI::App app {"RAVENNA Player example"};

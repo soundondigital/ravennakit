@@ -6,7 +6,7 @@
 #include <string>
 
 int main(const int argc, char* argv[]) {
-    rav::log::set_level_from_env();
+    rav::set_log_level_from_env();
     rav::do_system_checks();
 
     if (argc < 2) {
