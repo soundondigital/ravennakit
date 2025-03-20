@@ -10,7 +10,7 @@
 
 #pragma once
 
-namespace rav::rtp::constants {
+namespace rav::rtp {
 
 constexpr auto k_ssrc_length = 4;
 constexpr auto k_rtp_timestamp_length_length = 4;

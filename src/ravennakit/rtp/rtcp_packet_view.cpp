@@ -18,7 +18,7 @@ constexpr size_t kSenderReportNtpTimestampFullLength = kSenderReportNtpTimestamp
 constexpr size_t kSenderReportPacketCountLength = 4;
 constexpr size_t kSenderReportOctetCountLength = 4;
 constexpr size_t kSenderInfoLength = kSenderReportNtpTimestampFullLength
-    + rav::rtp::constants::k_rtp_timestamp_length_length + kSenderReportPacketCountLength
+    + rav::rtp::k_rtp_timestamp_length_length + kSenderReportPacketCountLength
     + kSenderReportOctetCountLength;
 }  // namespace
 
@@ -127,7 +127,7 @@ uint32_t rav::rtcp::rtcp_packet_view::rtp_timestamp() const {
     }
 
     constexpr auto offset = kHeaderLength + kSenderReportNtpTimestampFullLength;
-    if (size_bytes_ < offset + rtp::constants::k_rtp_timestamp_length_length) {
+    if (size_bytes_ < offset + rtp::k_rtp_timestamp_length_length) {
         return {};
     }
 
@@ -139,7 +139,7 @@ uint32_t rav::rtcp::rtcp_packet_view::packet_count() const {
         return {};
     }
 
-    constexpr auto offset = kHeaderLength + kSenderReportNtpTimestampFullLength + rtp::constants::k_rtp_timestamp_length_length;
+    constexpr auto offset = kHeaderLength + kSenderReportNtpTimestampFullLength + rtp::k_rtp_timestamp_length_length;
     if (size_bytes_ < offset + kSenderReportPacketCountLength) {
         return {};
     }
@@ -153,7 +153,7 @@ uint32_t rav::rtcp::rtcp_packet_view::octet_count() const {
     }
 
     constexpr auto offset =
-        kHeaderLength + kSenderReportNtpTimestampFullLength + rtp::constants::k_rtp_timestamp_length_length + kSenderReportOctetCountLength;
+        kHeaderLength + kSenderReportNtpTimestampFullLength + rtp::k_rtp_timestamp_length_length + kSenderReportOctetCountLength;
     if (size_bytes_ < offset + kSenderReportOctetCountLength) {
         return {};
     }
