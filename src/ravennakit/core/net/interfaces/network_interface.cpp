@@ -253,7 +253,7 @@ tl::expected<std::vector<rav::NetworkInterface>, int> rav::NetworkInterface::get
     #elif RAV_LINUX
             } else if (ifa->ifa_addr->sa_family == AF_PACKET) {
                 const sockaddr_ll* sdl = reinterpret_cast<struct sockaddr_ll*>(ifa->ifa_addr);
-                it->mac_address_ = mac_address(sdl->sll_addr);
+                it->mac_address_ = MacAddress(sdl->sll_addr);
     #endif
             }
         }

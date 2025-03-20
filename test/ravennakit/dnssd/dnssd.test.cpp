@@ -29,9 +29,9 @@ TEST_CASE("dnssd | Browse and advertise") {
     SECTION("On systems other than Apple and Windows, dnssd is not implemented") {
 #if !RAV_HAS_DNSSD
         asio::io_context io_context;
-        auto advertiser = rav::dnssd::dnssd_advertiser::create(io_context);
+        auto advertiser = rav::dnssd::Advertiser::create(io_context);
         REQUIRE_FALSE(advertiser);
-        auto browser = rav::dnssd::dnssd_browser::create(io_context);
+        auto browser = rav::dnssd::Browser::create(io_context);
         REQUIRE_FALSE(browser);
 #endif
     }
