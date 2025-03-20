@@ -17,7 +17,7 @@ std::unique_ptr<rav::dnssd::Browser> rav::dnssd::Browser::create(asio::io_contex
     return std::make_unique<BonjourBrowser>(io_context);
 #elif RAV_WINDOWS
     if (dnssd::is_bonjour_service_running()) {
-        return std::make_unique<bonjour_browser>(io_context);
+        return std::make_unique<BonjourBrowser>(io_context);
     } else {
         return {};
     }

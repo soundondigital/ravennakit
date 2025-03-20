@@ -195,7 +195,7 @@ const char* rav::NetworkInterface::type_to_string(const Type type) {
 }
 
 #if HAS_WIN32
-[[maybe_unused]] IF_LUID rav::network_interface::get_interface_luid() {
+[[maybe_unused]] IF_LUID rav::NetworkInterface::get_interface_luid() {
     return if_luid_;
 }
 #endif
@@ -332,7 +332,7 @@ tl::expected<std::vector<rav::NetworkInterface>, int> rav::NetworkInterface::get
 
         auto it = std::find_if(
             network_interfaces.begin(), network_interfaces.end(),
-            [&adapter_name](const network_interface& network_interface) {
+            [&adapter_name](const NetworkInterface& network_interface) {
                 return network_interface.identifier_ == adapter_name;
             }
         );
@@ -347,7 +347,7 @@ tl::expected<std::vector<rav::NetworkInterface>, int> rav::NetworkInterface::get
         it->capabilities_.multicast = !(adapter->Flags & IP_ADAPTER_NO_MULTICAST);
 
         if (adapter->PhysicalAddressLength == 6) {
-            it->mac_address_ = mac_address(adapter->PhysicalAddress);
+            it->mac_address_ = MacAddress(adapter->PhysicalAddress);
         } else if (adapter->PhysicalAddressLength > 0) {
             RAV_WARNING("Unknown physical address length ({})", adapter->PhysicalAddressLength);
         }
@@ -368,16 +368,16 @@ tl::expected<std::vector<rav::NetworkInterface>, int> rav::NetworkInterface::get
 
         switch (adapter->IfType) {
             case IF_TYPE_ETHERNET_CSMACD:
-                it->type_ = type::wired_ethernet;
+                it->type_ = Type::wired_ethernet;
                 break;
             case IF_TYPE_SOFTWARE_LOOPBACK:
-                it->type_ = type::loopback;
+                it->type_ = Type::loopback;
                 break;
             case IF_TYPE_IEEE80211:
-                it->type_ = type::wifi;
+                it->type_ = Type::wifi;
                 break;
             default:
-                it->type_ = type::other;
+                it->type_ = Type::other;
         }
     }
 #endif

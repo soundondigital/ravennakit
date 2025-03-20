@@ -35,7 +35,7 @@ class wsa_recv_msg_function {
      */
     wsa_recv_msg_function() {
         SOCKET temp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        rav::defer defer_closing_socket([&temp_sock] {
+        rav::Defer defer_closing_socket([&temp_sock] {
             closesocket(temp_sock);
         });
         DWORD bytes_returned = 0;

@@ -51,7 +51,7 @@ size_t receive_from_socket(
         ec = asio::error_code(WSAGetLastError(), asio::system_category());
         return 0;
     }
-    recv_time = rav::high_resolution_clock::now();
+    recv_time = rav::HighResolutionClock::now();
 
     if (src_addr.sa_family == AF_INET) {
         const auto* addr_in = reinterpret_cast<const sockaddr_in*>(&src_addr);

@@ -50,7 +50,7 @@ rav::AudioBuffer<T> get_test_buffer(const size_t num_channels, const size_t num_
     int value = 1;
     for (size_t ch = 0; ch < num_channels; ch++) {
         for (size_t sample = 0; sample < num_frames; sample++) {
-            buffer.set_sample(ch, sample, value++);
+            buffer.set_sample(ch, sample, T(value++));
         }
     }
 

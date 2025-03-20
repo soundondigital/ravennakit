@@ -18,7 +18,7 @@ std::unique_ptr<rav::dnssd::Advertiser> rav::dnssd::Advertiser::create(asio::io_
     return std::make_unique<BonjourAdvertiser>(io_context);
 #elif RAV_WINDOWS
     if (dnssd::is_bonjour_service_running()) {
-        return std::make_unique<bonjour_advertiser>(io_context);
+        return std::make_unique<BonjourAdvertiser>(io_context);
     } else {
         return {};
     }
