@@ -14,7 +14,7 @@
 
 TEST_CASE("rtp_filter") {
     const auto connection_address = asio::ip::make_address("239.3.8.1");
-    rav::rtp::rtp_filter filter(connection_address);
+    rav::rtp::Filter filter(connection_address);
     SECTION("matches") {
         REQUIRE(filter.connection_address() == connection_address);
     }

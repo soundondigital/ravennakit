@@ -16,7 +16,7 @@
 
 TEST_CASE("rtp_packet") {
     SECTION("Encode an RTP packet 2 times") {
-        rav::rtp::rtp_packet packet;
+        rav::rtp::Packet packet;
         packet.payload_type(0xff);
         packet.sequence_number(0x0012);
         packet.timestamp(0x00003456);

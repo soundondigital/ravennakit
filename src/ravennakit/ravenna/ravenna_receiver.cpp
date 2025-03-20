@@ -12,8 +12,8 @@
 #include "ravennakit/core/util/todo.hpp"
 #include "ravennakit/rtp/detail/rtp_filter.hpp"
 
-rav::RavennaReceiver::RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::rtp_receiver& rtp_receiver) :
-    rtp_stream_receiver(rtp_receiver), rtsp_client_(rtsp_client) {}
+rav::RavennaReceiver::RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::Receiver& rtp_receiver) :
+    StreamReceiver(rtp_receiver), rtsp_client_(rtsp_client) {}
 
 rav::RavennaReceiver::~RavennaReceiver() {
     std::ignore = rtsp_client_.unsubscribe_from_all_sessions(this);

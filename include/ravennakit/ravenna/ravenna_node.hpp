@@ -62,7 +62,7 @@ class RavennaNode {
         virtual void ravenna_receiver_removed([[maybe_unused]] id receiver_id) {}
     };
 
-    explicit RavennaNode(rtp::rtp_receiver::configuration config);
+    explicit RavennaNode(rtp::Receiver::Configuration config);
     ~RavennaNode();
 
     /**
@@ -109,7 +109,7 @@ class RavennaNode {
      * @return A future that will be set when the operation is complete.
      */
     [[nodiscard]] std::future<void>
-    subscribe_to_receiver(id receiver_id, rtp::rtp_stream_receiver::subscriber* subscriber_to_add);
+    subscribe_to_receiver(id receiver_id, rtp::StreamReceiver::Subscriber* subscriber_to_add);
 
     /**
      * Removes a subscriber from the receiver with the given id.
@@ -118,14 +118,14 @@ class RavennaNode {
      * @return A future that will be set when the operation is complete.
      */
     [[nodiscard]] std::future<void>
-    unsubscribe_from_receiver(id receiver_id, rtp::rtp_stream_receiver::subscriber* subscriber_to_remove);
+    unsubscribe_from_receiver(id receiver_id, rtp::StreamReceiver::Subscriber* subscriber_to_remove);
 
     /**
      * Get the packet statistics for the given stream, if the stream for the given ID exists.
      * @param receiver_id The ID of the stream to get the packet statistics for.
      * @return The packet statistics for the stream, or an empty structure if the stream doesn't exist.
      */
-    [[nodiscard]] std::future<rtp::rtp_stream_receiver::stream_stats> get_stats_for_receiver(id receiver_id);
+    [[nodiscard]] std::future<rtp::StreamReceiver::StreamStats> get_stats_for_receiver(id receiver_id);
 
     /**
      * Calls back with the ravenna receiver for the given receiver id. If the stream is not found, the callback will not
@@ -230,7 +230,7 @@ class RavennaNode {
 
     RavennaBrowser browser_ {io_context_};
     RavennaRtspClient rtsp_client_ {io_context_, browser_};
-    std::unique_ptr<rtp::rtp_receiver> rtp_receiver_;
+    std::unique_ptr<rtp::Receiver> rtp_receiver_;
 
     std::vector<std::unique_ptr<RavennaReceiver>> receivers_;
     subscriber_list<Subscriber> subscribers_;

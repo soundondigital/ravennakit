@@ -21,9 +21,9 @@
 
 namespace rav::rtcp {
 
-class rtcp_packet_view {
+class PacketView {
   public:
-    enum class packet_type {
+    enum class PacketType {
         /// Unknown packet type
         unknown,
         /// Sender report, for transmission and reception statistics from participants that are active senders
@@ -39,14 +39,14 @@ class rtcp_packet_view {
         app
     };
 
-    rtcp_packet_view() = default;
+    PacketView() = default;
 
     /**
      * Constructs an RTCP packet view from the given data.
      * @param data The RTCP packet data.
      * @param size_bytes The size of the RTCP packet in bytes.
      */
-    rtcp_packet_view(const uint8_t* data, size_t size_bytes);
+    PacketView(const uint8_t* data, size_t size_bytes);
 
     /**
      * Validates the RTP header data. After this method returns all other methods should return valid data and not lead
@@ -74,7 +74,7 @@ class rtcp_packet_view {
     /**
      * @return The packet type
      */
-    [[nodiscard]] packet_type type() const;
+    [[nodiscard]] PacketType type() const;
 
     /**
      * @returns The reported length of this RTCP packet in 32-bit words as encoded inside the data. While the length is
@@ -113,7 +113,7 @@ class rtcp_packet_view {
      * @param index The index of the report block to get.
      * @return The report block.
      */
-    [[nodiscard]] rtcp_report_block_view get_report_block(size_t index) const;
+    [[nodiscard]] ReportBlockView get_report_block(size_t index) const;
 
     /**
      * @returns The profile specific extension data, or an empty buffer if no extension data is present.
@@ -123,7 +123,7 @@ class rtcp_packet_view {
     /**
      * @return The next RTCP packet in the buffer, or an empty (invalid) view if no more packets are available.
      */
-    [[nodiscard]] rtcp_packet_view get_next_packet() const;
+    [[nodiscard]] PacketView get_next_packet() const;
 
     /**
      * @returns The pointer to the data, or nullptr if not pointing to any data.
@@ -144,7 +144,7 @@ class rtcp_packet_view {
      * @param packet_type The type to get a string representation for.
      * @return A string representation of given packet type.
      */
-    static const char* packet_type_to_string(packet_type packet_type);
+    static const char* packet_type_to_string(PacketType packet_type);
 
   private:
     const uint8_t* data_ {};

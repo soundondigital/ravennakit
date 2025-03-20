@@ -15,7 +15,7 @@
 
 TEST_CASE("rtp_packet_stats") {
     SECTION("Basic sequence") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(10);
         stats.update(11);
         stats.update(12);
@@ -29,7 +29,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Drop one packet") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(10);
         stats.update(12);
         auto totals = stats.get_total_counts();
@@ -49,7 +49,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Drop two packets") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(10);
         stats.update(13);
         auto totals = stats.get_total_counts();
@@ -79,7 +79,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("A packet older than the first packet is dropped") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(10);
         // Ideally this packet should not be marked duplicate, but I can;t think of a simple, clean and easy way to
         // implement this so for now we just mark it as duplicate. The chance of this happening is very low anyway.
@@ -92,7 +92,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Too old") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(10);
         stats.update(11);
         stats.update(12);
@@ -108,7 +108,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Drop, out of order, duplicates and too old") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(10);
         stats.update(15);
         stats.update(10);  // Duplicate
@@ -130,7 +130,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Test wrap around") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(0xffff - 2);
         stats.update(0xffff - 1);
         stats.update(0xffff);
@@ -143,7 +143,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Test wrap around with drop") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(0xffff - 2);
         stats.update(0xffff - 1);
         stats.update(0xffff);
@@ -160,7 +160,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Test wrap around with drop, out of order, duplicates and too old") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(0xffff - 2);
         stats.update(0x1);         // Jumping 4 packets
         stats.update(0x1);         // Duplicate
@@ -178,7 +178,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Mark too late") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(1);
         stats.mark_packet_too_late(0);
         stats.mark_packet_too_late(1);
@@ -200,7 +200,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Count 1 for every case") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(1);
         stats.update(4);
         stats.update(3);  // Out of order
@@ -222,7 +222,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Handling duplicates across the window") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(100);
         stats.update(101);
         stats.update(101);
@@ -237,7 +237,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Extreme out-of-order packets") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(200);
         stats.update(205);
         stats.update(202);
@@ -248,7 +248,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Reset behavior") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(10);
         stats.update(12);
         stats.update(14);
@@ -262,7 +262,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Reset with new window size") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(1);
         stats.update(2);
         stats.update(3);
@@ -270,7 +270,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Marking packets too late before arrival") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.mark_packet_too_late(50);
         stats.update(50);
         stats.mark_packet_too_late(50);
@@ -279,7 +279,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Continuous window updates with wraparound") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         for (uint16_t i = 0; i < 10; i++) {
             stats.update(0xfff0 + i * 2);
         }
@@ -288,7 +288,7 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Handling maximum window size") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
         stats.update(0);
         stats.update(32767);
         auto totals = stats.get_total_counts();
@@ -306,12 +306,12 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Test specific bug where the amount duplicates drops would suddenly jump to weird numbers") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
 
         for (uint16_t i = 0; i < 0xffff; i++) {
             stats.update(i);
             INFO("i: " << i);
-            REQUIRE(stats.get_total_counts() == rav::rtp::rtp_packet_stats::counters {});
+            REQUIRE(stats.get_total_counts() == rav::rtp::PacketStats::Counters {});
         }
 
         stats.reset();
@@ -319,12 +319,12 @@ TEST_CASE("rtp_packet_stats") {
         for (uint16_t i = 0; i < 0xffff; i++) {
             stats.update(i);
             INFO("i: " << i);
-            REQUIRE(stats.get_total_counts() == rav::rtp::rtp_packet_stats::counters {});
+            REQUIRE(stats.get_total_counts() == rav::rtp::PacketStats::Counters {});
         }
     }
 
     SECTION("Run couple of sequences, count drops") {
-        rav::rtp::rtp_packet_stats stats;
+        rav::rtp::PacketStats stats;
 
         size_t dropped = 0;
         for (size_t i = 0; i < 3 * 0x10000; i++) {
@@ -341,8 +341,8 @@ TEST_CASE("rtp_packet_stats") {
     }
 
     SECTION("Add counters") {
-        rav::rtp::rtp_packet_stats::counters a {1, 2, 3, 4};
-        rav::rtp::rtp_packet_stats::counters b {1, 2, 3, 4};
+        rav::rtp::PacketStats::Counters a {1, 2, 3, 4};
+        rav::rtp::PacketStats::Counters b {1, 2, 3, 4};
         auto c = a + b;
         REQUIRE(c.out_of_order == 2);
         REQUIRE(c.duplicates == 4);
@@ -352,7 +352,7 @@ TEST_CASE("rtp_packet_stats") {
 
     SECTION("Test packet drop expiry") {
         SECTION("A packet can arrive during half the window") {
-            rav::rtp::rtp_packet_stats stats;
+            rav::rtp::PacketStats stats;
             stats.update(10);
             // Progress half a window, use uint32_t to allow for wrap around
             for (uint32_t i = 12; i < 0xffff / 2 + 12; i++) {
@@ -368,7 +368,7 @@ TEST_CASE("rtp_packet_stats") {
         }
 
         SECTION("But after that a packet is considered newer and will be discarded") {
-            rav::rtp::rtp_packet_stats stats;
+            rav::rtp::PacketStats stats;
             stats.update(10);
             // Progress half a window, use uint32_t to allow for wrap around
             for (uint32_t i = 12; i < 0xffff / 2 + 13; i++) {
@@ -386,7 +386,7 @@ TEST_CASE("rtp_packet_stats") {
 
     SECTION("Test marking packet too late expiry") {
         SECTION("Within the window") {
-            rav::rtp::rtp_packet_stats stats;
+            rav::rtp::PacketStats stats;
             stats.update(10);
             // Progress half a window, use uint32_t to allow for wrap around
             for (uint32_t i = 12; i < 0xffff / 2 + 12; i++) {
@@ -400,7 +400,7 @@ TEST_CASE("rtp_packet_stats") {
         }
 
         SECTION("Outside the window") {
-            rav::rtp::rtp_packet_stats stats;
+            rav::rtp::PacketStats stats;
             stats.update(10);
             // Progress half a window, use uint32_t to allow for wrap around
             for (uint32_t i = 12; i < 0xffff / 2 + 13; i++) {

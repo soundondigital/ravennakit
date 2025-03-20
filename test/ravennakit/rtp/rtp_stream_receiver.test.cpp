@@ -14,6 +14,6 @@
 
 TEST_CASE("rtp_stream_receiver") {
     asio::io_context io_context;
-    rav::rtp::rtp_receiver receiver(io_context, {});
-    rav::rtp::rtp_stream_receiver stream_receiver(receiver);
+    rav::rtp::Receiver receiver(io_context, {});
+    rav::rtp::StreamReceiver stream_receiver(receiver);
 }

@@ -18,9 +18,9 @@ namespace rav::rtp {
 /**
  * This class holds state for an RTP packet and provides methods to encode it into a stream.
  */
-class rtp_packet {
+class Packet {
   public:
-    rtp_packet() = default;
+    Packet() = default;
 
     /**
      * Sets the payload type.

@@ -30,16 +30,16 @@ TEST_CASE("rtp_packet_view::rtp_packet_view()", "[rtp_packet_view]") {
     };
 
     SECTION("A header with invalid data should result not pass validation") {
-        rav::rtp::rtp_packet_view packet(data, sizeof(data) - 1);
+        rav::rtp::PacketView packet(data, sizeof(data) - 1);
         REQUIRE_FALSE(packet.validate());
     }
 
     SECTION("A header with more data should pass validation") {
-        rav::rtp::rtp_packet_view packet(data, sizeof(data) + 1);
+        rav::rtp::PacketView packet(data, sizeof(data) + 1);
         REQUIRE(packet.validate());
     }
 
-    rav::rtp::rtp_packet_view packet(data, sizeof(data));
+    rav::rtp::PacketView packet(data, sizeof(data));
 
     SECTION("Status should be ok") {
         REQUIRE(packet.validate());
@@ -95,7 +95,7 @@ TEST_CASE("rtp_packet_view::rtp_packet_view()", "[rtp_packet_view]") {
 }
 
 TEST_CASE("rtp_packet_view::validate()", "[rtp_packet_view]") {
-    rav::rtp::rtp_packet_view packet(nullptr, 0);
+    rav::rtp::PacketView packet(nullptr, 0);
 
     SECTION("Validation should fail when the packet is too short") {
         REQUIRE_FALSE(packet.validate());
@@ -177,7 +177,7 @@ TEST_CASE("rtp_packet_view::ssrc()", "[rtp_packet_view]") {
         0x12,
     };
 
-    const rav::rtp::rtp_packet_view packet(data, sizeof(data) - sizeof(uint32_t) * 2);
+    const rav::rtp::PacketView packet(data, sizeof(data) - sizeof(uint32_t) * 2);
 
     SECTION("Should not pass validation") {
         REQUIRE_FALSE(packet.validate());
@@ -247,7 +247,7 @@ TEST_CASE("rtp_packet_view::get_header_extension_data()", "[rtp_packet_view]") {
             0x08,
         };
 
-        const rav::rtp::rtp_packet_view packet(data, sizeof(data));
+        const rav::rtp::PacketView packet(data, sizeof(data));
 
         const auto header_extension_data = packet.get_header_extension_data();
         REQUIRE(header_extension_data.size_bytes() == 8);
@@ -292,7 +292,7 @@ TEST_CASE("rtp_packet_view::get_header_extension_data()", "[rtp_packet_view]") {
             0x08,
         };
 
-        const rav::rtp::rtp_packet_view packet(data, sizeof(data));
+        const rav::rtp::PacketView packet(data, sizeof(data));
 
         const auto header_extension_data = packet.get_header_extension_data();
         REQUIRE(header_extension_data.size_bytes() == 8);
@@ -322,7 +322,7 @@ TEST_CASE("rtp_packet_view::get_header_extension_data()", "[rtp_packet_view]") {
             0x04,
         };
 
-        const rav::rtp::rtp_packet_view packet(data, sizeof(data));
+        const rav::rtp::PacketView packet(data, sizeof(data));
 
         const auto header_extension_data = packet.get_header_extension_data();
         REQUIRE(header_extension_data.size_bytes() == 0);
@@ -353,7 +353,7 @@ TEST_CASE("rtp_packet_view::header_total_length()", "[rtp_packet_view]") {
             0x04,
         };
 
-        const rav::rtp::rtp_packet_view packet(data, sizeof(data));
+        const rav::rtp::PacketView packet(data, sizeof(data));
         REQUIRE(packet.header_total_length() == 12);
     }
 
@@ -393,7 +393,7 @@ TEST_CASE("rtp_packet_view::header_total_length()", "[rtp_packet_view]") {
             0x08,
         };
 
-        const rav::rtp::rtp_packet_view packet(data, sizeof(data));
+        const rav::rtp::PacketView packet(data, sizeof(data));
         REQUIRE(packet.header_total_length() == 24);
     }
 
@@ -443,7 +443,7 @@ TEST_CASE("rtp_packet_view::header_total_length()", "[rtp_packet_view]") {
             0x08,
         };
 
-        const rav::rtp::rtp_packet_view packet(data, sizeof(data));
+        const rav::rtp::PacketView packet(data, sizeof(data));
         REQUIRE(packet.header_total_length() == 32);
     }
 }
@@ -475,7 +475,7 @@ TEST_CASE("rtp_packet_view::payload_data()", "[rtp_packet_view]") {
             0x44,
         };
 
-        const rav::rtp::rtp_packet_view packet(data, sizeof(data));
+        const rav::rtp::PacketView packet(data, sizeof(data));
         auto payload = packet.payload_data();
         REQUIRE(payload.size() == 4);
         REQUIRE(payload.size() == payload.size_bytes());
@@ -527,7 +527,7 @@ TEST_CASE("rtp_packet_view::payload_data()", "[rtp_packet_view]") {
             0x44,
         };
 
-        const rav::rtp::rtp_packet_view packet(data, sizeof(data));
+        const rav::rtp::PacketView packet(data, sizeof(data));
         auto payload = packet.payload_data();
         REQUIRE(payload.size() == 4);
         REQUIRE(payload.size() == payload.size_bytes());
@@ -589,7 +589,7 @@ TEST_CASE("rtp_packet_view::payload_data()", "[rtp_packet_view]") {
             0x44,
         };
 
-        const rav::rtp::rtp_packet_view packet(data, sizeof(data));
+        const rav::rtp::PacketView packet(data, sizeof(data));
         auto payload = packet.payload_data();
         REQUIRE(payload.size() == 4);
         REQUIRE(payload.size() == payload.size_bytes());
@@ -608,7 +608,7 @@ TEST_CASE("rtp_packet_view::payload_data()", "[rtp_packet_view]") {
             0x11, 0x22, 0x33, 0x44   // payload data
         };
 
-        const rav::rtp::rtp_packet_view packet(data.data(), data.size() - 1);
+        const rav::rtp::PacketView packet(data.data(), data.size() - 1);
         auto payload = packet.payload_data();
         REQUIRE(payload.data() == nullptr);
         REQUIRE(payload.empty());

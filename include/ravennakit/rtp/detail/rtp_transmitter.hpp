@@ -19,9 +19,9 @@ namespace rav::rtp {
  * - Maintains a socket to send RTP packets.
  * - Maintains a socket to send RTCP packets (maybe the same socket).
  */
-class rtp_transmitter {
+class Transmitter {
   public:
-    rtp_transmitter(asio::io_context& io_context, const asio::ip::address_v4& interface_address) : socket_(io_context) {
+    Transmitter(asio::io_context& io_context, const asio::ip::address_v4& interface_address) : socket_(io_context) {
         socket_.open(asio::ip::udp::v4());
         socket_.set_option(asio::ip::multicast::outbound_interface(interface_address));
         socket_.set_option(asio::ip::multicast::enable_loopback(false));

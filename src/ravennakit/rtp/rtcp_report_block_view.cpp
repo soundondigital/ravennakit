@@ -13,10 +13,10 @@
 
 #include <array>
 
-rav::rtcp::rtcp_report_block_view::rtcp_report_block_view(const uint8_t* data, const size_t size_bytes) :
+rav::rtcp::ReportBlockView::ReportBlockView(const uint8_t* data, const size_t size_bytes) :
     data_(data), size_bytes_(size_bytes) {}
 
-bool rav::rtcp::rtcp_report_block_view::validate() const {
+bool rav::rtcp::ReportBlockView::validate() const {
     if (data_ == nullptr) {
         return false;
     }
@@ -32,39 +32,39 @@ bool rav::rtcp::rtcp_report_block_view::validate() const {
     return true;
 }
 
-uint32_t rav::rtcp::rtcp_report_block_view::ssrc() const {
+uint32_t rav::rtcp::ReportBlockView::ssrc() const {
     return read_be<uint32_t>(data_);
 }
 
-uint8_t rav::rtcp::rtcp_report_block_view::fraction_lost() const {
+uint8_t rav::rtcp::ReportBlockView::fraction_lost() const {
     return data_[4];
 }
 
-uint32_t rav::rtcp::rtcp_report_block_view::number_of_packets_lost() const {
+uint32_t rav::rtcp::ReportBlockView::number_of_packets_lost() const {
     const std::array<uint8_t, 4> packets_lost {0, data_[5], data_[6], data_[7]};
     return read_be<uint32_t>(packets_lost.data());
 }
 
-uint32_t rav::rtcp::rtcp_report_block_view::extended_highest_sequence_number_received() const {
+uint32_t rav::rtcp::ReportBlockView::extended_highest_sequence_number_received() const {
     return read_be<uint32_t>(data_ + 8);
 }
 
-uint32_t rav::rtcp::rtcp_report_block_view::inter_arrival_jitter() const {
+uint32_t rav::rtcp::ReportBlockView::inter_arrival_jitter() const {
     return read_be<uint32_t>(data_ + 12);
 }
 
-rav::ntp::Timestamp rav::rtcp::rtcp_report_block_view::last_sr_timestamp() const {
+rav::ntp::Timestamp rav::rtcp::ReportBlockView::last_sr_timestamp() const {
     return ntp::Timestamp::from_compact(read_be<uint32_t>(data_ + 16));
 }
 
-uint32_t rav::rtcp::rtcp_report_block_view::delay_since_last_sr() const {
+uint32_t rav::rtcp::ReportBlockView::delay_since_last_sr() const {
     return read_be<uint32_t>(data_ + 20);
 }
 
-const uint8_t* rav::rtcp::rtcp_report_block_view::data() const {
+const uint8_t* rav::rtcp::ReportBlockView::data() const {
     return data_;
 }
 
-size_t rav::rtcp::rtcp_report_block_view::size() const {
+size_t rav::rtcp::ReportBlockView::size() const {
     return size_bytes_;
 }

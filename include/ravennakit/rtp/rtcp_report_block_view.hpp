@@ -17,21 +17,21 @@
 
 namespace rav::rtcp {
 
-class rtcp_report_block_view {
+class ReportBlockView {
   public:
     static constexpr auto k_report_block_length_length = 24;
 
     /**
      * Constructs an invalid report block;
      */
-    rtcp_report_block_view() = default;
+    ReportBlockView() = default;
 
     /**
      * Constructs an RTCP report block view from the given data.
      * @param data The RTCP report block data.
      * @param size_bytes The size of the RTCP report block in bytes.
      */
-    rtcp_report_block_view(const uint8_t* data, size_t size_bytes);
+    ReportBlockView(const uint8_t* data, size_t size_bytes);
 
     /**
      * @returns True if this report block appears to be correct, or false if not.

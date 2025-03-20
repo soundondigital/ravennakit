@@ -15,7 +15,7 @@
 
 namespace rav::rtp {
 
-struct rtp_session {
+struct Session {
     asio::ip::address connection_address;
     uint16_t rtp_port {};
     uint16_t rtcp_port {};
@@ -30,12 +30,12 @@ struct rtp_session {
         return fmt::format("{}/{}/{}", connection_address.to_string(), rtp_port, rtcp_port);
     }
 
-    friend auto operator==(const rtp_session& lhs, const rtp_session& rhs) -> bool {
+    friend auto operator==(const Session& lhs, const Session& rhs) -> bool {
         return std::tie(lhs.connection_address, lhs.rtp_port, lhs.rtcp_port)
             == std::tie(rhs.connection_address, rhs.rtp_port, rhs.rtcp_port);
     }
 
-    friend bool operator!=(const rtp_session& lhs, const rtp_session& rhs) {
+    friend bool operator!=(const Session& lhs, const Session& rhs) {
         return !(lhs == rhs);
     }
 };

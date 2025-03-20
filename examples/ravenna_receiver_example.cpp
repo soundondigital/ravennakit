@@ -159,7 +159,7 @@ class portaudio_stream {
     }
 };
 
-class ravenna_receiver: public rav::rtp::rtp_stream_receiver::subscriber {
+class ravenna_receiver: public rav::rtp::StreamReceiver::Subscriber {
   public:
     explicit ravenna_receiver(
         const std::string& stream_name, std::string audio_device_name, const std::string& interface_address
@@ -167,9 +167,9 @@ class ravenna_receiver: public rav::rtp::rtp_stream_receiver::subscriber {
         audio_device_name_(std::move(audio_device_name)) {
         rtsp_client_ = std::make_unique<rav::RavennaRtspClient>(io_context_, browser_);
 
-        rav::rtp::rtp_receiver::configuration config;
+        rav::rtp::Receiver::Configuration config;
         config.interface_address = asio::ip::make_address(interface_address);
-        rtp_receiver_ = std::make_unique<rav::rtp::rtp_receiver>(io_context_, config);
+        rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(io_context_, config);
 
         ravenna_receiver_ = std::make_unique<rav::RavennaReceiver>(*rtsp_client_, *rtp_receiver_);
         ravenna_receiver_->set_delay(480);
@@ -196,7 +196,7 @@ class ravenna_receiver: public rav::rtp::rtp_stream_receiver::subscriber {
         portaudio_stream_.stop();
     }
 
-    void rtp_stream_receiver_updated(const rav::rtp::rtp_stream_receiver::stream_updated_event& event) override {
+    void rtp_stream_receiver_updated(const rav::rtp::StreamReceiver::stream_updated_event& event) override {
         if (!event.selected_audio_format.is_valid() || audio_format_ == event.selected_audio_format) {
             return;
         }
@@ -219,7 +219,7 @@ class ravenna_receiver: public rav::rtp::rtp_stream_receiver::subscriber {
     asio::io_context io_context_;
     rav::RavennaBrowser browser_ {io_context_};
     std::unique_ptr<rav::RavennaRtspClient> rtsp_client_;
-    std::unique_ptr<rav::rtp::rtp_receiver> rtp_receiver_;
+    std::unique_ptr<rav::rtp::Receiver> rtp_receiver_;
     std::unique_ptr<rav::RavennaReceiver> ravenna_receiver_;
     std::string audio_device_name_;
     portaudio_stream portaudio_stream_;

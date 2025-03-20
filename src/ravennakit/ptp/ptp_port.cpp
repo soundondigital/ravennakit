@@ -66,7 +66,7 @@ rav::ptp::Port::Port(
     event_socket_.set_dscp_value(46);    // Default AES67 value
     general_socket_.set_dscp_value(46);  // Default AES67 value
 
-    auto handler = [this](const rtp::udp_sender_receiver::recv_event& event) {
+    auto handler = [this](const rtp::UdpSenderReceiver::recv_event& event) {
         handle_recv_event(event);
     };
 
@@ -341,7 +341,7 @@ void rav::ptp::Port::increase_age() {
     foreign_master_list_.increase_age();
 }
 
-void rav::ptp::Port::handle_recv_event(const rtp::udp_sender_receiver::recv_event& event) {
+void rav::ptp::Port::handle_recv_event(const rtp::UdpSenderReceiver::recv_event& event) {
     TRACY_ZONE_SCOPED;
 
     const buffer_view data(event.data, event.size);

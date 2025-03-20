@@ -17,9 +17,9 @@
 
 namespace rav {
 
-class RavennaReceiver: public rtp::rtp_stream_receiver, public RavennaRtspClient::Subscriber {
+class RavennaReceiver: public rtp::StreamReceiver, public RavennaRtspClient::Subscriber {
   public:
-    explicit RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::rtp_receiver& rtp_receiver);
+    explicit RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::Receiver& rtp_receiver);
     ~RavennaReceiver() override;
 
     RavennaReceiver(const RavennaReceiver&) = delete;

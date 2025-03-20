@@ -92,8 +92,8 @@ class Port {
     Instance& parent_;
     PortDs port_ds_;
     asio::steady_timer announce_receipt_timeout_timer_;
-    rtp::udp_sender_receiver event_socket_;
-    rtp::udp_sender_receiver general_socket_;
+    rtp::UdpSenderReceiver event_socket_;
+    rtp::UdpSenderReceiver general_socket_;
     std::vector<subscription> subscriptions_;
     ForeignMasterList foreign_master_list_;
     std::optional<AnnounceMessage> erbest_;
@@ -106,7 +106,7 @@ class Port {
     ring_buffer<SyncMessage> sync_messages_ {8};
     ring_buffer<RequestResponseDelaySequence> request_response_delay_sequences_ {8};
 
-    void handle_recv_event(const rtp::udp_sender_receiver::recv_event& event);
+    void handle_recv_event(const rtp::UdpSenderReceiver::recv_event& event);
     void handle_announce_message(const AnnounceMessage& announce_message, buffer_view<const uint8_t> tlvs);
     void handle_sync_message(SyncMessage sync_message, buffer_view<const uint8_t> tlvs);
     void handle_follow_up_message(const FollowUpMessage& follow_up_message, buffer_view<const uint8_t> tlvs);

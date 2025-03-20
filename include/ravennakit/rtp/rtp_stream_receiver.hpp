@@ -28,7 +28,7 @@ namespace rav::rtp {
 /**
  * A class that receives RTP packets and buffers them for playback.
  */
-class rtp_stream_receiver: public rtp_receiver::subscriber {
+class StreamReceiver: public Receiver::Subscriber {
   public:
     /// The number of milliseconds after which a stream is considered inactive.
     static constexpr uint64_t k_receive_timeout_ms = 1000;
@@ -64,8 +64,8 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
      */
     struct stream_updated_event {
         id receiver_id;
-        rtp_session session;
-        rtp_filter filter;
+        Session session;
+        Filter filter;
         audio_format selected_audio_format;
         uint16_t packet_time_frames = 0;
         uint32_t delay_samples = 0;
@@ -77,9 +77,9 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     /**
      * Baseclass for other classes which want to receive changes to the stream.
      */
-    class subscriber {
+    class Subscriber {
       public:
-        virtual ~subscriber() = default;
+        virtual ~Subscriber() = default;
 
         /**
          * Called when the stream has changed.
@@ -121,16 +121,16 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     /**
      * A struct to hold the packet and interval statistics for the stream.
      */
-    struct stream_stats {
+    struct StreamStats {
         /// The packet interval statistics.
         sliding_stats::stats packet_interval_stats;
         /// The packet statistics.
-        rtp_packet_stats::counters packet_stats;
+        PacketStats::Counters packet_stats;
     };
 
-    explicit rtp_stream_receiver(rtp_receiver& receiver);
+    explicit StreamReceiver(Receiver& receiver);
 
-    ~rtp_stream_receiver() override;
+    ~StreamReceiver() override;
 
     /**
      * @returns The unique ID of this stream receiver. The id is unique across the process.
@@ -160,14 +160,14 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
      * @param subscriber_to_add The subscriber to add.
      * @return true if the subscriber was added, or false if it was already in the list.
      */
-    [[nodiscard]] bool subscribe(subscriber* subscriber_to_add);
+    [[nodiscard]] bool subscribe(Subscriber* subscriber_to_add);
 
     /**
      * Removes a subscriber from the receiver.
      * @param subscriber_to_remove The subscriber to remove.
      * @return true if the subscriber was removed, or false if it wasn't found.
      */
-    [[nodiscard]] bool unsubscribe(subscriber* subscriber_to_remove);
+    [[nodiscard]] bool unsubscribe(Subscriber* subscriber_to_remove);
 
     /**
      * Reads data from the buffer at the given timestamp.
@@ -199,12 +199,12 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     /**
      * @return The packet statistics for the first stream, if it exists, otherwise an empty structure.
      */
-    [[nodiscard]] stream_stats get_session_stats() const;
+    [[nodiscard]] StreamStats get_session_stats() const;
 
     /**
      * @return The packet statistics for the first stream, if it exists, otherwise an empty structure.
      */
-    [[nodiscard]] rtp_packet_stats::counters get_packet_stats() const;
+    [[nodiscard]] PacketStats::Counters get_packet_stats() const;
 
     /**
      * @return The packet interval statistics for the first stream, if it exists, otherwise an empty structure.
@@ -212,42 +212,42 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
     [[nodiscard]] sliding_stats::stats get_packet_interval_stats() const;
 
     // rtp_receiver::subscriber overrides
-    void on_rtp_packet(const rtp_receiver::rtp_packet_event& rtp_event) override;
-    void on_rtcp_packet(const rtp_receiver::rtcp_packet_event& rtcp_event) override;
+    void on_rtp_packet(const Receiver::RtpPacketEvent& rtp_event) override;
+    void on_rtcp_packet(const Receiver::RtcpPacketEvent& rtcp_event) override;
 
   private:
     /**
      * Context for a stream identified by the session.
      */
-    struct media_stream {
-        explicit media_stream(rtp_session session_) : session(std::move(session_)) {}
+    struct MediaStream {
+        explicit MediaStream(Session session_) : session(std::move(session_)) {}
 
-        rtp_session session;
-        rtp_filter filter;
+        Session session;
+        Filter filter;
         audio_format selected_format;
         uint16_t packet_time_frames = 0;
         wrapping_uint16 seq;
         std::optional<wrapping_uint32> first_packet_timestamp;
-        rtp_packet_stats packet_stats;
-        throttle<rtp_packet_stats::counters> packet_stats_throttle {std::chrono::seconds(5)};
+        PacketStats packet_stats;
+        throttle<PacketStats::Counters> packet_stats_throttle {std::chrono::seconds(5)};
         wrapping_uint64 last_packet_time_ns;
         sliding_stats packet_interval_stats {1000};
         throttle<void> packet_interval_throttle {std::chrono::seconds(10)};
     };
 
-    rtp_receiver& rtp_receiver_;
+    Receiver& rtp_receiver_;
     id id_ {id::next_process_wide_unique_id()};
     std::atomic<uint32_t> delay_ = 480;  // 100ms at 48KHz
     receiver_state state_ {receiver_state::idle};
-    std::vector<media_stream> media_streams_;
-    subscriber_list<subscriber> subscribers_;
+    std::vector<MediaStream> media_streams_;
+    subscriber_list<Subscriber> subscribers_;
     asio::steady_timer maintenance_timer_;
     exclusive_access_guard realtime_access_guard_;
 
     /**
      * Used for copying received packets to the realtime context.
      */
-    struct intermediate_packet {
+    struct IntermediatePacket {
         uint32_t timestamp;
         uint16_t seq;
         uint16_t data_len;
@@ -255,10 +255,10 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
         std::array<uint8_t, 1500> data;  // MTU
     };
 
-    struct shared_state {
-        rtp_receive_buffer receiver_buffer;
+    struct SharedState {
+        ReceiveBuffer receiver_buffer;
         std::vector<uint8_t> read_buffer;
-        fifo_buffer<intermediate_packet, Fifo::Spsc> fifo;
+        fifo_buffer<IntermediatePacket, Fifo::Spsc> fifo;
         fifo_buffer<uint16_t, Fifo::Spsc> packets_too_old;
         std::optional<wrapping_uint32> first_packet_timestamp;
         wrapping_uint32 next_ts;
@@ -267,17 +267,17 @@ class rtp_stream_receiver: public rtp_receiver::subscriber {
         std::atomic_bool consumer_active {false};
     };
 
-    rcu<shared_state> shared_state_;
-    rcu<shared_state>::reader audio_thread_reader_ {shared_state_.create_reader()};
-    rcu<shared_state>::reader network_thread_reader_ {shared_state_.create_reader()};
+    rcu<SharedState> shared_state_;
+    rcu<SharedState>::reader audio_thread_reader_ {shared_state_.create_reader()};
+    rcu<SharedState>::reader network_thread_reader_ {shared_state_.create_reader()};
 
     /**
      * Restarts the stream if it is running, otherwise does nothing.
      */
     void restart();
 
-    std::pair<media_stream*, bool> find_or_create_media_stream(const rtp_session& session);
-    void handle_rtp_packet_event_for_session(const rtp_receiver::rtp_packet_event& event, media_stream& stream);
+    std::pair<MediaStream*, bool> find_or_create_media_stream(const Session& session);
+    void handle_rtp_packet_event_for_session(const Receiver::RtpPacketEvent& event, MediaStream& stream);
     void set_state(receiver_state new_state, bool notify_subscribers);
     stream_updated_event make_updated_event() const;
     void do_maintenance();

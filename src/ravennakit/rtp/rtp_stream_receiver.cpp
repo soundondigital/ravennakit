@@ -38,7 +38,7 @@ bool is_connection_info_valid(const rav::sdp::connection_info_field& conn) {
 
 }  // namespace
 
-const char* rav::rtp::rtp_stream_receiver::to_string(const receiver_state state) {
+const char* rav::rtp::StreamReceiver::to_string(const receiver_state state) {
     switch (state) {
         case receiver_state::idle:
             return "idle";
@@ -55,29 +55,29 @@ const char* rav::rtp::rtp_stream_receiver::to_string(const receiver_state state)
     }
 }
 
-std::string rav::rtp::rtp_stream_receiver::stream_updated_event::to_string() const {
+std::string rav::rtp::StreamReceiver::stream_updated_event::to_string() const {
     return fmt::format(
         "id={}, session={}, selected_audio_format={}, packet_time_frames={}, delay_samples={}, state={}",
         receiver_id.value(), session.to_string(), selected_audio_format.to_string(), packet_time_frames, delay_samples,
-        rtp_stream_receiver::to_string(state)
+        StreamReceiver::to_string(state)
     );
 }
 
-rav::rtp::rtp_stream_receiver::rtp_stream_receiver(rtp_receiver& receiver) :
+rav::rtp::StreamReceiver::StreamReceiver(Receiver& receiver) :
     rtp_receiver_(receiver), maintenance_timer_(receiver.get_io_context()) {}
 
-rav::rtp::rtp_stream_receiver::~rtp_stream_receiver() {
+rav::rtp::StreamReceiver::~StreamReceiver() {
     if (!rtp_receiver_.unsubscribe(this)) {
         RAV_ERROR("Failed to remove subscriber");
     }
     maintenance_timer_.cancel();
 }
 
-rav::id rav::rtp::rtp_stream_receiver::get_id() const {
+rav::id rav::rtp::StreamReceiver::get_id() const {
     return id_;
 }
 
-void rav::rtp::rtp_stream_receiver::update_sdp(const sdp::session_description& sdp) {
+void rav::rtp::StreamReceiver::update_sdp(const sdp::session_description& sdp) {
     const sdp::media_description* selected_media_description = nullptr;
     const sdp::connection_info_field* selected_connection_info = nullptr;
     std::optional<audio_format> selected_audio_format;
@@ -167,12 +167,12 @@ void rav::rtp::rtp_stream_receiver::update_sdp(const sdp::session_description& s
 
     RAV_ASSERT(packet_time_frames > 0, "packet_time_frames must be greater than 0");
 
-    rtp_session session;
+    Session session;
     session.connection_address = asio::ip::make_address(selected_connection_info->address);  // TODO: Avoid exception
     session.rtp_port = selected_media_description->port();
     session.rtcp_port = session.rtp_port + 1;
 
-    rtp_filter filter(session.connection_address);
+    Filter filter(session.connection_address);
 
     const auto& source_filters = selected_media_description->source_filters();
     if (!source_filters.empty()) {
@@ -245,7 +245,7 @@ void rav::rtp::rtp_stream_receiver::update_sdp(const sdp::session_description& s
     }
 }
 
-void rav::rtp::rtp_stream_receiver::set_delay(const uint32_t delay) {
+void rav::rtp::StreamReceiver::set_delay(const uint32_t delay) {
     if (delay == delay_) {
         return;
     }
@@ -259,11 +259,11 @@ void rav::rtp::rtp_stream_receiver::set_delay(const uint32_t delay) {
     }
 }
 
-uint32_t rav::rtp::rtp_stream_receiver::get_delay() const {
+uint32_t rav::rtp::StreamReceiver::get_delay() const {
     return delay_;
 }
 
-bool rav::rtp::rtp_stream_receiver::subscribe(subscriber* subscriber_to_add) {
+bool rav::rtp::StreamReceiver::subscribe(Subscriber* subscriber_to_add) {
     if (subscribers_.add(subscriber_to_add)) {
         subscriber_to_add->rtp_stream_receiver_updated(make_updated_event());
         return true;
@@ -271,11 +271,11 @@ bool rav::rtp::rtp_stream_receiver::subscribe(subscriber* subscriber_to_add) {
     return false;
 }
 
-bool rav::rtp::rtp_stream_receiver::unsubscribe(subscriber* subscriber_to_remove) {
+bool rav::rtp::StreamReceiver::unsubscribe(Subscriber* subscriber_to_remove) {
     return subscribers_.remove(subscriber_to_remove);
 }
 
-std::optional<uint32_t> rav::rtp::rtp_stream_receiver::read_data_realtime(
+std::optional<uint32_t> rav::rtp::StreamReceiver::read_data_realtime(
     uint8_t* buffer, const size_t buffer_size, const std::optional<uint32_t> at_timestamp
 ) {
     TRACY_ZONE_SCOPED;
@@ -315,7 +315,7 @@ std::optional<uint32_t> rav::rtp::rtp_stream_receiver::read_data_realtime(
     return std::nullopt;
 }
 
-std::optional<uint32_t> rav::rtp::rtp_stream_receiver::read_audio_data_realtime(
+std::optional<uint32_t> rav::rtp::StreamReceiver::read_audio_data_realtime(
     audio_buffer_view<float> output_buffer, const std::optional<uint32_t> at_timestamp
 ) {
     TRACY_ZONE_SCOPED;
@@ -379,32 +379,32 @@ std::optional<uint32_t> rav::rtp::rtp_stream_receiver::read_audio_data_realtime(
     return std::nullopt;
 }
 
-rav::rtp::rtp_stream_receiver::stream_stats rav::rtp::rtp_stream_receiver::get_session_stats() const {
+rav::rtp::StreamReceiver::StreamStats rav::rtp::StreamReceiver::get_session_stats() const {
     if (media_streams_.empty()) {
         return {};
     }
-    stream_stats s;
+    StreamStats s;
     const auto& stream = media_streams_.front();
     s.packet_stats = stream.packet_stats.get_total_counts();
     s.packet_interval_stats = stream.packet_interval_stats.get_stats();
     return s;
 }
 
-rav::rtp::rtp_packet_stats::counters rav::rtp::rtp_stream_receiver::get_packet_stats() const {
+rav::rtp::PacketStats::Counters rav::rtp::StreamReceiver::get_packet_stats() const {
     if (media_streams_.empty()) {
         return {};
     }
     return media_streams_.front().packet_stats.get_total_counts();
 }
 
-rav::sliding_stats::stats rav::rtp::rtp_stream_receiver::get_packet_interval_stats() const {
+rav::sliding_stats::stats rav::rtp::StreamReceiver::get_packet_interval_stats() const {
     if (media_streams_.empty()) {
         return {};
     }
     return media_streams_.front().packet_interval_stats.get_stats();
 }
 
-void rav::rtp::rtp_stream_receiver::restart() {
+void rav::rtp::StreamReceiver::restart() {
     rtp_receiver_.unsubscribe(this); // This unsubscribes from all sessions
 
     if (media_streams_.empty()) {
@@ -437,7 +437,7 @@ void rav::rtp::rtp_stream_receiver::restart() {
     const auto bytes_per_frame = selected_format->bytes_per_frame();
     RAV_ASSERT(bytes_per_frame > 0, "bytes_per_frame must be greater than 0");
 
-    auto new_state = std::make_unique<shared_state>();
+    auto new_state = std::make_unique<SharedState>();
 
     const auto buffer_size_frames = std::max(selected_format->sample_rate * k_buffer_size_ms / 1000, 1024u);
     new_state->receiver_buffer.resize(selected_format->sample_rate * k_buffer_size_ms / 1000, bytes_per_frame);
@@ -463,8 +463,8 @@ void rav::rtp::rtp_stream_receiver::restart() {
     RAV_TRACE("(Re)Started rtp_stream_receiver");
 }
 
-std::pair<rav::rtp::rtp_stream_receiver::media_stream*, bool>
-rav::rtp::rtp_stream_receiver::find_or_create_media_stream(const rtp_session& session) {
+std::pair<rav::rtp::StreamReceiver::MediaStream*, bool>
+rav::rtp::StreamReceiver::find_or_create_media_stream(const Session& session) {
     for (auto& stream : media_streams_) {
         if (stream.session == session) {
             return std::make_pair(&stream, false);
@@ -474,8 +474,8 @@ rav::rtp::rtp_stream_receiver::find_or_create_media_stream(const rtp_session& se
     return std::make_pair(&media_streams_.emplace_back(session), true);
 }
 
-void rav::rtp::rtp_stream_receiver::handle_rtp_packet_event_for_session(
-    const rtp_receiver::rtp_packet_event& event, media_stream& stream
+void rav::rtp::StreamReceiver::handle_rtp_packet_event_for_session(
+    const Receiver::RtpPacketEvent& event, MediaStream& stream
 ) {
     TRACY_ZONE_SCOPED;
 
@@ -509,7 +509,7 @@ void rav::rtp::rtp_stream_receiver::handle_rtp_packet_event_for_session(
 
     if (auto state = network_thread_reader_.lock_realtime()) {
         if (state->consumer_active) {
-            intermediate_packet intermediate {};
+            IntermediatePacket intermediate {};
             intermediate.timestamp = event.packet.timestamp();
             intermediate.seq = event.packet.sequence_number();
             intermediate.data_len = static_cast<uint16_t>(payload.size_bytes());
@@ -557,7 +557,7 @@ void rav::rtp::rtp_stream_receiver::handle_rtp_packet_event_for_session(
     }
 }
 
-void rav::rtp::rtp_stream_receiver::set_state(const receiver_state new_state, const bool notify_subscribers) {
+void rav::rtp::StreamReceiver::set_state(const receiver_state new_state, const bool notify_subscribers) {
     // TODO: Schedule this on the maintenance thread
     if (state_ == new_state) {
         return;
@@ -571,7 +571,7 @@ void rav::rtp::rtp_stream_receiver::set_state(const receiver_state new_state, co
     }
 }
 
-rav::rtp::rtp_stream_receiver::stream_updated_event rav::rtp::rtp_stream_receiver::make_updated_event() const {
+rav::rtp::StreamReceiver::stream_updated_event rav::rtp::StreamReceiver::make_updated_event() const {
     stream_updated_event event;
     event.receiver_id = id_;
     event.state = state_;
@@ -589,7 +589,7 @@ rav::rtp::rtp_stream_receiver::stream_updated_event rav::rtp::rtp_stream_receive
     return event;
 }
 
-void rav::rtp::rtp_stream_receiver::do_maintenance() {
+void rav::rtp::StreamReceiver::do_maintenance() {
     // Check if streams became are no longer receiving data
     if (state_ == receiver_state::ok || state_ == receiver_state::ok_no_consumer) {
         const auto now = high_resolution_clock::now();
@@ -615,7 +615,7 @@ void rav::rtp::rtp_stream_receiver::do_maintenance() {
     });
 }
 
-void rav::rtp::rtp_stream_receiver::do_realtime_maintenance() {
+void rav::rtp::StreamReceiver::do_realtime_maintenance() {
     if (auto state = audio_thread_reader_.lock_realtime()) {
         if (state->consumer_active.exchange(true) == false) {
             state->fifo.pop_all();
@@ -664,7 +664,7 @@ void rav::rtp::rtp_stream_receiver::do_realtime_maintenance() {
     }
 }
 
-void rav::rtp::rtp_stream_receiver::on_rtp_packet(const rtp_receiver::rtp_packet_event& rtp_event) {
+void rav::rtp::StreamReceiver::on_rtp_packet(const Receiver::RtpPacketEvent& rtp_event) {
     // TODO: We should probably discard filtered packets here and not in rtp_receiver. This would also allow us to use a
     // subscriber list without context in rtp_receiver. Alternatively we could add a virtual function to
     // rtp_receiver::subscriber to determine whether the packet should be filtered or not. But since we need to call a
@@ -685,7 +685,7 @@ void rav::rtp::rtp_stream_receiver::on_rtp_packet(const rtp_receiver::rtp_packet
     RAV_WARNING("Packet received for unknown session");
 }
 
-void rav::rtp::rtp_stream_receiver::on_rtcp_packet(const rtp_receiver::rtcp_packet_event& rtcp_event) {
+void rav::rtp::StreamReceiver::on_rtcp_packet(const Receiver::RtcpPacketEvent& rtcp_event) {
     RAV_TRACE(
         "{} for session {} from {}:{}", rtcp_event.packet.to_string(), rtcp_event.session.to_string(),
         rtcp_event.src_endpoint.address().to_string(), rtcp_event.src_endpoint.port()

@@ -21,21 +21,21 @@ namespace rav::rtp {
 /**
  * Implements logic for filtering RTP packets.
  */
-class rtp_filter {
+class Filter {
   public:
-    rtp_filter() = default;
+    Filter() = default;
 
     /**
      * Creates a new RTP filter for the given connection address.
      * @param connection_address The connection address.
      */
-    explicit rtp_filter(asio::ip::address connection_address) : connection_address_(std::move(connection_address)) {}
+    explicit Filter(asio::ip::address connection_address) : connection_address_(std::move(connection_address)) {}
 
-    rtp_filter(const rtp_filter&) = default;
-    rtp_filter& operator=(const rtp_filter&) = default;
+    Filter(const Filter&) = default;
+    Filter& operator=(const Filter&) = default;
 
-    rtp_filter(rtp_filter&&) noexcept = default;
-    rtp_filter& operator=(rtp_filter&&) noexcept = default;
+    Filter(Filter&&) noexcept = default;
+    Filter& operator=(Filter&&) noexcept = default;
 
     /**
      * Adds a filter for the given source address.
@@ -131,11 +131,11 @@ class rtp_filter {
         return filters_.empty();
     }
 
-    friend bool operator==(const rtp_filter& lhs, const rtp_filter& rhs) {
+    friend bool operator==(const Filter& lhs, const Filter& rhs) {
         return std::tie(lhs.connection_address_, lhs.filters_) == std::tie(rhs.connection_address_, rhs.filters_);
     }
 
-    friend bool operator!=(const rtp_filter& lhs, const rtp_filter& rhs) {
+    friend bool operator!=(const Filter& lhs, const Filter& rhs) {
         return !(lhs == rhs);
     }
 

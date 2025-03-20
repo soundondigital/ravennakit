@@ -23,9 +23,9 @@ namespace rav::rtp {
  * packets with older packets. The reason for this is to allow different readers with different delay settings to use
  * the same buffer.
  */
-class rtp_receive_buffer {
+class ReceiveBuffer {
   public:
-    explicit rtp_receive_buffer() = default;
+    explicit ReceiveBuffer() = default;
 
     /**
      * Resizes the buffer.

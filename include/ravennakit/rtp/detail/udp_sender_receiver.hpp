@@ -22,7 +22,7 @@ namespace rav::rtp {
  * destination endpoints. Also in cases where a single receiver is receiving from multiple senders, the destination
  * address is needed to determine the source of the packet.
  */
-class udp_sender_receiver {
+class UdpSenderReceiver {
   public:
     struct recv_event {
         const uint8_t* data;
@@ -32,14 +32,14 @@ class udp_sender_receiver {
         uint64_t recv_time; // Monotonically increasing time in nanoseconds with arbitrary starting point.
     };
 
-    using handler_type = std::function<void(const recv_event& event)>;
+    using HandlerType = std::function<void(const recv_event& event)>;
 
     /**
      * Construct a new instance of the class. Private to force the use of the factory methods.
      * @param io_context The asio io_context to use.
      * @param endpoint The endpoint to bind to.
      */
-    udp_sender_receiver(asio::io_context& io_context, const asio::ip::udp::endpoint& endpoint);
+    UdpSenderReceiver(asio::io_context& io_context, const asio::ip::udp::endpoint& endpoint);
 
     /**
      * Construct a new instance of the class. Private to force the use of the factory methods.
@@ -47,21 +47,21 @@ class udp_sender_receiver {
      * @param interface_address The address to bind to.
      * @param port The port to bind to.
      */
-    udp_sender_receiver(asio::io_context& io_context, const asio::ip::address& interface_address, uint16_t port);
+    UdpSenderReceiver(asio::io_context& io_context, const asio::ip::address& interface_address, uint16_t port);
 
-    udp_sender_receiver(const udp_sender_receiver&) = delete;
-    udp_sender_receiver& operator=(const udp_sender_receiver&) = delete;
+    UdpSenderReceiver(const UdpSenderReceiver&) = delete;
+    UdpSenderReceiver& operator=(const UdpSenderReceiver&) = delete;
 
-    udp_sender_receiver(udp_sender_receiver&&) noexcept = delete;
-    udp_sender_receiver& operator=(udp_sender_receiver&&) noexcept = delete;
+    UdpSenderReceiver(UdpSenderReceiver&&) noexcept = delete;
+    UdpSenderReceiver& operator=(UdpSenderReceiver&&) noexcept = delete;
 
-    ~udp_sender_receiver();
+    ~UdpSenderReceiver();
 
     /**
      * Start the receiver.
      * @param handler The handler to receive incoming packets.
      */
-    void start(handler_type handler) const;
+    void start(HandlerType handler) const;
 
     /**
      * Sends a datagram to the given endpoint.

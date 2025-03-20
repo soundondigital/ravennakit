@@ -18,7 +18,7 @@
 
 rav::RavennaTransmitter::RavennaTransmitter(
     asio::io_context& io_context, dnssd::Advertiser& advertiser, rtsp::server& rtsp_server,
-    ptp::Instance& ptp_instance, rtp::rtp_transmitter& rtp_transmitter, const id id, std::string session_name,
+    ptp::Instance& ptp_instance, rtp::Transmitter& rtp_transmitter, const id id, std::string session_name,
     asio::ip::address_v4 interface_address
 ) :
     advertiser_(advertiser),

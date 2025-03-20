@@ -22,14 +22,14 @@ namespace rav::rtp {
  * cheap to create and use but make sure to keep the data alive while using this class.
  * RFC 3550 https://datatracker.ietf.org/doc/html/rfc3550
  */
-class rtp_packet_view {
+class PacketView {
   public:
     /**
      * Constructs an RTP header from the given data.
      * @param data The RTP header data.
      * @param size_bytes The size of the RTP header data in bytes.
      */
-    rtp_packet_view(const uint8_t* data, size_t size_bytes);
+    PacketView(const uint8_t* data, size_t size_bytes);
 
     /**
      * Validated the RTP header data. After this method returns all other methods should return valid data and not lead
