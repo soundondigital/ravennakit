@@ -19,17 +19,17 @@ namespace rav::rtsp {
 /**
  * Structure that represents an RTSP response.
  */
-struct response {
+struct Response {
     int status_code {};
     std::string reason_phrase;
     int rtsp_version_major {1};
     int rtsp_version_minor {0};
-    headers rtsp_headers;
+    Headers rtsp_headers;
     std::string data;
 
-    response() = default;
-    response(int status, const std::string& reason);
-    response(int status, std::string reason, std::string data_);
+    Response() = default;
+    Response(int status, const std::string& reason);
+    Response(int status, std::string reason, std::string data_);
 
     /**
      * Resets the request to its initial state.

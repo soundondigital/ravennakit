@@ -26,7 +26,7 @@
 
 namespace rav {
 
-class RavennaTransmitter: public rtsp::server::path_handler {
+class RavennaTransmitter: public rtsp::Server::PathHandler {
   public:
     struct OnDataRequestedEvent {
         uint32_t timestamp; // RTP timestamp
@@ -36,7 +36,7 @@ class RavennaTransmitter: public rtsp::server::path_handler {
     using EventsType = events<OnDataRequestedEvent>;
 
     RavennaTransmitter(
-        asio::io_context& io_context, dnssd::Advertiser& advertiser, rtsp::server& rtsp_server,
+        asio::io_context& io_context, dnssd::Advertiser& advertiser, rtsp::Server& rtsp_server,
         ptp::Instance& ptp_instance, rtp::Transmitter& rtp_transmitter, id id, std::string session_name,
         asio::ip::address_v4 interface_address
     );
@@ -116,11 +116,11 @@ class RavennaTransmitter: public rtsp::server::path_handler {
     }
 
     // rtsp_server::handler overrides
-    void on_request(rtsp::connection::request_event event) const override;
+    void on_request(rtsp::Connection::RequestEvent event) const override;
 
   private:
     dnssd::Advertiser& advertiser_;
-    rtsp::server& rtsp_server_;
+    rtsp::Server& rtsp_server_;
     ptp::Instance& ptp_instance_;
     rtp::Transmitter& rtp_transmitter_;
 

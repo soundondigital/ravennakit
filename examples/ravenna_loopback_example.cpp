@@ -40,7 +40,7 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
             RAV_THROW_EXCEPTION("No dnssd advertiser available");
         }
 
-        rtsp_server_ = std::make_unique<rav::rtsp::server>(
+        rtsp_server_ = std::make_unique<rav::rtsp::Server>(
             io_context_, asio::ip::tcp::endpoint(asio::ip::address_v4::any(), 5005)
         );
 
@@ -111,7 +111,7 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
 
     // Sender components
     std::unique_ptr<rav::dnssd::Advertiser> advertiser_;
-    std::unique_ptr<rav::rtsp::server> rtsp_server_;
+    std::unique_ptr<rav::rtsp::Server> rtsp_server_;
     std::unique_ptr<rav::rtp::Transmitter> rtp_transmitter_;
     std::unique_ptr<rav::ptp::Instance> ptp_instance_;
     std::unique_ptr<rav::RavennaTransmitter> transmitter_;

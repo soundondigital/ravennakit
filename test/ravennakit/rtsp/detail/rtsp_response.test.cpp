@@ -14,7 +14,7 @@
 
 TEST_CASE("rtsp_response", "[rtsp_response]") {
     SECTION("reset") {
-        rav::rtsp::response request;
+        rav::rtsp::Response request;
         request.status_code = 404;
         request.reason_phrase = "Error";
         request.rtsp_version_major = 1;
@@ -33,7 +33,7 @@ TEST_CASE("rtsp_response", "[rtsp_response]") {
 
 
 TEST_CASE("rtsp_response | encode", "[rtsp_response]") {
-    rav::rtsp::response res;
+    rav::rtsp::Response res;
     res.rtsp_version_major = 1;
     res.rtsp_version_minor = 0;
     res.status_code = 200;

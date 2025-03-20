@@ -10,51 +10,51 @@
 
 #include "ravennakit/rtsp/detail/rtsp_connection.hpp"
 
-rav::rtsp::connection::~connection() = default;
+rav::rtsp::Connection::~Connection() = default;
 
-rav::rtsp::connection::connection(asio::ip::tcp::socket socket) : socket_(std::move(socket)) {
-    parser_.on<request>([this](const request& request) {
+rav::rtsp::Connection::Connection(asio::ip::tcp::socket socket) : socket_(std::move(socket)) {
+    parser_.on<Request>([this](const Request& request) {
         if (subscriber_) {
             subscriber_->on_request(*this, request);
         }
     });
 
-    parser_.on<response>([this](const response& response) {
+    parser_.on<Response>([this](const Response& response) {
         if (subscriber_) {
             subscriber_->on_response(*this, response);
         }
     });
 }
 
-void rav::rtsp::connection::async_send_response(const response& response) {
+void rav::rtsp::Connection::async_send_response(const Response& response) {
     const auto encoded = response.encode();
     RAV_TRACE("Sending response: {}", response.to_debug_string(false));
     async_send_data(encoded);
 }
 
-void rav::rtsp::connection::async_send_request(const request& request) {
+void rav::rtsp::Connection::async_send_request(const Request& request) {
     const auto encoded = request.encode();
     RAV_TRACE("Sending request: {}", request.to_debug_string(false));
     async_send_data(encoded);
 }
 
-void rav::rtsp::connection::shutdown() {
+void rav::rtsp::Connection::shutdown() {
     socket_.shutdown(asio::ip::tcp::socket::shutdown_both);
 }
 
-void rav::rtsp::connection::start() {
+void rav::rtsp::Connection::start() {
     async_read_some();
 }
 
-void rav::rtsp::connection::stop() {
+void rav::rtsp::Connection::stop() {
     socket_.close();
 }
 
-void rav::rtsp::connection::set_subscriber(subscriber* subscriber_to_set) {
+void rav::rtsp::Connection::set_subscriber(Subscriber* subscriber_to_set) {
     subscriber_ = subscriber_to_set;
 }
 
-void rav::rtsp::connection::async_connect(const asio::ip::tcp::resolver::results_type& results) {
+void rav::rtsp::Connection::async_connect(const asio::ip::tcp::resolver::results_type& results) {
     auto self = shared_from_this();
     asio::async_connect(socket_, results, [self](const asio::error_code ec, const asio::ip::tcp::endpoint& endpoint) {
         if (ec) {
@@ -70,7 +70,7 @@ void rav::rtsp::connection::async_connect(const asio::ip::tcp::resolver::results
     });
 }
 
-void rav::rtsp::connection::async_send_data(const std::string& data) {
+void rav::rtsp::Connection::async_send_data(const std::string& data) {
     const bool should_trigger_async_write = output_buffer_.exhausted() && socket_.is_open();
     output_buffer_.write(data);
     if (should_trigger_async_write) {
@@ -78,7 +78,7 @@ void rav::rtsp::connection::async_send_data(const std::string& data) {
     }
 }
 
-void rav::rtsp::connection::async_write() {
+void rav::rtsp::Connection::async_write() {
     if (output_buffer_.exhausted()) {
         return;
     }
@@ -98,7 +98,7 @@ void rav::rtsp::connection::async_write() {
     );
 }
 
-void rav::rtsp::connection::async_read_some() {
+void rav::rtsp::Connection::async_read_some() {
     auto buffer = input_buffer_.prepare(512);
     auto self = shared_from_this();
     socket_.async_read_some(
@@ -121,7 +121,7 @@ void rav::rtsp::connection::async_read_some() {
             self->input_buffer_.commit(length);
 
             auto result = self->parser_.parse(self->input_buffer_);
-            if (!(result == parser::result::good || result == parser::result::indeterminate)) {
+            if (!(result == Parser::result::good || result == Parser::result::indeterminate)) {
                 RAV_ERROR("Parsing error: {}", static_cast<int>(result));
                 return;
             }
@@ -131,6 +131,6 @@ void rav::rtsp::connection::async_read_some() {
     );
 }
 
-asio::ip::tcp::endpoint rav::rtsp::connection::remote_endpoint() const {
+asio::ip::tcp::endpoint rav::rtsp::Connection::remote_endpoint() const {
     return socket_.remote_endpoint();
 }

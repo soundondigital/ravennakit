@@ -14,7 +14,7 @@
 
 #include <catch2/catch_all.hpp>
 
-void rav::rtsp::request::reset() {
+void rav::rtsp::Request::reset() {
     method.clear();
     uri.clear();
     rtsp_version_major = {};
@@ -23,13 +23,13 @@ void rav::rtsp::request::reset() {
     data.clear();
 }
 
-std::string rav::rtsp::request::encode(const char* newline) const {
+std::string rav::rtsp::Request::encode(const char* newline) const {
     std::string out;
     encode_append(out, newline);
     return out;
 }
 
-void rav::rtsp::request::encode_append(std::string& out, const char* newline) const {
+void rav::rtsp::Request::encode_append(std::string& out, const char* newline) const {
     fmt::format_to(
         std::back_inserter(out), "{} {} RTSP/{}.{}{}", method, uri, rtsp_version_major, rtsp_version_minor, newline
     );
@@ -41,7 +41,7 @@ void rav::rtsp::request::encode_append(std::string& out, const char* newline) co
     out += data;
 }
 
-std::string rav::rtsp::request::to_debug_string(bool include_data) const {
+std::string rav::rtsp::Request::to_debug_string(bool include_data) const {
     std::string out;
     fmt::format_to(std::back_inserter(out), "{} {} RTSP/{}.{}", method, uri, rtsp_version_major, rtsp_version_minor);
     out += rtsp_headers.to_debug_string();

@@ -10,18 +10,18 @@
 
 #include "ravennakit/rtsp/detail/rtsp_response.hpp"
 
-rav::rtsp::response::response(const int status, const std::string& reason) : response(status, reason, {}) {}
+rav::rtsp::Response::Response(const int status, const std::string& reason) : Response(status, reason, {}) {}
 
-rav::rtsp::response::response(const int status, std::string reason, std::string data_) :
+rav::rtsp::Response::Response(const int status, std::string reason, std::string data_) :
     status_code(status), reason_phrase(std::move(reason)), data(std::move(data_)) {}
 
-std::string rav::rtsp::response::encode(const char* newline) const {
+std::string rav::rtsp::Response::encode(const char* newline) const {
     std::string out;
     encode_append(out, newline);
     return out;
 }
 
-void rav::rtsp::response::encode_append(std::string& out, const char* newline) const {
+void rav::rtsp::Response::encode_append(std::string& out, const char* newline) const {
     fmt::format_to(
         std::back_inserter(out), "RTSP/{}.{} {} {}{}", rtsp_version_major, rtsp_version_minor, status_code,
         reason_phrase, newline
@@ -34,7 +34,7 @@ void rav::rtsp::response::encode_append(std::string& out, const char* newline) c
     out += data;
 }
 
-std::string rav::rtsp::response::to_debug_string(const bool include_data) const {
+std::string rav::rtsp::Response::to_debug_string(const bool include_data) const {
     std::string out;
     fmt::format_to(
         std::back_inserter(out), "RTSP/{}.{} {} {}", rtsp_version_major, rtsp_version_minor, status_code, reason_phrase

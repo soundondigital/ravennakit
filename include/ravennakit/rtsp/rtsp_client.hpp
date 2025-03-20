@@ -21,19 +21,19 @@ namespace rav::rtsp {
  * Client for connecting to an RTSP server. Given io_context must be single-threaded to implicitly support
  * thread-safety.
  */
-class client final: connection::subscriber {
+class Client final: Connection::Subscriber {
   public:
-    using events_type =
-        events<connection::connect_event, connection::response_event, connection::request_event>;
+    using EventsType =
+        events<Connection::ConnectEvent, Connection::ResponseEvent, Connection::RequestEvent>;
 
-    explicit client(asio::io_context& io_context);
-    ~client() override;
+    explicit Client(asio::io_context& io_context);
+    ~Client() override;
 
-    client(const client&) = delete;
-    client& operator=(const client&) = delete;
+    Client(const Client&) = delete;
+    Client& operator=(const Client&) = delete;
 
-    client(client&&) noexcept = default;
-    client& operator=(client&&) noexcept = default;
+    Client(Client&&) noexcept = default;
+    Client& operator=(Client&&) noexcept = default;
 
     /**
      * Connect to the given address and port. Function is async and will return immediately.
@@ -78,13 +78,13 @@ class client final: connection::subscriber {
      * Sends given response to the server. Function is async and will return immediately.
      * @param response The response to send.
      */
-    void async_send_response(const response& response) const;
+    void async_send_response(const Response& response) const;
 
     /**
      * Sends given request to the server. Function is async and will return immediately.
      * @param request The request to send.
      */
-    void async_send_request(const request& request) const;
+    void async_send_request(const Request& request) const;
 
     /**
      * Registers a handler for a specific event.
@@ -92,20 +92,20 @@ class client final: connection::subscriber {
      * @param handler The handler to register.
      */
     template<class T>
-    void on(events_type::handler<T> handler) {
+    void on(EventsType::handler<T> handler) {
         events_.on(handler);
     }
 
     // rtsp_connection::subscriber overrides
-    void on_connect(connection& connection) override;
-    void on_request(connection& connection, const request& request) override;
-    void on_response(connection& connection, const response& response) override;
+    void on_connect(Connection& connection) override;
+    void on_request(Connection& connection, const Request& request) override;
+    void on_response(Connection& connection, const Response& response) override;
 
   private:
     asio::ip::tcp::resolver resolver_;
     std::string host_;
-    std::shared_ptr<connection> connection_;
-    events_type events_;
+    std::shared_ptr<Connection> connection_;
+    EventsType events_;
 
     void
     async_resolve_connect(const std::string& host, const std::string& service, asio::ip::resolver_base::flags flags);

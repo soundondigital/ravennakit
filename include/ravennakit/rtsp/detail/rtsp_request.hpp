@@ -20,17 +20,17 @@ namespace rav::rtsp {
 /**
  * Structure that represents an RTSP request.
  */
-struct request {
+struct Request {
     std::string method;
     std::string uri;
     int rtsp_version_major {1};
     int rtsp_version_minor {0};
-    headers rtsp_headers;
+    Headers rtsp_headers;
     std::string data;
 
-    request() = default;
+    Request() = default;
 
-    request(std::string request_method, std::string request_uri, std::string request_data = "") :
+    Request(std::string request_method, std::string request_uri, std::string request_data = "") :
         method(std::move(request_method)), uri(std::move(request_uri)), data(std::move(request_data)) {}
 
     /**

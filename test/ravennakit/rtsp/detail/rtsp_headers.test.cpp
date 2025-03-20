@@ -14,7 +14,7 @@
 
 TEST_CASE("rtsp_headers", "[rtsp_headers]") {
     SECTION("Find header") {
-        rav::rtsp::headers headers;
+        rav::rtsp::Headers headers;
         REQUIRE(headers.get("CSeq") == nullptr);
         headers.push_back({"CSeq", "1"});
         auto* header = headers.get("CSeq");
@@ -23,14 +23,14 @@ TEST_CASE("rtsp_headers", "[rtsp_headers]") {
     }
 
     SECTION("Get content length") {
-        rav::rtsp::headers headers;
+        rav::rtsp::Headers headers;
         REQUIRE(headers.get_content_length() == std::nullopt);
         headers.emplace_back({"Content-Length", "10"});
         REQUIRE(headers.get_content_length() == 10);
     }
 
     SECTION("reset") {
-        rav::rtsp::headers headers;
+        rav::rtsp::Headers headers;
         headers.push_back({"CSeq", "1"});
         headers.push_back({"Content-Length", "10"});
         headers.clear();
@@ -38,7 +38,7 @@ TEST_CASE("rtsp_headers", "[rtsp_headers]") {
     }
 
     SECTION("Add header, make sure existing header gets updated using emplace_back") {
-        rav::rtsp::headers headers;
+        rav::rtsp::Headers headers;
         headers.emplace_back({"CSeq", "1"});
         headers.emplace_back({"CSeq", "2"});
         REQUIRE(headers.size() == 1);
@@ -46,7 +46,7 @@ TEST_CASE("rtsp_headers", "[rtsp_headers]") {
     }
 
     SECTION("Add header, make sure existing header gets updated using emplace_back case insensitive") {
-        rav::rtsp::headers headers;
+        rav::rtsp::Headers headers;
         headers.emplace_back({"cseq", "1"});
         headers.emplace_back({"CSeq", "2"});
         REQUIRE(headers.size() == 1);
@@ -54,7 +54,7 @@ TEST_CASE("rtsp_headers", "[rtsp_headers]") {
     }
 
     SECTION("Add header, make sure existing header gets updated using push_back") {
-        rav::rtsp::headers headers;
+        rav::rtsp::Headers headers;
         headers.push_back({"CSeq", "1"});
         headers.push_back({"CSeq", "2"});
         REQUIRE(headers.size() == 1);
@@ -62,7 +62,7 @@ TEST_CASE("rtsp_headers", "[rtsp_headers]") {
     }
 
     SECTION("Add header, make sure existing header gets updated using push_back case insensitive") {
-        rav::rtsp::headers headers;
+        rav::rtsp::Headers headers;
         headers.push_back({"cseq", "1"});
         headers.push_back({"CSeq", "2"});
         REQUIRE(headers.size() == 1);

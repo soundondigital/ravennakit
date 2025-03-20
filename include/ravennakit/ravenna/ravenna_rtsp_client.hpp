@@ -102,7 +102,7 @@ class RavennaRtspClient: public RavennaBrowser::Subscriber {
     struct ConnectionContext {
         std::string host_target;
         uint16_t port {};
-        rtsp::client client;
+        rtsp::Client client;
     };
 
     asio::io_context& io_context_;

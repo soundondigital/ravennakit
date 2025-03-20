@@ -21,12 +21,12 @@ namespace rav::rtsp {
 /**
  * Class for holding RTSP headers.
  */
-class headers {
+class Headers {
   public:
     /**
      * Struct for holding a header name and value.
      */
-    struct header {
+    struct Header {
         std::string name;
         std::string value;
     };
@@ -36,7 +36,7 @@ class headers {
      * @param name The name of the header.
      * @return The value of the header if found, otherwise nullptr.
      */
-    [[nodiscard]] const header* get(const std::string& name) const {
+    [[nodiscard]] const Header* get(const std::string& name) const {
         for (auto& h : headers_) {
             if (string_compare_case_insensitive(h.name, name)) {
                 return &h;
@@ -75,7 +75,7 @@ class headers {
      * @param index The index of the header.
      * @return The header at the specified index.
      */
-    header& operator[](const size_t index) {
+    Header& operator[](const size_t index) {
         return headers_[index];
     }
 
@@ -84,14 +84,14 @@ class headers {
      * @param index The index of the header.
      * @return The header at the specified index.
      */
-    [[nodiscard]] const header& operator[](const size_t index) const {
+    [[nodiscard]] const Header& operator[](const size_t index) const {
         return headers_[index];
     }
 
     /**
      * @return The headers.
      */
-    [[nodiscard]] const std::vector<header>& get_headers() const {
+    [[nodiscard]] const std::vector<Header>& get_headers() const {
         return headers_;
     }
 
@@ -129,7 +129,7 @@ class headers {
      * Sets a header value, updating the value if the header already exists, or creating it if it does not.
      * @param new_header The header to set.
      */
-    void set(const header& new_header) {
+    void set(const Header& new_header) {
         for (auto& h : headers_) {
             if (string_compare_case_insensitive(h.name, new_header.name)) {
                 h.value = new_header.value;
@@ -164,7 +164,7 @@ class headers {
      * Adds given header to the end.
      * @param new_header The header to add.
      */
-    void push_back(header new_header) {
+    void push_back(Header new_header) {
         for (auto& h : headers_) {
             if (string_compare_case_insensitive(h.name, new_header.name)) {
                 h.value = std::move(new_header.value);
@@ -178,7 +178,7 @@ class headers {
      * Adds an empty header at the end of the array.
      * @returns The newly added header.
      */
-    header& emplace_back() {
+    Header& emplace_back() {
         return headers_.emplace_back();
     }
 
@@ -187,7 +187,7 @@ class headers {
      * @param new_header The header to add.
      * @return The newly added header.
      */
-    header& emplace_back(header&& new_header) {
+    Header& emplace_back(Header&& new_header) {
         for (auto& h : headers_) {
             if (string_compare_case_insensitive(h.name, new_header.name)) {
                 h.value = std::move(new_header.value);
@@ -200,7 +200,7 @@ class headers {
     /**
      * @returns The last header.
      */
-    header& back() {
+    Header& back() {
         return headers_.back();
     }
 
@@ -233,7 +233,7 @@ class headers {
     }
 
   private:
-    std::vector<header> headers_;
+    std::vector<Header> headers_;
 };
 
 }  // namespace rav

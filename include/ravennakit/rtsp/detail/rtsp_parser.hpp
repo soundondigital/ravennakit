@@ -20,7 +20,7 @@ namespace rav::rtsp {
 /**
  * Parses RTSP messages.
  */
-class parser final: public events<request, response> {
+class Parser final: public events<Request, Response> {
   public:
     /**
      * The status of parsing.
@@ -39,7 +39,7 @@ class parser final: public events<request, response> {
         unexpected_blank_line,
     };
 
-    parser() = default;
+    Parser() = default;
 
     /**
      * Parses the input and returns the result.
@@ -63,11 +63,11 @@ class parser final: public events<request, response> {
     } state_ {state::start};
 
     std::string start_line_;
-    headers headers_;
+    Headers headers_;
     std::string data_;
 
-    request request_;
-    response response_;
+    Request request_;
+    Response response_;
 
     result handle_response();
     result handle_request();

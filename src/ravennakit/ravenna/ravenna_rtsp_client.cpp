@@ -110,13 +110,13 @@ rav::RavennaRtspClient::find_or_create_connection(const std::string& host_target
         return *connection;
     }
 
-    connections_.push_back({host_target, port, rtsp::client {io_context_}});
+    connections_.push_back({host_target, port, rtsp::Client {io_context_}});
     auto& new_connection = connections_.back();
 
-    new_connection.client.on<rtsp::connection::connect_event>([=](const auto&) {
+    new_connection.client.on<rtsp::Connection::ConnectEvent>([=](const auto&) {
         RAV_TRACE("Connected to: rtsp://{}:{}", host_target, port);
     });
-    new_connection.client.on<rtsp::connection::request_event>([this,
+    new_connection.client.on<rtsp::Connection::RequestEvent>([this,
                                                               &client = new_connection.client](const auto& event) {
         RAV_TRACE("{}", event.rtsp_request.to_debug_string(true));
 
@@ -135,7 +135,7 @@ rav::RavennaRtspClient::find_or_create_connection(const std::string& host_target
         if (event.rtsp_request.method == "GET_PARAMETER") {
             if (event.rtsp_request.data.empty()) {
                 // Interpret as liveliness check (ping) (https://datatracker.ietf.org/doc/html/rfc2326#section-10.8)
-                rtsp::response response;
+                rtsp::Response Response;
                 response.status_code = 200;
                 response.reason_phrase = "OK";
                 client.async_send_response(response);
@@ -147,7 +147,7 @@ rav::RavennaRtspClient::find_or_create_connection(const std::string& host_target
 
         RAV_WARNING("Unhandled RTSP request: {}", event.rtsp_request.method);
     });
-    new_connection.client.on<rtsp::connection::response_event>([=](const auto& event) {
+    new_connection.client.on<rtsp::Connection::ResponseEvent>([=](const auto& event) {
         RAV_TRACE("{}", event.rtsp_response.to_debug_string(true));
 
         if (event.rtsp_response.status_code != 200) {

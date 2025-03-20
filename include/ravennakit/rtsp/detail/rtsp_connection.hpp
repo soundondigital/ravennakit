@@ -17,41 +17,41 @@
 
 namespace rav::rtsp {
 
-class connection final: public std::enable_shared_from_this<connection> {
+class Connection final: public std::enable_shared_from_this<Connection> {
   public:
-    struct connect_event {
-        connection& rtsp_connection;
+    struct ConnectEvent {
+        Connection& rtsp_connection;
     };
 
-    struct request_event {
-        connection& rtsp_connection;
-        const request& rtsp_request;
+    struct RequestEvent {
+        Connection& rtsp_connection;
+        const Request& rtsp_request;
     };
 
-    struct response_event {
-        connection& rtsp_connection;
-        const response& rtsp_response;
+    struct ResponseEvent {
+        Connection& rtsp_connection;
+        const Response& rtsp_response;
     };
 
     /**
      * Observer for the connection.
      */
-    class subscriber {
+    class Subscriber {
       public:
-        subscriber() = default;
-        virtual ~subscriber() = default;
+        Subscriber() = default;
+        virtual ~Subscriber() = default;
 
-        subscriber(const subscriber&) = default;
-        subscriber& operator=(const subscriber&) = default;
+        Subscriber(const Subscriber&) = default;
+        Subscriber& operator=(const Subscriber&) = default;
 
-        subscriber(subscriber&&) noexcept = default;
-        subscriber& operator=(subscriber&&) noexcept = default;
+        Subscriber(Subscriber&&) noexcept = default;
+        Subscriber& operator=(Subscriber&&) noexcept = default;
 
         /**
          * Called when a connection is established.
          * @param connection The connection that was established.
          */
-        virtual void on_connect(connection& connection) {
+        virtual void on_connect(Connection& connection) {
             std::ignore = connection;
         }
 
@@ -60,7 +60,7 @@ class connection final: public std::enable_shared_from_this<connection> {
          * @param connection The connection on which the request was received.
          * @param request The request that was received.
          */
-        virtual void on_request(connection& connection, const request& request) {
+        virtual void on_request(Connection& connection, const Request& request) {
             std::ignore = connection;
             std::ignore = request;
         }
@@ -70,7 +70,7 @@ class connection final: public std::enable_shared_from_this<connection> {
          * @param connection The connection on which the response was received.
          * @param response The response that was received.
          */
-        virtual void on_response(connection& connection, const response& response) {
+        virtual void on_response(Connection& connection, const Response& response) {
             std::ignore = connection;
             std::ignore = response;
         }
@@ -79,34 +79,34 @@ class connection final: public std::enable_shared_from_this<connection> {
          * Called when a connection is disconnected.
          * @param connection The connection that was disconnected.
          */
-        virtual void on_disconnect(connection& connection) {
+        virtual void on_disconnect(Connection& connection) {
             std::ignore = connection;
         }
     };
 
-    static std::shared_ptr<connection> create(asio::ip::tcp::socket socket) {
-        return std::shared_ptr<connection>(new connection(std::move(socket)));
+    static std::shared_ptr<Connection> create(asio::ip::tcp::socket socket) {
+        return std::shared_ptr<Connection>(new Connection(std::move(socket)));
     }
 
-    ~connection();
+    ~Connection();
 
-    connection(const connection&) = delete;
-    connection& operator=(const connection&) = delete;
+    Connection(const Connection&) = delete;
+    Connection& operator=(const Connection&) = delete;
 
-    connection(connection&&) noexcept = default;
-    connection& operator=(connection&&) noexcept = default;
+    Connection(Connection&&) noexcept = default;
+    Connection& operator=(Connection&&) noexcept = default;
 
     /**
      * Sends given response to the server. Function is async and will return immediately.
      * @param response The response to send.
      */
-    void async_send_response(const response& response);
+    void async_send_response(const Response& response);
 
     /**
      * Sends given request to the server. Function is async and will return immediately.
      * @param request The request to send.
      */
-    void async_send_request(const request& request);
+    void async_send_request(const Request& request);
 
     /**
      * Shuts down the connection for both directions.
@@ -126,7 +126,7 @@ class connection final: public std::enable_shared_from_this<connection> {
     /**
      * Sets the subscriber for this connection.
      */
-    void set_subscriber(subscriber* subscriber_to_set);
+    void set_subscriber(Subscriber* subscriber_to_set);
 
     /**
      * Connects to the given host and port.
@@ -149,13 +149,13 @@ class connection final: public std::enable_shared_from_this<connection> {
     asio::ip::tcp::socket socket_;
     string_buffer input_buffer_;
     string_buffer output_buffer_;
-    parser parser_;
-    subscriber* subscriber_ {};
+    Parser parser_;
+    Subscriber* subscriber_ {};
 
-    explicit connection(asio::ip::tcp::socket socket);
+    explicit Connection(asio::ip::tcp::socket socket);
 
     void async_write();
     void async_read_some();
 };
 
-}  // namespace rav
+}  // namespace rav::rtsp

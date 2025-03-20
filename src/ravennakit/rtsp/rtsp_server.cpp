@@ -17,7 +17,7 @@
 #include "ravennakit/core/tracy.hpp"
 #include "ravennakit/core/uri.hpp"
 
-rav::rtsp::server::~server() {
+rav::rtsp::Server::~Server() {
     for (const auto& [path, ctx] : paths_) {
         for (auto& c : ctx.connections) {
             c->set_subscriber(nullptr);
@@ -28,11 +28,11 @@ rav::rtsp::server::~server() {
     }
 }
 
-uint16_t rav::rtsp::server::port() const {
+uint16_t rav::rtsp::Server::port() const {
     return acceptor_.local_endpoint().port();
 }
 
-void rav::rtsp::server::register_handler(const std::string& path, path_handler* handler) {
+void rav::rtsp::Server::register_handler(const std::string& path, PathHandler* handler) {
     if (handler == nullptr) {
         const auto found = paths_.find(path);
         if (found == paths_.end()) {
@@ -48,7 +48,7 @@ void rav::rtsp::server::register_handler(const std::string& path, path_handler* 
     path_ctx.handler = handler;
 }
 
-void rav::rtsp::server::unregister_handler(const path_handler* handler_to_remove) {
+void rav::rtsp::Server::unregister_handler(const PathHandler* handler_to_remove) {
     for (auto it = paths_.begin(); it != paths_.end();) {
         if (it->second.handler == handler_to_remove) {
             it->second.handler = nullptr;
@@ -63,7 +63,7 @@ void rav::rtsp::server::unregister_handler(const path_handler* handler_to_remove
     }
 }
 
-void rav::rtsp::server::send_request(const std::string& path, const request& request) const {
+void rav::rtsp::Server::send_request(const std::string& path, const Request& request) const {
     const auto found = paths_.find(path);
     if (found == paths_.end()) {
         return;
@@ -73,15 +73,15 @@ void rav::rtsp::server::send_request(const std::string& path, const request& req
     }
 }
 
-rav::rtsp::server::server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint) :
+rav::rtsp::Server::Server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint) :
     acceptor_(io_context, endpoint) {
     async_accept();
 }
 
-rav::rtsp::server::server(asio::io_context& io_context, const char* address, const uint16_t port) :
-    server(io_context, asio::ip::tcp::endpoint(asio::ip::make_address(address), port)) {}
+rav::rtsp::Server::Server(asio::io_context& io_context, const char* address, const uint16_t port) :
+    Server(io_context, asio::ip::tcp::endpoint(asio::ip::make_address(address), port)) {}
 
-void rav::rtsp::server::stop() {
+void rav::rtsp::Server::stop() {
     TRACY_ZONE_SCOPED;
     acceptor_.cancel();
     for (const auto& [path, ctx] : paths_) {
@@ -92,17 +92,17 @@ void rav::rtsp::server::stop() {
     }
 }
 
-void rav::rtsp::server::reset() noexcept {
+void rav::rtsp::Server::reset() noexcept {
     for (auto& [path, ctx] : paths_) {
         ctx.handler = nullptr;
     }
 }
 
-void rav::rtsp::server::on_connect(connection& connection) {
+void rav::rtsp::Server::on_connect(Connection& connection) {
     RAV_TRACE("New connection from: {}", connection.remote_endpoint().address().to_string());
 }
 
-void rav::rtsp::server::on_request(connection& connection, const request& request) {
+void rav::rtsp::Server::on_request(Connection& connection, const Request& request) {
     RAV_TRACE("Received request: {}", request.to_debug_string(false));
     const auto uri = uri::parse(request.uri);
 
@@ -111,16 +111,16 @@ void rav::rtsp::server::on_request(connection& connection, const request& reques
         pc.handler->on_request({connection, request});
     } else {
         RAV_WARNING("No handler registered for uri: {}", uri.to_string());
-        connection.async_send_response(response(404, "Not Found", "No handler registered for URI"));
+        connection.async_send_response(Response(404, "Not Found", "No handler registered for URI"));
         // Leave the connection open so that we can push an update when a handler is registered
     }
 }
 
-void rav::rtsp::server::on_response([[maybe_unused]] connection& connection, const response& response) {
+void rav::rtsp::Server::on_response([[maybe_unused]] Connection& connection, const Response& response) {
     RAV_TRACE("Received response: {}", response.to_debug_string(false));
 }
 
-void rav::rtsp::server::on_disconnect(connection& connection) {
+void rav::rtsp::Server::on_disconnect(Connection& connection) {
     RAV_TRACE("Connection closed: {}", connection.remote_endpoint().address().to_string());
 
     for (auto& [path, ctx] : paths_) {
@@ -136,7 +136,7 @@ void rav::rtsp::server::on_disconnect(connection& connection) {
     }
 }
 
-void rav::rtsp::server::async_accept() {
+void rav::rtsp::Server::async_accept() {
     acceptor_.async_accept(acceptor_.get_executor(), [this](const std::error_code ec, asio::ip::tcp::socket socket) {
         TRACY_ZONE_SCOPED;
         if (ec) {
@@ -163,7 +163,7 @@ void rav::rtsp::server::async_accept() {
         );
 
         auto& ctx = paths_[k_special_path_all];  // All connections get added to the special path /all
-        const auto& it = ctx.connections.emplace_back(connection::create(std::move(socket)));
+        const auto& it = ctx.connections.emplace_back(Connection::create(std::move(socket)));
         it->set_subscriber(this);
         it->start();
         on_connect(*it);

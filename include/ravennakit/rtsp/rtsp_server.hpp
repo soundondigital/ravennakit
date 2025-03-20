@@ -24,33 +24,33 @@ namespace rav::rtsp {
  * Server for accepting RTSP connections.
  * This class assumes a single threaded io_context and no attempt to synchronise access and callbacks have been made.
  */
-class server final: connection::subscriber {
+class Server final: Connection::Subscriber {
   public:
-    using request_handler = std::function<void(connection::request_event)>;
+    using RequestHandler = std::function<void(Connection::RequestEvent)>;
 
     /**
      * Baseclass for other classes which need to handle requests for specific paths.
      */
-    class path_handler {
+    class PathHandler {
     public:
-        virtual ~path_handler() = default;
+        virtual ~PathHandler() = default;
 
         /**
          * Called when a request is received.
          * @param event The event containing the request.
          */
-        virtual void on_request([[maybe_unused]] connection::request_event event) const {}
+        virtual void on_request([[maybe_unused]] Connection::RequestEvent event) const {}
 
         /**
          * Called when a response is received.
          * @param event The event containing the response.
          */
-        virtual void on_response([[maybe_unused]] connection::response_event event) {}
+        virtual void on_response([[maybe_unused]] Connection::ResponseEvent event) {}
     };
 
-    server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint);
-    server(asio::io_context& io_context, const char* address, uint16_t port);
-    ~server() override;
+    Server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint);
+    Server(asio::io_context& io_context, const char* address, uint16_t port);
+    ~Server() override;
 
     /**
      * @returns The port the server is listening on.
@@ -63,19 +63,19 @@ class server final: connection::subscriber {
      * @param handler The handler to set. If the handler is nullptr it will remove any previously registered handler for
      * path.
      */
-    void register_handler(const std::string& path, path_handler* handler);
+    void register_handler(const std::string& path, PathHandler* handler);
 
     /**
      * Removes given handler from all paths.
      */
-    void unregister_handler(const path_handler* handler_to_remove);
+    void unregister_handler(const PathHandler* handler_to_remove);
 
     /**
      * Sends a request to all connected clients. The path will determine which clients will receive the request.
      * @param path The path to send the request to.
      * @param request The request to send.
      */
-    void send_request(const std::string& path, const request& request) const;
+    void send_request(const std::string& path, const Request& request) const;
 
     /**
      * Closes the listening socket. Implies cancellation.
@@ -88,21 +88,21 @@ class server final: connection::subscriber {
     void reset() noexcept;
 
   protected:
-    void on_connect(connection& connection) override;
-    void on_request(connection& connection, const request& request) override;
-    void on_response(connection& connection, const response& response) override;
-    void on_disconnect(connection& connection) override;
+    void on_connect(Connection& connection) override;
+    void on_request(Connection& connection, const Request& request) override;
+    void on_response(Connection& connection, const Response& response) override;
+    void on_disconnect(Connection& connection) override;
 
   private:
     static constexpr auto k_special_path_all = "/all";
 
-    struct path_context {
-        path_handler* handler;
-        std::vector<std::shared_ptr<connection>> connections;
+    struct PathContext {
+        PathHandler* handler;
+        std::vector<std::shared_ptr<Connection>> connections;
     };
 
     asio::ip::tcp::acceptor acceptor_;
-    std::unordered_map<std::string, path_context> paths_;
+    std::unordered_map<std::string, PathContext> paths_;
 
     void async_accept();
 };
