@@ -66,7 +66,7 @@ class ptp_local_ptp_clock {
      */
     [[nodiscard]] bool is_calibrated() const {
         TRACY_ZONE_SCOPED;
-        return is_locked() && util::is_between(offset_stats_.median(), -k_calibrated_threshold, k_calibrated_threshold);
+        return is_locked() && is_between(offset_stats_.median(), -k_calibrated_threshold, k_calibrated_threshold);
     }
 
     /**

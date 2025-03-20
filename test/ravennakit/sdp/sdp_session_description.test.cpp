@@ -310,7 +310,7 @@ TEST_CASE("session_description | description from AES67 spec 2") {
     REQUIRE(format.clock_rate == 48000);
     REQUIRE(format.num_channels == 8);
     REQUIRE(media.direction() == rav::sdp::media_direction::sendonly);
-    REQUIRE(rav::util::is_within(media.ptime().value(), 0.250f, 0.00001f));
+    REQUIRE(rav::is_within(media.ptime().value(), 0.250f, 0.00001f));
     REQUIRE(media.ref_clock().has_value());
     const auto& refclk = media.ref_clock().value();
     REQUIRE(refclk.source() == rav::sdp::reference_clock::clock_source::ptp);

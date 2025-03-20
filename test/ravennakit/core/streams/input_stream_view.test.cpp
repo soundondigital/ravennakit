@@ -16,7 +16,7 @@
 TEST_CASE("input_stream_view") {
     SECTION("raw data") {
         constexpr uint8_t data[] = {0x11, 0x22, 0x33, 0x44};
-        rav::input_stream_view stream(data, rav::util::num_elements_in_array(data));
+        rav::input_stream_view stream(data, rav::num_elements_in_array(data));
         REQUIRE(stream.read_be<uint32_t>() == 0x11223344);
     }
 

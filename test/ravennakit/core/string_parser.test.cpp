@@ -222,16 +222,16 @@ TEST_CASE("string_parser") {
     SECTION("Parse some floats") {
         const auto str = "0.1.23456";
         rav::string_parser parser(str);
-        REQUIRE(rav::util::is_within(parser.read_float().value(), 0.1f, 00001.f));
-        REQUIRE(rav::util::is_within(parser.read_float().value(), 0.23456f, 00001.f));
+        REQUIRE(rav::is_within(parser.read_float().value(), 0.1f, 00001.f));
+        REQUIRE(rav::is_within(parser.read_float().value(), 0.23456f, 00001.f));
         REQUIRE_FALSE(parser.read_float().has_value());
     }
 
     SECTION("Parse some doubles") {
         const auto str = "0.1.23456";
         rav::string_parser parser(str);
-        REQUIRE(rav::util::is_within(parser.read_double().value(), 0.1, 00001.0));
-        REQUIRE(rav::util::is_within(parser.read_double().value(), 0.23456, 00001.0));
+        REQUIRE(rav::is_within(parser.read_double().value(), 0.1, 00001.0));
+        REQUIRE(rav::is_within(parser.read_double().value(), 0.23456, 00001.0));
         REQUIRE_FALSE(parser.read_float().has_value());
     }
 

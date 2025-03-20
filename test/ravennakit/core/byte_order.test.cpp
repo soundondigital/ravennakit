@@ -66,8 +66,8 @@ TEST_CASE("byte_order | swap_bytes()", "[byte_order]") {
 #endif
 
         // Swap back and forth and check if the result is within a tolerance of the original value
-        REQUIRE(rav::util::is_within(rav::byte_order::swap_bytes(rav::byte_order::swap_bytes(f32)), f32, 0.f));
-        REQUIRE(rav::util::is_within(rav::byte_order::swap_bytes(rav::byte_order::swap_bytes(f64)), f64, 0.0));
+        REQUIRE(rav::is_within(rav::byte_order::swap_bytes(rav::byte_order::swap_bytes(f32)), f32, 0.f));
+        REQUIRE(rav::is_within(rav::byte_order::swap_bytes(rav::byte_order::swap_bytes(f64)), f64, 0.0));
     }
 
     SECTION("24 bit swapping") {
@@ -145,13 +145,13 @@ TEST_CASE("byte_order | read()", "[byte_order]") {
 
     constexpr uint8_t f32_be[] = {0xbf, 0x8c, 0xcc, 0xcd};  // -1.1f (big endian)
     constexpr uint8_t f32_le[] = {0xcd, 0xcc, 0x8c, 0xbf};  // -1.1f (little endian)
-    REQUIRE(rav::util::is_within(rav::byte_order::read_be<float>(f32_be), -1.1f, 0.f));
-    REQUIRE(rav::util::is_within(rav::byte_order::read_le<float>(f32_le), -1.1f, 0.f));
+    REQUIRE(rav::is_within(rav::byte_order::read_be<float>(f32_be), -1.1f, 0.f));
+    REQUIRE(rav::is_within(rav::byte_order::read_le<float>(f32_le), -1.1f, 0.f));
 
     constexpr uint8_t f64_be[] = {0x9a, 0x99, 0x99, 0x99, 0x99, 0x99, 0xf1, 0xbf};  // -1.1 (big endian)
     constexpr uint8_t f64_le[] = {0xbf, 0xf1, 0x99, 0x99, 0x99, 0x99, 0x99, 0x9a};  // -1.1 (little endian)
-    REQUIRE(rav::util::is_within(rav::byte_order::read_be<double>(f64_le), -1.1, 0.0));
-    REQUIRE(rav::util::is_within(rav::byte_order::read_le<double>(f64_be), -1.1, 0.0));
+    REQUIRE(rav::is_within(rav::byte_order::read_be<double>(f64_le), -1.1, 0.0));
+    REQUIRE(rav::is_within(rav::byte_order::read_le<double>(f64_be), -1.1, 0.0));
 }
 
 TEST_CASE("byte_order | write()", "[byte_order]") {

@@ -469,11 +469,11 @@ TEST_CASE("audio_data") {
             );
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read_be(), -1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_be(), +1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_be(), +0.f, f32_tolerance));
-            REQUIRE(rav::util::is_between(dst.read_be(), -1.f, 0.f));
-            REQUIRE(rav::util::is_between(dst.read_be(), -0.f, 1.f));
+            REQUIRE(rav::is_within(dst.read_be(), -1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read_be(), +1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read_be(), +0.f, f32_tolerance));
+            REQUIRE(rav::is_between(dst.read_be(), -1.f, 0.f));
+            REQUIRE(rav::is_between(dst.read_be(), -0.f, 1.f));
         }
 
         SECTION("Convert int16 to float be to le") {
@@ -487,11 +487,11 @@ TEST_CASE("audio_data") {
             );
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read_le(), -1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_le(), +1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_le(), +0.f, f32_tolerance));
-            REQUIRE(rav::util::is_between(dst.read_le(), -1.f, 0.f));
-            REQUIRE(rav::util::is_between(dst.read_le(), -0.f, 1.f));
+            REQUIRE(rav::is_within(dst.read_le(), -1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read_le(), +1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read_le(), +0.f, f32_tolerance));
+            REQUIRE(rav::is_between(dst.read_le(), -1.f, 0.f));
+            REQUIRE(rav::is_between(dst.read_le(), -0.f, 1.f));
         }
 
         SECTION("Convert int16 to float be to ne") {
@@ -505,11 +505,11 @@ TEST_CASE("audio_data") {
             );
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read(), -1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read(), +1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read(), +0.f, f32_tolerance));
-            REQUIRE(rav::util::is_between(dst.read(), -1.f, 0.f));
-            REQUIRE(rav::util::is_between(dst.read(), -0.f, 1.f));
+            REQUIRE(rav::is_within(dst.read(), -1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read(), +1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read(), +0.f, f32_tolerance));
+            REQUIRE(rav::is_between(dst.read(), -1.f, 0.f));
+            REQUIRE(rav::is_between(dst.read(), -0.f, 1.f));
         }
     }
 
@@ -524,11 +524,11 @@ TEST_CASE("audio_data") {
                 interleaving::interleaved>(src.data(), src.size(), dst.data(), dst.size(), 1);
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read_be(), -1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_be(), +1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_be(), +0.f, f32_tolerance));
-            REQUIRE(rav::util::is_between(dst.read_be(), -1.f, 0.f));
-            REQUIRE(rav::util::is_between(dst.read_be(), -0.f, 1.f));
+            REQUIRE(rav::is_within(dst.read_be(), -1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read_be(), +1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read_be(), +0.f, f32_tolerance));
+            REQUIRE(rav::is_between(dst.read_be(), -1.f, 0.f));
+            REQUIRE(rav::is_between(dst.read_be(), -0.f, 1.f));
         }
 
         SECTION("Convert int24 to float be to le") {
@@ -541,11 +541,11 @@ TEST_CASE("audio_data") {
                 interleaving::interleaved>(src.data(), src.size(), dst.data(), dst.size(), 1);
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read_le(), -1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_le(), +1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_le(), +0.f, f32_tolerance));
-            REQUIRE(rav::util::is_between(dst.read_le(), -1.f, 0.f));
-            REQUIRE(rav::util::is_between(dst.read_le(), -0.f, 1.f));
+            REQUIRE(rav::is_within(dst.read_le(), -1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read_le(), +1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read_le(), +0.f, f32_tolerance));
+            REQUIRE(rav::is_between(dst.read_le(), -1.f, 0.f));
+            REQUIRE(rav::is_between(dst.read_le(), -0.f, 1.f));
         }
 
         SECTION("Convert int24 to float be to ne") {
@@ -558,11 +558,11 @@ TEST_CASE("audio_data") {
                 interleaving::interleaved>(src.data(), src.size(), dst.data(), dst.size(), 1);
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read(), -1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read(), +1.f, f32_tolerance));
-            REQUIRE(rav::util::is_within(dst.read(), +0.f, f32_tolerance));
-            REQUIRE(rav::util::is_between(dst.read(), -1.f, 0.f));
-            REQUIRE(rav::util::is_between(dst.read(), -0.f, 1.f));
+            REQUIRE(rav::is_within(dst.read(), -1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read(), +1.f, f32_tolerance));
+            REQUIRE(rav::is_within(dst.read(), +0.f, f32_tolerance));
+            REQUIRE(rav::is_between(dst.read(), -1.f, 0.f));
+            REQUIRE(rav::is_between(dst.read(), -0.f, 1.f));
         }
     }
 
@@ -578,11 +578,11 @@ TEST_CASE("audio_data") {
             );
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read_be(), -1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_be(), +1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_be(), +0.0, f64_tolerance));
-            REQUIRE(rav::util::is_between(dst.read_be(), -1.0, 0.0));
-            REQUIRE(rav::util::is_between(dst.read_be(), -0.0, 1.0));
+            REQUIRE(rav::is_within(dst.read_be(), -1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read_be(), +1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read_be(), +0.0, f64_tolerance));
+            REQUIRE(rav::is_between(dst.read_be(), -1.0, 0.0));
+            REQUIRE(rav::is_between(dst.read_be(), -0.0, 1.0));
         }
 
         SECTION("Convert int16 to double be to le") {
@@ -596,11 +596,11 @@ TEST_CASE("audio_data") {
             );
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read_le(), -1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_le(), +1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_le(), +0.0, f64_tolerance));
-            REQUIRE(rav::util::is_between(dst.read_le(), -1.0, 0.0));
-            REQUIRE(rav::util::is_between(dst.read_le(), -0.0, 1.0));
+            REQUIRE(rav::is_within(dst.read_le(), -1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read_le(), +1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read_le(), +0.0, f64_tolerance));
+            REQUIRE(rav::is_between(dst.read_le(), -1.0, 0.0));
+            REQUIRE(rav::is_between(dst.read_le(), -0.0, 1.0));
         }
 
         SECTION("Convert int16 to double be to ne") {
@@ -614,11 +614,11 @@ TEST_CASE("audio_data") {
             );
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read(), -1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read(), +1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read(), +0.0, f64_tolerance));
-            REQUIRE(rav::util::is_between(dst.read(), -1.0, 0.0));
-            REQUIRE(rav::util::is_between(dst.read(), -0.0, 1.0));
+            REQUIRE(rav::is_within(dst.read(), -1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read(), +1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read(), +0.0, f64_tolerance));
+            REQUIRE(rav::is_between(dst.read(), -1.0, 0.0));
+            REQUIRE(rav::is_between(dst.read(), -0.0, 1.0));
         }
     }
 
@@ -633,11 +633,11 @@ TEST_CASE("audio_data") {
                 interleaving::interleaved>(src.data(), src.size(), dst.data(), dst.size(), 1);
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read_be(), -1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_be(), +1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_be(), +0.0, f64_tolerance));
-            REQUIRE(rav::util::is_between(dst.read_be(), -1.0, 0.0));
-            REQUIRE(rav::util::is_between(dst.read_be(), -0.0, 1.0));
+            REQUIRE(rav::is_within(dst.read_be(), -1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read_be(), +1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read_be(), +0.0, f64_tolerance));
+            REQUIRE(rav::is_between(dst.read_be(), -1.0, 0.0));
+            REQUIRE(rav::is_between(dst.read_be(), -0.0, 1.0));
         }
 
         SECTION("Convert int24 to double be to le") {
@@ -650,11 +650,11 @@ TEST_CASE("audio_data") {
                 interleaving::interleaved>(src.data(), src.size(), dst.data(), dst.size(), 1);
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read_le(), -1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_le(), +1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read_le(), +0.0, f64_tolerance));
-            REQUIRE(rav::util::is_between(dst.read_le(), -1.0, 0.0));
-            REQUIRE(rav::util::is_between(dst.read_le(), -0.0, 1.0));
+            REQUIRE(rav::is_within(dst.read_le(), -1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read_le(), +1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read_le(), +0.0, f64_tolerance));
+            REQUIRE(rav::is_between(dst.read_le(), -1.0, 0.0));
+            REQUIRE(rav::is_between(dst.read_le(), -0.0, 1.0));
         }
 
         SECTION("Convert int24 to double be to ne") {
@@ -667,11 +667,11 @@ TEST_CASE("audio_data") {
                 interleaving::interleaved>(src.data(), src.size(), dst.data(), dst.size(), 1);
 
             REQUIRE(result);
-            REQUIRE(rav::util::is_within(dst.read(), -1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read(), +1.0, f64_tolerance));
-            REQUIRE(rav::util::is_within(dst.read(), +0.0, f64_tolerance));
-            REQUIRE(rav::util::is_between(dst.read(), -1.0, 0.0));
-            REQUIRE(rav::util::is_between(dst.read(), -0.0, 1.0));
+            REQUIRE(rav::is_within(dst.read(), -1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read(), +1.0, f64_tolerance));
+            REQUIRE(rav::is_within(dst.read(), +0.0, f64_tolerance));
+            REQUIRE(rav::is_between(dst.read(), -1.0, 0.0));
+            REQUIRE(rav::is_between(dst.read(), -0.0, 1.0));
         }
     }
 

@@ -23,7 +23,7 @@ TEST_CASE("wav_audio_format | Read wav file", "[wav_audio_format]") {
 
     rav::wav_audio_format::reader reader(std::move(bytes));
     REQUIRE(reader.num_channels() == 2);
-    REQUIRE(rav::util::is_within(reader.sample_rate(), 44100.0, 0.00001));
+    REQUIRE(rav::is_within(reader.sample_rate(), 44100.0, 0.00001));
 
     std::vector<uint8_t> read_audio_data(1764, 0);
 

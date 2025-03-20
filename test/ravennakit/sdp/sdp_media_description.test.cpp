@@ -99,7 +99,7 @@ TEST_CASE("media_description | media_description") {
         REQUIRE_FALSE(media.max_ptime().has_value());
         media.parse_attribute("a=maxptime:60.5");
         REQUIRE(media.max_ptime().has_value());
-        REQUIRE(rav::util::is_within(*media.max_ptime(), 60.5f, 0.0001f));
+        REQUIRE(rav::is_within(*media.max_ptime(), 60.5f, 0.0001f));
     }
 
     SECTION("Test mediaclk attribute") {

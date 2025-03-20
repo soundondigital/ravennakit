@@ -14,7 +14,7 @@
 #include <cmath>
 #include <cstddef>
 
-namespace rav::util {
+namespace rav {
 
 /**
  * Returns the number of elements in a c-style array.

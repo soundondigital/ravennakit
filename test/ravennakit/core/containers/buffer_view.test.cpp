@@ -21,7 +21,7 @@ static_assert(std::is_trivially_copyable_v<rav::buffer_view<char>> == true);
 TEST_CASE("buffer_view | buffer_view()", "[buffer_view]") {
     SECTION("Test int buffer") {
         int data[] = {1, 2, 3, 4, 5};
-        const rav::buffer_view buffer_view(data, rav::util::num_elements_in_array(data));
+        const rav::buffer_view buffer_view(data, rav::num_elements_in_array(data));
 
         REQUIRE(buffer_view.size() == 5);
         REQUIRE(buffer_view.size_bytes() == 5 * sizeof(int));
@@ -31,7 +31,7 @@ TEST_CASE("buffer_view | buffer_view()", "[buffer_view]") {
 
     SECTION("Test char buffer") {
         char data[] = {1, 2, 3, 4, 5};
-        const rav::buffer_view buffer_view(data, rav::util::num_elements_in_array(data));
+        const rav::buffer_view buffer_view(data, rav::num_elements_in_array(data));
 
         REQUIRE(buffer_view.size() == 5);
         REQUIRE(buffer_view.size_bytes() == 5 * sizeof(char));
@@ -60,7 +60,7 @@ TEST_CASE("buffer_view | buffer_view()", "[buffer_view]") {
 
     SECTION("buffer_view can be copied") {
         int data[] = {1, 2, 3, 4, 5};
-        const rav::buffer_view buffer_view(data, rav::util::num_elements_in_array(data));
+        const rav::buffer_view buffer_view(data, rav::num_elements_in_array(data));
         const rav::buffer_view buffer_view_copy(buffer_view);
 
         REQUIRE(buffer_view.data() == buffer_view_copy.data());
