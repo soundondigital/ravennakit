@@ -659,7 +659,7 @@ void rav::rtp_stream_receiver::do_realtime_maintenance() {
 
         TRACY_PLOT(
             "available_frames",
-            static_cast<int64_t>(shared_state->next_ts.diff(shared_state->receiver_buffer.next_ts()))
+            static_cast<int64_t>(state->next_ts.diff(state->receiver_buffer.next_ts()))
         );
     }
 }
