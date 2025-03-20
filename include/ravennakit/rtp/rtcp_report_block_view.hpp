@@ -1,4 +1,4 @@
- /*
+/*
  * Owllab License Agreement
  *
  * This software is provided by Owllab and may not be used, copied, modified,
@@ -13,7 +13,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "ravennakit/ntp/timestamp.hpp"
+#include "ravennakit/ntp/ntp_timestamp.hpp"
 
 namespace rav::rtcp {
 
@@ -66,7 +66,7 @@ class rtcp_report_block_view {
     /**
      * @return The last SR timestamp.
      */
-    [[nodiscard]] ntp::timestamp last_sr_timestamp() const;
+    [[nodiscard]] ntp::Timestamp last_sr_timestamp() const;
 
     /**
      * @return The delay since the last SR.
@@ -88,4 +88,4 @@ class rtcp_report_block_view {
     size_t size_bytes_ {0};
 };
 
-}  // namespace rav
+}  // namespace rav::rtcp

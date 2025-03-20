@@ -53,8 +53,8 @@ uint32_t rav::rtcp::rtcp_report_block_view::inter_arrival_jitter() const {
     return read_be<uint32_t>(data_ + 12);
 }
 
-rav::ntp::timestamp rav::rtcp::rtcp_report_block_view::last_sr_timestamp() const {
-    return ntp::timestamp::from_compact(read_be<uint32_t>(data_ + 16));
+rav::ntp::Timestamp rav::rtcp::rtcp_report_block_view::last_sr_timestamp() const {
+    return ntp::Timestamp::from_compact(read_be<uint32_t>(data_ + 16));
 }
 
 uint32_t rav::rtcp::rtcp_report_block_view::delay_since_last_sr() const {

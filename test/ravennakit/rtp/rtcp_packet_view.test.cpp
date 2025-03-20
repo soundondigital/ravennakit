@@ -275,7 +275,7 @@ TEST_CASE("rtcp_packet_view::ntp_timestamp()", "[rtcp_packet_view]") {
 
     SECTION("Timestamp should be 0 on a too small packet") {
         const rav::rtcp::rtcp_packet_view zero_packet(data.data(), data.size() - 1);
-        REQUIRE(zero_packet.ntp_timestamp() == rav::ntp::timestamp {});
+        REQUIRE(zero_packet.ntp_timestamp() == rav::ntp::Timestamp {});
     }
 }
 

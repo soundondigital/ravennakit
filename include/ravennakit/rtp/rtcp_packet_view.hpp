@@ -16,7 +16,7 @@
 
 #include "rtcp_report_block_view.hpp"
 #include "ravennakit/core/containers/buffer_view.hpp"
-#include "ravennakit/ntp/timestamp.hpp"
+#include "ravennakit/ntp/ntp_timestamp.hpp"
 #include "rtp_constants.hpp"
 
 namespace rav::rtcp {
@@ -91,7 +91,7 @@ class rtcp_packet_view {
      * @return If the packet is a send report then this method returns the NTP timestamp, otherwise returns an empty
      * (0) timestamp.
      */
-    [[nodiscard]] ntp::timestamp ntp_timestamp() const;
+    [[nodiscard]] ntp::Timestamp ntp_timestamp() const;
 
     /**
      * @returns The RTP timestamp if this packet is a sender report, otherwise returns 0.
