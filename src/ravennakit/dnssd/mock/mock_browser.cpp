@@ -27,7 +27,7 @@ void rav::dnssd::MockBrowser::mock_discovering_service(
         service.reg_type = reg_type;
         service.domain = domain;
         const auto [it, inserted] = services_.emplace(fullname, service);
-        emit(service_discovered {it->second});
+        emit(ServiceDiscovered {it->second});
     });
 }
 
@@ -42,7 +42,7 @@ void rav::dnssd::MockBrowser::mock_resolved_service(
         it->second.host_target = host_target;
         it->second.port = port;
         it->second.txt = txt_record;
-        emit(service_resolved {it->second});
+        emit(ServiceResolved {it->second});
     });
 }
 
@@ -55,7 +55,7 @@ void rav::dnssd::MockBrowser::mock_adding_address(
             RAV_THROW_EXCEPTION("Service not discovered: {}", fullname);
         }
         it->second.interfaces[interface_index].insert(address);
-        emit(address_added {it->second, address, interface_index});
+        emit(AddressAdded {it->second, address, interface_index});
     });
 }
 
@@ -79,7 +79,7 @@ void rav::dnssd::MockBrowser::mock_removing_address(
         if (iface->second.empty()) {
             it->second.interfaces.erase(iface);
         }
-        emit(address_removed {it->second, address, interface_index});
+        emit(AddressRemoved {it->second, address, interface_index});
     });
 }
 
@@ -89,7 +89,7 @@ void rav::dnssd::MockBrowser::mock_removing_service(const std::string& fullname)
         if (it == services_.end()) {
             RAV_THROW_EXCEPTION("Service not discovered: {}", fullname);
         }
-        emit(service_removed {it->second});
+        emit(ServiceRemoved {it->second});
         services_.erase(it);
     });
 }
@@ -121,11 +121,11 @@ std::vector<rav::dnssd::ServiceDescription> rav::dnssd::MockBrowser::get_service
 void rav::dnssd::MockBrowser::subscribe(Subscriber& s) {
     subscribers_.push_back(s);
     for (auto& [fullname, service] : services_) {
-        s->emit(service_discovered {service});
-        s->emit(service_resolved {service});
+        s->emit(ServiceDiscovered {service});
+        s->emit(ServiceResolved {service});
         for (auto& [iface_index, addrs] : service.interfaces) {
             for (auto& addr : addrs) {
-                s->emit(address_added {service, addr, iface_index});
+                s->emit(AddressAdded {service, addr, iface_index});
             }
         }
     }

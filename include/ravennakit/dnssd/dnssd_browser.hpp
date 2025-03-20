@@ -20,7 +20,7 @@ class Browser {
      * Event for when a service was discovered.
      * Note: this event will be emitted asynchronously from a background thread.
      */
-    struct service_discovered {
+    struct ServiceDiscovered {
         /// The service description of the discovered service.
         const ServiceDescription& description;
     };
@@ -29,7 +29,7 @@ class Browser {
      * Event for when a service was removed.
      * Note: this event will be emitted asynchronously from a background thread.
      */
-    struct service_removed {
+    struct ServiceRemoved {
         /// The service description of the removed service.
         const ServiceDescription& description;
     };
@@ -38,7 +38,7 @@ class Browser {
      * Event for when a service was resolved (i.e. address information was resolved).
      * Note: this event will be emitted asynchronously from a background thread.
      */
-    struct service_resolved {
+    struct ServiceResolved {
         /// The service description of the resolved service.
         const ServiceDescription& description;
     };
@@ -47,7 +47,7 @@ class Browser {
      * Event for when the service became available on given address.
      * Note: this event will be emitted asynchronously from a background thread.
      */
-    struct address_added {
+    struct AddressAdded {
         /// The service description of the service for which the address was added.
         const ServiceDescription& description;
         /// The address which was added.
@@ -60,7 +60,7 @@ class Browser {
      * Event for when the service became unavailable on given address.
      * Note: this event will be emitted asynchronously from a background thread.
      */
-    struct address_removed {
+    struct AddressRemoved {
         /// The service description of the service for which the address was removed.
         const ServiceDescription& description;
         /// The address which was removed.
@@ -73,12 +73,12 @@ class Browser {
      * Event for when an error occurred during browsing for a service.
      * Note: this event might be emitted asynchronously from a background thread.
      */
-    struct browse_error {
+    struct BrowseError {
         const std::string& error_message;
     };
 
     using Subscriber = linked_node<
-        events<service_discovered, service_removed, service_resolved, address_added, address_removed, browse_error>>;
+        events<ServiceDiscovered, ServiceRemoved, ServiceResolved, AddressAdded, AddressRemoved, BrowseError>>;
 
     virtual ~Browser() = default;
 

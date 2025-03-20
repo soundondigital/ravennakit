@@ -67,13 +67,13 @@ int main(int const argc, char* argv[]) {
         return -1;
     }
 
-    rav::dnssd::Advertiser::subscriber subscriber;
+    rav::dnssd::Advertiser::Subscriber subscriber;
 
-    subscriber->on<rav::dnssd::Advertiser::advertiser_error>([](const auto& event) {
+    subscriber->on<rav::dnssd::Advertiser::AdvertiserError>([](const auto& event) {
         RAV_ERROR("Advertiser error: {}", event.error_message);
     });
 
-    subscriber->on<rav::dnssd::Advertiser::name_conflict>([](const auto& event) {
+    subscriber->on<rav::dnssd::Advertiser::NameConflict>([](const auto& event) {
         RAV_CRITICAL("Name conflict: {} {}", event.reg_type, event.name);
     });
 

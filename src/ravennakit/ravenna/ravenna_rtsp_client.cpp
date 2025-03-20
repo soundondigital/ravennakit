@@ -72,7 +72,7 @@ bool rav::RavennaRtspClient::unsubscribe_from_all_sessions(Subscriber* subscribe
     return count > 0;
 }
 
-void rav::RavennaRtspClient::ravenna_session_discovered(const dnssd::Browser::service_resolved& event) {
+void rav::RavennaRtspClient::ravenna_session_discovered(const dnssd::Browser::ServiceResolved& event) {
     RAV_TRACE("RAVENNA session resolved: {}", event.description.to_string());
     for (auto& session : sessions_) {
         if (event.description.name == session.session_name) {

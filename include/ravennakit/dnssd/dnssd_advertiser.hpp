@@ -21,19 +21,19 @@ class Advertiser {
     /**
      * Event for when a service was discovered.
      */
-    struct advertiser_error {
+    struct AdvertiserError {
         const std::string& error_message;
     };
 
     /**
      * Event for when a DNS-SD service registration failed due to a name conflict.
      */
-    struct name_conflict {
+    struct NameConflict {
         const char* reg_type;
         const char* name;
     };
 
-    using subscriber = linked_node<events<advertiser_error, name_conflict>>;
+    using Subscriber = linked_node<events<AdvertiserError, NameConflict>>;
 
     explicit Advertiser() = default;
     virtual ~Advertiser() = default;
@@ -88,7 +88,7 @@ class Advertiser {
      * Subscribes given subscriber to the advertiser. The subscriber will receive future events.
      * @param s The subscriber to subscribe.
      */
-    virtual void subscribe(subscriber& s) = 0;
+    virtual void subscribe(Subscriber& s) = 0;
 };
 
 }  // namespace rav::dnssd

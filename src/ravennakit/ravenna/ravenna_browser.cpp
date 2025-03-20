@@ -25,24 +25,24 @@ rav::RavennaBrowser::RavennaBrowser(asio::io_context& io_context) {
         RAV_THROW_EXCEPTION("No dnssd browser available");
     }
 
-    node_browser_subscriber_->on<dnssd::Browser::service_resolved>([this](const auto& event) {
+    node_browser_subscriber_->on<dnssd::Browser::ServiceResolved>([this](const auto& event) {
         for (auto* s : subscribers_) {
             s->ravenna_node_discovered(event);
         }
     });
-    node_browser_subscriber_->on<dnssd::Browser::service_removed>([this](const auto& event) {
+    node_browser_subscriber_->on<dnssd::Browser::ServiceRemoved>([this](const auto& event) {
         for (auto* s : subscribers_) {
             s->ravenna_node_removed(event);
         }
     });
     node_browser_->subscribe(node_browser_subscriber_);
 
-    session_browser_subscriber_->on<dnssd::Browser::service_resolved>([this](const auto& event) {
+    session_browser_subscriber_->on<dnssd::Browser::ServiceResolved>([this](const auto& event) {
         for (auto* s : subscribers_) {
             s->ravenna_session_discovered(event);
         }
     });
-    session_browser_subscriber_->on<dnssd::Browser::service_removed>([this](const auto& event) {
+    session_browser_subscriber_->on<dnssd::Browser::ServiceRemoved>([this](const auto& event) {
         for (auto* s : subscribers_) {
             s->ravenna_session_removed(event);
         }

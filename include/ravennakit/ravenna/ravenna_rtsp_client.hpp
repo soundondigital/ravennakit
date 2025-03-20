@@ -87,7 +87,7 @@ class RavennaRtspClient: public RavennaBrowser::Subscriber {
     [[nodiscard]] asio::io_context& get_io_context() const;
 
     // ravenna_browser::subscriber overrides
-    void ravenna_session_discovered(const dnssd::Browser::service_resolved& event) override;
+    void ravenna_session_discovered(const dnssd::Browser::ServiceResolved& event) override;
 
   private:
     struct SessionContext {

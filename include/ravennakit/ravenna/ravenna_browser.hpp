@@ -31,25 +31,25 @@ class RavennaBrowser {
          * Called when a node is discovered.
          * @param event The event containing the service description.
          */
-        virtual void ravenna_node_discovered([[maybe_unused]] const dnssd::Browser::service_resolved& event) {}
+        virtual void ravenna_node_discovered([[maybe_unused]] const dnssd::Browser::ServiceResolved& event) {}
 
         /**
          * Called when a node is removed.
          * @param event The event containing the service description.
          */
-        virtual void ravenna_node_removed([[maybe_unused]] const dnssd::Browser::service_removed& event) {}
+        virtual void ravenna_node_removed([[maybe_unused]] const dnssd::Browser::ServiceRemoved& event) {}
 
         /**
          * Called when a session is discovered.
          * @param event The event containing the service description.
          */
-        virtual void ravenna_session_discovered([[maybe_unused]] const dnssd::Browser::service_resolved& event) {}
+        virtual void ravenna_session_discovered([[maybe_unused]] const dnssd::Browser::ServiceResolved& event) {}
 
         /**
          * Called when a session is removed.
          * @param event The event containing the service description.
          */
-        virtual void ravenna_session_removed([[maybe_unused]] const dnssd::Browser::service_removed& event) {}
+        virtual void ravenna_session_removed([[maybe_unused]] const dnssd::Browser::ServiceRemoved& event) {}
     };
 
     explicit RavennaBrowser(asio::io_context& io_context);

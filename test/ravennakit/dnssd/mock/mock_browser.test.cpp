@@ -21,10 +21,10 @@ TEST_CASE("mock_browser") {
         std::vector<rav::dnssd::ServiceDescription> removed_services;
 
         rav::dnssd::Browser::Subscriber subscriber;
-        subscriber->on<rav::dnssd::Browser::service_discovered>([&](const auto& event) {
+        subscriber->on<rav::dnssd::Browser::ServiceDiscovered>([&](const auto& event) {
             discovered_services.push_back(event.description);
         });
-        subscriber->on<rav::dnssd::Browser::service_removed>([&](const auto& event) {
+        subscriber->on<rav::dnssd::Browser::ServiceRemoved>([&](const auto& event) {
             removed_services.push_back(event.description);
         });
         browser.subscribe(subscriber);
@@ -52,7 +52,7 @@ TEST_CASE("mock_browser") {
         std::vector<rav::dnssd::ServiceDescription> resolved_services;
 
         rav::dnssd::Browser::Subscriber subscriber;
-        subscriber->on<rav::dnssd::Browser::service_resolved>([&](const auto& event) {
+        subscriber->on<rav::dnssd::Browser::ServiceResolved>([&](const auto& event) {
             resolved_services.push_back(event.description);
         });
         browser.subscribe(subscriber);
@@ -79,10 +79,10 @@ TEST_CASE("mock_browser") {
         std::vector<rav::dnssd::ServiceDescription> addresses_removed;
 
         rav::dnssd::Browser::Subscriber subscriber;
-        subscriber->on<rav::dnssd::Browser::address_added>([&](const auto& event) {
+        subscriber->on<rav::dnssd::Browser::AddressAdded>([&](const auto& event) {
             addresses_added.push_back(event.description);
         });
-        subscriber->on<rav::dnssd::Browser::address_removed>([&](const auto& event) {
+        subscriber->on<rav::dnssd::Browser::AddressRemoved>([&](const auto& event) {
             addresses_removed.push_back(event.description);
         });
         browser.subscribe(subscriber);
@@ -156,13 +156,13 @@ TEST_CASE("mock_browser") {
         std::vector<rav::dnssd::ServiceDescription> addresses_added;
 
         rav::dnssd::Browser::Subscriber subscriber;
-        subscriber->on<rav::dnssd::Browser::service_discovered>([&](const auto& event) {
+        subscriber->on<rav::dnssd::Browser::ServiceDiscovered>([&](const auto& event) {
             discovered_services.push_back(event.description);
         });
-        subscriber->on<rav::dnssd::Browser::service_resolved>([&](const auto& event) {
+        subscriber->on<rav::dnssd::Browser::ServiceResolved>([&](const auto& event) {
             resolved_services.push_back(event.description);
         });
-        subscriber->on<rav::dnssd::Browser::address_added>([&](const auto& event) {
+        subscriber->on<rav::dnssd::Browser::AddressAdded>([&](const auto& event) {
             addresses_added.push_back(event.description);
         });
 

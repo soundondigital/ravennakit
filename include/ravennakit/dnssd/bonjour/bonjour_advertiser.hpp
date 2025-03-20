@@ -38,7 +38,7 @@ class BonjourAdvertiser: public Advertiser {
     void update_txt_record(id id, const TxtRecord& txt_record) override;
     void unregister_service(id id) override;
 
-    void subscribe(subscriber& s) override;
+    void subscribe(Subscriber& s) override;
 
   private:
     struct registered_service {
@@ -51,7 +51,7 @@ class BonjourAdvertiser: public Advertiser {
     id::generator id_generator_;
     std::vector<registered_service> registered_services_;
     size_t process_results_failed_attempts_ = 0;
-    subscriber subscribers_;
+    Subscriber subscribers_;
 
     void async_process_results();
 
