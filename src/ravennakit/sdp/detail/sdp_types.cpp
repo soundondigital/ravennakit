@@ -12,52 +12,52 @@
 
 #include "ravennakit/sdp/detail/sdp_constants.hpp"
 
-std::string rav::sdp::to_string(const netw_type& type) {
+std::string rav::sdp::to_string(const NetwType& type) {
     switch (type) {
-        case netw_type::internet:
+        case NetwType::internet:
             return k_sdp_inet;
-        case netw_type::undefined:
+        case NetwType::undefined:
         default:
             return "undefined";
     }
 }
 
-std::string rav::sdp::to_string(const addr_type& type) {
+std::string rav::sdp::to_string(const AddrType& type) {
     switch (type) {
-        case addr_type::ipv4:
+        case AddrType::ipv4:
             return k_sdp_ipv4;
-        case addr_type::ipv6:
+        case AddrType::ipv6:
             return k_sdp_ipv6;
-        case addr_type::both:
+        case AddrType::both:
             return k_sdp_wildcard;
-        case addr_type::undefined:
+        case AddrType::undefined:
         default:
             return "undefined";
     }
 }
 
-std::string rav::sdp::to_string(const media_direction& direction) {
+std::string rav::sdp::to_string(const MediaDirection& direction) {
     switch (direction) {
-        case media_direction::sendrecv:
+        case MediaDirection::sendrecv:
             return k_sdp_sendrecv;
-        case media_direction::sendonly:
+        case MediaDirection::sendonly:
             return k_sdp_sendonly;
-        case media_direction::recvonly:
+        case MediaDirection::recvonly:
             return k_sdp_recvonly;
-        case media_direction::inactive:
+        case MediaDirection::inactive:
             return k_sdp_inactive;
         default:
             return "undefined";
     }
 }
 
-std::string rav::sdp::to_string(const filter_mode& filter_mode) {
+std::string rav::sdp::to_string(const FilterMode& filter_mode) {
     switch (filter_mode) {
-        case filter_mode::exclude:
+        case FilterMode::exclude:
             return "excl";
-        case filter_mode::include:
+        case FilterMode::include:
             return "incl";
-        case filter_mode::undefined:
+        case FilterMode::undefined:
         default:
             return "undefined";
     }

@@ -21,7 +21,7 @@ TEST_CASE("rtp_filter") {
 
     SECTION("matches") {
         REQUIRE(filter.empty());
-        filter.add_filter(asio::ip::make_address("192.168.1.2"), rav::sdp::filter_mode::exclude);
+        filter.add_filter(asio::ip::make_address("192.168.1.2"), rav::sdp::FilterMode::exclude);
         REQUIRE_FALSE(filter.empty());
     }
 
@@ -37,7 +37,7 @@ TEST_CASE("rtp_filter") {
     }
 
     SECTION("is_valid_source with single exclude address") {
-        filter.add_filter(asio::ip::make_address("192.168.1.2"), rav::sdp::filter_mode::exclude);
+        filter.add_filter(asio::ip::make_address("192.168.1.2"), rav::sdp::FilterMode::exclude);
         auto matches = filter.is_valid_source(connection_address, asio::ip::make_address("127.0.0.1"));
         REQUIRE(matches);
         matches = filter.is_valid_source(connection_address, asio::ip::make_address("192.168.1.2"));
@@ -45,7 +45,7 @@ TEST_CASE("rtp_filter") {
     }
 
     SECTION("is_valid_source with single include address") {
-        filter.add_filter(asio::ip::make_address("192.168.1.2"), rav::sdp::filter_mode::include);
+        filter.add_filter(asio::ip::make_address("192.168.1.2"), rav::sdp::FilterMode::include);
         auto matches = filter.is_valid_source(connection_address, asio::ip::make_address("127.0.0.1"));
         REQUIRE_FALSE(matches);
         matches = filter.is_valid_source(connection_address, asio::ip::make_address("192.168.1.2"));
@@ -53,7 +53,7 @@ TEST_CASE("rtp_filter") {
     }
 
     SECTION("add_filter with single include address") {
-        auto src_filter = rav::sdp::source_filter::parse_new(" incl IN IP4 239.3.8.1 192.168.16.52");
+        auto src_filter = rav::sdp::SourceFilter::parse_new(" incl IN IP4 239.3.8.1 192.168.16.52");
         REQUIRE(src_filter.is_ok());
         REQUIRE(filter.add_filter(src_filter.get_ok()) == 1);
         REQUIRE_FALSE(filter.empty());
@@ -65,7 +65,7 @@ TEST_CASE("rtp_filter") {
     }
 
     SECTION("add_filter with single exclude address") {
-        auto src_filter = rav::sdp::source_filter::parse_new(" excl IN IP4 239.3.8.1 192.168.16.52");
+        auto src_filter = rav::sdp::SourceFilter::parse_new(" excl IN IP4 239.3.8.1 192.168.16.52");
         REQUIRE(src_filter.is_ok());
         REQUIRE(filter.add_filter(src_filter.get_ok()) == 1);
         REQUIRE_FALSE(filter.empty());

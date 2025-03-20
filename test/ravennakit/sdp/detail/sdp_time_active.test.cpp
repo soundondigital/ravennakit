@@ -14,7 +14,7 @@
 
 TEST_CASE("media_description | time_active_field") {
     SECTION("Test time field") {
-        auto result = rav::sdp::time_active_field::parse_new("t=123456789 987654321");
+        auto result = rav::sdp::TimeActiveField::parse_new("t=123456789 987654321");
         REQUIRE(result.is_ok());
         const auto time = result.move_ok();
         REQUIRE(time.start_time == 123456789);
@@ -22,12 +22,12 @@ TEST_CASE("media_description | time_active_field") {
     }
 
     SECTION("Test invalid time field") {
-        auto result = rav::sdp::time_active_field::parse_new("t=123456789 ");
+        auto result = rav::sdp::TimeActiveField::parse_new("t=123456789 ");
         REQUIRE(result.is_err());
     }
 
     SECTION("Test invalid time field") {
-        auto result = rav::sdp::time_active_field::parse_new("t=");
+        auto result = rav::sdp::TimeActiveField::parse_new("t=");
         REQUIRE(result.is_err());
     }
 }

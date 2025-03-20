@@ -42,7 +42,7 @@ class Filter {
      * @param src_address The source address.
      * @param mode The filter mode.
      */
-    void add_filter(asio::ip::address src_address, const sdp::filter_mode mode) {
+    void add_filter(asio::ip::address src_address, const sdp::FilterMode mode) {
         RAV_TRACE(
             "Added source filter: {} {} {}", rav::sdp::to_string(mode), connection_address_.to_string(),
             src_address.to_string()
@@ -55,7 +55,7 @@ class Filter {
      * @param source_filter The source filter.
      * @return The number of source filters added.
      */
-    size_t add_filter(const sdp::source_filter& source_filter) {
+    size_t add_filter(const sdp::SourceFilter& source_filter) {
         size_t total = 0;
         const auto dest_address = asio::ip::make_address(source_filter.dest_address());
         if (dest_address != connection_address_) {
@@ -73,7 +73,7 @@ class Filter {
      * @param filters The source filters.
      * @return The number of source filters added.
      */
-    size_t add_filters(const std::vector<sdp::source_filter>& filters) {
+    size_t add_filters(const std::vector<sdp::SourceFilter>& filters) {
         size_t total = 0;
         for (auto& f : filters) {
             total += add_filter(f);
@@ -110,10 +110,10 @@ class Filter {
         bool has_include_filters = false;
 
         for (auto& f : filters_) {
-            if (f.mode == sdp::filter_mode::exclude && f.address == src_address) {
+            if (f.mode == sdp::FilterMode::exclude && f.address == src_address) {
                 return false;  // This prioritizes exclude filters over include filters
             }
-            if (f.mode == sdp::filter_mode::include) {
+            if (f.mode == sdp::FilterMode::include) {
                 has_include_filters = true;
                 if (f.address == src_address) {
                     is_address_included = true;
@@ -141,7 +141,7 @@ class Filter {
 
   private:
     struct filter {
-        sdp::filter_mode mode {sdp::filter_mode::undefined};
+        sdp::FilterMode mode {sdp::FilterMode::undefined};
         asio::ip::address address;
 
         friend bool operator==(const filter& lhs, const filter& rhs) {

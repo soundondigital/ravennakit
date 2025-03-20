@@ -24,25 +24,25 @@ namespace rav::sdp {
  * packets.
  * https://datatracker.ietf.org/doc/html/rfc7273#autoid-15
  */
-class media_clock_source {
+class MediaClockSource {
   public:
     static constexpr auto k_attribute_name = "mediaclk";
 
-    enum class clock_mode { undefined, direct };
+    enum class ClockMode { undefined, direct };
 
-    media_clock_source() = default;
-    media_clock_source(clock_mode mode, std::optional<int64_t> offset, std::optional<fraction<int32_t>> rate);
+    MediaClockSource() = default;
+    MediaClockSource(ClockMode mode, std::optional<int64_t> offset, std::optional<fraction<int32_t>> rate);
 
     /// A type alias for a parse result.
     template<class T>
-    using parse_result = result<T, std::string>;
+    using ParseResult = result<T, std::string>;
 
-    static parse_result<media_clock_source> parse_new(std::string_view line);
+    static ParseResult<MediaClockSource> parse_new(std::string_view line);
 
     /**
      * @returns The clock mode
      */
-    [[nodiscard]] clock_mode mode() const;
+    [[nodiscard]] ClockMode mode() const;
 
     /**
      * @return The offset of the media clock.
@@ -71,10 +71,10 @@ class media_clock_source {
      * @param mode The clock mode to convert.
      * @return The clock mode as a string.
      */
-    static std::string to_string(clock_mode mode);
+    static std::string to_string(ClockMode mode);
 
   private:
-    clock_mode mode_ {clock_mode::undefined};
+    ClockMode mode_ {ClockMode::undefined};
     std::optional<int64_t> offset_;
     std::optional<fraction<int32_t>> rate_;
 };

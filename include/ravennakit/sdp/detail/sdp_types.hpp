@@ -13,14 +13,14 @@
 
 namespace rav::sdp {
 
-enum class netw_type { undefined, internet };
-enum class addr_type { undefined, ipv4, ipv6, both };
-enum class media_direction { sendrecv, sendonly, recvonly, inactive };
-enum class filter_mode { undefined, exclude, include };
+enum class NetwType { undefined, internet };
+enum class AddrType { undefined, ipv4, ipv6, both };
+enum class MediaDirection { sendrecv, sendonly, recvonly, inactive };
+enum class FilterMode { undefined, exclude, include };
 
-std::string to_string(const netw_type& type);
-std::string to_string(const addr_type& type);
-std::string to_string(const media_direction& direction);
-std::string to_string(const filter_mode& filter_mode);
+std::string to_string(const NetwType& type);
+std::string to_string(const AddrType& type);
+std::string to_string(const MediaDirection& direction);
+std::string to_string(const FilterMode& filter_mode);
 
 }

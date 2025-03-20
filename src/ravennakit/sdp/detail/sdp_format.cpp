@@ -13,11 +13,11 @@
 
 #include "ravennakit/core/format.hpp"
 
-std::string rav::sdp::format::to_string() const {
+std::string rav::sdp::Format::to_string() const {
     return fmt::format("{} {}/{}/{}", payload_type, encoding_name, clock_rate, num_channels);
 }
 
-std::optional<rav::audio_format> rav::sdp::format::to_audio_format() const {
+std::optional<rav::audio_format> rav::sdp::Format::to_audio_format() const {
     if (encoding_name == "L16") {
         return audio_format {
             audio_format::byte_order::be, audio_encoding::pcm_s16, audio_format::channel_ordering::interleaved,
@@ -39,8 +39,8 @@ std::optional<rav::audio_format> rav::sdp::format::to_audio_format() const {
     return std::nullopt;
 }
 
-std::optional<rav::sdp::format> rav::sdp::format::from_audio_format(const audio_format& input_format) {
-    format output_format;
+std::optional<rav::sdp::Format> rav::sdp::Format::from_audio_format(const audio_format& input_format) {
+    Format output_format;
 
     switch (input_format.encoding) {
         case audio_encoding::undefined:
@@ -67,30 +67,30 @@ std::optional<rav::sdp::format> rav::sdp::format::from_audio_format(const audio_
     return output_format;
 }
 
-rav::sdp::format::parse_result<rav::sdp::format> rav::sdp::format::parse_new(const std::string_view line) {
+rav::sdp::Format::parse_result<rav::sdp::Format> rav::sdp::Format::parse_new(const std::string_view line) {
     string_parser parser(line);
 
-    format map;
+    Format map;
 
     if (const auto payload_type = parser.read_int<uint8_t>()) {
         map.payload_type = *payload_type;
         if (!parser.skip(' ')) {
-            return parse_result<format>::err("rtpmap: expecting space after payload type");
+            return parse_result<Format>::err("rtpmap: expecting space after payload type");
         }
     } else {
-        return parse_result<format>::err("rtpmap: invalid payload type");
+        return parse_result<Format>::err("rtpmap: invalid payload type");
     }
 
     if (const auto encoding_name = parser.split('/')) {
         map.encoding_name = *encoding_name;
     } else {
-        return parse_result<format>::err("rtpmap: failed to parse encoding name");
+        return parse_result<Format>::err("rtpmap: failed to parse encoding name");
     }
 
     if (const auto clock_rate = parser.read_int<uint32_t>()) {
         map.clock_rate = *clock_rate;
     } else {
-        return parse_result<format>::err("rtpmap: invalid clock rate");
+        return parse_result<Format>::err("rtpmap: invalid clock rate");
     }
 
     if (parser.skip('/')) {
@@ -99,11 +99,11 @@ rav::sdp::format::parse_result<rav::sdp::format> rav::sdp::format::parse_new(con
             // channels.
             map.num_channels = *num_channels;
         } else {
-            return parse_result<format>::err("rtpmap: failed to parse number of channels");
+            return parse_result<Format>::err("rtpmap: failed to parse number of channels");
         }
     } else {
         map.num_channels = 1;
     }
 
-    return parse_result<format>::ok(map);
+    return parse_result<Format>::ok(map);
 }

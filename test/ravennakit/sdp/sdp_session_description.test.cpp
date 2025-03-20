@@ -20,7 +20,7 @@ TEST_CASE("session_description") {
             "v=0\r\n"
             "o=- 13 0 IN IP4 192.168.15.52\r\n"
             "s=Anubis_610120_13\r\n";
-        auto result = rav::sdp::session_description::parse_new(crlf);
+        auto result = rav::sdp::SessionDescription::parse_new(crlf);
         REQUIRE(result.is_ok());
         REQUIRE(result.get_ok().version() == 0);
     }
@@ -30,7 +30,7 @@ TEST_CASE("session_description") {
             "v=0\n"
             "o=- 13 0 IN IP4 192.168.15.52\n"
             "s=Anubis_610120_13\n";
-        auto result = rav::sdp::session_description::parse_new(n);
+        auto result = rav::sdp::SessionDescription::parse_new(n);
         REQUIRE(result.is_ok());
         REQUIRE(result.get_ok().version() == 0);
     }
@@ -60,7 +60,7 @@ TEST_CASE("session_description | description from anubis") {
         "a=recvonly\r\n"
         "a=midi-pre2:50040 0,0;0,1\r\n";
 
-    auto result = rav::sdp::session_description::parse_new(k_anubis_sdp);
+    auto result = rav::sdp::SessionDescription::parse_new(k_anubis_sdp);
     REQUIRE(result.is_ok());
 
     SECTION("Parse a description from an Anubis") {
@@ -72,7 +72,7 @@ TEST_CASE("session_description | description from anubis") {
             "v=1\r\n"
             "o=- 13 0 IN IP4 192.168.15.52\r\n"
             "s=Anubis_610120_13\r\n";
-        REQUIRE(rav::sdp::session_description::parse_new(sdp).is_err());
+        REQUIRE(rav::sdp::SessionDescription::parse_new(sdp).is_err());
     }
 
     SECTION("Test origin") {
@@ -80,16 +80,16 @@ TEST_CASE("session_description | description from anubis") {
         REQUIRE(origin.username == "-");
         REQUIRE(origin.session_id == "13");
         REQUIRE(origin.session_version == 0);
-        REQUIRE(origin.network_type == rav::sdp::netw_type::internet);
-        REQUIRE(origin.address_type == rav::sdp::addr_type::ipv4);
+        REQUIRE(origin.network_type == rav::sdp::NetwType::internet);
+        REQUIRE(origin.address_type == rav::sdp::AddrType::ipv4);
         REQUIRE(origin.unicast_address == "192.168.15.52");
     }
 
     SECTION("Test connection") {
         const auto& connection = result.get_ok().connection_info();
         REQUIRE(connection.has_value());
-        REQUIRE(connection->network_type == rav::sdp::netw_type::internet);
-        REQUIRE(connection->address_type == rav::sdp::addr_type::ipv4);
+        REQUIRE(connection->network_type == rav::sdp::NetwType::internet);
+        REQUIRE(connection->address_type == rav::sdp::AddrType::ipv4);
         REQUIRE(connection->address == "239.1.15.52");
     }
 
@@ -122,8 +122,8 @@ TEST_CASE("session_description | description from anubis") {
         REQUIRE(media.connection_infos().size() == 1);
 
         const auto& conn = media.connection_infos().back();
-        REQUIRE(conn.network_type == rav::sdp::netw_type::internet);
-        REQUIRE(conn.address_type == rav::sdp::addr_type::ipv4);
+        REQUIRE(conn.network_type == rav::sdp::NetwType::internet);
+        REQUIRE(conn.address_type == rav::sdp::AddrType::ipv4);
         REQUIRE(conn.address == "239.1.15.52");
         REQUIRE(conn.ttl.has_value() == true);
         REQUIRE(*conn.ttl == 15);
@@ -132,8 +132,8 @@ TEST_CASE("session_description | description from anubis") {
         SECTION("Test refclk on media") {
             const auto& refclk = media.ref_clock();
             REQUIRE(refclk.has_value());
-            REQUIRE(refclk->source() == rav::sdp::reference_clock::clock_source::ptp);
-            REQUIRE(refclk->ptp_version() == rav::sdp::reference_clock::ptp_ver::IEEE_1588_2008);
+            REQUIRE(refclk->source() == rav::sdp::ReferenceClock::ClockSource::ptp);
+            REQUIRE(refclk->ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
             REQUIRE(refclk->gmid() == "00-1D-C1-FF-FE-51-9E-F7");
             REQUIRE(refclk->domain() == 0);
         }
@@ -144,7 +144,7 @@ TEST_CASE("session_description | description from anubis") {
 
         SECTION("Test mediaclk on media") {
             const auto& media_clock = media.media_clock().value();
-            REQUIRE(media_clock.mode() == rav::sdp::media_clock_source::clock_mode::direct);
+            REQUIRE(media_clock.mode() == rav::sdp::MediaClockSource::ClockMode::direct);
             REQUIRE(media_clock.offset().value() == 0);
             REQUIRE_FALSE(media_clock.rate().has_value());
         }
@@ -153,9 +153,9 @@ TEST_CASE("session_description | description from anubis") {
             const auto& filters = media.source_filters();
             REQUIRE(filters.size() == 1);
             const auto& filter = filters[0];
-            REQUIRE(filter.mode() == rav::sdp::filter_mode::include);
-            REQUIRE(filter.network_type() == rav::sdp::netw_type::internet);
-            REQUIRE(filter.address_type() == rav::sdp::addr_type::ipv4);
+            REQUIRE(filter.mode() == rav::sdp::FilterMode::include);
+            REQUIRE(filter.network_type() == rav::sdp::NetwType::internet);
+            REQUIRE(filter.address_type() == rav::sdp::AddrType::ipv4);
             REQUIRE(filter.dest_address() == "239.1.15.52");
             REQUIRE(filter.src_list().size() == 1);
             REQUIRE(filter.src_list()[0] == "192.168.15.52");
@@ -174,28 +174,28 @@ TEST_CASE("session_description | description from anubis") {
     }
 
     SECTION("Media direction") {
-        REQUIRE(result.get_ok().direction() == rav::sdp::media_direction::sendrecv);
+        REQUIRE(result.get_ok().direction() == rav::sdp::MediaDirection::sendrecv);
     }
 
     SECTION("Test refclk on session") {
         const auto& refclk = result.get_ok().ref_clock();
         REQUIRE(refclk.has_value());
-        REQUIRE(refclk->source() == rav::sdp::reference_clock::clock_source::ptp);
-        REQUIRE(refclk->ptp_version() == rav::sdp::reference_clock::ptp_ver::IEEE_1588_2008);
+        REQUIRE(refclk->source() == rav::sdp::ReferenceClock::ClockSource::ptp);
+        REQUIRE(refclk->ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
         REQUIRE(refclk->gmid() == "00-1D-C1-FF-FE-51-9E-F7");
         REQUIRE(refclk->domain() == 0);
     }
 
     SECTION("Test mediaclk attribute") {
         auto media_clock = result.move_ok().media_clock().value();
-        REQUIRE(media_clock.mode() == rav::sdp::media_clock_source::clock_mode::direct);
+        REQUIRE(media_clock.mode() == rav::sdp::MediaClockSource::ClockMode::direct);
         REQUIRE(media_clock.offset().value() == 0);
         REQUIRE_FALSE(media_clock.rate().has_value());
     }
 
     SECTION("Test clock-domain") {
         auto clock_domain = result.get_ok().clock_domain().value();
-        REQUIRE(clock_domain.source == rav::sdp::ravenna_clock_domain::sync_source::ptp_v2);
+        REQUIRE(clock_domain.source == rav::sdp::RavennaClockDomain::SyncSource::ptp_v2);
         REQUIRE(clock_domain.domain == 0);
     }
 }
@@ -215,20 +215,20 @@ TEST_CASE("session_description | description from AES67 spec") {
         "a=ts-refclk:ptp=IEEE1588-2008:39-A7-94-FF-FE-07-CB-D0:0\n"
         "a=mediaclk:direct=963214424\n";
 
-    auto result = rav::sdp::session_description::parse_new(k_aes67_sdp);
+    auto result = rav::sdp::SessionDescription::parse_new(k_aes67_sdp);
     REQUIRE(result.is_ok());
     auto session = result.move_ok();
     REQUIRE(session.version() == 0);
     REQUIRE(session.origin().username == "-");
     REQUIRE(session.origin().session_id == "1311738121");
     REQUIRE(session.origin().session_version == 1311738121);
-    REQUIRE(session.origin().network_type == rav::sdp::netw_type::internet);
-    REQUIRE(session.origin().address_type == rav::sdp::addr_type::ipv4);
+    REQUIRE(session.origin().network_type == rav::sdp::NetwType::internet);
+    REQUIRE(session.origin().address_type == rav::sdp::AddrType::ipv4);
     REQUIRE(session.origin().unicast_address == "192.168.1.1");
     REQUIRE(session.session_name() == "Stage left I/O");
     REQUIRE(session.connection_info().has_value());
-    REQUIRE(session.connection_info()->network_type == rav::sdp::netw_type::internet);
-    REQUIRE(session.connection_info()->address_type == rav::sdp::addr_type::ipv4);
+    REQUIRE(session.connection_info()->network_type == rav::sdp::NetwType::internet);
+    REQUIRE(session.connection_info()->address_type == rav::sdp::AddrType::ipv4);
     REQUIRE(session.connection_info()->address == "239.0.0.1");
     REQUIRE(session.connection_info()->ttl == 32);
     REQUIRE(session.time_active().start_time == 0);
@@ -246,17 +246,17 @@ TEST_CASE("session_description | description from AES67 spec") {
     REQUIRE(format.encoding_name == "L24");
     REQUIRE(format.clock_rate == 48000);
     REQUIRE(format.num_channels == 8);
-    REQUIRE(media.direction() == rav::sdp::media_direction::recvonly);
+    REQUIRE(media.direction() == rav::sdp::MediaDirection::recvonly);
     REQUIRE(static_cast<int64_t>(media.ptime().value()) == 1);
     REQUIRE(media.ref_clock().has_value());
     const auto& refclk = media.ref_clock().value();
-    REQUIRE(refclk.source() == rav::sdp::reference_clock::clock_source::ptp);
-    REQUIRE(refclk.ptp_version() == rav::sdp::reference_clock::ptp_ver::IEEE_1588_2008);
+    REQUIRE(refclk.source() == rav::sdp::ReferenceClock::ClockSource::ptp);
+    REQUIRE(refclk.ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
     REQUIRE(refclk.gmid() == "39-A7-94-FF-FE-07-CB-D0");
     REQUIRE(refclk.domain() == 0);
     REQUIRE(media.media_clock().has_value());
     const auto& media_clock = media.media_clock().value();
-    REQUIRE(media_clock.mode() == rav::sdp::media_clock_source::clock_mode::direct);
+    REQUIRE(media_clock.mode() == rav::sdp::MediaClockSource::ClockMode::direct);
     REQUIRE(media_clock.offset().value() == 963214424);
     REQUIRE_FALSE(media_clock.rate().has_value());
 }
@@ -276,7 +276,7 @@ TEST_CASE("session_description | description from AES67 spec 2") {
         "a=ts-refclk:ptp=IEEE1588-2008:39-A7-94-FF-FE-07-CB-D0:0\n"
         "a=mediaclk:direct=2216659908\n";
 
-    auto result = rav::sdp::session_description::parse_new(k_aes67_sdp);
+    auto result = rav::sdp::SessionDescription::parse_new(k_aes67_sdp);
     if (result.is_err()) {
         FAIL(result.get_err());
     }
@@ -285,13 +285,13 @@ TEST_CASE("session_description | description from AES67 spec 2") {
     REQUIRE(session.origin().username == "audio");
     REQUIRE(session.origin().session_id == "1311738121");
     REQUIRE(session.origin().session_version == 1311738121);
-    REQUIRE(session.origin().network_type == rav::sdp::netw_type::internet);
-    REQUIRE(session.origin().address_type == rav::sdp::addr_type::ipv4);
+    REQUIRE(session.origin().network_type == rav::sdp::NetwType::internet);
+    REQUIRE(session.origin().address_type == rav::sdp::AddrType::ipv4);
     REQUIRE(session.origin().unicast_address == "192.168.1.1");
     REQUIRE(session.session_name() == "Stage left I/O");
     REQUIRE(session.connection_info().has_value());
-    REQUIRE(session.connection_info()->network_type == rav::sdp::netw_type::internet);
-    REQUIRE(session.connection_info()->address_type == rav::sdp::addr_type::ipv4);
+    REQUIRE(session.connection_info()->network_type == rav::sdp::NetwType::internet);
+    REQUIRE(session.connection_info()->address_type == rav::sdp::AddrType::ipv4);
     REQUIRE(session.connection_info()->address == "192.168.1.1");
     REQUIRE_FALSE(session.connection_info()->ttl.has_value());
     REQUIRE(session.time_active().start_time == 0);
@@ -309,17 +309,17 @@ TEST_CASE("session_description | description from AES67 spec 2") {
     REQUIRE(format.encoding_name == "L24");
     REQUIRE(format.clock_rate == 48000);
     REQUIRE(format.num_channels == 8);
-    REQUIRE(media.direction() == rav::sdp::media_direction::sendonly);
+    REQUIRE(media.direction() == rav::sdp::MediaDirection::sendonly);
     REQUIRE(rav::is_within(media.ptime().value(), 0.250f, 0.00001f));
     REQUIRE(media.ref_clock().has_value());
     const auto& refclk = media.ref_clock().value();
-    REQUIRE(refclk.source() == rav::sdp::reference_clock::clock_source::ptp);
-    REQUIRE(refclk.ptp_version() == rav::sdp::reference_clock::ptp_ver::IEEE_1588_2008);
+    REQUIRE(refclk.source() == rav::sdp::ReferenceClock::ClockSource::ptp);
+    REQUIRE(refclk.ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
     REQUIRE(refclk.gmid() == "39-A7-94-FF-FE-07-CB-D0");
     REQUIRE(refclk.domain() == 0);
     REQUIRE(media.media_clock().has_value());
     const auto& media_clock = media.media_clock().value();
-    REQUIRE(media_clock.mode() == rav::sdp::media_clock_source::clock_mode::direct);
+    REQUIRE(media_clock.mode() == rav::sdp::MediaClockSource::ClockMode::direct);
     REQUIRE(media_clock.offset().value() == 2216659908);
     REQUIRE_FALSE(media_clock.rate().has_value());
 }
@@ -349,16 +349,16 @@ TEST_CASE("session_description | source filters") {
         "a=recvonly\r\n"
         "a=midi-pre2:50040 0,0;0,1\r\n";
 
-    auto result = rav::sdp::session_description::parse_new(k_anubis_sdp);
+    auto result = rav::sdp::SessionDescription::parse_new(k_anubis_sdp);
     REQUIRE(result.is_ok());
 
     SECTION("Session level source filter") {
         const auto& filters = result.get_ok().source_filters();
         REQUIRE(filters.size() == 1);
         const auto& filter = filters[0];
-        REQUIRE(filter.mode() == rav::sdp::filter_mode::include);
-        REQUIRE(filter.network_type() == rav::sdp::netw_type::internet);
-        REQUIRE(filter.address_type() == rav::sdp::addr_type::ipv4);
+        REQUIRE(filter.mode() == rav::sdp::FilterMode::include);
+        REQUIRE(filter.network_type() == rav::sdp::NetwType::internet);
+        REQUIRE(filter.address_type() == rav::sdp::AddrType::ipv4);
         REQUIRE(filter.dest_address() == "239.1.15.52");
         const auto& src_list = filter.src_list();
         REQUIRE(src_list.size() == 1);
@@ -375,9 +375,9 @@ TEST_CASE("session_description | source filters") {
             const auto& filters = media.source_filters();
             REQUIRE(filters.size() == 1);
             const auto& filter = filters[0];
-            REQUIRE(filter.mode() == rav::sdp::filter_mode::include);
-            REQUIRE(filter.network_type() == rav::sdp::netw_type::internet);
-            REQUIRE(filter.address_type() == rav::sdp::addr_type::ipv4);
+            REQUIRE(filter.mode() == rav::sdp::FilterMode::include);
+            REQUIRE(filter.network_type() == rav::sdp::NetwType::internet);
+            REQUIRE(filter.address_type() == rav::sdp::AddrType::ipv4);
             REQUIRE(filter.dest_address() == "239.1.15.52");
             REQUIRE(filter.src_list().size() == 1);
             REQUIRE(filter.src_list()[0] == "192.168.15.52");
@@ -412,7 +412,7 @@ TEST_CASE("session_description | Unknown attributes") {
         "a=recvonly\r\n"
         "a=midi-pre2:50040 0,0;0,1\r\n";
 
-    auto result = rav::sdp::session_description::parse_new(k_anubis_sdp);
+    auto result = rav::sdp::SessionDescription::parse_new(k_anubis_sdp);
     REQUIRE(result.is_ok());
 
     SECTION("Unknown attributes on session") {
@@ -444,14 +444,14 @@ TEST_CASE("session_description | To string") {
         "s=Anubis Combo LR\r\n"
         "t=0 0\r\n";
 
-    rav::sdp::origin_field origin;
+    rav::sdp::OriginField origin;
     origin.session_id = "13";
     origin.session_version = 0;
-    origin.network_type = rav::sdp::netw_type::internet;
-    origin.address_type = rav::sdp::addr_type::ipv4;
+    origin.network_type = rav::sdp::NetwType::internet;
+    origin.address_type = rav::sdp::AddrType::ipv4;
     origin.unicast_address = "192.168.15.52";
 
-    rav::sdp::session_description sdp;
+    rav::sdp::SessionDescription sdp;
     sdp.set_origin(origin);
     sdp.set_session_name("Anubis Combo LR");
     sdp.set_time_active({0, 0});
@@ -459,9 +459,9 @@ TEST_CASE("session_description | To string") {
     REQUIRE(sdp.to_string().value() == expected);
 
     SECTION("Connection info (optional if media descriptions all have their own connection info)") {
-        rav::sdp::connection_info_field connection_info;
-        connection_info.network_type = rav::sdp::netw_type::internet;
-        connection_info.address_type = rav::sdp::addr_type::ipv4;
+        rav::sdp::ConnectionInfoField connection_info;
+        connection_info.network_type = rav::sdp::NetwType::internet;
+        connection_info.address_type = rav::sdp::AddrType::ipv4;
         connection_info.address = "239.1.16.51";
         connection_info.ttl = 15;
         sdp.set_connection_info(connection_info);
@@ -472,8 +472,8 @@ TEST_CASE("session_description | To string") {
     REQUIRE(sdp.to_string().value() == expected);
 
     SECTION("RAVENNA clock-domain attribute") {
-        rav::sdp::ravenna_clock_domain clock_domain;
-        clock_domain.source = rav::sdp::ravenna_clock_domain::sync_source::ptp_v2;
+        rav::sdp::RavennaClockDomain clock_domain;
+        clock_domain.source = rav::sdp::RavennaClockDomain::SyncSource::ptp_v2;
         clock_domain.domain = 0;
         sdp.set_clock_domain(clock_domain);
         expected += "a=clock-domain:PTPv2 0\r\n";
@@ -481,8 +481,8 @@ TEST_CASE("session_description | To string") {
     }
 
     SECTION("Reference clock attribute") {
-        rav::sdp::reference_clock ref_clock(
-            rav::sdp::reference_clock::clock_source::ptp, rav::sdp::reference_clock::ptp_ver::IEEE_1588_2008,
+        rav::sdp::ReferenceClock ref_clock(
+            rav::sdp::ReferenceClock::ClockSource::ptp, rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008,
             "00-1D-C1-FF-FE-51-9E-F7", 0
         );
         sdp.set_ref_clock(ref_clock);
@@ -491,14 +491,14 @@ TEST_CASE("session_description | To string") {
     }
 
     SECTION("Media direction attribute") {
-        sdp.set_media_direction(rav::sdp::media_direction::recvonly);
+        sdp.set_media_direction(rav::sdp::MediaDirection::recvonly);
         expected += "a=recvonly\r\n";
         REQUIRE(sdp.to_string().value() == expected);
     }
 
     SECTION("Media clock attribute") {
-        rav::sdp::media_clock_source media_clock(
-            rav::sdp::media_clock_source::clock_mode::direct, 0, rav::fraction<int>({1000, 1001})
+        rav::sdp::MediaClockSource media_clock(
+            rav::sdp::MediaClockSource::ClockMode::direct, 0, rav::fraction<int>({1000, 1001})
         );
         sdp.set_media_clock(media_clock);
         expected += "a=mediaclk:direct=0 rate=1000/1001\r\n";
@@ -506,8 +506,8 @@ TEST_CASE("session_description | To string") {
     }
 
     SECTION("Source filters") {
-        rav::sdp::source_filter filter(
-            rav::sdp::filter_mode::include, rav::sdp::netw_type::internet, rav::sdp::addr_type::ipv4, "239.1.16.51",
+        rav::sdp::SourceFilter filter(
+            rav::sdp::FilterMode::include, rav::sdp::NetwType::internet, rav::sdp::AddrType::ipv4, "239.1.16.51",
             {"192.168.16.51"}
         );
         sdp.add_source_filter(filter);
@@ -515,23 +515,23 @@ TEST_CASE("session_description | To string") {
         REQUIRE(sdp.to_string().value() == expected);
     }
 
-    rav::sdp::media_description md1;
+    rav::sdp::MediaDescription md1;
     md1.set_media_type("audio");
     md1.set_port(5004);
     md1.set_number_of_ports(1);
     md1.set_protocol("RTP/AVP");
     md1.add_format({98, "L16", 44100, 2});
-    md1.add_connection_info({rav::sdp::netw_type::internet, rav::sdp::addr_type::ipv4, "192.168.1.1", 15, {}});
+    md1.add_connection_info({rav::sdp::NetwType::internet, rav::sdp::AddrType::ipv4, "192.168.1.1", 15, {}});
     md1.set_ptime(20.f);
     md1.set_max_ptime(60.f);
-    md1.set_direction(rav::sdp::media_direction::recvonly);
+    md1.set_direction(rav::sdp::MediaDirection::recvonly);
     md1.set_ref_clock(
-        {rav::sdp::reference_clock::clock_source::ptp, rav::sdp::reference_clock::ptp_ver::IEEE_1588_2008, "gmid", 1}
+        {rav::sdp::ReferenceClock::ClockSource::ptp, rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008, "gmid", 1}
     );
     md1.set_media_clock(
-        {rav::sdp::media_clock_source::clock_mode::direct, 5, std::optional<rav::fraction<int>>({48000, 1})}
+        {rav::sdp::MediaClockSource::ClockMode::direct, 5, std::optional<rav::fraction<int>>({48000, 1})}
     );
-    md1.set_clock_domain(rav::sdp::ravenna_clock_domain {rav::sdp::ravenna_clock_domain::sync_source::ptp_v2, 1});
+    md1.set_clock_domain(rav::sdp::RavennaClockDomain {rav::sdp::RavennaClockDomain::SyncSource::ptp_v2, 1});
     md1.set_sync_time(1234);
     md1.set_clock_deviation(std::optional<rav::fraction<unsigned>>({1001, 1000}));
     sdp.add_media_description(md1);
@@ -579,7 +579,7 @@ TEST_CASE("session_description | To string - regenerate Anubis SDP") {
         "a=recvonly\r\n"
         "a=midi-pre2:50040 0,0;0,1\r\n";
 
-    auto result = rav::sdp::session_description::parse_new(k_anubis_sdp);
+    auto result = rav::sdp::SessionDescription::parse_new(k_anubis_sdp);
     REQUIRE(result.is_ok());
 
     auto sdp_txt = result.get_ok().to_string().value();

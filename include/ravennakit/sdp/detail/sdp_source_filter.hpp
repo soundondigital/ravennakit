@@ -19,38 +19,38 @@
 
 namespace rav::sdp {
 
-class source_filter {
+class SourceFilter {
   public:
     static constexpr auto k_attribute_name = "source-filter";
 
     /// A type alias for a parse result.
     template<class T>
-    using parse_result = result<T, std::string>;
+    using ParseResult = result<T, std::string>;
 
-    source_filter() = default;
-    source_filter(
-        filter_mode mode, netw_type net_type, addr_type addr_type, std::string dest_address,
+    SourceFilter() = default;
+    SourceFilter(
+        FilterMode mode, NetwType net_type, AddrType addr_type, std::string dest_address,
         std::vector<std::string> src_list
     );
 
     /**
      * @returns The filter mode.
      */
-    [[nodiscard]] filter_mode mode() const {
+    [[nodiscard]] FilterMode mode() const {
         return mode_;
     }
 
     /**
      * @returns The network type.
      */
-    [[nodiscard]] netw_type network_type() const {
+    [[nodiscard]] NetwType network_type() const {
         return net_type_;
     }
 
     /**
      * @returns The address type.
      */
-    [[nodiscard]] addr_type address_type() const {
+    [[nodiscard]] AddrType address_type() const {
         return addr_type_;
     }
 
@@ -86,12 +86,12 @@ class source_filter {
      * @return A pair containing the parse result and the connection info. When parsing fails, the connection info
      * will be a default-constructed object.
      */
-    static parse_result<source_filter> parse_new(std::string_view line);
+    static ParseResult<SourceFilter> parse_new(std::string_view line);
 
   private:
-    filter_mode mode_ {filter_mode::undefined};
-    netw_type net_type_ {netw_type::undefined};
-    addr_type addr_type_ {addr_type::undefined};
+    FilterMode mode_ {FilterMode::undefined};
+    NetwType net_type_ {NetwType::undefined};
+    AddrType addr_type_ {AddrType::undefined};
     std::string dest_address_;  // Must correspond to the address of a connection info field.
     std::vector<std::string> src_list_;
 };

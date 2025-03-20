@@ -16,7 +16,7 @@
 
 TEST_CASE("media_description | media_description") {
     SECTION("Test media field") {
-        auto result = rav::sdp::media_description::parse_new("m=audio 5004 RTP/AVP 98");
+        auto result = rav::sdp::MediaDescription::parse_new("m=audio 5004 RTP/AVP 98");
         REQUIRE(result.is_ok());
         const auto media = result.move_ok();
         REQUIRE(media.media_type() == "audio");
@@ -29,7 +29,7 @@ TEST_CASE("media_description | media_description") {
     }
 
     SECTION("Test media field with multiple formats") {
-        auto result = rav::sdp::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
+        auto result = rav::sdp::MediaDescription::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
         REQUIRE(result.is_ok());
 
         auto media = result.move_ok();
@@ -77,23 +77,23 @@ TEST_CASE("media_description | media_description") {
     }
 
     SECTION("Test media field with multiple formats and an invalid one") {
-        auto result = rav::sdp::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100 256");
+        auto result = rav::sdp::MediaDescription::parse_new("m=audio 5004/2 RTP/AVP 98 99 100 256");
         REQUIRE(result.is_err());
     }
 
     SECTION("Test media field direction") {
-        auto result = rav::sdp::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
+        auto result = rav::sdp::MediaDescription::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
         REQUIRE(result.is_ok());
         auto media = result.move_ok();
         REQUIRE_FALSE(media.direction().has_value());
         auto result2 = media.parse_attribute("a=recvonly");
         REQUIRE(result2.is_ok());
         REQUIRE(media.direction().has_value());
-        REQUIRE(*media.direction() == rav::sdp::media_direction::recvonly);
+        REQUIRE(*media.direction() == rav::sdp::MediaDirection::recvonly);
     }
 
     SECTION("Test maxptime attribute") {
-        auto result = rav::sdp::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
+        auto result = rav::sdp::MediaDescription::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
         REQUIRE(result.is_ok());
         auto media = result.move_ok();
         REQUIRE_FALSE(media.max_ptime().has_value());
@@ -103,14 +103,14 @@ TEST_CASE("media_description | media_description") {
     }
 
     SECTION("Test mediaclk attribute") {
-        auto result = rav::sdp::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
+        auto result = rav::sdp::MediaDescription::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
         REQUIRE(result.is_ok());
         auto media = result.move_ok();
         REQUIRE_FALSE(media.media_clock().has_value());
         media.parse_attribute("a=mediaclk:direct=5 rate=48000/1");
         REQUIRE(media.media_clock().has_value());
         const auto& clock = media.media_clock().value();
-        REQUIRE(clock.mode() == rav::sdp::media_clock_source::clock_mode::direct);
+        REQUIRE(clock.mode() == rav::sdp::MediaClockSource::ClockMode::direct);
         REQUIRE(clock.offset().value() == 5);
         REQUIRE(clock.rate().has_value());
         REQUIRE(clock.rate().value().numerator == 48000);
@@ -118,7 +118,7 @@ TEST_CASE("media_description | media_description") {
     }
 
     SECTION("Test clock-deviation attribute") {
-        auto result = rav::sdp::media_description::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
+        auto result = rav::sdp::MediaDescription::parse_new("m=audio 5004/2 RTP/AVP 98 99 100");
         REQUIRE(result.is_ok());
         auto media = result.move_ok();
         REQUIRE_FALSE(media.media_clock().has_value());
@@ -134,7 +134,7 @@ TEST_CASE("media_description | To string") {
         "m=audio 5004 RTP/AVP 98\r\n"
         "a=rtpmap:98 L16/44100/2\r\n";
 
-    rav::sdp::media_description md;
+    rav::sdp::MediaDescription md;
     REQUIRE(md.to_string().error() == "media: media type is empty");
     md.set_media_type("audio");
     REQUIRE(md.to_string().error() == "media: port is 0");
@@ -158,7 +158,7 @@ TEST_CASE("media_description | To string") {
         REQUIRE(md2.to_string().value() == "m=audio 5004 RTP/AVP 98\r\ns=session info\r\na=rtpmap:98 L16/44100/2\r\n");
     }
 
-    md.add_connection_info({rav::sdp::netw_type::internet, rav::sdp::addr_type::ipv4, "239.1.16.51", 15, {}});
+    md.add_connection_info({rav::sdp::NetwType::internet, rav::sdp::AddrType::ipv4, "239.1.16.51", 15, {}});
 
     expected =
         "m=audio 5004 RTP/AVP 98\r\n"
@@ -192,14 +192,14 @@ TEST_CASE("media_description | To string") {
     }
 
     SECTION("Media direction") {
-        md.set_direction(rav::sdp::media_direction::recvonly);
+        md.set_direction(rav::sdp::MediaDirection::recvonly);
         expected += "a=recvonly\r\n";
         REQUIRE(md.to_string().value() == expected);
     }
 
     SECTION("reference clock") {
         md.set_ref_clock(
-            {rav::sdp::reference_clock::clock_source::ptp, rav::sdp::reference_clock::ptp_ver::IEEE_1588_2008, "gmid", 1
+            {rav::sdp::ReferenceClock::ClockSource::ptp, rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008, "gmid", 1
             }
         );
         expected += "a=ts-refclk:ptp=IEEE1588-2008:gmid:1\r\n";
@@ -208,14 +208,14 @@ TEST_CASE("media_description | To string") {
 
     SECTION("media clock") {
         md.set_media_clock(
-            {rav::sdp::media_clock_source::clock_mode::direct, 5, std::optional<rav::fraction<int>>({48000, 1})}
+            {rav::sdp::MediaClockSource::ClockMode::direct, 5, std::optional<rav::fraction<int>>({48000, 1})}
         );
         expected += "a=mediaclk:direct=5 rate=48000/1\r\n";
         REQUIRE(md.to_string().value() == expected);
     }
 
     SECTION("RAVENNA clock domain") {
-        md.set_clock_domain(rav::sdp::ravenna_clock_domain {rav::sdp::ravenna_clock_domain::sync_source::ptp_v2, 1});
+        md.set_clock_domain(rav::sdp::RavennaClockDomain {rav::sdp::RavennaClockDomain::SyncSource::ptp_v2, 1});
         expected += "a=clock-domain:PTPv2 1\r\n";
         REQUIRE(md.to_string().value() == expected);
     }
@@ -240,16 +240,16 @@ TEST_CASE("media_description | To string") {
 
     SECTION("Source filters") {
         md.add_source_filter(
-            {rav::sdp::filter_mode::include,
-             rav::sdp::netw_type::internet,
-             rav::sdp::addr_type::ipv4,
+            {rav::sdp::FilterMode::include,
+             rav::sdp::NetwType::internet,
+             rav::sdp::AddrType::ipv4,
              "192.168.1.1",
              {"192.168.1.99"}}
         );
         md.add_source_filter(
-            {rav::sdp::filter_mode::include,
-             rav::sdp::netw_type::internet,
-             rav::sdp::addr_type::ipv4,
+            {rav::sdp::FilterMode::include,
+             rav::sdp::NetwType::internet,
+             rav::sdp::AddrType::ipv4,
              "192.168.2.1",
              {"192.168.2.99", "192.168.2.100"}}
         );

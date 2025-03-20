@@ -21,15 +21,15 @@ namespace rav::sdp {
 /**
  * Defines a clock source and domain. This is a RAVENNA-specific attribute extension to the SDP specification.
  */
-struct ravenna_clock_domain {
+struct RavennaClockDomain {
     static constexpr auto k_attribute_name = "clock-domain";
-    enum class sync_source { undefined, ptp_v2 };
+    enum class SyncSource { undefined, ptp_v2 };
 
     /// A type alias for a parse result.
     template<class T>
-    using parse_result = result<T, std::string>;
+    using ParseResult = result<T, std::string>;
 
-    sync_source source {sync_source::undefined};
+    SyncSource source {SyncSource::undefined};
     int32_t domain {};
 
     /**
@@ -47,14 +47,14 @@ struct ravenna_clock_domain {
      * @param source The sync source to convert.
      * @returns A string representation of the sync source.
      */
-    static std::string to_string(sync_source source);
+    static std::string to_string(SyncSource source);
 
     /**
      * Parses a new instance of this structure from a string.
      * @param line The string to parse.
      * @return A parse result.
      */
-    static parse_result<ravenna_clock_domain> parse_new(std::string_view line);
+    static ParseResult<RavennaClockDomain> parse_new(std::string_view line);
 };
 
 }  // namespace rav::sdp

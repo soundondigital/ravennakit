@@ -178,8 +178,8 @@ rav::RavennaNode::get_receiver(id receiver_id, std::function<void(RavennaReceive
     return asio::dispatch(io_context_, asio::use_future(work));
 }
 
-std::future<std::optional<rav::sdp::session_description>> rav::RavennaNode::get_sdp_for_receiver(id receiver_id) {
-    auto work = [this, receiver_id]() -> std::optional<sdp::session_description> {
+std::future<std::optional<rav::sdp::SessionDescription>> rav::RavennaNode::get_sdp_for_receiver(id receiver_id) {
+    auto work = [this, receiver_id]() -> std::optional<sdp::SessionDescription> {
         for (const auto& receiver : receivers_) {
             if (receiver->get_id() == receiver_id) {
                 return receiver->get_sdp();

@@ -12,7 +12,7 @@
 
 #include "ravennakit/core/string_parser.hpp"
 
-tl::expected<void, std::string> rav::sdp::time_active_field::validate() const {
+tl::expected<void, std::string> rav::sdp::TimeActiveField::validate() const {
     if (start_time < 0) {
         return tl::unexpected("time: start time must be greater than or equal to 0");
     }
@@ -22,7 +22,7 @@ tl::expected<void, std::string> rav::sdp::time_active_field::validate() const {
     return {};
 }
 
-tl::expected<std::string, std::string> rav::sdp::time_active_field::to_string() const {
+tl::expected<std::string, std::string> rav::sdp::TimeActiveField::to_string() const {
     auto validated = validate();
     if (!validate()) {
         return tl::unexpected(validated.error());
@@ -30,31 +30,31 @@ tl::expected<std::string, std::string> rav::sdp::time_active_field::to_string() 
     return fmt::format("t={} {}", start_time, stop_time);
 }
 
-rav::sdp::time_active_field::parse_result<rav::sdp::time_active_field>
-rav::sdp::time_active_field::parse_new(const std::string_view line) {
+rav::sdp::TimeActiveField::ParseResult<rav::sdp::TimeActiveField>
+rav::sdp::TimeActiveField::parse_new(const std::string_view line) {
     string_parser parser(line);
 
     if (!parser.skip("t=")) {
-        return parse_result<time_active_field>::err("time: expecting 't='");
+        return ParseResult<TimeActiveField>::err("time: expecting 't='");
     }
 
-    time_active_field time;
+    TimeActiveField time;
 
     if (const auto start_time = parser.read_int<int64_t>()) {
         time.start_time = *start_time;
     } else {
-        return parse_result<time_active_field>::err("time: failed to parse start time as integer");
+        return ParseResult<TimeActiveField>::err("time: failed to parse start time as integer");
     }
 
     if (!parser.skip(' ')) {
-        return parse_result<time_active_field>::err("time: expecting space after start time");
+        return ParseResult<TimeActiveField>::err("time: expecting space after start time");
     }
 
     if (const auto stop_time = parser.read_int<int64_t>()) {
         time.stop_time = *stop_time;
     } else {
-        return parse_result<time_active_field>::err("time: failed to parse stop time as integer");
+        return ParseResult<TimeActiveField>::err("time: failed to parse stop time as integer");
     }
 
-    return parse_result<time_active_field>::ok(time);
+    return ParseResult<TimeActiveField>::ok(time);
 }

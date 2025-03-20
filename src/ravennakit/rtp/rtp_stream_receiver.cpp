@@ -18,12 +18,12 @@
 
 namespace {
 
-bool is_connection_info_valid(const rav::sdp::connection_info_field& conn) {
-    if (conn.network_type != rav::sdp::netw_type::internet) {
+bool is_connection_info_valid(const rav::sdp::ConnectionInfoField& conn) {
+    if (conn.network_type != rav::sdp::NetwType::internet) {
         RAV_WARNING("Unsupported network type in connection_info_field");
         return false;
     }
-    if (!(conn.address_type == rav::sdp::addr_type::ipv4 || conn.address_type == rav::sdp::addr_type::ipv6)) {
+    if (!(conn.address_type == rav::sdp::AddrType::ipv4 || conn.address_type == rav::sdp::AddrType::ipv6)) {
         RAV_WARNING("Unsupported network type in connection_info_field");
         return false;
     }
@@ -77,9 +77,9 @@ rav::id rav::rtp::StreamReceiver::get_id() const {
     return id_;
 }
 
-void rav::rtp::StreamReceiver::update_sdp(const sdp::session_description& sdp) {
-    const sdp::media_description* selected_media_description = nullptr;
-    const sdp::connection_info_field* selected_connection_info = nullptr;
+void rav::rtp::StreamReceiver::update_sdp(const sdp::SessionDescription& sdp) {
+    const sdp::MediaDescription* selected_media_description = nullptr;
+    const sdp::ConnectionInfoField* selected_connection_info = nullptr;
     std::optional<audio_format> selected_audio_format;
 
     for (auto& media_description : sdp.media_descriptions()) {

@@ -22,27 +22,27 @@ namespace rav::sdp {
  * Specifies the reference clock as specified in RFC 7273 and AES67.
  * https://datatracker.ietf.org/doc/html/rfc7273#section-4.3
  */
-class reference_clock {
+class ReferenceClock {
   public:
-    enum class clock_source { undefined, atomic_clock, gps, terrestrial_radio, ptp, ntp, ntp_server, ntp_pool };
-    enum class ptp_ver { undefined, IEEE_1588_2002, IEEE_1588_2008, IEEE_802_1AS_2011, traceable };
+    enum class ClockSource { undefined, atomic_clock, gps, terrestrial_radio, ptp, ntp, ntp_server, ntp_pool };
+    enum class PtpVersion { undefined, IEEE_1588_2002, IEEE_1588_2008, IEEE_802_1AS_2011, traceable };
 
     /// A type alias for a parse result.
     template<class T>
-    using parse_result = result<T, std::string>;
+    using ParseResult = result<T, std::string>;
 
-    reference_clock() = default;
-    reference_clock(clock_source source, ptp_ver version, std::string gmid, int32_t domain);
+    ReferenceClock() = default;
+    ReferenceClock(ClockSource source, PtpVersion version, std::string gmid, int32_t domain);
 
     /**
      * @returns The source of the reference clock.
      */
-    [[nodiscard]] clock_source source() const;
+    [[nodiscard]] ClockSource source() const;
 
     /**
      * @return The PTP version of the reference clock.
      */
-    [[nodiscard]] std::optional<ptp_ver> ptp_version() const;
+    [[nodiscard]] std::optional<PtpVersion> ptp_version() const;
 
     /**
      * @return The GMID of the reference clock.
@@ -71,23 +71,23 @@ class reference_clock {
      * @param line The string to parse.
      * @return A parse result.
      */
-    static parse_result<reference_clock> parse_new(std::string_view line);
+    static ParseResult<ReferenceClock> parse_new(std::string_view line);
 
     /**
      * @param source The clock source to convert.
      * @returns A string representation of the clock source.
      */
-    static std::string to_string(clock_source source);
+    static std::string to_string(ClockSource source);
 
     /**
      * @param version The PTP version to convert.
      * @return A string representation of the PTP version.
      */
-    static std::string to_string(ptp_ver version);
+    static std::string to_string(PtpVersion version);
 
   private:
-    clock_source source_ {clock_source::undefined};
-    std::optional<ptp_ver> ptp_version_ {ptp_ver::undefined};
+    ClockSource source_ {ClockSource::undefined};
+    std::optional<PtpVersion> ptp_version_ {PtpVersion::undefined};
     std::optional<std::string> gmid_;
     std::optional<int32_t> domain_ {};
 };

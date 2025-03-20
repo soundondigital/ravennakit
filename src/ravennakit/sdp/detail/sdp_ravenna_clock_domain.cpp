@@ -12,8 +12,8 @@
 
 #include "ravennakit/core/string_parser.hpp"
 
-tl::expected<void, std::string> rav::sdp::ravenna_clock_domain::validate() const {
-    if (source == sync_source::undefined) {
+tl::expected<void, std::string> rav::sdp::RavennaClockDomain::validate() const {
+    if (source == SyncSource::undefined) {
         return tl::unexpected("clock_domain: sync source is undefined");
     }
     if (domain < 0) {
@@ -22,7 +22,7 @@ tl::expected<void, std::string> rav::sdp::ravenna_clock_domain::validate() const
     return {};
 }
 
-tl::expected<std::string, std::string> rav::sdp::ravenna_clock_domain::to_string() const {
+tl::expected<std::string, std::string> rav::sdp::RavennaClockDomain::to_string() const {
     auto validated = validate();
     if (!validated) {
         return tl::unexpected(validated.error());
@@ -30,35 +30,35 @@ tl::expected<std::string, std::string> rav::sdp::ravenna_clock_domain::to_string
     return fmt::format("a={}:{} {}", k_attribute_name, to_string(source), domain);
 }
 
-std::string rav::sdp::ravenna_clock_domain::to_string(const sync_source source) {
+std::string rav::sdp::RavennaClockDomain::to_string(const SyncSource source) {
     switch (source) {
-        case sync_source::ptp_v2:
+        case SyncSource::ptp_v2:
             return "PTPv2";
-        case sync_source::undefined:
+        case SyncSource::undefined:
         default:
             return "undefined";
     }
 }
 
-rav::sdp::ravenna_clock_domain::parse_result<rav::sdp::ravenna_clock_domain>
-rav::sdp::ravenna_clock_domain::parse_new(const std::string_view line) {
+rav::sdp::RavennaClockDomain::ParseResult<rav::sdp::RavennaClockDomain>
+rav::sdp::RavennaClockDomain::parse_new(const std::string_view line) {
     string_parser parser(line);
 
-    ravenna_clock_domain clock_domain;
+    RavennaClockDomain clock_domain;
 
     if (const auto sync_source = parser.split(' ')) {
         if (sync_source == "PTPv2") {
             if (const auto domain = parser.read_int<int32_t>()) {
-                clock_domain = ravenna_clock_domain {sync_source::ptp_v2, *domain};
+                clock_domain = RavennaClockDomain {SyncSource::ptp_v2, *domain};
             } else {
-                return parse_result<ravenna_clock_domain>::err("clock_domain: invalid domain");
+                return ParseResult<RavennaClockDomain>::err("clock_domain: invalid domain");
             }
         } else {
-            return parse_result<ravenna_clock_domain>::err("clock_domain: unsupported sync source");
+            return ParseResult<RavennaClockDomain>::err("clock_domain: unsupported sync source");
         }
     } else {
-        return parse_result<ravenna_clock_domain>::err("clock_domain: failed to parse sync source");
+        return ParseResult<RavennaClockDomain>::err("clock_domain: failed to parse sync source");
     }
 
-    return parse_result<ravenna_clock_domain>::ok(clock_domain);
+    return ParseResult<RavennaClockDomain>::ok(clock_domain);
 }

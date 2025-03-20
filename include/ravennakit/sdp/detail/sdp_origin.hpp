@@ -23,7 +23,7 @@ namespace rav::sdp {
  * In general, the origin serves as a globally unique identifier for this version of the session description, and
  * the subfields excepting the version, taken together identify the session irrespective of any modifications.
  */
-struct origin_field {
+struct OriginField {
     /// The user's login on the originating host, or "-" if the originating host does not support the concept of
     /// user IDs.
     std::string username;
@@ -36,10 +36,10 @@ struct origin_field {
     int session_version {};
 
     /// Specifies the type of network.
-    netw_type network_type {netw_type::undefined};
+    NetwType network_type {NetwType::undefined};
 
     /// Specifies the type of address.
-    addr_type address_type {addr_type::undefined};
+    AddrType address_type {AddrType::undefined};
 
     /// The address of the machine from which the session was created.
     std::string unicast_address;
@@ -56,7 +56,7 @@ struct origin_field {
 
     /// A type alias for a parse result.
     template<class T>
-    using parse_result = result<T, std::string>;
+    using ParseResult = result<T, std::string>;
 
     /**
      * Parses an origin field from a string.
@@ -64,7 +64,7 @@ struct origin_field {
      * @return A result indicating success or failure. When parsing fails, the error message will contain a
      * description of the error.
      */
-    static parse_result<origin_field> parse_new(std::string_view line);
+    static ParseResult<OriginField> parse_new(std::string_view line);
 };
 
 }

@@ -31,12 +31,12 @@ namespace rav::sdp {
 /**
  * A type representing a media description (m=*) as part of an SDP session description.
  */
-class media_description {
+class MediaDescription {
   public:
     /// A type alias for a parse result.
     /// TODO: Replace with tl::expected
     template<class T>
-    using parse_result = result<T, std::string>;
+    using ParseResult = result<T, std::string>;
 
     /**
      * Parses a media description from a string (i.e. the line starting with m=*). Does not parse the connection
@@ -45,7 +45,7 @@ class media_description {
      * @returns A result indicating success or failure. When parsing fails, the error message will contain a
      * description of the error.
      */
-    static parse_result<media_description> parse_new(std::string_view line);
+    static ParseResult<MediaDescription> parse_new(std::string_view line);
 
     /**
      * Parse an attribute from a string.
@@ -53,7 +53,7 @@ class media_description {
      * @return A result indicating success or failure. When parsing fails, the error message will contain a
      * description of the error.
      */
-    parse_result<void> parse_attribute(std::string_view line);
+    ParseResult<void> parse_attribute(std::string_view line);
 
     /**
      * @returns The media type of the media description (i.e. audio, video, text, application, message).
@@ -102,14 +102,14 @@ class media_description {
     /**
      * @return The formats of the media description.
      */
-    [[nodiscard]] const std::vector<format>& formats() const;
+    [[nodiscard]] const std::vector<Format>& formats() const;
 
     /**
      * Adds a format to the media description. If a format with the same payload type already exists, it will be
      * replaced.
      * @param format_to_add The format to add.
      */
-    void add_format(const format& format_to_add);
+    void add_format(const Format& format_to_add);
 
     /**
      * Multiple addresses or "c=" lines MAY be specified on a per media description basis only if they provide multicast
@@ -117,13 +117,13 @@ class media_description {
      * https://datatracker.ietf.org/doc/html/rfc8866#name-connection-information-c
      * @return The connection information of the media description.
      */
-    [[nodiscard]] const std::vector<connection_info_field>& connection_infos() const;
+    [[nodiscard]] const std::vector<ConnectionInfoField>& connection_infos() const;
 
     /**
      * Adds a connection info to the media description.
      * @param connection_info The connection info to add.
      */
-    void add_connection_info(connection_info_field connection_info);
+    void add_connection_info(ConnectionInfoField connection_info);
 
     /**
      * @returns The value of the "ptime" attribute, or an empty optional if the attribute does not exist or the
@@ -152,35 +152,35 @@ class media_description {
     /**
      * @return The direction of the media description.
      */
-    [[nodiscard]] const std::optional<media_direction>& direction() const;
+    [[nodiscard]] const std::optional<MediaDirection>& direction() const;
 
     /**
      * Sets the direction of the media description.
      * @param direction The direction to set.
      */
-    void set_direction(media_direction direction);
+    void set_direction(MediaDirection direction);
 
     /**
      * @return The reference clock of the media description.
      */
-    [[nodiscard]] const std::optional<reference_clock>& ref_clock() const;
+    [[nodiscard]] const std::optional<ReferenceClock>& ref_clock() const;
 
     /**
      * Sets the reference clock of the media description.
      * @param ref_clock The reference clock to set.
      */
-    void set_ref_clock(reference_clock ref_clock);
+    void set_ref_clock(ReferenceClock ref_clock);
 
     /**
      * @return The media clock of the media description.
      */
-    [[nodiscard]] const std::optional<media_clock_source>& media_clock() const;
+    [[nodiscard]] const std::optional<MediaClockSource>& media_clock() const;
 
     /**
      * Sets the media clock of the media description.
      * @param media_clock The media clock to set.
      */
-    void set_media_clock(media_clock_source media_clock);
+    void set_media_clock(MediaClockSource media_clock);
 
     /**
      * @return The session information of the media description.
@@ -220,13 +220,13 @@ class media_description {
     /**
      * @returns The source filters of the media description.
      */
-    [[nodiscard]] const std::vector<source_filter>& source_filters() const;
+    [[nodiscard]] const std::vector<SourceFilter>& source_filters() const;
 
     /**
      * Adds a source filter to the session description. If the filter already exists, it will be replaced.
      * @param filter The source filter to add.
      */
-    void add_source_filter(const source_filter& filter);
+    void add_source_filter(const SourceFilter& filter);
 
     /**
      * Returns framecount attribute. This is a legacy RAVENNA attribute, replaced by ptime. Only use when ptime is not
@@ -246,13 +246,13 @@ class media_description {
      * @return The clock domain of the media description.
      */
     [[nodiscard]]
-    std::optional<ravenna_clock_domain> clock_domain() const;
+    std::optional<RavennaClockDomain> clock_domain() const;
 
     /**
      * Sets the clock domain attribute. This is a RAVENNA-specific attribute and redundant to a=ts-refclk.
      * @param clock_domain The clock domain to set.
      */
-    void set_clock_domain(ravenna_clock_domain clock_domain);
+    void set_clock_domain(RavennaClockDomain clock_domain);
 
     /**
      * @returns Attributes which have not been parsed into a specific field.
@@ -276,18 +276,18 @@ class media_description {
     uint16_t port_ {};
     uint16_t number_of_ports_ {1};
     std::string protocol_;
-    std::vector<format> formats_;
-    std::vector<connection_info_field> connection_infos_;
+    std::vector<Format> formats_;
+    std::vector<ConnectionInfoField> connection_infos_;
     std::optional<float> ptime_;
     std::optional<float> max_ptime_;
-    std::optional<media_direction> media_direction_;
-    std::optional<reference_clock> reference_clock_;
-    std::optional<media_clock_source> media_clock_;
+    std::optional<MediaDirection> media_direction_;
+    std::optional<ReferenceClock> reference_clock_;
+    std::optional<MediaClockSource> media_clock_;
     std::optional<std::string> session_information_;
-    std::optional<ravenna_clock_domain> clock_domain_;   // RAVENNA-specific attribute
+    std::optional<RavennaClockDomain> clock_domain_;   // RAVENNA-specific attribute
     std::optional<uint32_t> sync_time_;                  // RAVENNA-specific attribute
     std::optional<fraction<uint32_t>> clock_deviation_;  // RAVENNA-specific attribute
-    std::vector<source_filter> source_filters_;
+    std::vector<SourceFilter> source_filters_;
     std::optional<uint32_t> framecount_;             // Legacy RAVENNA attribute, replaced by ptime
     std::map<std::string, std::string> attributes_;  // Remaining, unknown attributes
 };

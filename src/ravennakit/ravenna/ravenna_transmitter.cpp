@@ -85,7 +85,7 @@ std::string rav::RavennaTransmitter::session_name() const {
 }
 
 bool rav::RavennaTransmitter::set_audio_format(const audio_format format) {
-    const auto sdp_format = sdp::format::from_audio_format(format);
+    const auto sdp_format = sdp::Format::from_audio_format(format);
     if (!sdp_format) {
         RAV_ERROR("Failed to convert audio format to SDP format");
         return false;
@@ -182,31 +182,31 @@ void rav::RavennaTransmitter::send_announce() const {
     rtsp_server_.send_request(path_by_name_, request);
 }
 
-rav::sdp::session_description rav::RavennaTransmitter::build_sdp() const {
+rav::sdp::SessionDescription rav::RavennaTransmitter::build_sdp() const {
     // Connection info
-    const sdp::connection_info_field connection_info {
-        sdp::netw_type::internet, sdp::addr_type::ipv4, destination_address_.to_string(), 15, {}
+    const sdp::ConnectionInfoField connection_info {
+        sdp::NetwType::internet, sdp::AddrType::ipv4, destination_address_.to_string(), 15, {}
     };
 
     // Source filter
-    sdp::source_filter filter(
-        sdp::filter_mode::include, sdp::netw_type::internet, sdp::addr_type::ipv4, destination_address_.to_string(),
+    sdp::SourceFilter filter(
+        sdp::FilterMode::include, sdp::NetwType::internet, sdp::AddrType::ipv4, destination_address_.to_string(),
         {interface_address_.to_string()}
     );
 
     // Reference clock
-    const sdp::reference_clock ref_clock {
-        sdp::reference_clock::clock_source::ptp, sdp::reference_clock::ptp_ver::IEEE_1588_2008,
+    const sdp::ReferenceClock ref_clock {
+        sdp::ReferenceClock::ClockSource::ptp, sdp::ReferenceClock::PtpVersion::IEEE_1588_2008,
         grandmaster_identity_.to_string(), clock_domain_
     };
 
     // Media clock
     // ST 2110-30:2017 defines a constraint to use a zero offset exclusively.
-    sdp::media_clock_source media_clk {sdp::media_clock_source::clock_mode::direct, 0, {}};
+    sdp::MediaClockSource media_clk {sdp::MediaClockSource::ClockMode::direct, 0, {}};
 
-    sdp::ravenna_clock_domain clock_domain {sdp::ravenna_clock_domain::sync_source::ptp_v2, clock_domain_};
+    sdp::RavennaClockDomain clock_domain {sdp::RavennaClockDomain::SyncSource::ptp_v2, clock_domain_};
 
-    sdp::media_description media;
+    sdp::MediaDescription media;
     media.add_connection_info(connection_info);
     media.set_media_type("audio");
     media.set_port(5004);
@@ -216,15 +216,15 @@ rav::sdp::session_description rav::RavennaTransmitter::build_sdp() const {
     media.set_clock_domain(clock_domain);
     media.set_sync_time(0);
     media.set_ref_clock(ref_clock);
-    media.set_direction(sdp::media_direction::recvonly);
+    media.set_direction(sdp::MediaDirection::recvonly);
     media.set_ptime(get_signaled_ptime());
     media.set_framecount(get_framecount());
 
-    sdp::session_description sdp;
+    sdp::SessionDescription sdp;
 
     // Origin
-    const sdp::origin_field origin {
-        "-", id_.to_string(), 0, sdp::netw_type::internet, sdp::addr_type::ipv4, interface_address_.to_string()
+    const sdp::OriginField origin {
+        "-", id_.to_string(), 0, sdp::NetwType::internet, sdp::AddrType::ipv4, interface_address_.to_string()
     };
     sdp.set_origin(origin);
 

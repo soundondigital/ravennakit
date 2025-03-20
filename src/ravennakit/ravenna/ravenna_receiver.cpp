@@ -52,7 +52,7 @@ const std::string& rav::RavennaReceiver::get_session_name() const {
     return session_name_;
 }
 
-std::optional<rav::sdp::session_description> rav::RavennaReceiver::get_sdp() const {
+std::optional<rav::sdp::SessionDescription> rav::RavennaReceiver::get_sdp() const {
     return rtsp_client_.get_sdp_for_session(session_name_);
 }
 

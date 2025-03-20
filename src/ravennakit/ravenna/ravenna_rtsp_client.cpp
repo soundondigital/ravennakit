@@ -81,7 +81,7 @@ void rav::RavennaRtspClient::ravenna_session_discovered(const dnssd::Browser::se
     }
 }
 
-std::optional<rav::sdp::session_description>
+std::optional<rav::sdp::SessionDescription>
 rav::RavennaRtspClient::get_sdp_for_session(const std::string& session_name) const {
     for (auto& session : sessions_) {
         if (session.session_name == session_name) {
@@ -217,7 +217,7 @@ void rav::RavennaRtspClient::do_maintenance() {
 }
 
 void rav::RavennaRtspClient::handle_incoming_sdp(const std::string& sdp_text) {
-    auto result = sdp::session_description::parse_new(sdp_text);
+    auto result = sdp::SessionDescription::parse_new(sdp_text);
     if (result.is_err()) {
         RAV_ERROR("Failed to parse SDP: {}", result.get_err());
         return;

@@ -14,7 +14,7 @@
 
 TEST_CASE("media_description | format") {
     SECTION("98/L16/48000/2") {
-        auto result = rav::sdp::format::parse_new("98 L16/48000/2");
+        auto result = rav::sdp::Format::parse_new("98 L16/48000/2");
         REQUIRE(result.is_ok());
         auto fmt = result.move_ok();
         REQUIRE(fmt.payload_type == 98);
@@ -31,7 +31,7 @@ TEST_CASE("media_description | format") {
     }
 
     SECTION("98/L16/48000/4") {
-        auto result = rav::sdp::format::parse_new("98 L16/48000/4");
+        auto result = rav::sdp::Format::parse_new("98 L16/48000/4");
         REQUIRE(result.is_ok());
         auto fmt = result.move_ok();
         REQUIRE(fmt.payload_type == 98);
@@ -48,7 +48,7 @@ TEST_CASE("media_description | format") {
     }
 
     SECTION("98/L24/48000/2") {
-        auto result = rav::sdp::format::parse_new("98 L24/48000/2");
+        auto result = rav::sdp::Format::parse_new("98 L24/48000/2");
         REQUIRE(result.is_ok());
         auto fmt = result.move_ok();
         REQUIRE(fmt.payload_type == 98);
@@ -65,7 +65,7 @@ TEST_CASE("media_description | format") {
     }
 
     SECTION("98/L32/48000/2") {
-        auto result = rav::sdp::format::parse_new("98 L32/48000/2");
+        auto result = rav::sdp::Format::parse_new("98 L32/48000/2");
         REQUIRE(result.is_ok());
         auto fmt = result.move_ok();
         REQUIRE(fmt.payload_type == 98);
@@ -82,7 +82,7 @@ TEST_CASE("media_description | format") {
     }
 
     SECTION("98/NA/48000/2") {
-        auto result = rav::sdp::format::parse_new("98 NA/48000/2");
+        auto result = rav::sdp::Format::parse_new("98 NA/48000/2");
         REQUIRE(result.is_ok());
         auto fmt = result.move_ok();
         REQUIRE(fmt.payload_type == 98);

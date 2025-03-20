@@ -133,7 +133,7 @@ class RavennaTransmitter: public rtsp::Server::PathHandler {
     id advertisement_id_;
     int32_t clock_domain_ {};
     audio_format audio_format_;
-    sdp::format sdp_format_;  // I think we can compute this from audio_format_ each time we need it
+    sdp::Format sdp_format_;  // I think we can compute this from audio_format_ each time we need it
     aes67::PacketTime ptime_ {aes67::PacketTime::ms_1()};
     bool running_ {false};
     ptp::ClockIdentity grandmaster_identity_;
@@ -148,7 +148,7 @@ class RavennaTransmitter: public rtsp::Server::PathHandler {
      * Sends an announce request to all connected clients.
      */
     void send_announce() const;
-    [[nodiscard]] sdp::session_description build_sdp() const;
+    [[nodiscard]] sdp::SessionDescription build_sdp() const;
     void start_timer();
     void send_data();
     void resize_internal_buffers();

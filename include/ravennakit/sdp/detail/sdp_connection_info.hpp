@@ -20,11 +20,11 @@ namespace rav::sdp {
 /**
  * A type representing the connection information (c=*) of an SDP session description.
  */
-struct connection_info_field {
+struct ConnectionInfoField {
     /// Specifies the type of network.
-    netw_type network_type {netw_type::undefined};
+    NetwType network_type {NetwType::undefined};
     /// Specifies the type of address.
-    addr_type address_type {addr_type::undefined};
+    AddrType address_type {AddrType::undefined};
     /// The address at which the media can be found.
     std::string address;
     /// Optional ttl
@@ -54,7 +54,7 @@ struct connection_info_field {
      * @return A pair containing the parse result and the connection info. When parsing fails, the connection info
      * will be a default-constructed object.
      */
-    static parse_result<connection_info_field> parse_new(std::string_view line);
+    static parse_result<ConnectionInfoField> parse_new(std::string_view line);
 };
 
 }

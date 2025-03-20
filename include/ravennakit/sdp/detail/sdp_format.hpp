@@ -20,7 +20,7 @@ namespace rav::sdp {
 /**
  * Holds the information of an RTP map.
  */
-struct format {
+struct Format {
     uint8_t payload_type {};
     std::string encoding_name;
     uint32_t clock_rate {};
@@ -40,7 +40,7 @@ struct format {
     /**
      * @return The format as audio_format, or nullopt if the format is not supported or cannot be converted.
      */
-    [[nodiscard]] static std::optional<format> from_audio_format(const audio_format& input_format) ;
+    [[nodiscard]] static std::optional<Format> from_audio_format(const audio_format& input_format) ;
 
     /**
      * Parses a format from a string.
@@ -48,13 +48,13 @@ struct format {
      * @return A result indicating success or failure. When parsing fails, the error message will contain a
      * description of what went wrong.
      */
-    static parse_result<format> parse_new(std::string_view line);
+    static parse_result<Format> parse_new(std::string_view line);
 };
 
-bool operator==(const format& lhs, const format& rhs);
-bool operator!=(const format& lhs, const format& rhs);
+bool operator==(const Format& lhs, const Format& rhs);
+bool operator!=(const Format& lhs, const Format& rhs);
 
-inline auto format_as(const format& f) {
+inline auto format_as(const Format& f) {
     return f.to_string();
 }
 

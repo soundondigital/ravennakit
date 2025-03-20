@@ -26,7 +26,7 @@ class RavennaRtspClient: public RavennaBrowser::Subscriber {
   public:
     struct AnnouncedEvent {
         const std::string& session_name;
-        const sdp::session_description& sdp;
+        const sdp::SessionDescription& sdp;
     };
 
     class Subscriber {
@@ -70,7 +70,7 @@ class RavennaRtspClient: public RavennaBrowser::Subscriber {
      * @param session_name The name of the session to get the SDP for.
      * @return The SDP for the session, if it exists, otherwise an empty optional.
      */
-    [[nodiscard]] std::optional<sdp::session_description> get_sdp_for_session(const std::string& session_name) const;
+    [[nodiscard]] std::optional<sdp::SessionDescription> get_sdp_for_session(const std::string& session_name) const;
 
     /**
      * Tries to find the SDP text for the given session. The difference between this and get_sdp_for_session is that the
@@ -93,7 +93,7 @@ class RavennaRtspClient: public RavennaBrowser::Subscriber {
     struct SessionContext {
         std::string session_name;
         subscriber_list<Subscriber> subscribers;
-        std::optional<sdp::session_description> sdp_;
+        std::optional<sdp::SessionDescription> sdp_;
         std::optional<std::string> sdp_text_;
         std::string host_target;
         uint16_t port {};

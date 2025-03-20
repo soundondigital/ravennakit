@@ -15,6 +15,8 @@
       <option name="/Default/CodeStyle/CodeFormatting/CppClangFormat/EnableClangFormatSupport/@EntryValue" value="true" type="bool" />
       <option name="/Default/CodeStyle/Naming/CppNaming/Rules/=Classes_0020and_0020structs/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;1&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;__interface&quot; /&gt;&lt;type Name=&quot;class&quot; /&gt;&lt;type Name=&quot;struct&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot; /&gt;&lt;/NamingElement&gt;" type="string" />
       <option name="/Default/CodeStyle/Naming/CppNaming/Rules/=Classes_0020and_0020structs/@EntryIndexRemoved" />
+      <option name="/Default/CodeStyle/Naming/CppNaming/Rules/=Enums/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;3&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;enum&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot; /&gt;&lt;/NamingElement&gt;" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNaming/Rules/=Enums/@EntryIndexRemoved" />
     </RiderCodeStyleSettings>
     <clangFormatSettings>
       <option name="ENABLED" value="true" />

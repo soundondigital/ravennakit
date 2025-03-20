@@ -12,7 +12,7 @@
 #include "ravennakit/core/string_parser.hpp"
 #include "ravennakit/sdp/detail/sdp_constants.hpp"
 
-tl::expected<void, std::string> rav::sdp::origin_field::validate() const {
+tl::expected<void, std::string> rav::sdp::OriginField::validate() const {
     if (session_id.empty()) {
         return tl::unexpected("origin: session id is empty");
     }
@@ -21,18 +21,18 @@ tl::expected<void, std::string> rav::sdp::origin_field::validate() const {
         return tl::unexpected("origin: unicast address is empty");
     }
 
-    if (network_type == netw_type::undefined) {
+    if (network_type == NetwType::undefined) {
         return tl::unexpected("origin: network type is undefined");
     }
 
-    if (address_type == addr_type::undefined) {
+    if (address_type == AddrType::undefined) {
         return tl::unexpected("origin: address type is undefined");
     }
 
     return {};
 }
 
-tl::expected<std::string, std::string> rav::sdp::origin_field::to_string() const {
+tl::expected<std::string, std::string> rav::sdp::OriginField::to_string() const {
     auto result = validate();
     if (!result) {
         return tl::unexpected(result.error());
@@ -44,27 +44,27 @@ tl::expected<std::string, std::string> rav::sdp::origin_field::to_string() const
     );
 }
 
-rav::sdp::origin_field::parse_result<rav::sdp::origin_field> rav::sdp::origin_field::parse_new(std::string_view line) {
+rav::sdp::OriginField::ParseResult<rav::sdp::OriginField> rav::sdp::OriginField::parse_new(std::string_view line) {
     string_parser parser(line);
 
     if (!parser.skip("o=")) {
-        return parse_result<origin_field>::err("origin: expecting 'o='");
+        return ParseResult<OriginField>::err("origin: expecting 'o='");
     }
 
-    origin_field o;
+    OriginField o;
 
     // Username
     if (const auto username = parser.split(' ')) {
         o.username = *username;
     } else {
-        return parse_result<origin_field>::err("origin: failed to parse username");
+        return ParseResult<OriginField>::err("origin: failed to parse username");
     }
 
     // Session id
     if (const auto session_id = parser.split(' ')) {
         o.session_id = *session_id;
     } else {
-        return parse_result<origin_field>::err("origin: failed to parse session id");
+        return ParseResult<OriginField>::err("origin: failed to parse session id");
     }
 
     // Session version
@@ -72,38 +72,38 @@ rav::sdp::origin_field::parse_result<rav::sdp::origin_field> rav::sdp::origin_fi
         o.session_version = *version;
         parser.skip(' ');
     } else {
-        return parse_result<origin_field>::err("origin: failed to parse session version");
+        return ParseResult<OriginField>::err("origin: failed to parse session version");
     }
 
     // Network type
     if (const auto network_type = parser.split(' ')) {
         if (*network_type != k_sdp_inet) {
-            return parse_result<origin_field>::err("origin: invalid network type");
+            return ParseResult<OriginField>::err("origin: invalid network type");
         }
-        o.network_type = netw_type::internet;
+        o.network_type = NetwType::internet;
     } else {
-        return parse_result<origin_field>::err("origin: failed to parse network type");
+        return ParseResult<OriginField>::err("origin: failed to parse network type");
     }
 
     // Address type
     if (const auto address_type = parser.split(' ')) {
         if (*address_type == k_sdp_ipv4) {
-            o.address_type = addr_type::ipv4;
+            o.address_type = AddrType::ipv4;
         } else if (*address_type == k_sdp_ipv6) {
-            o.address_type = addr_type::ipv6;
+            o.address_type = AddrType::ipv6;
         } else {
-            return parse_result<origin_field>::err("origin: invalid address type");
+            return ParseResult<OriginField>::err("origin: invalid address type");
         }
     } else {
-        return parse_result<origin_field>::err("origin: failed to parse address type");
+        return ParseResult<OriginField>::err("origin: failed to parse address type");
     }
 
     // Address
     if (const auto address = parser.split(' ')) {
         o.unicast_address = *address;
     } else {
-        return parse_result<origin_field>::err("origin: failed to parse address");
+        return ParseResult<OriginField>::err("origin: failed to parse address");
     }
 
-    return parse_result<origin_field>::ok(std::move(o));
+    return ParseResult<OriginField>::ok(std::move(o));
 }

@@ -141,7 +141,7 @@ class RavennaNode {
      * @param receiver_id The id of the receiver to get the SDP for.
      * @return The SDP for the receiver.
      */
-    [[nodiscard]] std::future<std::optional<sdp::session_description>> get_sdp_for_receiver(id receiver_id);
+    [[nodiscard]] std::future<std::optional<sdp::SessionDescription>> get_sdp_for_receiver(id receiver_id);
 
     /**
      * Get the SDP text for the receiver with the given id. This is the original SDP text as received from the server,

@@ -142,7 +142,7 @@ class StreamReceiver: public Receiver::Subscriber {
      * changed.
      * @param sdp The SDP to update with.
      */
-    void update_sdp(const sdp::session_description& sdp);
+    void update_sdp(const sdp::SessionDescription& sdp);
 
     /**
      * Sets the delay nin samples.
