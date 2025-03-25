@@ -38,10 +38,10 @@
         RAV_THROW_EXCEPTION(msg);        \
     }
 
-#define ABORT_IF_ENABLED(msg)                                    \
-    if (RAV_ABORT_ON_ASSERT) {                                   \
-        std::cerr << "Abort on assertion: " << msg << std::endl; \
-        std::abort();                                            \
+#define ABORT_IF_ENABLED(msg)                                      \
+    if (RAV_ABORT_ON_ASSERT) {                                     \
+        std::cerr << "Abort on assertion: " << (msg) << std::endl; \
+        std::abort();                                              \
     }
 
 #define RAV_ASSERT(condition, message)                                \

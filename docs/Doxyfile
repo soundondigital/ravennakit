@@ -995,7 +995,7 @@ INPUT                  =    main.md \
                             getting-started.md \
                             dependencies.md \
                             options.md \
-                            logging.md \
+                            error-handling.md \
                             rfcs.md \
                             glossary.md \
                             ../include \
