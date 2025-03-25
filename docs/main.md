@@ -1,9 +1,9 @@
 ## Introduction
 
 Welcome to the RAVENNAKIT reference documentation. RAVENNAKIT is a cross-platform Software Development Kit (SDK) for
-integrating audio-over-IP technology into your applications. It supports well known audio over IP protocols like
-RAVENNA, ASE67 and SMPTE ST2110-30. Additionally, the SDK includes NMOS (IS-04 & IS-05) for device discovery and
-connection management, ST2022-7 for stream redundancy, and PTPv2 for precise time synchronization.
+integrating audio-over-IP technology into your applications. It supports widely adopted audio-over-IP protocols, 
+including RAVENNA, AES67, and SMPTE ST 2110-30. Additionally, the SDK includes NMOS (IS-04 & IS-05) for device 
+discovery and connection management, ST2022-7 for stream redundancy, and PTPv2 for precise time synchronization.
 
 The SDK is written in modern C++17, and targets systems running macOS, Windows and Linux.
 

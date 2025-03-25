@@ -7,14 +7,14 @@ required:
 
 1. Copy the RAVENNAKIT source code into the source tree of your project.
 2. Make the dependencies available through `find_package()` as RAVENNAKIT will try to link the dependencies using the
-   CMake `find_package()` command. Recommended is to use vcpkg. See [building](building.md) for more details.
+   CMake `find_package()` command. Recommended is to use vcpkg. See [dependencies](dependencies.md) for more details.
 3. Call add_subdirectory() in your CMakeLists.txt file.:
 
 ```cmake
 add_subdirectory(path/to/ravennakit)
 ``` 
 
-Then call target_link_libraries() to link against the RAVENNAKIT library:
+Then call target_link_libraries() to link your target against the RAVENNAKIT library:
 
 ```cmake
 target_link_libraries(your_target PRIVATE ravennakit)
@@ -22,15 +22,16 @@ target_link_libraries(your_target PRIVATE ravennakit)
 
 ## Manually integrating RAVENNAKIT
 
-If you can't or don't want to use CMake, it's possible to manually integrate RAVENNAKIT into your project. This requires more steps and is not as easy as the CMake approach:
+It is possible to manually integrate RAVENNAKIT into your project. This requires some manual steps and is not as trivial
+as the CMake approach:
 
 1. Copy the RAVENNAKIT source code into the source tree of your project.
 2. Add the RAVENNAKIT source files to your project (path/to/ravennakit/include/** and path/to/ravennakit/src/**)
-3. Link the required dependencies to your project. Visit the [building](building.md) documentation for more details.
+3. Link the required dependencies to your project. Visit the [dependencies](dependencies.md) documentation for more details.
 
 ## Build configurations and options
 
-To influence how RAVENNAKIT is built, several variables can be set. Head over to the [building](building.md)
+To influence how RAVENNAKIT is built, several variables can be set. Head over to the [options](options.md)
 documentation for more details.
 
 ## Setting up a ravenna_node
@@ -92,5 +93,3 @@ int main() {
 ``` 
 
 For a more detailed example on how to set up a RAVENNA node, see [ravenna_node_example.cpp](#ravenna_node_example.cpp).
-
-Next you might want to read about [building](building.md) the SDK.

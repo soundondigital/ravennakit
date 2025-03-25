@@ -993,7 +993,8 @@ WARN_LOGFILE           =
 
 INPUT                  =    main.md \
                             getting-started.md \
-                            building.md \
+                            dependencies.md \
+                            options.md \
                             logging.md \
                             rfcs.md \
                             glossary.md \
