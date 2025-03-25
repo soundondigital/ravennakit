@@ -18,13 +18,13 @@
 
 rav::RavennaSender::RavennaSender(
     asio::io_context& io_context, dnssd::Advertiser& advertiser, rtsp::Server& rtsp_server,
-    ptp::Instance& ptp_instance, rtp::Transmitter& rtp_transmitter, const Id id, std::string session_name,
+    ptp::Instance& ptp_instance, rtp::Sender& rtp_transmitter, const Id id, std::string session_name,
     asio::ip::address_v4 interface_address
 ) :
     advertiser_(advertiser),
     rtsp_server_(rtsp_server),
     ptp_instance_(ptp_instance),
-    rtp_transmitter_(rtp_transmitter),
+    rtp_sender_(rtp_transmitter),
     id_(id),
     session_name_(std::move(session_name)),
     interface_address_(std::move(interface_address)),
@@ -294,7 +294,7 @@ void rav::RavennaSender::send_data() {
         rtp_packet_.encode(packet_intermediate_buffer_.data(), required_amount_of_data, send_buffer_);
         rtp_packet_.sequence_number_inc(1);
         rtp_packet_.timestamp_inc(framecount);
-        rtp_transmitter_.send_to(send_buffer_, {destination_address_, 5004});
+        rtp_sender_.send_to(send_buffer_, {destination_address_, 5004});
     }
 }
 

@@ -20,7 +20,7 @@
 #include "ravennakit/ptp/ptp_instance.hpp"
 #include "ravennakit/ptp/types/ptp_timestamp.hpp"
 #include "ravennakit/rtp/rtp_packet.hpp"
-#include "ravennakit/rtp/detail/rtp_transmitter.hpp"
+#include "ravennakit/rtp/detail/rtp_sender.hpp"
 #include "ravennakit/rtsp/rtsp_server.hpp"
 #include "ravennakit/sdp/sdp_session_description.hpp"
 
@@ -37,7 +37,7 @@ class RavennaSender: public rtsp::Server::PathHandler {
 
     RavennaSender(
         asio::io_context& io_context, dnssd::Advertiser& advertiser, rtsp::Server& rtsp_server,
-        ptp::Instance& ptp_instance, rtp::Transmitter& rtp_transmitter, Id id, std::string session_name,
+        ptp::Instance& ptp_instance, rtp::Sender& rtp_transmitter, Id id, std::string session_name,
         asio::ip::address_v4 interface_address
     );
 
@@ -122,7 +122,7 @@ class RavennaSender: public rtsp::Server::PathHandler {
     dnssd::Advertiser& advertiser_;
     rtsp::Server& rtsp_server_;
     ptp::Instance& ptp_instance_;
-    rtp::Transmitter& rtp_transmitter_;
+    rtp::Sender& rtp_sender_;
 
     Id id_;
     std::string session_name_;

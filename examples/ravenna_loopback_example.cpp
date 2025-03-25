@@ -14,7 +14,7 @@
 #include "ravennakit/ptp/ptp_instance.hpp"
 #include "ravennakit/ravenna/ravenna_receiver.hpp"
 #include "ravennakit/ravenna/ravenna_sender.hpp"
-#include "ravennakit/rtp/detail/rtp_transmitter.hpp"
+#include "ravennakit/rtp/detail/rtp_sender.hpp"
 #include "ravennakit/rtsp/rtsp_server.hpp"
 
 #include <CLI/App.hpp>
@@ -44,7 +44,7 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
             io_context_, asio::ip::tcp::endpoint(asio::ip::address_v4::any(), 5005)
         );
 
-        rtp_transmitter_ = std::make_unique<rav::rtp::Transmitter>(io_context_, interface_addr);
+        rtp_sender_ = std::make_unique<rav::rtp::Sender>(io_context_, interface_addr);
 
         ptp_instance_ = std::make_unique<rav::ptp::Instance>(io_context_);
         if (const auto result = ptp_instance_->add_port(interface_addr); !result) {
@@ -60,7 +60,7 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
         });
 
         sender_ = std::make_unique<rav::RavennaSender>(
-            io_context_, *advertiser_, *rtsp_server_, *ptp_instance_, *rtp_transmitter_, rav::Id(1),
+            io_context_, *advertiser_, *rtsp_server_, *ptp_instance_, *rtp_sender_, rav::Id(1),
             stream_name_ + "_loopback", interface_addr
         );
 
@@ -112,7 +112,7 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
     // Sender components
     std::unique_ptr<rav::dnssd::Advertiser> advertiser_;
     std::unique_ptr<rav::rtsp::Server> rtsp_server_;
-    std::unique_ptr<rav::rtp::Transmitter> rtp_transmitter_;
+    std::unique_ptr<rav::rtp::Sender> rtp_sender_;
     std::unique_ptr<rav::ptp::Instance> ptp_instance_;
     std::unique_ptr<rav::RavennaSender> sender_;
     rav::EventSlot<rav::ptp::Instance::PortChangedStateEventEvent> ptp_port_changed_event_slot_;

@@ -15,13 +15,13 @@
 namespace rav::rtp {
 
 /**
- * This class is responsible for transmitting RTP packets.
+ * This class is responsible for sending RTP packets.
  * - Maintains a socket to send RTP packets.
  * - Maintains a socket to send RTCP packets (maybe the same socket).
  */
-class Transmitter {
+class Sender {
   public:
-    Transmitter(asio::io_context& io_context, const asio::ip::address_v4& interface_address) : socket_(io_context) {
+    Sender(asio::io_context& io_context, const asio::ip::address_v4& interface_address) : socket_(io_context) {
         socket_.open(asio::ip::udp::v4());
         socket_.set_option(asio::ip::multicast::outbound_interface(interface_address));
         socket_.set_option(asio::ip::multicast::enable_loopback(false));
