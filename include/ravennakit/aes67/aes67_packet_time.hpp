@@ -52,7 +52,7 @@ class PacketTime {
      * @returns True if the packet time is valid, false otherwise.
      */
     [[nodiscard]] bool is_valid() const {
-        if (fraction_.denominator() == 0) {
+        if (fraction_.denominator == 0) {
             return false;
         }
         if (fraction_.numerator == 0) {

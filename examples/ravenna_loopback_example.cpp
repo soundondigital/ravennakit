@@ -55,13 +55,13 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
             if (event.port.state() == rav::ptp::State::slave) {
                 RAV_INFO("Port state changed to slave, start playing");
                 ptp_clock_stable_ = true;
-                start_transmitting();  // Also called when the first packet is received
+                start_sending();  // Also called when the first packet is received
             }
         });
+        // stream_name_ + "_loopback"
 
         sender_ = std::make_unique<rav::RavennaSender>(
-            io_context_, *advertiser_, *rtsp_server_, *ptp_instance_, *rtp_sender_, rav::Id(1),
-            stream_name_ + "_loopback", interface_addr
+            io_context_, *advertiser_, *rtsp_server_, *ptp_instance_, *rtp_sender_, rav::Id(1)
         );
 
         sender_->on_data_requested([this](const uint32_t timestamp, rav::BufferView<uint8_t> buffer) {
@@ -84,11 +84,18 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
 
     void rtp_stream_receiver_updated(const rav::rtp::StreamReceiver::StreamUpdatedEvent& event) override {
         buffer_.resize(event.selected_audio_format.bytes_per_frame() * event.packet_time_frames);
-        if (!sender_->set_audio_format(event.selected_audio_format)) {
-            RAV_ERROR("Format not supported by transmitter");
+
+        rav::RavennaSender::ConfigurationUpdate update;
+        update.session_name = stream_name_ + "_loopback";
+        update.audio_format = event.selected_audio_format;
+
+        auto result = sender_->update_configuration(update);
+        if (!result) {
+            RAV_ERROR("Failed to update sender: {}", result.error());
             return;
         }
-        start_transmitting();
+
+        start_sending();
     }
 
     void on_data_ready(rav::WrappingUint32 timestamp) override {
@@ -124,9 +131,9 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
      * Starts transmitting if the PTP clock is stable and a timestamp is available and transmitter is not already
      * running.
      */
-    void start_transmitting() const {
+    void start_sending() const {
         if (ptp_clock_stable_ && most_recent_timestamp_) {
-            sender_->start(most_recent_timestamp_->value());
+            // sender_->start(most_recent_timestamp_->value()); // TODO: Alternative
         }
     }
 };

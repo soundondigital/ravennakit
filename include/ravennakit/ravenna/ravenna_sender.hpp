@@ -33,18 +33,29 @@ class RavennaSender: public rtsp::Server::PathHandler {
     using OnDataRequestedHandler = std::function<bool(uint32_t timestamp, BufferView<uint8_t> buffer)>;
 
     /**
-     * Contains the configuration for the sender.
+     * Defines the configuration for the sender.
      */
     struct Configuration {
+        std::string session_name;
+        asio::ip::address_v4 destination_address;
+        int32_t ttl;
+        uint8_t payload_type;
+        AudioFormat audio_format;
+        aes67::PacketTime packet_time;
+        bool enabled;
+    };
+
+    /**
+     * Field to update in the configuration. Only the fields that are set are updated, which allows for partial updates.
+     */
+    struct ConfigurationUpdate {
         std::optional<std::string> session_name;
         std::optional<asio::ip::address_v4> destination_address;
-        std::optional<int32_t> ttl;
+        std::optional<int32_t> ttl; // How and where is this used?
         std::optional<uint8_t> payload_type;
-        std::optional<AudioEncoding> audio_encoding;
+        std::optional<AudioFormat> audio_format;
         std::optional<aes67::PacketTime> packet_time;
         std::optional<bool> enabled;
-
-        [[nodiscard]] bool is_valid() const;
     };
 
     class Subscriber {
@@ -78,50 +89,14 @@ class RavennaSender: public rtsp::Server::PathHandler {
     /**
      * Updates the configuration of the sender. Only takes into account the fields in the configuration that are set.
      * This allows to update only a subset of the configuration.
-     * @param configuration The configuration to update.
+     * @param update The configuration to update.
      */
-    void update_configuration(const Configuration& configuration);
+    tl::expected<void, std::string> update_configuration(const ConfigurationUpdate& update);
 
     /**
      * @returns The current configuration of the sender.
      */
     [[nodiscard]] const Configuration& get_configuration() const;
-
-    /**
-     * Sets the audio format for the sender.
-     * @param format The audio format to set.
-     * @return True if the audio format is supported, false otherwise.
-     */
-    [[nodiscard]] bool set_audio_format(AudioFormat format);
-
-    /**
-     * Sets the packet time.
-     * @param packet_time The packet time.
-     */
-    void set_packet_time(aes67::PacketTime packet_time);
-
-    /**
-     * @return The packet time in milliseconds as signaled using SDP. If the packet time is 1ms and the sample
-     * rate is 44.1kHz, then the signaled packet time is 1.09.
-     */
-    [[nodiscard]] float get_signaled_ptime() const;
-
-    /**
-     * Start the streaming.
-     * @param timestamp_samples The RTP timestamp in samples at which to send the first packet.
-     */
-    void start(uint32_t timestamp_samples);
-
-    /**
-     * Start the streaming.
-     * @param timestamp The timestamp at which to send the first packet.
-     */
-    void start(ptp::Timestamp timestamp);
-
-    /**
-     * Stops the streaming.
-     */
-    void stop();
 
     /**
      * Subscribes to the sender.
@@ -138,9 +113,10 @@ class RavennaSender: public rtsp::Server::PathHandler {
     bool unsubscribe(Subscriber* subscriber);
 
     /**
-     * @return True if the sender is running, false otherwise.
+     * @return The packet time in milliseconds as signaled using SDP. If the packet time is 1ms and the sample
+     * rate is 44.1kHz, then the signaled packet time is 1.09.
      */
-    [[nodiscard]] bool is_running() const;
+    [[nodiscard]] float get_signaled_ptime() const;
 
     /**
      * @return The packet size in number of frames.
@@ -169,10 +145,6 @@ class RavennaSender: public rtsp::Server::PathHandler {
     std::string rtsp_path_by_id_;
     Id advertisement_id_;
     int32_t clock_domain_ {};
-    AudioFormat audio_format_;
-    sdp::Format sdp_format_;  // I think we can compute this from audio_format_ each time we need it
-    aes67::PacketTime ptime_ {aes67::PacketTime::ms_1()};
-    bool running_ {false};
     ptp::ClockIdentity grandmaster_identity_;
     rtp::Packet rtp_packet_;
     std::vector<uint8_t> packet_intermediate_buffer_;

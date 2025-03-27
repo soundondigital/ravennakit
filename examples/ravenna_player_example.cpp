@@ -37,8 +37,7 @@ class wav_file_player {
         }
 
         auto sender = std::make_unique<rav::RavennaSender>(
-            io_context, advertiser, rtsp_server, ptp_instance, rtp_sender, id_generator.next(), session_name,
-            interface_address
+            io_context, advertiser, rtsp_server, ptp_instance, rtp_sender, id_generator.next()
         );
 
         auto file_input_stream = std::make_unique<rav::FileInputStream>(file_to_play);
@@ -49,8 +48,12 @@ class wav_file_player {
             throw std::runtime_error("Failed to read audio format from file: " + file_to_play.path().string());
         }
 
-        if (!sender->set_audio_format(*format)) {
-            throw std::runtime_error("Unsupported audio format for transmitter: " + file_to_play.path().string());
+        rav::RavennaSender::ConfigurationUpdate update;
+        update.session_name = session_name;
+        update.audio_format = *format;
+        const auto result = sender->update_configuration(update);
+        if (!result) {
+            throw std::runtime_error("Failed to update configuration for transmitter: " + result.error());
         }
 
         reader_ = std::move(reader);
@@ -82,7 +85,7 @@ class wav_file_player {
     }
 
     void start(const rav::ptp::Timestamp at) const {
-        sender_->start(at);
+        // sender_->start(at); TODO: Reimeplement start
     }
 
   private:
