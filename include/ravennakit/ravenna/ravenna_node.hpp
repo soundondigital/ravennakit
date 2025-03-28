@@ -233,6 +233,23 @@ class RavennaNode {
     );
 
     /**
+     * Schedules data to be sent onto the network.
+     * @param sender_id The id of the sender.
+     * @param buffer The buffer to send.
+     * @param timestamp The timestamp of the data.
+     */
+    [[nodiscard]] bool send_data_realtime(Id sender_id, BufferView<uint8_t> buffer, uint32_t timestamp);
+
+    /**
+     * Schedules audio data to be sent onto the network.
+     * @param sender_id The id of the sender.
+     * @param buffer The buffer to send.
+     * @param timestamp The timestamp of the data.
+     * @return True if the data was sent, false if something went wrong.
+     */
+    [[nodiscard]] bool send_audio_data_realtime(Id sender_id, const AudioBufferView<const float>& buffer, uint32_t timestamp);
+
+    /**
      * @return True if this method is called on the maintenance thread, false otherwise.
      */
     [[nodiscard]] bool is_maintenance_thread() const;
@@ -278,6 +295,7 @@ class RavennaNode {
   private:
     struct realtime_shared_context {
         std::vector<RavennaReceiver*> receivers;
+        std::vector<RavennaSender*> senders;
     };
 
     asio::io_context io_context_;

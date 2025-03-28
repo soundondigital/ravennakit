@@ -147,7 +147,7 @@ class BufferView {
 
     /**
      * @returns A new buffer_view pointing to a sub-range of this buffer.
-     * @param offset The offset of the sub-range.
+     * @param offset The offset of the sub-range. Will be limited to the available size.
      */
     [[nodiscard]] BufferView subview(size_t offset) const {
         offset = std::min(offset, size_);
@@ -156,7 +156,7 @@ class BufferView {
 
     /**
      * @returns A new buffer_view pointing to a sub-range of this buffer.
-     * @param offset The offset of the sub-range.
+     * @param offset The offset of the sub-range. Will be limited to the available size.
      * @param size The number of elements in the sub-range. The size will be limited to the available size.
      */
     [[nodiscard]] BufferView subview(size_t offset, const size_t size) const {

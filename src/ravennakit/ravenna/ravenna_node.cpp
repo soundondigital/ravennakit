@@ -327,6 +327,34 @@ std::optional<uint32_t> rav::RavennaNode::read_audio_data_realtime(
     return std::nullopt;
 }
 
+bool rav::RavennaNode::send_data_realtime(
+    const Id sender_id, const BufferView<uint8_t> buffer, const uint32_t timestamp
+) {
+    const auto lock = realtime_shared_context_.lock_realtime();
+
+    for (auto* sender : lock->senders) {
+        if (sender->get_id() == sender_id) {
+            return sender->send_data_realtime(buffer, timestamp);
+        }
+    }
+
+    return false;
+}
+
+bool rav::RavennaNode::send_audio_data_realtime(
+    const Id sender_id, const AudioBufferView<const float>& buffer, const uint32_t timestamp
+) {
+    const auto lock = realtime_shared_context_.lock_realtime();
+
+    for (auto* sender : lock->senders) {
+        if (sender->get_id() == sender_id) {
+            return sender->send_audio_data_realtime(buffer, timestamp);
+        }
+    }
+
+    return false;
+}
+
 bool rav::RavennaNode::is_maintenance_thread() const {
     return maintenance_thread_id_ == std::this_thread::get_id();
 }
@@ -335,6 +363,9 @@ bool rav::RavennaNode::update_realtime_shared_context() {
     auto new_context = std::make_unique<realtime_shared_context>();
     for (auto& receiver : receivers_) {
         new_context->receivers.emplace_back(receiver.get());
+    }
+    for (auto& sender : senders_) {
+        new_context->senders.emplace_back(sender.get());
     }
     return realtime_shared_context_.update(std::move(new_context));
 }

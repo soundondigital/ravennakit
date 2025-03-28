@@ -12,7 +12,10 @@
 
 #include "ravennakit/aes67/aes67_packet_time.hpp"
 #include "ravennakit/core/uri.hpp"
+#include "ravennakit/core/audio/audio_buffer_view.hpp"
 #include "ravennakit/core/containers/fifo_buffer.hpp"
+#include "ravennakit/core/sync/rcu.hpp"
+#include "ravennakit/core/sync/realtime_shared_object.hpp"
 #include "ravennakit/dnssd/dnssd_advertiser.hpp"
 #include "ravennakit/ptp/ptp_instance.hpp"
 #include "ravennakit/ptp/types/ptp_timestamp.hpp"
@@ -25,6 +28,10 @@ namespace rav {
 
 class RavennaSender: public rtsp::Server::PathHandler {
   public:
+    /// The number of packet buffers available for sending. This value means that n packets worth of data can be queued
+    /// for sending.
+    static constexpr uint32_t k_buffer_num_packets = 20;
+
     /**
      * Handler for when data is requested. The handler should fill the buffer with audio data and return true if the
      * whole buffer was filled, or false if not enough data is available (in which case sending will happen on the next
@@ -125,6 +132,24 @@ class RavennaSender: public rtsp::Server::PathHandler {
     [[nodiscard]] uint32_t get_framecount() const;
 
     /**
+     * Schedules data for sending. A call to this function is realtime safe and thread safe as long as only one thread
+     * makes the call.
+     * @param buffer The buffer to send.
+     * @param timestamp The timestamp of the buffer.
+     * @returns True if the buffer was sent, or false if something went wrong.
+     */
+    bool send_data_realtime(BufferView<uint8_t> buffer, uint32_t timestamp);
+
+    /**
+     * Schedules audio data for sending. A call to this function is realtime safe and thread safe as long as only one
+     * thread makes the call.
+     * @param input_buffer The buffer to send.
+     * @param timestamp The timestamp of the buffer.
+     * @return True if the buffer was sent, or false if something went wrong.
+     */
+    bool send_audio_data_realtime(const AudioBufferView<const float>& input_buffer, uint32_t timestamp);
+
+    /**
      * Sets a handler for when data is requested. The handler should fill the buffer with audio data and return true if
      * the buffer was filled, or false if not enough data is available.
      * @param handler The handler to install.
@@ -148,12 +173,24 @@ class RavennaSender: public rtsp::Server::PathHandler {
     int32_t clock_domain_ {};
     ptp::ClockIdentity grandmaster_identity_;
     rtp::Packet rtp_packet_;
-    std::vector<uint8_t> packet_intermediate_buffer_;
     asio::high_resolution_timer timer_;
     OnDataRequestedHandler on_data_requested_handler_;
-    ByteBuffer send_buffer_;
     EventSlot<ptp::Instance::ParentChangedEvent> ptp_parent_changed_slot_;
     SubscriberList<Subscriber> subscribers_;
+
+    struct RealtimeContext {
+        asio::ip::udp::endpoint destination_endpoint;
+        AudioFormat audio_format;
+        uint32_t packet_time_frames;
+        FifoBuffer<uint8_t, Fifo::Single> outgoing_data_;
+        std::vector<uint8_t> packet_intermediate_buffer;
+        ByteBuffer send_buffer_;
+        std::vector<uint8_t> outgoing_packet_buffer_;
+    };
+
+    Rcu<RealtimeContext> realtime_context_;
+    Rcu<RealtimeContext>::Reader audio_thread_reader_ {realtime_context_.create_reader()};
+    Rcu<RealtimeContext>::Reader network_thread_reader_ {realtime_context_.create_reader()};
 
     /**
      * Sends an announce request to all connected clients.
@@ -161,8 +198,7 @@ class RavennaSender: public rtsp::Server::PathHandler {
     void send_announce() const;
     [[nodiscard]] sdp::SessionDescription build_sdp() const;
     void start_timer();
-    void send_data();
-    void resize_internal_buffers();
+    void update_realtime_context();
 };
 
 }  // namespace rav

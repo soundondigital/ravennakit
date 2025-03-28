@@ -30,14 +30,23 @@ class ByteBuffer {
     ByteBuffer(ByteBuffer&&) noexcept = default;
     ByteBuffer& operator=(ByteBuffer&&) noexcept = default;
 
+    /**
+     * @return A pointer to the data in the buffer.
+     */
     [[nodiscard]] const uint8_t* data() const {
         return data_.data();
     }
 
+    /**
+     * @return The current size of the buffer.
+     */
     [[nodiscard]] size_t size() const {
         return data_.size();
     }
 
+    /**
+     * Clears the data.
+     */
     void clear() {
         data_.clear();
     }

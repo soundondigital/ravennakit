@@ -10,6 +10,8 @@
 
 #include "ravennakit/ravenna/ravenna_sender.hpp"
 
+#include "ravennakit/aes67/aes67_constants.hpp"
+#include "ravennakit/core/audio/audio_data.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
 
 #if RAV_WINDOWS
@@ -122,44 +124,44 @@ tl::expected<void, std::string> rav::RavennaSender::update_configuration(const C
     }
 
     bool update_advertisement = false;
-    bool schedule_announce = false;
+    bool announce = false;
 
     // Session name
     if (update.session_name.has_value() && update.session_name != configuration_.session_name) {
         configuration_.session_name = *update.session_name;
         update_advertisement = true;
-        schedule_announce = true;
+        announce = true;
     }
 
     // Destination address
     if (update.destination_address.has_value() && update.destination_address != configuration_.destination_address) {
         configuration_.destination_address = *update.destination_address;
-        schedule_announce = true;
+        announce = true;
     }
 
     // TTL
     if (update.ttl.has_value() && update.ttl != configuration_.ttl) {
         configuration_.ttl = *update.ttl;
-        schedule_announce = true;
+        announce = true;
         // TODO: Update socket option for TTL. Probably both multicast and unicast in one go.
     }
 
     // Payload type
     if (update.payload_type.has_value() && update.payload_type != configuration_.payload_type) {
         configuration_.payload_type = *update.payload_type;
-        schedule_announce = true;
+        announce = true;
     }
 
     // Audio format
     if (update.audio_format.has_value() && update.audio_format != configuration_.audio_format) {
         configuration_.audio_format = *update.audio_format;
-        schedule_announce = true;
+        announce = true;
     }
 
     // Packet time
     if (update.packet_time.has_value() && update.packet_time != configuration_.packet_time) {
         configuration_.packet_time = *update.packet_time;
-        schedule_announce = true;
+        announce = true;
     }
 
     if (update.enabled.has_value()) {
@@ -225,11 +227,11 @@ tl::expected<void, std::string> rav::RavennaSender::update_configuration(const C
     // TODO: Implement proper SSRC generation
     rtp_packet_.ssrc(static_cast<uint32_t>(Random().get_random_int(0, std::numeric_limits<int>::max())));
 
-    if (schedule_announce) {
+    if (announce) {
         send_announce();
     }
 
-    resize_internal_buffers();  // TODO: Remove
+    update_realtime_context();  // TODO: Remove
 
     return {};
 }
@@ -260,6 +262,84 @@ bool rav::RavennaSender::unsubscribe(Subscriber* subscriber) {
 
 uint32_t rav::RavennaSender::get_framecount() const {
     return configuration_.packet_time.framecount(configuration_.audio_format.sample_rate);
+}
+
+bool rav::RavennaSender::send_data_realtime(BufferView<uint8_t> buffer, uint32_t timestamp) {
+    // TODO: Handle timestamp
+
+    if (auto lock = audio_thread_reader_.lock_realtime()) {
+        const auto framecount = lock->packet_time_frames;
+        const auto size_per_packet = framecount * lock->audio_format.bytes_per_frame();
+
+        RAV_ASSERT(lock->outgoing_packet_buffer_.size() >= size_per_packet, "Buffer size mismatch");
+
+        lock->outgoing_data_.write(buffer.data(), buffer.size_bytes());
+
+        while (lock->outgoing_data_.size() >= size_per_packet) {
+            lock->outgoing_data_.read(lock->outgoing_packet_buffer_.data(), size_per_packet);
+
+            lock->send_buffer_.clear();
+            rtp_packet_.encode(lock->outgoing_packet_buffer_.data(), size_per_packet, lock->send_buffer_);
+            rtp_packet_.sequence_number_inc(1);
+            rtp_packet_.timestamp_inc(framecount);  // TODO: Timestamp
+
+            if (lock->send_buffer_.size() > aes67::constants::k_max_payload) {
+                RAV_ERROR("Exceeding max payload: {}", lock->send_buffer_.size());
+                return false;
+            }
+
+            // TODO: Defer to another thread to make the call to this method realtime safe
+            rtp_sender_.send_to(lock->send_buffer_, lock->destination_endpoint);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+bool rav::RavennaSender::send_audio_data_realtime(
+    const AudioBufferView<const float>& input_buffer, uint32_t const timestamp
+) {
+    if (auto realtime_lock = audio_thread_reader_.lock_realtime()) {
+        auto audio_format = realtime_lock->audio_format;
+        if (audio_format.num_channels != input_buffer.num_channels()) {
+            RAV_ERROR("Channel mismatch: expected {}, got {}", audio_format.num_channels, input_buffer.num_channels());
+            return false;
+        }
+
+        auto& intermediate_buffer = realtime_lock->packet_intermediate_buffer;
+        // TODO: Preallocate to avoid reallocations here (how to determine the size for the buffer?)
+        intermediate_buffer.resize(input_buffer.num_frames() * audio_format.bytes_per_frame());
+
+        if (audio_format.encoding == AudioEncoding::pcm_s16) {
+            const auto ok = AudioData::convert<
+                float, AudioData::ByteOrder::Ne, int16_t, AudioData::ByteOrder::Be,
+                AudioData::Interleaving::Interleaved>(
+                input_buffer.data(), input_buffer.num_frames(), input_buffer.num_channels(),
+                reinterpret_cast<int16_t*>(intermediate_buffer.data()), 0, 0
+            );
+            if (!ok) {
+                RAV_WARNING("Failed to convert audio data");
+            }
+        } else if (audio_format.encoding == AudioEncoding::pcm_s24) {
+            const auto ok = AudioData::convert<
+                float, AudioData::ByteOrder::Ne, int24_t, AudioData::ByteOrder::Be,
+                AudioData::Interleaving::Interleaved>(
+                input_buffer.data(), input_buffer.num_frames(), input_buffer.num_channels(),
+                reinterpret_cast<int24_t*>(intermediate_buffer.data()), 0, 0
+            );
+            if (!ok) {
+                RAV_WARNING("Failed to convert audio data");
+            }
+        } else {
+            RAV_ERROR("Unsupported encoding");
+            return false;
+        }
+
+        return send_data_realtime(BufferView(intermediate_buffer), timestamp);
+    }
+    return false;
 }
 
 void rav::RavennaSender::on_data_requested(OnDataRequestedHandler handler) {
@@ -296,12 +376,15 @@ void rav::RavennaSender::send_announce() const {
     request.rtsp_headers.set("content-type", "application/sdp");
     request.data = std::move(sdp.value());
     request.uri = Uri::encode(
-        "rtsp://", interface_address_string + ":" + std::to_string(rtsp_server_.port()), rtsp_path_by_name_
+        "rtsp", interface_address_string + ":" + std::to_string(rtsp_server_.port()), rtsp_path_by_name_
     );
     rtsp_server_.send_request(rtsp_path_by_name_, request);
+    RAV_TRACE("Announced session: {}", request.uri);
+
     request.uri =
-        Uri::encode("rtsp://", interface_address_string + ":" + std::to_string(rtsp_server_.port()), rtsp_path_by_id_);
+        Uri::encode("rtsp", interface_address_string + ":" + std::to_string(rtsp_server_.port()), rtsp_path_by_id_);
     rtsp_server_.send_request(rtsp_path_by_name_, request);
+    RAV_TRACE("Announced session: {}", request.uri);
 }
 
 rav::sdp::SessionDescription rav::RavennaSender::build_sdp() const {
@@ -403,54 +486,22 @@ void rav::RavennaSender::start_timer() {
             RAV_ERROR("Timer error: {}", ec.message());
             return;
         }
-        send_data();
+        // TODO: Do something with the timer. Either use or remove.
         start_timer();
     });
 }
 
-void rav::RavennaSender::send_data() {
-    TRACY_ZONE_SCOPED;
-
-    if (!on_data_requested_handler_) {
-        RAV_WARNING("No data handler installed");
-        return;
-    }
-
-    if (configuration_.destination_address.is_unspecified()) {
-        RAV_ERROR("Destination address not set");
-        return;
-    }
-
-    const auto framecount = get_framecount();
-    const auto required_amount_of_data = framecount * configuration_.audio_format.bytes_per_frame();
-    RAV_ASSERT(packet_intermediate_buffer_.size() == required_amount_of_data, "Buffer size mismatch");
-
-    for (auto i = 0; i < 10; i++) {
-        const auto now_samples = ptp_instance_.get_local_ptp_time().to_samples(configuration_.audio_format.sample_rate);
-        if (WrappingUint(static_cast<uint32_t>(now_samples)) < rtp_packet_.timestamp()) {
-            break;
-        }
-
-        if (!on_data_requested_handler_(rtp_packet_.timestamp().value(), BufferView(packet_intermediate_buffer_))) {
-            return;  // No data was provided
-        }
-
-        if (configuration_.audio_format.byte_order == AudioFormat::ByteOrder::le) {
-            swap_bytes(
-                packet_intermediate_buffer_.data(), required_amount_of_data,
-                configuration_.audio_format.bytes_per_sample()
-            );
-        }
-
-        send_buffer_.clear();
-        rtp_packet_.encode(packet_intermediate_buffer_.data(), required_amount_of_data, send_buffer_);
-        rtp_packet_.sequence_number_inc(1);
-        rtp_packet_.timestamp_inc(framecount);
-        rtp_sender_.send_to(send_buffer_, {configuration_.destination_address, 5004});
-    }
-}
-
-void rav::RavennaSender::resize_internal_buffers() {
-    const auto bytes_per_packet = get_framecount() * configuration_.audio_format.bytes_per_frame();
-    packet_intermediate_buffer_.resize(bytes_per_packet);
+void rav::RavennaSender::update_realtime_context() {
+    auto new_context = std::make_unique<RealtimeContext>();
+    const auto audio_format = configuration_.audio_format;
+    const auto packet_size_frames = get_framecount();
+    const auto packet_size_bytes = packet_size_frames * audio_format.bytes_per_frame();
+    new_context->audio_format = audio_format;
+    new_context->destination_endpoint = {configuration_.destination_address, 5004};
+    new_context->packet_time_frames = get_framecount();
+    new_context->outgoing_data_.resize(packet_size_bytes * k_buffer_num_packets);
+    new_context->packet_intermediate_buffer.resize(packet_size_bytes);
+    new_context->send_buffer_ = ByteBuffer(packet_size_bytes);
+    new_context->outgoing_packet_buffer_.resize(packet_size_bytes);
+    realtime_context_.update(std::move(new_context));
 }
