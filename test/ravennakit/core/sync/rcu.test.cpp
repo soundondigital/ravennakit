@@ -43,6 +43,11 @@ TEST_CASE("rcu") {
         REQUIRE(lock.get() == nullptr);
     }
 
+    SECTION("Reclaim on default object") {
+        rav::Rcu<int> rcu;
+        REQUIRE(rcu.reclaim() == 0);
+    }
+
     SECTION("Basic operation") {
         rav::Rcu<std::string> rcu;
         rav::Rcu<std::string>::Reader reader(rcu);

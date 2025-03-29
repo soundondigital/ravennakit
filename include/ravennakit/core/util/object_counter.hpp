@@ -27,6 +27,8 @@ class ObjectCounter {
  */
 class CountedObject {
   public:
+    CountedObject() = delete;
+
     explicit CountedObject(ObjectCounter& counter) : counter_(counter), index_(counter.instances_created++) {
         ++counter_.instances_alive;
     }

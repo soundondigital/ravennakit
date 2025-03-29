@@ -205,9 +205,7 @@ class Rcu {
         std::atomic<int64_t> num_locks_ {0};
     };
 
-    Rcu() {
-        update({});
-    }
+    Rcu() = default;
 
     /**
      * Constructs an rcu object with a new value.
@@ -283,6 +281,10 @@ class Rcu {
      */
     [[nodiscard]] size_t reclaim() {
         std::lock_guard lock(values_mutex_);
+
+        if (current_epoch_ == 0) {
+            return 0; // Nothing to reclaim since we're in default state
+        }
 
         RAV_ASSERT(!values_.empty(), "The last value should have never been reclaimed");
 
