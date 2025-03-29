@@ -299,8 +299,7 @@ bool rav::RavennaSender::send_data_realtime(BufferView<uint8_t> buffer, const st
             TRACY_PLOT("ts diff", static_cast<int64_t>(WrappingUint32(ptp_ts).diff(rtp_packet_.timestamp())));
 
             if (rtp_packet_.timestamp() < WrappingUint32(ptp_ts) - framecount) {
-                rtp_packet_.timestamp(ptp_ts);
-                RAV_TRACE("Timestamp updated to {}", ptp_ts);
+                rtp_packet_.timestamp_inc(framecount);
             }
 
             lock->outgoing_data_.read(lock->outgoing_packet_buffer_.data(), size_per_packet);
