@@ -86,7 +86,7 @@ class LocalPtpClock {
         TRACY_ZONE_SCOPED;
 
         const auto system_now = system_monotonic_now();
-        shift_ = now().total_seconds_double() - system_now.total_seconds_double();
+        shift_ += -measurement.offset_from_master;
         last_sync_ = system_now;
 
         // Add the measurement to the offset statistics in any case to allow the outlier filtering to dynamically
