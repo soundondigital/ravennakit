@@ -48,14 +48,28 @@ class LocalSystemClock {
 
     /**
      * Adjusts the correction of this clock by adding the given shift and frequency ratio.
-     * @param shift The shift to apply to the clock.
-     * @param frequency_ratio The frequency ratio to apply to the clock.
+     * @param offset_from_master The shift to apply to the clock.
      */
-    void adjust(const double shift, const double frequency_ratio) {
+    void adjust(const double offset_from_master) {
         TRACY_ZONE_SCOPED;
         last_sync_ = system_monotonic_now();
-        shift_ += shift;
-        frequency_ratio_ += frequency_ratio;
+        shift_ += -offset_from_master;
+
+        constexpr double max_ratio = 0.5;  // +/-
+        const auto nominal_ratio = 0.001 * std::pow(-offset_from_master, 3) + 1.0;
+        frequency_ratio_ = std::clamp(nominal_ratio, 1.0 - max_ratio, 1 + max_ratio);
+    }
+
+    /**
+     * Steps the clock to the given offset from the master clock. This is used when the clock is out of sync and needs
+     * to be reset.
+     * @param offset_from_master The offset from the master clock in seconds.
+     */
+    void step(const double offset_from_master) {
+        TRACY_ZONE_SCOPED;
+        last_sync_ = system_monotonic_now();
+        shift_ = -offset_from_master;
+        frequency_ratio_ = 1.0;
     }
 
     /**
@@ -131,7 +145,6 @@ class LocalPtpClock {
         // Add the measurement to the offset statistics in any case to allow the outlier filtering to dynamically
         // adjust.
         offset_stats_.add(measurement.offset_from_master);
-        TRACY_PLOT("Offset from master median (ms)", offset_stats_.median() * 1000.0);
 
         // Filter out outliers, allowing a maximum per non-filtered outliers to avoid getting in a loop where all
         // measurements are filtered out and no adjustment is made anymore.
@@ -142,33 +155,21 @@ class LocalPtpClock {
             return;
         }
 
+        filtered_offset_stats_.add(measurement.offset_from_master);
+
+        local_clock_.adjust(measurement.offset_from_master);
+        adjustments_since_last_step_++;
+
+        TRACY_PLOT("Offset from master median (ms)", offset_stats_.median() * 1000.0);
         TRACY_PLOT("Offset from master outliers", 0.0);
         TRACY_PLOT("Filtered offset from master (ms)", measurement.offset_from_master * 1000.0);
-
-        filtered_offset_stats_.add(measurement.offset_from_master);
         TRACY_PLOT("Filtered offset from master median (ms)", filtered_offset_stats_.median() * 1000.0);
-
-        auto frequency_ratio = local_clock_.get_frequency_ratio();
-        double frequency_ratio_adjustment = {};
-
-        if (is_locked()) {
-            constexpr double max_ratio = 0.5;  // +/-
-            auto nominal_ratio = 0.001 * std::pow(-measurement.offset_from_master, 3) + 1.0;
-            nominal_ratio = std::clamp(nominal_ratio, 1.0 - max_ratio, 1 + max_ratio);
-            frequency_ratio_adjustment = nominal_ratio - frequency_ratio;
-        } else {
-            adjustments_since_last_step_++;
-            frequency_ratio_adjustment = 1.0 - frequency_ratio;
-        }
-
-        local_clock_.adjust(-measurement.offset_from_master, frequency_ratio_adjustment);
-
-        TRACY_PLOT("Frequency ratio", frequency_ratio);
+        TRACY_PLOT("Frequency ratio", local_clock_.get_frequency_ratio());
 
         if (trace_adjustments_throttle_.update()) {
             RAV_TRACE(
                 "Clock stats: offset from master=[{}], ratio={}", filtered_offset_stats_.to_string(1000.0),
-                frequency_ratio
+                local_clock_.get_frequency_ratio()
             );
         }
     }
@@ -180,7 +181,7 @@ class LocalPtpClock {
     void step_clock(const double offset_from_master_seconds) {
         TRACY_ZONE_SCOPED;
 
-        local_clock_.adjust(-offset_from_master_seconds, 1.0);
+        local_clock_.step(offset_from_master_seconds);
         offset_stats_.reset();
         adjustments_since_last_step_ = 0;
 
