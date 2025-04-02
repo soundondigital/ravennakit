@@ -117,12 +117,6 @@ class Instance {
      */
     void update_local_ptp_clock(const Measurement<double>& measurement);
 
-    /**
-     * Force updates the local PTP clock to the given timestamp.
-     * @param timestamp The timestamp to set the clock to.
-     */
-    void force_update_local_ptp_clock(Timestamp timestamp);
-
   private:
     asio::io_context& io_context_;
     asio::steady_timer state_decision_timer_;
@@ -132,7 +126,8 @@ class Instance {
     TimePropertiesDs time_properties_ds_;
     std::vector<std::unique_ptr<Port>> ports_;
     network_interface_list network_interfaces_;
-    LocalPtpClock local_ptp_clock_;
+    LocalSystemClock local_clock_;
+    LocalPtpClock local_ptp_clock_ {local_clock_};
 
     [[nodiscard]] uint16_t get_next_available_port_number() const;
     void schedule_state_decision_timer();

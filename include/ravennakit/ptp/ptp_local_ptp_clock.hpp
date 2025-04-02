@@ -24,13 +24,51 @@
 
 namespace rav::ptp {
 
-/**
- * A class that maintains a local PTP clock as close as possible to some grand master clock.
- * This particular implementation maintains a 'virtual' clock based on the monotonic system clock.
- */
-class LocalPtpClock {
+class LocalSystemClock {
   public:
-    LocalPtpClock() = default;
+    /**
+     * @return The best estimate of 'now' in the timescale of the grand master clock.
+     */
+    [[nodiscard]] Timestamp now() const {
+        return get_ptp_time(system_monotonic_now());
+    }
+
+    /**
+     * @param system_time The local timestamp to convert to the timescale of the grand master clock.
+     * @return The best estimate of the PTP time based on given system time.
+     */
+    [[nodiscard]] Timestamp get_ptp_time(const Timestamp system_time) const {
+        TRACY_ZONE_SCOPED;
+        const auto elapsed = system_time.total_seconds_double() - last_sync_.total_seconds_double();
+        auto result = last_sync_;
+        result.add_seconds(elapsed * frequency_ratio_);
+        result.add_seconds(shift_);
+        return result;
+    }
+
+    /**
+     * Adjusts the correction of this clock by adding the given shift and frequency ratio.
+     * @param shift The shift to apply to the clock.
+     * @param frequency_ratio The frequency ratio to apply to the clock.
+     */
+    void adjust(const double shift, const double frequency_ratio) {
+        TRACY_ZONE_SCOPED;
+        last_sync_ = system_monotonic_now();
+        shift_ += shift;
+        frequency_ratio_ += frequency_ratio;
+    }
+
+    /**
+     * @return The current shift of the clock.
+     */
+    [[nodiscard]] double get_frequency_ratio() const {
+        return frequency_ratio_;
+    }
+
+  private:
+    Timestamp last_sync_ = system_monotonic_now();
+    double shift_ {};
+    double frequency_ratio_ = 1.0;
 
     /**
      * @return The current system time as a PTP timestamp. The timestamp is based on the high resolution clock and bears
@@ -39,18 +77,23 @@ class LocalPtpClock {
     static Timestamp system_monotonic_now() {
         return Timestamp(HighResolutionClock::now());
     }
+};
+
+/**
+ * A class that maintains a local PTP clock as close as possible to some grand master clock.
+ * This particular implementation maintains a 'virtual' clock based on the monotonic system clock.
+ */
+class LocalPtpClock {
+  public:
+    explicit LocalPtpClock(LocalSystemClock& local_clock) : local_clock_(local_clock) {}
 
     /**
-     * @param system_timestamp The local timestamp to convert to the timescale of the grand master clock.
+     * @param local_time The local timestamp to convert to the timescale of the grand master clock.
      * @return The best estimate of the PTP time based on given system time.
      */
-    [[nodiscard]] Timestamp system_to_ptp_time(const Timestamp system_timestamp) const {
+    [[nodiscard]] Timestamp system_to_ptp_time(const Timestamp local_time) const {
         TRACY_ZONE_SCOPED;
-        const auto elapsed = system_timestamp.total_seconds_double() - last_sync_.total_seconds_double();
-        auto result = last_sync_;
-        result.add_seconds(elapsed * frequency_ratio_);
-        result.add_seconds(shift_);
-        return result;
+        return local_clock_.get_ptp_time(local_time);
     }
 
     /**
@@ -58,7 +101,7 @@ class LocalPtpClock {
      */
     [[nodiscard]] Timestamp now() const {
         TRACY_ZONE_SCOPED;
-        return system_to_ptp_time(system_monotonic_now());
+        return local_clock_.now();
     }
 
     /**
@@ -85,10 +128,6 @@ class LocalPtpClock {
     void adjust(const Measurement<double>& measurement) {
         TRACY_ZONE_SCOPED;
 
-        const auto system_now = system_monotonic_now();
-        shift_ += -measurement.offset_from_master;
-        last_sync_ = system_now;
-
         // Add the measurement to the offset statistics in any case to allow the outlier filtering to dynamically
         // adjust.
         offset_stats_.add(measurement.offset_from_master);
@@ -102,12 +141,15 @@ class LocalPtpClock {
             TRACY_MESSAGE("Ignoring outlier in offset from master");
             return;
         }
-        TRACY_PLOT("Offset from master outliers", 0.0);
 
+        TRACY_PLOT("Offset from master outliers", 0.0);
         TRACY_PLOT("Filtered offset from master (ms)", measurement.offset_from_master * 1000.0);
 
         filtered_offset_stats_.add(measurement.offset_from_master);
         TRACY_PLOT("Filtered offset from master median (ms)", filtered_offset_stats_.median() * 1000.0);
+
+        auto frequency_ratio = local_clock_.get_frequency_ratio();
+        double frequency_ratio_adjustment = {};
 
         if (is_locked()) {
             constexpr double base = 1.5;         // The higher the value, the faster the clock will adjust (>= 1.0)
@@ -116,26 +158,28 @@ class LocalPtpClock {
             const auto nominal_ratio =
                 std::clamp(std::pow(base, -measurement.offset_from_master), 1.0 - max_ratio, 1 + max_ratio);
 
-            if (std::fabs(nominal_ratio - frequency_ratio_) > max_step) {
-                if (frequency_ratio_ < nominal_ratio) {
-                    frequency_ratio_ += max_step;
+            if (std::fabs(nominal_ratio - frequency_ratio) > max_step) {
+                if (frequency_ratio < nominal_ratio) {
+                    frequency_ratio_adjustment = max_step;
                 } else {
-                    frequency_ratio_ -= max_step;
+                    frequency_ratio_adjustment = -max_step;
                 }
             } else {
-                frequency_ratio_ = nominal_ratio;
+                frequency_ratio_adjustment = nominal_ratio - frequency_ratio;
             }
         } else {
             adjustments_since_last_step_++;
-            frequency_ratio_ = 1.0;
+            frequency_ratio_adjustment = 1.0 - frequency_ratio;
         }
 
-        TRACY_PLOT("Frequency ratio", frequency_ratio_);
+        local_clock_.adjust(-measurement.offset_from_master, frequency_ratio_adjustment);
+
+        TRACY_PLOT("Frequency ratio", frequency_ratio);
 
         if (trace_adjustments_throttle_.update()) {
             RAV_TRACE(
                 "Clock stats: offset from master=[{}], ratio={}", filtered_offset_stats_.to_string(1000.0),
-                frequency_ratio_
+                frequency_ratio
             );
         }
     }
@@ -147,10 +191,8 @@ class LocalPtpClock {
     void step_clock(const double offset_from_master_seconds) {
         TRACY_ZONE_SCOPED;
 
-        last_sync_ = system_monotonic_now();
-        shift_ += -offset_from_master_seconds;
+        local_clock_.adjust(-offset_from_master_seconds, 1.0);
         offset_stats_.reset();
-        frequency_ratio_ = 1.0;
         adjustments_since_last_step_ = 0;
 
         RAV_TRACE("Stepping clock: offset_from_master={}", offset_from_master_seconds);
@@ -175,32 +217,18 @@ class LocalPtpClock {
         return false;
     }
 
-    /**
-     * Force updates the time of the clock to the given timestamp.
-     * @param timestamp_seconds The timestamp to set the clock to.
-     */
-    void force_update_time(const Timestamp timestamp_seconds) {
-        TRACY_ZONE_SCOPED;
-
-        last_sync_ = system_monotonic_now();
-        shift_ = timestamp_seconds.total_seconds_double() - last_sync_.total_seconds_double();
-        offset_stats_.reset();
-        frequency_ratio_ = 1.0;
-        adjustments_since_last_step_ = 0;
-    }
-
   private:
     constexpr static size_t k_lock_threshold = 10;
     constexpr static double k_calibrated_threshold = 0.0018;
     constexpr static int64_t k_clock_step_threshold_seconds = 1;
 
-    Timestamp last_sync_ = system_monotonic_now();
-    double shift_ {};
-    double frequency_ratio_ = 1.0;
+    LocalSystemClock& local_clock_;
+
     SlidingStats offset_stats_ {51};
     SlidingStats filtered_offset_stats_ {51};
     size_t adjustments_since_last_step_ {};
     Throttle<void> trace_adjustments_throttle_ {std::chrono::seconds(5)};
+    Timestamp last_sync_ = local_clock_.now();
 };
 
-}  // namespace rav
+}  // namespace rav::ptp

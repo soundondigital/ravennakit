@@ -222,10 +222,6 @@ void rav::ptp::Instance::update_local_ptp_clock(const Measurement<double>& measu
     local_ptp_clock_.update(measurement);
 }
 
-void rav::ptp::Instance::force_update_local_ptp_clock(const Timestamp timestamp) {
-    local_ptp_clock_.force_update_time(timestamp);
-}
-
 uint16_t rav::ptp::Instance::get_next_available_port_number() const {
     for (uint16_t i = PortIdentity::k_port_number_min; i <= PortIdentity::k_port_number_max; ++i) {
         if (std::none_of(ports_.begin(), ports_.end(), [i](const auto& port) {
