@@ -248,12 +248,6 @@ class RavennaNode {
     [[nodiscard]] bool send_audio_data_realtime(Id sender_id, const AudioBufferView<const float>& buffer, uint32_t timestamp);
 
     /**
-     * Realtime and thread safe for a single consumer.
-     * @return The current PTP time from the local PTP clock in nanoseconds.
-     */
-    ptp::Timestamp get_local_ptp_time() const;
-
-    /**
      * @return True if this method is called on the maintenance thread, false otherwise.
      */
     [[nodiscard]] bool is_maintenance_thread() const;

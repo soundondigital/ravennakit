@@ -367,10 +367,6 @@ bool rav::RavennaNode::send_audio_data_realtime(
     return false;
 }
 
-rav::ptp::Timestamp rav::RavennaNode::get_local_ptp_time() const {
-    return ptp_instance_.get_local_ptp_time();
-}
-
 bool rav::RavennaNode::is_maintenance_thread() const {
     return maintenance_thread_id_ == std::this_thread::get_id();
 }

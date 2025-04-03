@@ -18,94 +18,76 @@
 namespace rav::ptp {
 
 /**
- * Represents a local clock as specified in IEEE 1588-2019.
+ * Maintains a local clock corrected to the timebase of another time source, most likely a PTP master clock.
  */
 class LocalClock {
   public:
-    virtual ~LocalClock() = default;
-
     /**
      * @return The best estimate of 'now' in the timescale of the grand master clock.
      */
-    [[nodiscard]] virtual Timestamp now() const = 0;
+    [[nodiscard]] Timestamp now() const {
+        return get_adjusted_time(system_monotonic_now());
+    }
+
+    /**
+     * Returns the adjusted time of the clock, which is the time in the timescale of the grand master clock.
+     * @param system_time The system time to adjust.
+     * @return The adjusted time in the timescale of the grand master clock.
+     */
+    [[nodiscard]] Timestamp get_adjusted_time(const Timestamp system_time) const {
+        TRACY_ZONE_SCOPED;
+        const auto elapsed = system_time.total_seconds_double() - last_sync_.total_seconds_double();
+        auto result = last_sync_;
+        result.add_seconds(elapsed * frequency_ratio_);
+        result.add_seconds(shift_);
+        return result;
+    }
 
     /**
      * Adjusts the correction of this clock by adding the given shift and frequency ratio.
      * @param offset_from_master The shift to apply to the clock.
      */
-    virtual void adjust(double offset_from_master) = 0;
+    void adjust(const double offset_from_master) {
+        TRACY_ZONE_SCOPED;
+        last_sync_ = system_monotonic_now();
+        shift_ += -offset_from_master;
+
+        constexpr double max_ratio = 0.5;  // +/-
+        const auto nominal_ratio = 0.001 * std::pow(-offset_from_master, 3) + 1.0;
+        frequency_ratio_ = std::clamp(nominal_ratio, 1.0 - max_ratio, 1 + max_ratio);
+    }
 
     /**
      * Steps the clock to the given offset from the master clock. This is used when the clock is out of sync and needs
      * to be reset.
      * @param offset_from_master The offset from the master clock in seconds.
      */
-    virtual void step(double offset_from_master) = 0;
+    void step(const double offset_from_master) {
+        TRACY_ZONE_SCOPED;
+        last_sync_ = system_monotonic_now();
+        shift_ = -offset_from_master;
+        frequency_ratio_ = 1.0;
+    }
 
     /**
      * @return The current frequency ratio of the clock.
      */
-    [[nodiscard]] virtual double get_frequency_ratio() const = 0;
-};
-
-/**
- * A class that maintains a local PTP clock as close as possible to some grand master clock.
- * This particular implementation maintains a 'virtual' clock based on the monotonic system clock.
- */
-class LocalSystemClock: public LocalClock {
-  public:
-    [[nodiscard]] Timestamp now() const override {
-        return state_.get_adjusted_time(system_monotonic_now());
+    [[nodiscard]] double get_frequency_ratio() const {
+        return frequency_ratio_;
     }
 
-    [[nodiscard]] Timestamp now_realtime() {
-        if (const auto state = state_buffer_.get()) {
-            state_copy_ = *state;
-        }
-        return state_copy_.get_adjusted_time(system_monotonic_now());
-    }
-
-    void adjust(const double offset_from_master) override {
-        TRACY_ZONE_SCOPED;
-        state_.last_sync_ = system_monotonic_now();
-        state_.shift_ += -offset_from_master;
-
-        constexpr double max_ratio = 0.5;  // +/-
-        const auto nominal_ratio = 0.001 * std::pow(-offset_from_master, 3) + 1.0;
-        state_.frequency_ratio_ = std::clamp(nominal_ratio, 1.0 - max_ratio, 1 + max_ratio);
-    }
-
-    void step(const double offset_from_master) override {
-        TRACY_ZONE_SCOPED;
-        state_.last_sync_ = system_monotonic_now();
-        state_.shift_ = -offset_from_master;
-        state_.frequency_ratio_ = 1.0;
-    }
-
-    [[nodiscard]] double get_frequency_ratio() const override {
-        return state_.frequency_ratio_;
+    /**
+     *
+     * @return The current shift of the clock.
+     */
+    [[nodiscard]] double get_shift() const {
+        return shift_;
     }
 
   private:
-    struct State {
-        Timestamp last_sync_ = system_monotonic_now();
-        double shift_ {};
-        double frequency_ratio_ = 1.0;
-
-        [[nodiscard]] Timestamp get_adjusted_time(const Timestamp system_time) const {
-            TRACY_ZONE_SCOPED;
-            const auto elapsed = system_time.total_seconds_double() - last_sync_.total_seconds_double();
-            auto result = last_sync_;
-            result.add_seconds(elapsed * frequency_ratio_);
-            result.add_seconds(shift_);
-            return result;
-        }
-    } state_;
-
-    static_assert(std::is_trivially_copyable_v<State>, "State must be trivially copyable");
-
-    TripleBuffer<State> state_buffer_;
-    State state_copy_; // For access by now_realtime
+    Timestamp last_sync_ = system_monotonic_now();
+    double shift_ {};
+    double frequency_ratio_ = 1.0;
 
     static Timestamp system_monotonic_now() {
         return Timestamp(HighResolutionClock::now());
