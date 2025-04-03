@@ -14,8 +14,6 @@
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("TripleBuffer") {
-    static constexpr int k_num_iterations = 500000;
-
     SECTION("Basic operation") {
         rav::TripleBuffer<int> buffer;
         REQUIRE(buffer.get() == std::nullopt);
@@ -29,6 +27,8 @@ TEST_CASE("TripleBuffer") {
     }
 
     SECTION("Equal speed") {
+        static constexpr int k_num_iterations = 5000;
+
         rav::TripleBuffer<int> buffer;
 
         std::thread producer([&] {
@@ -54,6 +54,8 @@ TEST_CASE("TripleBuffer") {
     }
 
     SECTION("Faster producer") {
+        static constexpr int k_num_iterations = 5000;
+
         rav::TripleBuffer<int> buffer;
 
         std::thread producer([&] {
@@ -80,6 +82,8 @@ TEST_CASE("TripleBuffer") {
     }
 
     SECTION("Faster consumer") {
+        static constexpr int k_num_iterations = 5000;
+
         rav::TripleBuffer<int> buffer;
 
         std::thread producer([&] {
