@@ -51,8 +51,14 @@ tl::expected<void, rav::ptp::Error> rav::ptp::Instance::add_port(const asio::ip:
     port_identity.clock_identity = default_ds_.clock_identity;
     port_identity.port_number = get_next_available_port_number();
 
-    ports_.emplace_back(std::make_unique<Port>(*this, io_context_, interface_address, port_identity))
-        ->assert_valid_state(DefaultProfile1);
+    auto new_port = std::make_unique<Port>(*this, io_context_, interface_address, port_identity);
+    new_port->on_state_changed([this](const Port& port) {
+        for (auto* s : subscribers_) {
+            s->ptp_port_changed_state(port);
+        }
+    });
+
+    ports_.emplace_back(std::move(new_port))->assert_valid_state(DefaultProfile1);
 
     default_ds_.number_ports = static_cast<uint16_t>(ports_.size());
 
@@ -122,7 +128,9 @@ bool rav::ptp::Instance::set_recommended_state(
 
         if (parent_changed || gm_changed) {
             RAV_INFO("{}", parent_ds_.to_string());
-            on_parent_changed({parent_ds_});
+            for (auto* s : subscribers_) {
+                s->ptp_parent_changed(parent_ds_);
+            }
         }
 
         return true;

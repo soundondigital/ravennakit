@@ -20,7 +20,7 @@
 #include <CLI/App.hpp>
 
 namespace examples {
-class loopback: public rav::rtp::StreamReceiver::Subscriber {
+class loopback: public rav::rtp::StreamReceiver::Subscriber, public rav::ptp::Instance::Subscriber {
   public:
     explicit loopback(std::string stream_name, const asio::ip::address_v4& interface_addr) :
         stream_name_(std::move(stream_name)) {
@@ -39,12 +39,9 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
             RAV_THROW_EXCEPTION("Failed to add PTP port: {}", to_string(result.error()));
         }
 
-        ptp_port_changed_event_slot_ = ptp_instance_->on_port_changed_state.subscribe([this](auto event) {
-            if (event.port.state() == rav::ptp::State::slave) {
-                RAV_INFO("Port state changed to slave, start playing");
-                ptp_clock_stable_ = true;
-            }
-        });
+        if (!ptp_instance_->subscribe(this)) {
+            RAV_WARNING("Failed to add subscriber");
+        }
 
         sender_ = std::make_unique<rav::RavennaSender>(
             io_context_, *advertiser_, *rtsp_server_, *ptp_instance_, rav::Id(1), interface_addr
@@ -71,6 +68,12 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
     }
 
     ~loopback() override {
+        if (ptp_instance_ != nullptr) {
+            if (!ptp_instance_->unsubscribe(this)) {
+                RAV_WARNING("Failed to remove subscriber");
+            }
+        }
+
         if (ravenna_receiver_ != nullptr) {
             if (!ravenna_receiver_->unsubscribe(this)) {
                 RAV_WARNING("Failed to remove subscriber");
@@ -112,6 +115,13 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
         std::ignore = sender_->send_data_realtime(rav::BufferView(buffer_).const_view(), timestamp.value());
     }
 
+    void ptp_port_changed_state(const rav::ptp::Port& port) override {
+        if (port.state() == rav::ptp::State::slave) {
+            RAV_INFO("Port state changed to slave, start playing");
+            ptp_clock_stable_ = true;
+        }
+    }
+
     void run() {
         while (true) {
             io_context_.poll();
@@ -138,7 +148,6 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber {
     std::unique_ptr<rav::rtsp::Server> rtsp_server_;
     std::unique_ptr<rav::ptp::Instance> ptp_instance_;
     std::unique_ptr<rav::RavennaSender> sender_;
-    rav::EventSlot<rav::ptp::Instance::PortChangedStateEvent> ptp_port_changed_event_slot_;
 };
 
 }  // namespace examples

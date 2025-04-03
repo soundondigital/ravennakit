@@ -29,7 +29,7 @@
 
 namespace rav {
 
-class RavennaSender: public rtp::StreamSender, public rtsp::Server::PathHandler {
+class RavennaSender: public rtp::StreamSender, public rtsp::Server::PathHandler, public ptp::Instance::Subscriber {
   public:
     /// The number of packet buffers available for sending. This value means that n packets worth of data can be queued
     /// for sending.
@@ -174,6 +174,10 @@ class RavennaSender: public rtp::StreamSender, public rtsp::Server::PathHandler 
     // rtsp_server::handler overrides
     void on_request(rtsp::Connection::RequestEvent event) const override;
 
+    // ptp::Instance::Subscriber overrides
+    void ptp_parent_changed(const ptp::ParentDs& parent) override;
+    void ptp_port_changed_state(const ptp::Port& port) override;
+
   private:
     dnssd::Advertiser& advertiser_;
     rtsp::Server& rtsp_server_;
@@ -190,8 +194,6 @@ class RavennaSender: public rtp::StreamSender, public rtsp::Server::PathHandler 
 
     asio::high_resolution_timer timer_;
     OnDataRequestedHandler on_data_requested_handler_;
-    EventSlot<ptp::Instance::ParentChangedEvent> ptp_parent_changed_slot_;
-    EventSlot<ptp::Instance::PortChangedStateEvent> ptp_port_changed_state_event_slot_;
     SubscriberList<Subscriber> subscribers_;
     std::atomic<bool> ptp_stable_ {false};
 

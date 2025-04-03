@@ -88,6 +88,12 @@ class Port {
      */
     void increase_age();
 
+    /**
+     * Sets the state of this port.
+     * @param callback The callback to call when the state changes.
+     */
+    void on_state_changed(std::function<void(const Port&)> callback);
+
   private:
     Instance& parent_;
     PortDs port_ds_;
@@ -102,6 +108,7 @@ class Port {
     BasicFilter mean_delay_filter_ {0.1};
     int32_t syncs_until_delay_req_ = 10;  // Number of syncs until the next delay_req message.
     ByteBuffer send_buffer_ {128};
+    std::function<void(const Port&)> on_state_changed_callback_;
 
     RingBuffer<SyncMessage> sync_messages_ {8};
     RingBuffer<RequestResponseDelaySequence> request_response_delay_sequences_ {8};

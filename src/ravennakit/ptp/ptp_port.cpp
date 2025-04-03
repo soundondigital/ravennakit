@@ -202,7 +202,9 @@ void rav::ptp::Port::set_state(const State new_state) {
 
     RAV_INFO("Switching port {} to {}", port_ds_.port_identity.port_number, to_string(new_state));
 
-    parent_.on_port_changed_state({*this});
+    if (on_state_changed_callback_) {
+        on_state_changed_callback_(*this);
+    }
 }
 
 rav::ptp::Measurement<double> rav::ptp::Port::calculate_offset_from_master(const SyncMessage& sync_message) const {
@@ -339,6 +341,10 @@ const rav::ptp::PortDs& rav::ptp::Port::port_ds() const {
 
 void rav::ptp::Port::increase_age() {
     foreign_master_list_.increase_age();
+}
+
+void rav::ptp::Port::on_state_changed(std::function<void(const Port&)> callback) {
+    on_state_changed_callback_ = std::move(callback);
 }
 
 void rav::ptp::Port::handle_recv_event(const rtp::UdpSenderReceiver::recv_event& event) {

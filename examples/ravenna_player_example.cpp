@@ -127,16 +127,17 @@ int main(int const argc, char* argv[]) {
 
     // PTP
     rav::ptp::Instance ptp_instance(io_context);
-    auto slot = ptp_instance.on_port_changed_state.subscribe([&ptp_instance, &wav_file_players](auto event) {
-        if (event.port.state() == rav::ptp::State::slave) {
-            RAV_INFO("Port state changed to slave, start players");
-            auto start_at = ptp_instance.get_local_ptp_time();
-            start_at.add_seconds(0.5);
-            for (const auto& player : wav_file_players) {
-                player->start(start_at);
-            }
-        }
-    });
+    // auto slot = ptp_instance.on_port_changed_state.subscribe([&ptp_instance, &wav_file_players](auto event) {
+    //     if (event.port.state() == rav::ptp::State::slave) {
+    //         RAV_INFO("Port state changed to slave, start players");
+    //         auto start_at = ptp_instance.get_local_ptp_time();
+    //         start_at.add_seconds(0.5);
+    //         for (const auto& player : wav_file_players) {
+    //             player->start(start_at);
+    //         }
+    //     }
+    // });
+    // TODO: Re-implement
 
     if (const auto result = ptp_instance.add_port(interface_address); !result) {
         RAV_THROW_EXCEPTION("Failed to add PTP port: {}", to_string(result.error()));

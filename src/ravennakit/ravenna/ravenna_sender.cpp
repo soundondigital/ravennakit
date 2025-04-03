@@ -62,19 +62,9 @@ rav::RavennaSender::RavennaSender(
         );
     }
 
-    ptp_parent_changed_slot_ =
-        ptp_instance.on_parent_changed.subscribe([this](const ptp::Instance::ParentChangedEvent& event) {
-            if (grandmaster_identity_ == event.parent.grandmaster_identity) {
-                return;
-            }
-            grandmaster_identity_ = event.parent.grandmaster_identity;
-            send_announce();
-        });
-
-    ptp_port_changed_state_event_slot_ =
-        ptp_instance.on_port_changed_state.subscribe([this](const ptp::Instance::PortChangedStateEvent& event) {
-            ptp_stable_ = event.port.state() == ptp::State::slave || event.port.state() == ptp::State::master;
-        });
+    if (!ptp_instance_.subscribe(this)) {
+        RAV_ERROR("Failed to subscribe to PTP instance");
+    }
 
 #if RAV_WINDOWS
     timeBeginPeriod(1);
@@ -84,6 +74,10 @@ rav::RavennaSender::RavennaSender(
 }
 
 rav::RavennaSender::~RavennaSender() {
+    if (!ptp_instance_.unsubscribe(this)) {
+        RAV_ERROR("Failed to unsubscribe from PTP instance");
+    }
+
 #if RAV_WINDOWS
     timeEndPeriod(1);
 #endif
@@ -421,6 +415,18 @@ void rav::RavennaSender::on_request(const rtsp::Connection::RequestEvent event) 
     }
     response.rtsp_headers.set("content-type", "application/sdp");
     event.rtsp_connection.async_send_response(response);
+}
+
+void rav::RavennaSender::ptp_parent_changed(const ptp::ParentDs& parent) {
+    if (grandmaster_identity_ == parent.grandmaster_identity) {
+        return;
+    }
+    grandmaster_identity_ = parent.grandmaster_identity;
+    send_announce();
+}
+
+void rav::RavennaSender::ptp_port_changed_state(const ptp::Port& port) {
+    ptp_stable_ = port.state() == ptp::State::slave || port.state() == ptp::State::master;
 }
 
 void rav::RavennaSender::send_announce() const {
