@@ -22,7 +22,6 @@
 #include "ravennakit/core/events/event_emitter.hpp"
 #include "ravennakit/core/net/interfaces/network_interface_list.hpp"
 #include "ravennakit/core/expected.hpp"
-#include "ravennakit/core/sync/double_buffer.hpp"
 #include "ravennakit/core/sync/realtime_shared_object.hpp"
 
 #include <asio/ip/address.hpp>
