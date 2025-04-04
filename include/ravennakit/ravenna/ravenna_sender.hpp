@@ -33,7 +33,7 @@ class RavennaSender: public rtp::StreamSender, public rtsp::Server::PathHandler,
   public:
     /// The number of packet buffers available for sending. This value means that n packets worth of data can be queued
     /// for sending.
-    static constexpr uint32_t k_buffer_num_packets = 20;
+    static constexpr uint32_t k_buffer_num_packets = 30;
 
     /// The max number of frames to feed into the sender (using send_audio_data_realtime). This will usually correspond
     /// to an audio device buffer size.
@@ -158,13 +158,6 @@ class RavennaSender: public rtp::StreamSender, public rtsp::Server::PathHandler,
     [[nodiscard]] bool
     send_audio_data_realtime(const AudioBufferView<const float>& input_buffer, uint32_t timestamp);
 
-    /**
-     * Sets a handler for when data is requested. The handler should fill the buffer with audio data and return true if
-     * the buffer was filled, or false if not enough data is available.
-     * @param handler The handler to install.
-     */
-    void on_data_requested(OnDataRequestedHandler handler);
-
     // rtsp_server::handler overrides
     void on_request(rtsp::Connection::RequestEvent event) const override;
 
@@ -184,10 +177,9 @@ class RavennaSender: public rtp::StreamSender, public rtsp::Server::PathHandler,
     Id advertisement_id_;
     int32_t clock_domain_ {};
     ptp::ClockIdentity grandmaster_identity_;
-    std::mutex mutex_;
+    std::mutex timer_mutex_;
 
     asio::high_resolution_timer timer_;
-    OnDataRequestedHandler on_data_requested_handler_;
     SubscriberList<Subscriber> subscribers_;
     std::atomic<bool> ptp_stable_ {false};
 

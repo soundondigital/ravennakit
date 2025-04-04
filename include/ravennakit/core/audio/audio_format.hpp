@@ -82,6 +82,14 @@ struct AudioFormat {
     static const char* to_string(const ChannelOrdering order) {
         return order == ChannelOrdering::interleaved ? "interleaved" : "noninterleaved";
     }
+
+    /**
+     * @param order The byte order to set.
+     * @return A copy of this AudioFormat with the byte order set to the given value.
+     */
+    [[nodiscard]] AudioFormat with_byte_order(const ByteOrder order) const {
+        return {order, encoding, ordering, sample_rate, num_channels};
+    }
 };
 
 }  // namespace rav

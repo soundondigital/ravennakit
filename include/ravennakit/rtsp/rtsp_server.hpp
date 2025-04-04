@@ -32,7 +32,7 @@ class Server final: Connection::Subscriber {
      * Baseclass for other classes which need to handle requests for specific paths.
      */
     class PathHandler {
-    public:
+      public:
         virtual ~PathHandler() = default;
 
         /**
@@ -60,8 +60,8 @@ class Server final: Connection::Subscriber {
     /**
      * Sets given handler to handle requests for given path.
      * @param path The path to associate the handler with. The path should NOT be uri encoded.
-     * @param handler The handler to set. If the handler is nullptr it will remove any previously registered handler for
-     * path.
+     * @param handler The handler to set. If the handler is nullptr it will remove any previously registered handler
+     * for path.
      */
     void register_handler(const std::string& path, PathHandler* handler);
 
@@ -74,8 +74,9 @@ class Server final: Connection::Subscriber {
      * Sends a request to all connected clients. The path will determine which clients will receive the request.
      * @param path The path to send the request to.
      * @param request The request to send.
+     * @returns The number of clients that the request was sent to.
      */
-    void send_request(const std::string& path, const Request& request) const;
+    [[nodiscard]] size_t send_request(const std::string& path, const Request& request) const;
 
     /**
      * Closes the listening socket. Implies cancellation.
@@ -99,6 +100,8 @@ class Server final: Connection::Subscriber {
     struct PathContext {
         PathHandler* handler;
         std::vector<std::shared_ptr<Connection>> connections;
+
+        bool add_connection_if_not_exists(Connection& connection);
     };
 
     asio::ip::tcp::acceptor acceptor_;
@@ -107,4 +110,4 @@ class Server final: Connection::Subscriber {
     void async_accept();
 };
 
-}  // namespace rav
+}  // namespace rav::rtsp

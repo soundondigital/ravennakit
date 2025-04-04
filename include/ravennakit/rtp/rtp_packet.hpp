@@ -62,6 +62,13 @@ class Packet {
     }
 
     /**
+     * @return The sequence number.
+     */
+    [[nodiscard]] WrappingUint<uint16_t> get_sequence_number() const {
+        return sequence_number_;
+    }
+
+    /**
      * Sets the synchronization source identifier.
      * @param value The synchronization source identifier.
      */

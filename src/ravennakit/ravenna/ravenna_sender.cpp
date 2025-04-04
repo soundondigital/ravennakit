@@ -321,7 +321,17 @@ bool rav::RavennaSender::send_data_realtime(const BufferView<const uint8_t> buff
             packet.payload_size_bytes = static_cast<uint32_t>(lock->rtp_packet_buffer.size());
             std::memcpy(packet.payload.data(), lock->rtp_packet_buffer.data(), lock->rtp_packet_buffer.size());
 
-            lock->outgoing_data.push(packet);
+            if (lock->outgoing_data.push(packet)) {
+                // RAV_TRACE(
+                // "Scheduled RTP packet: {} bytes, timestamp: {}, seq: {}", lock->rtp_packet_buffer.size(),
+                // packet.rtp_timestamp, rtp_packet.get_sequence_number().value()
+                // );
+            } else {
+                RAV_ERROR(
+                    "Failed to schedule RTP packet: {} bytes, timestamp: {}, seq: {}", lock->rtp_packet_buffer.size(),
+                    packet.rtp_timestamp, rtp_packet.get_sequence_number().value()
+                );
+            }
 
             rtp_packet.sequence_number_inc(1);
             rtp_packet.inc_timestamp(packet_time_frames);
@@ -392,10 +402,6 @@ bool rav::RavennaSender::send_audio_data_realtime(
     return false;
 }
 
-void rav::RavennaSender::on_data_requested(OnDataRequestedHandler handler) {
-    on_data_requested_handler_ = std::move(handler);
-}
-
 void rav::RavennaSender::on_request(const rtsp::Connection::RequestEvent event) const {
     const auto sdp = build_sdp();  // Should the SDP be cached and updated on changes?
     RAV_TRACE("SDP:\n{}", sdp.to_string("\n").value());
@@ -441,13 +447,11 @@ void rav::RavennaSender::send_announce() const {
     request.data = std::move(sdp.value());
     request.uri =
         Uri::encode("rtsp", interface_address_string + ":" + std::to_string(rtsp_server_.port()), rtsp_path_by_name_);
-    rtsp_server_.send_request(rtsp_path_by_name_, request);
-    RAV_TRACE("Announced session: {}", request.uri);
+    std::ignore = rtsp_server_.send_request(rtsp_path_by_name_, request);
 
     request.uri =
         Uri::encode("rtsp", interface_address_string + ":" + std::to_string(rtsp_server_.port()), rtsp_path_by_id_);
-    rtsp_server_.send_request(rtsp_path_by_name_, request);
-    RAV_TRACE("Announced session: {}", request.uri);
+    std::ignore = rtsp_server_.send_request(rtsp_path_by_id_, request);
 }
 
 rav::sdp::SessionDescription rav::RavennaSender::build_sdp() const {
@@ -549,14 +553,14 @@ void rav::RavennaSender::start_timer() {
             RAV_ERROR("Timer error: {}", ec.message());
             return;
         }
-        std::lock_guard lock(mutex_);
+        std::lock_guard lock(timer_mutex_);
         send_outgoing_data();
         start_timer();
     });
 }
 
 void rav::RavennaSender::stop_timer() {
-    std::lock_guard lock(mutex_);
+    std::lock_guard lock(timer_mutex_);
     timer_.cancel();
 }
 
@@ -564,15 +568,18 @@ void rav::RavennaSender::send_outgoing_data() {
     if (auto lock = send_outgoing_data_reader_.lock_realtime()) {
         TRACY_ZONE_SCOPED;
 
-        const auto packet = lock->outgoing_data.pop();
+        // Allow to send 10 extra packets which come in during the loop, but otherwise keep the loop bounded
+        for (size_t i = 0; i < lock->outgoing_data.size() + 100; ++i) {
+            const auto packet = lock->outgoing_data.pop();
 
-        if (!packet.has_value()) {
-            return;  // Nothing to do here
+            if (!packet.has_value()) {
+                return;  // Nothing to do here
+            }
+
+            RAV_ASSERT(packet->payload_size_bytes <= aes67::constants::k_max_payload, "Payload size exceeds maximum");
+
+            rtp_sender_.send_to(packet->payload.data(), packet->payload_size_bytes, lock->destination_endpoint);
         }
-
-        RAV_ASSERT(packet->payload_size_bytes <= aes67::constants::k_max_payload, "Payload size exceeds maximum");
-
-        rtp_sender_.send_to(packet->payload.data(), packet->payload_size_bytes, lock->destination_endpoint);
     }
 }
 

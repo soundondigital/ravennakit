@@ -44,8 +44,8 @@ void rav::rtsp::Server::register_handler(const std::string& path, PathHandler* h
         }
         return;
     }
-    auto& path_ctx = paths_[path];
-    path_ctx.handler = handler;
+    auto& pc = paths_[path];
+    pc.handler = handler;
 }
 
 void rav::rtsp::Server::unregister_handler(const PathHandler* handler_to_remove) {
@@ -63,14 +63,18 @@ void rav::rtsp::Server::unregister_handler(const PathHandler* handler_to_remove)
     }
 }
 
-void rav::rtsp::Server::send_request(const std::string& path, const Request& request) const {
+size_t rav::rtsp::Server::send_request(const std::string& path, const Request& request) const {
     const auto found = paths_.find(path);
     if (found == paths_.end()) {
-        return;
+        RAV_WARNING("No path context for path: {} (request={})", path, request.to_debug_string(false));
+        return 0;
     }
+    size_t count = 0;
     for (auto& c : found->second.connections) {
         c->async_send_request(request);
+        count++;
     }
+    return count;
 }
 
 rav::rtsp::Server::Server(asio::io_context& io_context, const asio::ip::tcp::endpoint& endpoint) :
@@ -106,7 +110,15 @@ void rav::rtsp::Server::on_request(Connection& connection, const Request& reques
     RAV_TRACE("Received request: {}", request.to_debug_string(false));
     const auto uri = Uri::parse(request.uri);
 
-    const auto pc = paths_[uri.path];
+    auto& pc = paths_[uri.path];
+
+    if (pc.add_connection_if_not_exists(connection)) {
+        RAV_TRACE(
+            "Added connection from {}:{} to {}", connection.remote_endpoint().address().to_string(),
+            connection.remote_endpoint().port(), uri.path
+        );
+    }
+
     if (pc.handler) {
         pc.handler->on_request({connection, request});
     } else {
@@ -134,6 +146,19 @@ void rav::rtsp::Server::on_disconnect(Connection& connection) {
             ctx.connections.end()
         );
     }
+}
+
+bool rav::rtsp::Server::PathContext::add_connection_if_not_exists(Connection& connection) {
+    auto shared = connection.shared_from_this();
+    if (!shared) {
+        RAV_ERROR("Failed to create shared connection");
+        return false;
+    }
+    if (std::find(connections.begin(), connections.end(), shared) == connections.end()) {
+        connections.push_back(std::move(shared));
+        return true;
+    }
+    return false;
 }
 
 void rav::rtsp::Server::async_accept() {
