@@ -11,7 +11,7 @@ For a higher level overview visit [ravennakit.com](https://ravennakit.com).
 
 ## Early Access
 
-RAVENNAKIT is currently in Early Access. Want to get access? Shoot us a [message](https://ravennakit.com/contact/).
+RAVENNAKIT is currently being developed. Want to get early access? Shoot us a [message](https://ravennakit.com/contact/).
 
 ## Licensing
 
