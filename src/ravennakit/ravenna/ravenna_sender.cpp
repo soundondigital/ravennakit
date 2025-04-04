@@ -187,11 +187,6 @@ tl::expected<void, std::string> rav::RavennaSender::update_configuration(const C
         configuration_.enabled ? start_timer() : stop_timer();
     }
 
-    // Adjust timestamps
-    if (update.adjust_timestamps.has_value() && update.adjust_timestamps != configuration_.adjust_timestamps) {
-        configuration_.adjust_timestamps = *update.adjust_timestamps;
-    }
-
     const bool should_be_running = configuration_.enabled && !configuration_.session_name.empty()
         && configuration_.audio_format.is_valid() && configuration_.destination_address.is_multicast()
         && configuration_.packet_time.is_valid() && configuration_.ttl > 0;
@@ -598,7 +593,6 @@ void rav::RavennaSender::update_realtime_context() {
     new_context->intermediate_audio_buffer.resize(k_max_num_frames * audio_format.bytes_per_frame());
     new_context->rtp_packet_buffer = ByteBuffer(packet_size_bytes);
     new_context->intermediate_send_buffer.resize(packet_size_bytes);
-    new_context->adjust_timestamps = configuration_.adjust_timestamps;
     new_context->rtp_buffer.resize(k_max_num_frames, audio_format.bytes_per_frame());
     new_context->rtp_buffer.set_ground_value(audio_format.ground_value());
 

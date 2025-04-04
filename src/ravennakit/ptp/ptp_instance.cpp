@@ -15,6 +15,7 @@
 #include "ravennakit/ptp/ptp_constants.hpp"
 
 const rav::ptp::LocalClock& rav::ptp::Instance::Subscriber::get_local_clock() {
+    static_assert(std::is_trivially_copyable_v<LocalClock>);
     if (const auto value = local_clock_buffer_.get()) {
         local_clock_ = *value;
     }
@@ -31,13 +32,14 @@ rav::ptp::Instance::~Instance() {
 bool rav::ptp::Instance::subscribe(Subscriber* subscriber) {
     if (subscribers_.add(subscriber)) {
         if (!parent_ds_.parent_port_identity.is_valid()) {
-            return true; // No parent yet
+            return true;  // No parent yet
         }
         subscriber->ptp_parent_changed(parent_ds_);
         for (auto& port : ports_) {
             subscriber->ptp_port_changed_state(*port);
         }
         if (local_ptp_clock_.is_calibrated()) {
+            static_assert(std::is_trivially_copyable_v<LocalClock>);
             subscriber->local_clock_buffer_.update(local_clock_);
         }
         return true;

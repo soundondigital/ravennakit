@@ -57,11 +57,6 @@ class RavennaSender: public rtp::StreamSender, public rtsp::Server::PathHandler,
         AudioFormat audio_format;
         aes67::PacketTime packet_time;
         bool enabled {};
-        /// When enabled, the sender will adjust the timestamps of the packets to match the PTP time. It does this by
-        /// skipping or jumping packets when the difference becomes greater than 1 packet period. It's a very rough way
-        /// of synchronizing, but can be useful as a quick-and-dirty way of synchronizing data which is not related to
-        /// the PTP time.
-        bool adjust_timestamps {};
     };
 
     /**
@@ -76,7 +71,6 @@ class RavennaSender: public rtp::StreamSender, public rtsp::Server::PathHandler,
         std::optional<AudioFormat> audio_format;
         std::optional<aes67::PacketTime> packet_time;
         std::optional<bool> enabled;
-        std::optional<bool> adjust_timestamps;
     };
 
     class Subscriber {
@@ -208,7 +202,6 @@ class RavennaSender: public rtp::StreamSender, public rtsp::Server::PathHandler,
         asio::ip::udp::endpoint destination_endpoint;
 
         // Audio thread:
-        bool adjust_timestamps {};
         ByteBuffer rtp_packet_buffer;
         std::vector<uint8_t> intermediate_send_buffer;
         std::vector<uint8_t> intermediate_audio_buffer;
