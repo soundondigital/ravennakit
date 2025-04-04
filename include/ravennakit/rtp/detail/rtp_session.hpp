@@ -30,6 +30,10 @@ struct Session {
         return fmt::format("{}/{}/{}", connection_address.to_string(), rtp_port, rtcp_port);
     }
 
+    [[nodiscard]] bool valid() const {
+        return !connection_address.is_unspecified() && rtp_port != 0 && rtcp_port != 0;
+    }
+
     friend auto operator==(const Session& lhs, const Session& rhs) -> bool {
         return std::tie(lhs.connection_address, lhs.rtp_port, lhs.rtcp_port)
             == std::tie(rhs.connection_address, rhs.rtp_port, rhs.rtcp_port);

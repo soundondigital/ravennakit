@@ -34,10 +34,7 @@ void rav::rtsp::Connection::async_send_response(const Response& response) {
 
 void rav::rtsp::Connection::async_send_request(const Request& request) {
     const auto encoded = request.encode();
-    RAV_TRACE(
-        "Sending {} to {}:{}", request.to_debug_string(false), remote_endpoint().address().to_string(),
-        remote_endpoint().port()
-    );
+    RAV_TRACE("Sending {}", request.to_debug_string(false));
     async_send_data(encoded);
 }
 

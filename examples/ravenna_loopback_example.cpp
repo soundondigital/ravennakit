@@ -72,7 +72,7 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber, public rav::ptp::In
         }
     }
 
-    void rtp_stream_receiver_updated(const rav::rtp::StreamReceiver::StreamUpdatedEvent& event) override {
+    void on_rtp_stream_receiver_updated(const rav::rtp::StreamReceiver::StreamUpdatedEvent& event) override {
         if (event.state == rav::rtp::StreamReceiver::ReceiverState::idle) {
             // TODO: Stop sending
             return;

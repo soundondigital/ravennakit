@@ -240,7 +240,7 @@ void rav::rtp::StreamReceiver::update_sdp(const sdp::SessionDescription& sdp) {
     if (should_restart || was_changed) {
         auto event = make_updated_event();
         for (auto& s : subscribers_) {
-            s->rtp_stream_receiver_updated(event);
+            s->on_rtp_stream_receiver_updated(event);
         }
     }
 }
@@ -255,7 +255,7 @@ void rav::rtp::StreamReceiver::set_delay(const uint32_t delay) {
 
     const auto event = make_updated_event();
     for (auto* s : subscribers_) {
-        s->rtp_stream_receiver_updated(event);
+        s->on_rtp_stream_receiver_updated(event);
     }
 }
 
@@ -265,7 +265,7 @@ uint32_t rav::rtp::StreamReceiver::get_delay() const {
 
 bool rav::rtp::StreamReceiver::subscribe(Subscriber* subscriber_to_add) {
     if (subscribers_.add(subscriber_to_add)) {
-        subscriber_to_add->rtp_stream_receiver_updated(make_updated_event());
+        subscriber_to_add->on_rtp_stream_receiver_updated(make_updated_event());
         return true;
     }
     return false;
@@ -561,7 +561,7 @@ void rav::rtp::StreamReceiver::set_state(const ReceiverState new_state, const bo
     if (notify_subscribers) {
         const auto event = make_updated_event();
         for (auto* s : subscribers_) {
-            s->rtp_stream_receiver_updated(event);
+            s->on_rtp_stream_receiver_updated(event);
         }
     }
 }

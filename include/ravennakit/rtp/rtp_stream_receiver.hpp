@@ -90,7 +90,7 @@ class StreamReceiver: public Receiver::Subscriber {
          *
          * @param event The event.
          */
-        virtual void rtp_stream_receiver_updated([[maybe_unused]] const StreamUpdatedEvent& event) {}
+        virtual void on_rtp_stream_receiver_updated([[maybe_unused]] const StreamUpdatedEvent& event) {}
 
         /**
          * Called when new data has been received.

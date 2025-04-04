@@ -93,11 +93,25 @@ class File {
     }
 
     /**
+     * @return The absolute path to the file.
+     */
+    [[nodiscard]] File absolute() const {
+        return File(std::filesystem::absolute(path_));
+    }
+
+    /**
      * @throws std::filesystem::filesystem_error if the file does not exist.
      * @return The size of the file in bytes.
      */
     [[nodiscard]] std::uintmax_t size() const {
         return std::filesystem::file_size(path_);
+    }
+
+    /**
+     * @return Path as a string.
+     */
+    [[nodiscard]] std::string to_string() const {
+        return path_.string();
     }
 
   private:

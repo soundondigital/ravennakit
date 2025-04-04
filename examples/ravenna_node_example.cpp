@@ -47,7 +47,7 @@ struct ravenna_node final: rav::RavennaNode::Subscriber, rav::rtp::StreamReceive
         RAV_INFO("RAVENNA receiver added for: {}", receiver.get_session_name());
     }
 
-    void rtp_stream_receiver_updated(const rav::rtp::StreamReceiver::StreamUpdatedEvent& event) override {
+    void on_rtp_stream_receiver_updated(const rav::rtp::StreamReceiver::StreamUpdatedEvent& event) override {
         RAV_INFO("Stream updated: {}", event.to_string());
     }
 

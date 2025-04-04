@@ -27,7 +27,7 @@ namespace examples {
  */
 class stream_recorder: public rav::rtp::StreamReceiver::Subscriber {
   public:
-    explicit stream_recorder(std::unique_ptr<rav::RavennaReceiver> sink) : receiver_(std::move(sink)) {
+    explicit stream_recorder(std::unique_ptr<rav::RavennaReceiver> receiver) : receiver_(std::move(receiver)) {
         if (receiver_) {
             if (!receiver_->subscribe(this)) {
                 RAV_WARNING("Failed to add subscriber");
@@ -56,7 +56,11 @@ class stream_recorder: public rav::rtp::StreamReceiver::Subscriber {
         }
     }
 
-    void rtp_stream_receiver_updated(const rav::rtp::StreamReceiver::StreamUpdatedEvent& event) override {
+    void on_rtp_stream_receiver_updated(const rav::rtp::StreamReceiver::StreamUpdatedEvent& event) override {
+        if (!event.selected_audio_format.is_valid() || !event.session.valid()) {
+            return;
+        }
+
         close();
 
         if (receiver_ == nullptr) {
@@ -64,9 +68,12 @@ class stream_recorder: public rav::rtp::StreamReceiver::Subscriber {
             return;
         }
 
+        auto file_path = rav::File(receiver_->get_session_name() + ".wav").absolute();
+
+        RAV_INFO("Recording stream: {} to file: {}", receiver_->get_session_name(), file_path.to_string());
+
         audio_format_ = event.selected_audio_format;
-        file_output_stream_ =
-            std::make_unique<rav::FileOutputStream>(rav::File(receiver_->get_session_name() + ".wav"));
+        file_output_stream_ = std::make_unique<rav::FileOutputStream>(file_path);
         wav_writer_ = std::make_unique<rav::WavAudioFormat::Writer>(
             *file_output_stream_, rav::WavAudioFormat::FormatCode::pcm, audio_format_.sample_rate,
             audio_format_.num_channels, audio_format_.bytes_per_sample() * 8
@@ -75,6 +82,8 @@ class stream_recorder: public rav::rtp::StreamReceiver::Subscriber {
     }
 
     void on_data_ready(const rav::WrappingUint32 timestamp) override {
+        TRACY_ZONE_SCOPED;
+
         if (!receiver_->read_data_realtime(audio_data_.data(), audio_data_.size(), timestamp.value())) {
             RAV_ERROR("Failed to read audio data");
             return;
@@ -119,7 +128,9 @@ class ravenna_recorder {
     }
 
     void start() {
-        io_context_.run();
+        while (!io_context_.stopped()) {
+            io_context_.poll();
+        }
     }
 
     void stop() {

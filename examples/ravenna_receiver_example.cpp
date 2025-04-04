@@ -196,7 +196,7 @@ class ravenna_receiver: public rav::rtp::StreamReceiver::Subscriber {
         portaudio_stream_.stop();
     }
 
-    void rtp_stream_receiver_updated(const rav::rtp::StreamReceiver::StreamUpdatedEvent& event) override {
+    void on_rtp_stream_receiver_updated(const rav::rtp::StreamReceiver::StreamUpdatedEvent& event) override {
         if (!event.selected_audio_format.is_valid() || audio_format_ == event.selected_audio_format) {
             return;
         }
