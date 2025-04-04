@@ -47,15 +47,6 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber, public rav::ptp::In
             io_context_, *advertiser_, *rtsp_server_, *ptp_instance_, rav::Id(1), interface_addr
         );
 
-        sender_->on_data_requested([this](const uint32_t timestamp, rav::BufferView<uint8_t> buffer) {
-            if (ravenna_receiver_
-                    ->read_data_realtime(buffer.data(), buffer.size(), timestamp - ravenna_receiver_->get_delay())
-                    .has_value()) {
-                return true;
-            }
-            return false;
-        });
-
         auto config = rav::rtp::Receiver::Configuration {interface_addr};
         rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(io_context_, config);
 
@@ -93,7 +84,6 @@ class loopback: public rav::rtp::StreamReceiver::Subscriber, public rav::ptp::In
         update.session_name = stream_name_ + "_loopback";
         update.audio_format = event.selected_audio_format;
         update.enabled = true;
-        update.adjust_timestamps = false;
 
         auto result = sender_->update_configuration(update);
         if (!result) {
