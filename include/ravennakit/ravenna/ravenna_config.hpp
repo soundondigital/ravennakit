@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ravennakit/core/net/interfaces/network_interface.hpp"
+#include "ravennakit/core/util/rank.hpp"
 
 namespace rav {
 
@@ -18,53 +19,30 @@ namespace rav {
  * Configuration for RAVENNA related classes.
  * This class is used to configure the Ravenna node and its components.
  */
-class RavennaConfig {
-  public:
+struct RavennaConfig {
     struct NetworkInterfaceConfig {
-        std::optional<NetworkInterface::Identifier> primary_interface;
-        std::optional<NetworkInterface::Identifier> secondary_interface;
+        std::optional<NetworkInterface::Identifier> primary;
+        std::optional<NetworkInterface::Identifier> secondary;
 
         /**
          * @return A string representation of the network interface configuration.
          */
         [[nodiscard]] std::string to_string() const {
             return fmt::format(
-                R"(Network interface configuration: primary={}, secondary={})",
-                primary_interface ? *primary_interface : "none", secondary_interface ? *secondary_interface : "none"
+                R"(Network interface configuration: primary={}, secondary={})", primary ? *primary : "none",
+                secondary ? *secondary : "none"
             );
         }
     };
 
     /**
-     * Sets the network interface configuration.
-     * @param config The new network interface configuration.
-     * @returns True if the configuration was changed, false otherwise.
-     */
-    bool set_network_interface_config(NetworkInterfaceConfig config) {
-        if (network_interface_config_.primary_interface == config.primary_interface
-            && network_interface_config_.secondary_interface == config.secondary_interface) {
-            return false;
-        }
-        network_interface_config_ = std::move(config);
-        return true;
-    }
-
-    /**
-     * @returns Gets the current network interface configuration.
-     */
-    [[nodiscard]] const NetworkInterfaceConfig& get_network_interface_config() const {
-        return network_interface_config_;
-    }
-
-    /**
      * @return A string representation of the configuration.
      */
     [[nodiscard]] std::string to_string() const {
-        return fmt::format("RAVENNA Configuration: {}", network_interface_config_.to_string());
+        return fmt::format("RAVENNA Configuration: {}", network_interfaces.to_string());
     }
 
-  private:
-    NetworkInterfaceConfig network_interface_config_;
+    NetworkInterfaceConfig network_interfaces;
 };
 
 }  // namespace rav

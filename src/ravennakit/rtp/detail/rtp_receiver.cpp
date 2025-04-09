@@ -70,6 +70,22 @@ bool rav::rtp::Receiver::unsubscribe(const Subscriber* subscriber_to_remove) {
     return count > 0;
 }
 
+void rav::rtp::Receiver::set_interface(const asio::ip::address& interface_address) {
+    for (auto& session : sessions_contexts_) {
+        if (session.session.connection_address.is_multicast() && !interface_address.is_unspecified()) {
+            session.rtp_multicast_subscription = session.rtp_sender_receiver->join_multicast_group(
+                session.session.connection_address, interface_address
+            );
+            session.rtcp_multicast_subscription = session.rtcp_sender_receiver->join_multicast_group(
+                session.session.connection_address, interface_address
+            );
+        } else {
+            session.rtp_multicast_subscription.reset();
+            session.rtcp_multicast_subscription.reset();
+        }
+    }
+}
+
 rav::rtp::Receiver::SessionContext* rav::rtp::Receiver::find_session_context(const Session& session) {
     for (auto& context : sessions_contexts_) {
         if (context.session == session) {

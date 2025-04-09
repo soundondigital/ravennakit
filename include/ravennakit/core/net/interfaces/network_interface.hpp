@@ -133,6 +133,18 @@ class NetworkInterface {
     }
 
     /**
+     * @return The first IPv4 address of the interface, or nullopt if the interface does not have an IPv4 address.
+     */
+    asio::ip::address get_first_ipv4_address() const {
+        for (const auto& addr : addresses_) {
+            if (addr.is_v4()) {
+                return addr;
+            }
+        }
+        return {};
+    }
+
+    /**
      * @return The type of the interface.
      */
     [[nodiscard]] Type get_type() const {

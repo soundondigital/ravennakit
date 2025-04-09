@@ -112,6 +112,13 @@ class Receiver {
      */
     bool unsubscribe(const Subscriber* subscriber_to_remove);
 
+    /**
+     * Sets the interface address to join multicast groups on. If the address is empty existing multicast groups are
+     * left.
+     * @param interface_address The address to bind to.
+     */
+    void set_interface(const asio::ip::address& interface_address);
+
   private:
     struct SubscriberContext {
         Filter filter;
@@ -153,4 +160,4 @@ class Receiver {
     void handle_incoming_rtcp_data(const UdpSenderReceiver::recv_event& event);
 };
 
-}  // namespace rav
+}  // namespace rav::rtp

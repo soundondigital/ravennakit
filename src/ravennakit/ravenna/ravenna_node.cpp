@@ -173,7 +173,7 @@ std::future<void> rav::RavennaNode::subscribe(Subscriber* subscriber) {
         for (const auto& sender : senders_) {
             subscriber->ravenna_sender_added(*sender);
         }
-        subscriber->network_interface_config_updated(config_.get_network_interface_config());
+        subscriber->network_interface_config_updated(config_.network_interfaces);
     };
     return asio::dispatch(io_context_, asio::use_future(work));
 }
@@ -369,15 +369,29 @@ bool rav::RavennaNode::send_audio_data_realtime(
 std::future<void>
 rav::RavennaNode::set_network_interface_config(RavennaConfig::NetworkInterfaceConfig interface_config) {
     auto work = [this, config = std::move(interface_config)] {
-        if (config_.set_network_interface_config(config)) {
-            // TODO: Update senders
-            // TODO: Update receivers
-            // TODO: Update PTP instance
-            for (const auto& subscriber : subscribers_) {
-                subscriber->network_interface_config_updated(config);
-            }
-            RAV_INFO("{}", config.to_string());
+        bool changed = false;
+
+        if (config_.network_interfaces.primary != config.primary) {
+            config_.network_interfaces.primary = config.primary;
+            changed = true;
+            update_rtp_receiver_interface(config_.network_interfaces.primary, *rtp_receiver_);
         }
+
+        if (config_.network_interfaces.secondary != config.secondary) {
+            config_.network_interfaces.secondary = config.secondary;
+            changed = true;
+            // TODO: Update secondary rtp_receiver
+        }
+
+        if (!changed) {
+            return;
+        }
+
+        for (const auto& subscriber : subscribers_) {
+            subscriber->network_interface_config_updated(config);
+        }
+
+        RAV_INFO("{}", config.to_string());
     };
     return asio::dispatch(io_context_, asio::use_future(work));
 }
@@ -395,4 +409,21 @@ bool rav::RavennaNode::update_realtime_shared_context() {
         new_context->senders.emplace_back(sender.get());
     }
     return realtime_shared_context_.update(std::move(new_context));
+}
+
+void rav::RavennaNode::update_rtp_receiver_interface(
+    const std::optional<NetworkInterface::Identifier>& interface_id, rtp::Receiver& rtp_receiver
+) {
+    const auto& interfaces = NetworkInterfaceList::get_system_interfaces();
+
+    do {
+        if (interface_id) {
+            if (auto* interface = interfaces.get_interface(*interface_id)) {
+                rtp_receiver.set_interface(interface->get_first_ipv4_address());
+                break;
+            }
+        }
+
+        rtp_receiver.set_interface({}); // Leave existing multicast groups
+    } while (false);
 }

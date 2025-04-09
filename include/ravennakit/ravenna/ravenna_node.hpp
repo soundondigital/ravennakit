@@ -339,6 +339,9 @@ class RavennaNode {
     RavennaConfig config_;
 
     [[nodiscard]] bool update_realtime_shared_context();
+    static void update_rtp_receiver_interface(
+        const std::optional<NetworkInterface::Identifier>& interface_id, rtp::Receiver& rtp_receiver
+    );
 };
 
 }  // namespace rav
