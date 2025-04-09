@@ -100,7 +100,14 @@ class Instance {
     /**
      * @return The amount of ports in the PTP instance.
      */
-    size_t get_port_count() const;
+    [[nodiscard]] size_t get_port_count() const;
+
+    /**
+     * Sets the network interface for port with given index.
+     * @param port_index The index of the port to set the network interface for.
+     * @param interface_address The address of the interface to bind the port to.
+     */
+    void set_port_interface(size_t port_index, const asio::ip::address_v4& interface_address) const;
 
     /**
      * @return The default data set of the PTP instance.

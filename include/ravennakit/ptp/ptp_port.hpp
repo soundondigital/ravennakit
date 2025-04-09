@@ -94,6 +94,12 @@ class Port {
      */
     void on_state_changed(std::function<void(const Port&)> callback);
 
+    /**
+     * Sets the interface address of this port.
+     * @param interface_address The address of the interface to use.
+     */
+    void set_interface(const asio::ip::address_v4& interface_address);
+
   private:
     Instance& parent_;
     PortDs port_ds_;

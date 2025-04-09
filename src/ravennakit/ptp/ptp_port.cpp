@@ -209,9 +209,8 @@ void rav::ptp::Port::set_state(const State new_state) {
 
 rav::ptp::Measurement<double> rav::ptp::Port::calculate_offset_from_master(const SyncMessage& sync_message) const {
     RAV_ASSERT(!sync_message.header.flags.two_step_flag, "Use the other method for two-step sync messages");
-    const auto corrected_sync_correction_field =
-        TimeInterval::from_wire_format(sync_message.header.correction_field)
-            .total_seconds_double();  // TODO: Ignoring delay asymmetry for now
+    const auto corrected_sync_correction_field = TimeInterval::from_wire_format(sync_message.header.correction_field)
+                                                     .total_seconds_double();  // TODO: Ignoring delay asymmetry for now
     const auto t1 = sync_message.origin_timestamp.total_seconds_double();
     const auto t2 = sync_message.receive_timestamp.total_seconds_double();
     // Note: using mean_delay_stats_.median() with a window of 32 instead of mean_delay_ worked also quite well
@@ -223,9 +222,8 @@ rav::ptp::Measurement<double> rav::ptp::Port::calculate_offset_from_master(
     const SyncMessage& sync_message, const FollowUpMessage& follow_up_message
 ) const {
     RAV_ASSERT(sync_message.header.flags.two_step_flag, "Use the other method for one-step sync messages");
-    const auto corrected_sync_correction_field =
-        TimeInterval::from_wire_format(sync_message.header.correction_field)
-            .total_seconds_double();  // TODO: Ignoring delay asymmetry for now
+    const auto corrected_sync_correction_field = TimeInterval::from_wire_format(sync_message.header.correction_field)
+                                                     .total_seconds_double();  // TODO: Ignoring delay asymmetry for now
     const auto follow_up_correction_field =
         TimeInterval::from_wire_format(follow_up_message.header.correction_field).total_seconds_double();
     const auto t1 = follow_up_message.precise_origin_timestamp.total_seconds_double();
@@ -347,6 +345,22 @@ void rav::ptp::Port::on_state_changed(std::function<void(const Port&)> callback)
     on_state_changed_callback_ = std::move(callback);
 }
 
+void rav::ptp::Port::set_interface(const asio::ip::address_v4& interface_address) {
+    subscriptions_.clear();
+
+    subscriptions_.push_back(event_socket_.join_multicast_group(k_ptp_multicast_address, interface_address));
+    subscriptions_.push_back(general_socket_.join_multicast_group(k_ptp_multicast_address, interface_address));
+
+    auto ec = event_socket_.set_multicast_outbound_interface(interface_address);
+    if (ec) {
+        RAV_ERROR("Failed to set multicast outbound interface for event socket: {}", ec.message());
+    }
+    ec = general_socket_.set_multicast_outbound_interface(interface_address);
+    if (ec) {
+        RAV_ERROR("Failed to set multicast outbound interface for general socket: {}", ec.message());
+    }
+}
+
 void rav::ptp::Port::handle_recv_event(const rtp::UdpSenderReceiver::recv_event& event) {
     TRACY_ZONE_SCOPED;
 
@@ -392,8 +406,7 @@ void rav::ptp::Port::handle_recv_event(const rtp::UdpSenderReceiver::recv_event&
             break;
         }
         case MessageType::sync: {
-            auto sync_message =
-                SyncMessage::from_data(header.value(), data.subview(MessageHeader::k_header_size));
+            auto sync_message = SyncMessage::from_data(header.value(), data.subview(MessageHeader::k_header_size));
             if (!sync_message) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(sync_message.error()));
             }
@@ -414,8 +427,7 @@ void rav::ptp::Port::handle_recv_event(const rtp::UdpSenderReceiver::recv_event&
             break;
         }
         case MessageType::follow_up: {
-            auto follow_up =
-                FollowUpMessage::from_data(header.value(), data.subview(MessageHeader::k_header_size));
+            auto follow_up = FollowUpMessage::from_data(header.value(), data.subview(MessageHeader::k_header_size));
             if (!follow_up) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(follow_up.error()));
             }
@@ -423,8 +435,7 @@ void rav::ptp::Port::handle_recv_event(const rtp::UdpSenderReceiver::recv_event&
             break;
         }
         case MessageType::delay_resp: {
-            auto delay_resp =
-                DelayRespMessage::from_data(header.value(), data.subview(MessageHeader::k_header_size));
+            auto delay_resp = DelayRespMessage::from_data(header.value(), data.subview(MessageHeader::k_header_size));
             if (!delay_resp) {
                 RAV_ERROR("{} error: {}", header->to_string(), to_string(delay_resp.error()));
             }
@@ -460,9 +471,7 @@ void rav::ptp::Port::handle_recv_event(const rtp::UdpSenderReceiver::recv_event&
     }
 }
 
-void rav::ptp::Port::handle_announce_message(
-    const AnnounceMessage& announce_message, BufferView<const uint8_t> tlvs
-) {
+void rav::ptp::Port::handle_announce_message(const AnnounceMessage& announce_message, BufferView<const uint8_t> tlvs) {
     TRACY_ZONE_SCOPED;
 
     std::ignore = announce_message;

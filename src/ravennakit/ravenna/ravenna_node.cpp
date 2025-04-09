@@ -379,6 +379,8 @@ rav::RavennaNode::set_network_interface_config(RavennaConfig::NetworkInterfaceCo
 
             if (ptp_instance_.get_port_count() == 0) {
                 ptp_instance_.add_port(interface_address);
+            } else {
+                ptp_instance_.set_port_interface(0, interface_address);
             }
         }
 

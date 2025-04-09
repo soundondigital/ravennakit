@@ -104,6 +104,16 @@ size_t rav::ptp::Instance::get_port_count() const {
     return ports_.size();
 }
 
+void rav::ptp::Instance::set_port_interface(
+    const size_t port_index, const asio::ip::address_v4& interface_address
+) const {
+    if (port_index >= ports_.size()) {
+        RAV_ERROR("Port index out of range");
+        return;
+    }
+    ports_[port_index]->set_interface(interface_address);
+}
+
 const rav::ptp::DefaultDs& rav::ptp::Instance::default_ds() const {
     return default_ds_;
 }
