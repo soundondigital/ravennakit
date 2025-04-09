@@ -17,9 +17,7 @@ rav::RavennaNode::RavennaNode(asio::ip::address_v4 interface_address) :
     interface_address_(std::move(interface_address)),
     rtsp_server_(io_context_, asio::ip::tcp::endpoint(asio::ip::address_v4::any(), 0)),
     ptp_instance_(io_context_) {
-    rtp::Receiver::Configuration config;
-    config.interface_address = interface_address_;
-    rtp_receiver_ = std::make_unique<rtp::Receiver>(io_context_, std::move(config));
+    rtp_receiver_ = std::make_unique<rtp::Receiver>(io_context_);
 
     ptp_instance_.add_port(interface_address_);
 
@@ -424,6 +422,6 @@ void rav::RavennaNode::update_rtp_receiver_interface(
             }
         }
 
-        rtp_receiver.set_interface({}); // Leave existing multicast groups
+        rtp_receiver.set_interface({});  // Leave existing multicast groups
     } while (false);
 }

@@ -81,9 +81,8 @@ class Receiver {
     /**
      * Constructs a new RTP receiver using given loop.
      * @param io_context The io_context to use.
-     * @param config The configuration to use.
      */
-    explicit Receiver(asio::io_context& io_context, Configuration config);
+    explicit Receiver(asio::io_context& io_context);
 
     Receiver(const Receiver&) = delete;
     Receiver& operator=(const Receiver&) = delete;

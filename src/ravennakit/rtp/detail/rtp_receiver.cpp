@@ -35,8 +35,7 @@ typedef BOOL(PASCAL* LPFN_WSARECVMSG)(
 );
 #endif
 
-rav::rtp::Receiver::Receiver(asio::io_context& io_context, Configuration config) :
-    io_context_(io_context), config_(std::move(config)) {}
+rav::rtp::Receiver::Receiver(asio::io_context& io_context) : io_context_(io_context) {}
 
 asio::io_context& rav::rtp::Receiver::get_io_context() const {
     return io_context_;
@@ -71,8 +70,9 @@ bool rav::rtp::Receiver::unsubscribe(const Subscriber* subscriber_to_remove) {
 }
 
 void rav::rtp::Receiver::set_interface(const asio::ip::address& interface_address) {
+    config_.interface_address = interface_address;
     for (auto& session : sessions_contexts_) {
-        if (session.session.connection_address.is_multicast() && !interface_address.is_unspecified()) {
+        if (!interface_address.is_unspecified() && session.session.connection_address.is_multicast()) {
             session.rtp_multicast_subscription = session.rtp_sender_receiver->join_multicast_group(
                 session.session.connection_address, interface_address
             );
