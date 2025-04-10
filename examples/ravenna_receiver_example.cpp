@@ -167,9 +167,8 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
         audio_device_name_(std::move(audio_device_name)) {
         rtsp_client_ = std::make_unique<rav::RavennaRtspClient>(io_context_, browser_);
 
-        rav::rtp::Receiver::Configuration config;
-        config.interface_address = asio::ip::make_address(interface_address);
-        rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(io_context_, config);
+        rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(io_context_);
+        rtp_receiver_->set_interface(asio::ip::make_address(interface_address));
 
         rav::RavennaReceiver::ConfigurationUpdate update;
         update.delay_frames = 480;  // 10ms at 48KHz

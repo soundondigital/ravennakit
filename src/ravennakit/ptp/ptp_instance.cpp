@@ -56,8 +56,8 @@ tl::expected<void, rav::ptp::Error> rav::ptp::Instance::add_port(const asio::ip:
         return tl::unexpected(Error::only_ordinary_clock_supported);
     }
 
-    network_interfaces_.refresh();
-    auto* iface = network_interfaces_.find_by_address(interface_address);
+    const auto interfaces = NetworkInterfaceList::get_system_interfaces(false);
+    auto* iface = interfaces.find_by_address(interface_address);
     if (!iface) {
         return tl::unexpected(Error::network_interface_not_found);
     }
@@ -98,6 +98,20 @@ tl::expected<void, rav::ptp::Error> rav::ptp::Instance::add_port(const asio::ip:
     }
 
     return {};
+}
+
+size_t rav::ptp::Instance::get_port_count() const {
+    return ports_.size();
+}
+
+void rav::ptp::Instance::set_port_interface(
+    const size_t port_index, const asio::ip::address_v4& interface_address
+) const {
+    if (port_index >= ports_.size()) {
+        RAV_ERROR("Port index out of range");
+        return;
+    }
+    ports_[port_index]->set_interface(interface_address);
 }
 
 const rav::ptp::DefaultDs& rav::ptp::Instance::default_ds() const {

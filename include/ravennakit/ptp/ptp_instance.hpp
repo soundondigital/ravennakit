@@ -98,6 +98,18 @@ class Instance {
     tl::expected<void, Error> add_port(const asio::ip::address& interface_address);
 
     /**
+     * @return The amount of ports in the PTP instance.
+     */
+    [[nodiscard]] size_t get_port_count() const;
+
+    /**
+     * Sets the network interface for port with given index.
+     * @param port_index The index of the port to set the network interface for.
+     * @param interface_address The address of the interface to bind the port to.
+     */
+    void set_port_interface(size_t port_index, const asio::ip::address_v4& interface_address) const;
+
+    /**
      * @return The default data set of the PTP instance.
      */
     [[nodiscard]] const DefaultDs& default_ds() const;
@@ -155,7 +167,6 @@ class Instance {
     ParentDs parent_ds_;
     TimePropertiesDs time_properties_ds_;
     std::vector<std::unique_ptr<Port>> ports_;
-    network_interface_list network_interfaces_;
     LocalClock local_clock_;
     LocalPtpClock local_ptp_clock_ {local_clock_};
     SubscriberList<Subscriber> subscribers_;

@@ -122,7 +122,7 @@ rav::NetworkInterface::Capabilities capabilities_for_interface(const char* name)
 }  // namespace
 #endif
 
-std::optional<uint32_t> rav::NetworkInterface::interface_index() const {
+std::optional<uint32_t> rav::NetworkInterface::get_interface_index() const {
 #if HAS_BSD_SOCKETS
     auto index = if_nametoindex(identifier_.c_str());
     if (index == 0) {
@@ -142,7 +142,7 @@ std::optional<uint32_t> rav::NetworkInterface::interface_index() const {
 #endif
 }
 
-std::string rav::NetworkInterface::to_string() {
+std::string rav::NetworkInterface::to_string() const {
     std::string output = fmt::format("{}\n", identifier_);
 
     if (!display_name_.empty()) {
@@ -164,7 +164,7 @@ std::string rav::NetworkInterface::to_string() {
 
     fmt::format_to(std::back_inserter(output), "  type:\n    {}\n", type_to_string(type_));
 
-    fmt::format_to(std::back_inserter(output), "  index:\n    {}\n", interface_index().value_or(0));
+    fmt::format_to(std::back_inserter(output), "  index:\n    {}\n", get_interface_index().value_or(0));
 
     if (!addresses_.empty()) {
         fmt::format_to(std::back_inserter(output), "  addrs:\n");
@@ -399,6 +399,6 @@ std::string rav::NetworkInterface::Capabilities::to_string() const {
     return output;
 }
 
-const std::string& rav::NetworkInterface::identifier() const {
+const rav::NetworkInterface::Identifier& rav::NetworkInterface::get_identifier() const {
     return identifier_;
 }

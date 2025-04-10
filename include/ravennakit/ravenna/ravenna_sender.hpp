@@ -150,6 +150,12 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     [[nodiscard]] bool
     send_audio_data_realtime(const AudioBufferView<const float>& input_buffer, uint32_t timestamp);
 
+    /**
+     * Sets the interface to use for this sender.
+     * @param interface_address The address of the interface to use.
+     */
+    void set_interface(const asio::ip::address_v4& interface_address);
+
     // rtsp_server::handler overrides
     void on_request(rtsp::Connection::RequestEvent event) const override;
 

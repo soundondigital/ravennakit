@@ -66,9 +66,23 @@ class Sender {
     }
 
     /**
+     * Sets the interface to use for this sender.
+     * @param interface_address The address of the interface to use.
+     */
+    void set_interface(const asio::ip::address_v4& interface_address) {
+        asio::error_code ec;
+        socket_.set_option(asio::ip::multicast::outbound_interface(interface_address), ec);
+        if (ec) {
+            RAV_ERROR("Failed to set interface: {}", ec.message());
+        }
+        interface_address_ = interface_address;
+    }
+
+    /**
      * @return The interface address used by the sender.
      */
     [[nodiscard]] const asio::ip::address_v4& get_interface_address() const {
+        // TODO: Get the interface address from the socket (local endpoint)
         return interface_address_;
     }
 

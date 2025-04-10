@@ -43,10 +43,6 @@ class Receiver {
         const asio::ip::udp::endpoint& src_endpoint;
     };
 
-    struct Configuration {
-        asio::ip::address interface_address {};
-    };
-
     /**
      * Baseclass for other classes that want to subscribe to receiving RTP and RTCP packets.
      * The class provides several facilities to filter the traffic.
@@ -81,9 +77,8 @@ class Receiver {
     /**
      * Constructs a new RTP receiver using given loop.
      * @param io_context The io_context to use.
-     * @param config The configuration to use.
      */
-    explicit Receiver(asio::io_context& io_context, Configuration config);
+    explicit Receiver(asio::io_context& io_context);
 
     Receiver(const Receiver&) = delete;
     Receiver& operator=(const Receiver&) = delete;
@@ -112,6 +107,13 @@ class Receiver {
      */
     bool unsubscribe(const Subscriber* subscriber_to_remove);
 
+    /**
+     * Sets the interface address to join multicast groups on. If the address is empty existing multicast groups are
+     * left.
+     * @param interface_address The address to bind to.
+     */
+    void set_interface(const asio::ip::address& interface_address);
+
   private:
     struct SubscriberContext {
         Filter filter;
@@ -139,6 +141,10 @@ class Receiver {
         Subscription rtcp_multicast_subscription;
     };
 
+    struct Configuration {
+        asio::ip::address interface_address {};
+    };
+
     asio::io_context& io_context_;
     Configuration config_;
     std::vector<SessionContext> sessions_contexts_;
@@ -153,4 +159,4 @@ class Receiver {
     void handle_incoming_rtcp_data(const UdpSenderReceiver::recv_event& event);
 };
 
-}  // namespace rav
+}  // namespace rav::rtp

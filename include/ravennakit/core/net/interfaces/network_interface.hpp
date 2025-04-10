@@ -42,6 +42,9 @@ namespace rav {
  */
 class NetworkInterface {
   public:
+    /// The identifier of a network interface (e.g. "en0", "eth0").
+    using Identifier = std::string;
+
     /// The type of the network interface.
     enum class Type {
         undefined,
@@ -59,6 +62,15 @@ class NetworkInterface {
         bool multicast {false};
 
         [[nodiscard]] std::string to_string() const;
+
+        friend bool operator==(const Capabilities& lhs, const Capabilities& rhs) {
+            return lhs.hw_timestamp == rhs.hw_timestamp && lhs.sw_timestamp == rhs.sw_timestamp
+                && lhs.multicast == rhs.multicast;
+        }
+
+        friend bool operator!=(const Capabilities& lhs, const Capabilities& rhs) {
+            return !(lhs == rhs);
+        }
     };
 
     /**
@@ -66,25 +78,43 @@ class NetworkInterface {
      * interface, and should be the BSD name on BSD-style platforms and the AdapterName on Windows platforms.
      * @param identifier The unique identifier of the network interface.
      */
-    explicit NetworkInterface(std::string identifier) : identifier_(std::move(identifier)) {}
+    explicit NetworkInterface(Identifier identifier) : identifier_(std::move(identifier)) {
+        RAV_ASSERT(!identifier_.empty(), "Identifier cannot be empty");
+    }
 
     /**
      *
      * @return The name of the network interface.
      */
-    [[nodiscard]] const std::string& identifier() const;
+    [[nodiscard]] const Identifier& get_identifier() const;
 
     /**
      * @return The display name of the network interface.
      */
-    [[nodiscard]] const std::string& display_name() const {
+    [[nodiscard]] const std::string& get_display_name() const {
         return display_name_;
+    }
+
+    /**
+     * @returns The display name of the network interface, including the identifier and the first ipv4 address.
+     */
+    [[nodiscard]] std::string get_extended_display_name() const {
+        std::string display_name = display_name_;
+        if (display_name_.empty())
+            display_name = identifier_;
+        for (const auto& addr : addresses_) {
+            if (addr.is_v6() || addr.is_multicast() || addr.is_unspecified())
+                continue;
+            fmt::format_to(std::back_inserter(display_name), " ({}: {})", identifier_, addr.to_string());
+            break;
+        }
+        return display_name;
     }
 
     /**
      * @return The description of the network interface.
      */
-    [[nodiscard]] const std::string& description() const {
+    [[nodiscard]] const std::string& get_description() const {
         return description_;
     }
 
@@ -98,8 +128,20 @@ class NetworkInterface {
     /**
      * @return The addresses of the interface.
      */
-    [[nodiscard]] const std::vector<asio::ip::address>& addresses() const {
+    [[nodiscard]] const std::vector<asio::ip::address>& get_addresses() const {
         return addresses_;
+    }
+
+    /**
+     * @return The first IPv4 address of the interface, or nullopt if the interface does not have an IPv4 address.
+     */
+    [[nodiscard]] asio::ip::address_v4 get_first_ipv4_address() const {
+        for (const auto& addr : addresses_) {
+            if (addr.is_v4()) {
+                return addr.to_v4();
+            }
+        }
+        return {};
     }
 
     /**
@@ -120,12 +162,12 @@ class NetworkInterface {
      * @returns The index of the network interface, or nullopt if the index could not be found.
      * Note: this is the index as defined by the operating system.
      */
-    [[nodiscard]] std::optional<uint32_t> interface_index() const;
+    [[nodiscard]] std::optional<uint32_t> get_interface_index() const;
 
     /**
      * @returns A description of the network interface as string.
      */
-    std::string to_string();
+    [[nodiscard]] std::string to_string() const;
 
     /**
      * Converts the given type to a string.
@@ -140,8 +182,20 @@ class NetworkInterface {
      */
     static tl::expected<std::vector<NetworkInterface>, int> get_all();
 
+    [[nodiscard]] auto tie() const {
+        return std::tie(identifier_, display_name_, description_, mac_address_, addresses_, type_, capabilities_);
+    }
+
+    friend bool operator==(const NetworkInterface& lhs, const NetworkInterface& rhs) {
+        return lhs.tie() == rhs.tie();
+    }
+
+    friend bool operator!=(const NetworkInterface& lhs, const NetworkInterface& rhs) {
+        return lhs.tie() != rhs.tie();
+    }
+
   private:
-    std::string identifier_;
+    Identifier identifier_;
     std::string display_name_;
     std::string description_;
     std::optional<MacAddress> mac_address_;

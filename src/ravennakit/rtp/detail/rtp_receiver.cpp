@@ -35,8 +35,7 @@ typedef BOOL(PASCAL* LPFN_WSARECVMSG)(
 );
 #endif
 
-rav::rtp::Receiver::Receiver(asio::io_context& io_context, Configuration config) :
-    io_context_(io_context), config_(std::move(config)) {}
+rav::rtp::Receiver::Receiver(asio::io_context& io_context) : io_context_(io_context) {}
 
 asio::io_context& rav::rtp::Receiver::get_io_context() const {
     return io_context_;
@@ -68,6 +67,23 @@ bool rav::rtp::Receiver::unsubscribe(const Subscriber* subscriber_to_remove) {
         }
     }
     return count > 0;
+}
+
+void rav::rtp::Receiver::set_interface(const asio::ip::address& interface_address) {
+    config_.interface_address = interface_address;
+    for (auto& session : sessions_contexts_) {
+        if (!interface_address.is_unspecified() && session.session.connection_address.is_multicast()) {
+            session.rtp_multicast_subscription = session.rtp_sender_receiver->join_multicast_group(
+                session.session.connection_address, interface_address
+            );
+            session.rtcp_multicast_subscription = session.rtcp_sender_receiver->join_multicast_group(
+                session.session.connection_address, interface_address
+            );
+        } else {
+            session.rtp_multicast_subscription.reset();
+            session.rtcp_multicast_subscription.reset();
+        }
+    }
 }
 
 rav::rtp::Receiver::SessionContext* rav::rtp::Receiver::find_session_context(const Session& session) {
@@ -213,8 +229,6 @@ void rav::rtp::Receiver::handle_incoming_rtp_data(const UdpSenderReceiver::recv_
             }
         }
     }
-
-    // TODO: Process the packet
 }
 
 void rav::rtp::Receiver::handle_incoming_rtcp_data(const UdpSenderReceiver::recv_event& event) {

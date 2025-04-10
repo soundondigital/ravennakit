@@ -10,13 +10,8 @@
 
 #pragma once
 
-/**
- * This example demonstrates how to set up a ravenna_node. This the most high level class available for implementing
- * RAVENNA and will eventually support everything needed to implement a RAVENNA node. At this stage the node is capable
- * of receiving streams.
- */
-
 #include "ravenna_browser.hpp"
+#include "ravenna_config.hpp"
 #include "ravenna_rtsp_client.hpp"
 #include "ravenna_receiver.hpp"
 #include "ravenna_sender.hpp"
@@ -24,7 +19,6 @@
 #include "ravennakit/core/sync/realtime_shared_object.hpp"
 #include "ravennakit/core/util/id.hpp"
 #include "ravennakit/dnssd/dnssd_advertiser.hpp"
-#include "ravennakit/dnssd/dnssd_browser.hpp"
 #include "ravennakit/ptp/ptp_instance.hpp"
 #include "ravennakit/rtp/detail/rtp_sender.hpp"
 #include "ravennakit/rtsp/rtsp_server.hpp"
@@ -57,31 +51,47 @@ class RavennaNode {
          * Called from the maintenance thread.
          * @param receiver The id of the receiver.
          */
-        virtual void ravenna_receiver_added([[maybe_unused]] const RavennaReceiver& receiver) {}
+        virtual void ravenna_receiver_added(const RavennaReceiver& receiver) {
+            std::ignore = receiver;
+        }
 
         /**
          * Called when a receiver is removed from the node.
          * Called from the maintenance thread.
          * @param receiver_id The id of the receiver.
          */
-        virtual void ravenna_receiver_removed([[maybe_unused]] Id receiver_id) {}
+        virtual void ravenna_receiver_removed(Id receiver_id) {
+            std::ignore = receiver_id;
+        }
 
         /**
          * Called when a sender is added to the node, or when subscribing.
          * Called from the maintenance thread.
          * @param sender The id of the sender.
          */
-        virtual void ravenna_sender_added([[maybe_unused]] const RavennaSender& sender) {}
+        virtual void ravenna_sender_added(const RavennaSender& sender) {
+            std::ignore = sender;
+        }
 
         /**
          * Called when a sender is removed from the node.
          * Called from the maintenance thread.
          * @param sender_id The id of the sender.
          */
-        virtual void ravenna_sender_removed([[maybe_unused]] Id sender_id) {}
+        virtual void ravenna_sender_removed(Id sender_id) {
+            std::ignore = sender_id;
+        }
+
+        /**
+         * Called when the network interface configuration is updated.
+         * @param config The new network interface configuration.
+         */
+        virtual void network_interface_config_updated(const RavennaConfig::NetworkInterfaceConfig& config) {
+            std::ignore = config;
+        }
     };
 
-    explicit RavennaNode(asio::ip::address_v4 interface_address);
+    explicit RavennaNode();
     ~RavennaNode();
 
     /**
@@ -157,8 +167,7 @@ class RavennaNode {
      * @param subscriber The subscriber to remove.
      * @return A future that will be set when the operation is complete.
      */
-    [[nodiscard]] std::future<void>
-    unsubscribe_from_receiver(Id receiver_id, RavennaReceiver::Subscriber* subscriber);
+    [[nodiscard]] std::future<void> unsubscribe_from_receiver(Id receiver_id, RavennaReceiver::Subscriber* subscriber);
 
     /**
      * Adds a subscriber to the sender with the given id.
@@ -196,14 +205,6 @@ class RavennaNode {
      * @return The packet statistics for the stream, or an empty structure if the stream doesn't exist.
      */
     [[nodiscard]] std::future<RavennaReceiver::StreamStats> get_stats_for_receiver(Id receiver_id);
-
-    /**
-     * Calls back with the ravenna receiver for the given receiver id. If the stream is not found, the callback will not
-     * be called and the future will be set to false.
-     * @param receiver_id The id of the receiver to get the receiver for.
-     * @param update_function The function to call with the receiver.
-     */
-    [[nodiscard]] std::future<bool> get_receiver(Id receiver_id, std::function<void(RavennaReceiver&)> update_function);
 
     /**
      * Get the SDP for the receiver with the given id.
@@ -259,7 +260,15 @@ class RavennaNode {
      * @param timestamp The timestamp of the data.
      * @return True if the data was sent, false if something went wrong.
      */
-    [[nodiscard]] bool send_audio_data_realtime(Id sender_id, const AudioBufferView<const float>& buffer, uint32_t timestamp);
+    [[nodiscard]] bool
+    send_audio_data_realtime(Id sender_id, const AudioBufferView<const float>& buffer, uint32_t timestamp);
+
+    /**
+     * Sets the network interfaces to use. Can contain multiple interfaces for redundancy (not yet implemented).
+     * @param interface_config The interfaces to use. If empty, operations will be stopped.
+     * @return A future that will be set when the operation is complete.
+     */
+    std::future<void> set_network_interface_config(RavennaConfig::NetworkInterfaceConfig interface_config);
 
     /**
      * @return True if this method is called on the maintenance thread, false otherwise.
@@ -313,7 +322,6 @@ class RavennaNode {
     asio::io_context io_context_;
     std::thread maintenance_thread_;
     std::thread::id maintenance_thread_id_;
-    asio::ip::address_v4 interface_address_;
 
     RavennaBrowser browser_ {io_context_};
     RavennaRtspClient rtsp_client_ {io_context_, browser_};
@@ -326,8 +334,8 @@ class RavennaNode {
     std::vector<std::unique_ptr<RavennaSender>> senders_;
 
     SubscriberList<Subscriber> subscribers_;
-
     RealtimeSharedObject<realtime_shared_context> realtime_shared_context_;
+    RavennaConfig config_;
 
     [[nodiscard]] bool update_realtime_shared_context();
 };

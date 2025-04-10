@@ -54,14 +54,6 @@ rav::RavennaSender::RavennaSender(
         initial_config.audio_format = audio_format;
     }
 
-    if (!initial_config.destination_address.has_value()) {
-        // Construct a multicast address from the interface address
-        const auto interface_address_bytes = interface_address.to_bytes();
-        configuration_.destination_address = asio::ip::address_v4(
-            {239, interface_address_bytes[2], interface_address_bytes[3], static_cast<uint8_t>(id_.value() % 0xff)}
-        );
-    }
-
     if (!ptp_instance_.subscribe(this)) {
         RAV_ERROR("Failed to subscribe to PTP instance");
     }
@@ -154,6 +146,15 @@ tl::expected<void, std::string> rav::RavennaSender::update_configuration(const C
     if (update.destination_address.has_value() && update.destination_address != configuration_.destination_address) {
         configuration_.destination_address = *update.destination_address;
         announce = true;
+    }
+
+    // Generate a multicast address if not set
+    if (configuration_.destination_address.is_unspecified() && !rtp_sender_.get_interface_address().is_unspecified()) {
+        // Construct a multicast address from the interface address
+        const auto interface_address_bytes = rtp_sender_.get_interface_address().to_bytes();
+        configuration_.destination_address = asio::ip::address_v4(
+            {239, interface_address_bytes[2], interface_address_bytes[3], static_cast<uint8_t>(id_.value() % 0xff)}
+        );
     }
 
     // TTL
@@ -396,6 +397,11 @@ bool rav::RavennaSender::send_audio_data_realtime(
     }
 
     return false;
+}
+
+void rav::RavennaSender::set_interface(const asio::ip::address_v4& interface_address) {
+    rtp_sender_.set_interface(interface_address);
+    update_configuration({}); // Trigger an update to generate a destination address if necessary
 }
 
 void rav::RavennaSender::on_request(const rtsp::Connection::RequestEvent event) const {

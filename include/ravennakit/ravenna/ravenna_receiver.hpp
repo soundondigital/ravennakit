@@ -259,15 +259,21 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
   private:
     /**
      * Handless a single RTP stream
+     * Note: I think this can be a class in itself, something called rtp::StreamReceiver or rtp::SessionReceiver.
+     * This class would be responsible for receiving the RTP packets for a single session and provide access to the fifo
+     * for lock free and thread safe access of the packets.
+     * Then a class like RavennaReceiver would be reading the packets from the fifo and putting them into a buffer. The
+     * good thing here is that packets from multiple sessions can be placed into the same buffer which basically gives
+     * the redundancy we need at some point.
      */
     class MediaStream: public rtp::Receiver::Subscriber {
       public:
         explicit MediaStream(RavennaReceiver& owner, rtp::Receiver& rtp_receiver, rtp::Session session);
         ~MediaStream() override;
         bool update_parameters(const StreamParameters& new_parameters);
-        const rtp::Session& get_session() const;
+        [[nodiscard]] const rtp::Session& get_session() const;
         void do_maintenance();
-        StreamStats get_stream_stats() const;
+        [[nodiscard]] StreamStats get_stream_stats() const;
         [[nodiscard]] rtp::PacketStats::Counters get_packet_stats() const;
         [[nodiscard]] SlidingStats::Stats get_packet_interval_stats() const;
         [[nodiscard]] const StreamParameters& get_parameters() const;

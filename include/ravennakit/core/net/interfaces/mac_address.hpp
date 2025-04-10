@@ -94,6 +94,14 @@ class MacAddress {
         );
     }
 
+    friend bool operator==(const MacAddress& lhs, const MacAddress& rhs) {
+        return lhs.address_ == rhs.address_;
+    }
+
+    friend bool operator!=(const MacAddress& lhs, const MacAddress& rhs) {
+        return !(lhs == rhs);
+    }
+
   private:
     std::array<uint8_t, 6> address_ {};
 };

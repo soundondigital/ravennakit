@@ -35,14 +35,14 @@ class UdpSenderReceiver {
     using HandlerType = std::function<void(const recv_event& event)>;
 
     /**
-     * Construct a new instance of the class. Private to force the use of the factory methods.
+     * Construct a new instance of the class.
      * @param io_context The asio io_context to use.
      * @param endpoint The endpoint to bind to.
      */
     UdpSenderReceiver(asio::io_context& io_context, const asio::ip::udp::endpoint& endpoint);
 
     /**
-     * Construct a new instance of the class. Private to force the use of the factory methods.
+     * Construct a new instance of the class.
      * @param io_context The asio io_context to use.
      * @param interface_address The address to bind to.
      * @param port The port to bind to.

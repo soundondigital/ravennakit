@@ -13,15 +13,9 @@
 #include <utility>
 #include "ravennakit/ravenna/ravenna_sender.hpp"
 
-rav::RavennaNode::RavennaNode(asio::ip::address_v4 interface_address) :
-    interface_address_(std::move(interface_address)),
-    rtsp_server_(io_context_, asio::ip::tcp::endpoint(asio::ip::address_v4::any(), 0)),
-    ptp_instance_(io_context_) {
-    rtp::Receiver::Configuration config;
-    config.interface_address = interface_address_;
-    rtp_receiver_ = std::make_unique<rtp::Receiver>(io_context_, std::move(config));
-
-    ptp_instance_.add_port(interface_address_);
+rav::RavennaNode::RavennaNode() :
+    rtsp_server_(io_context_, asio::ip::tcp::endpoint(asio::ip::address_v4::any(), 0)), ptp_instance_(io_context_) {
+    rtp_receiver_ = std::make_unique<rtp::Receiver>(io_context_);
 
     std::promise<std::thread::id> promise;
     auto f = promise.get_future();
@@ -109,7 +103,8 @@ std::future<rav::Id> rav::RavennaNode::create_sender(const RavennaSender::Config
 
         auto new_sender = std::make_unique<RavennaSender>(
             io_context_, *advertiser_, rtsp_server_, ptp_instance_, Id::get_next_process_wide_unique_id(),
-            interface_address_, std::move(initial_config)
+            config_.network_interfaces.get_ipv4_address(RavennaConfig::NetworkInterfaceConfig::Rank::primary),
+            std::move(initial_config)
         );
         const auto& it = senders_.emplace_back(std::move(new_sender));
         for (const auto& s : subscribers_) {
@@ -170,6 +165,10 @@ std::future<void> rav::RavennaNode::subscribe(Subscriber* subscriber) {
         for (const auto& receiver : receivers_) {
             subscriber->ravenna_receiver_added(*receiver);
         }
+        for (const auto& sender : senders_) {
+            subscriber->ravenna_sender_added(*sender);
+        }
+        subscriber->network_interface_config_updated(config_.network_interfaces);
     };
     return asio::dispatch(io_context_, asio::use_future(work));
 }
@@ -202,8 +201,7 @@ std::future<void> rav::RavennaNode::subscribe_to_receiver(Id receiver_id, Ravenn
     return asio::dispatch(io_context_, asio::use_future(work));
 }
 
-std::future<void>
-rav::RavennaNode::unsubscribe_from_receiver(Id receiver_id, RavennaReceiver::Subscriber* subscriber) {
+std::future<void> rav::RavennaNode::unsubscribe_from_receiver(Id receiver_id, RavennaReceiver::Subscriber* subscriber) {
     auto work = [this, receiver_id, subscriber] {
         for (const auto& receiver : receivers_) {
             if (receiver->get_id() == receiver_id) {
@@ -274,21 +272,6 @@ std::future<rav::RavennaReceiver::StreamStats> rav::RavennaNode::get_stats_for_r
             }
         }
         return RavennaReceiver::StreamStats {};
-    };
-    return asio::dispatch(io_context_, asio::use_future(work));
-}
-
-std::future<bool>
-rav::RavennaNode::get_receiver(Id receiver_id, std::function<void(RavennaReceiver&)> update_function) {
-    RAV_ASSERT(update_function != nullptr, "Function must be valid");
-    auto work = [this, receiver_id, f = std::move(update_function)] {
-        for (const auto& receiver : receivers_) {
-            if (receiver->get_id() == receiver_id) {
-                f(*receiver);
-                return true;
-            }
-        }
-        return false;
     };
     return asio::dispatch(io_context_, asio::use_future(work));
 }
@@ -376,6 +359,48 @@ bool rav::RavennaNode::send_audio_data_realtime(
     }
 
     return false;
+}
+
+std::future<void>
+rav::RavennaNode::set_network_interface_config(RavennaConfig::NetworkInterfaceConfig interface_config) {
+    auto work = [this, config = std::move(interface_config)] {
+        bool changed = false;
+
+        if (config_.network_interfaces.primary != config.primary) {
+            config_.network_interfaces.primary = config.primary;
+            changed = true;
+            const auto interface_address =
+                config_.network_interfaces.get_ipv4_address(RavennaConfig::NetworkInterfaceConfig::Rank::primary);
+            rtp_receiver_->set_interface(interface_address);
+
+            for (const auto& sender : senders_) {
+                sender->set_interface(interface_address);
+            }
+
+            if (ptp_instance_.get_port_count() == 0) {
+                ptp_instance_.add_port(interface_address);
+            } else {
+                ptp_instance_.set_port_interface(0, interface_address);
+            }
+        }
+
+        if (config_.network_interfaces.secondary != config.secondary) {
+            config_.network_interfaces.secondary = config.secondary;
+            changed = true;
+            // TODO: Update secondary rtp_receiver
+        }
+
+        if (!changed) {
+            return;
+        }
+
+        for (const auto& subscriber : subscribers_) {
+            subscriber->network_interface_config_updated(config);
+        }
+
+        RAV_INFO("{}", config.to_string());
+    };
+    return asio::dispatch(io_context_, asio::use_future(work));
 }
 
 bool rav::RavennaNode::is_maintenance_thread() const {

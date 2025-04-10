@@ -47,8 +47,8 @@ class loopback: public rav::RavennaReceiver::Subscriber, public rav::ptp::Instan
             io_context_, *advertiser_, *rtsp_server_, *ptp_instance_, rav::Id(1), interface_addr
         );
 
-        auto config = rav::rtp::Receiver::Configuration {interface_addr};
-        rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(io_context_, config);
+        rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(io_context_);
+        rtp_receiver_->set_interface(interface_addr);
 
         rav::RavennaReceiver::ConfigurationUpdate update;
         update.delay_frames = 480;  // 10ms at 48KHz

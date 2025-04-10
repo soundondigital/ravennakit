@@ -19,7 +19,10 @@
 namespace examples {
 
 struct ravenna_node final: rav::RavennaNode::Subscriber, rav::RavennaReceiver::Subscriber {
-    explicit ravenna_node(asio::ip::address_v4 interface_addr) : node(std::move(interface_addr)) {
+    explicit ravenna_node(rav::NetworkInterface::Identifier primary_interface) {
+        rav::RavennaConfig::NetworkInterfaceConfig config;
+        config.primary = std::move(primary_interface);
+        node.set_network_interface_config(config);
         node.subscribe(this).wait();
     }
 
@@ -89,12 +92,23 @@ int main(int const argc, char* argv[]) {
     std::vector<std::string> stream_names;
     app.add_option("stream_names", stream_names, "The name of the streams to receive (at least one)")->required();
 
-    std::string interface_address = "0.0.0.0";
-    app.add_option("--interface-addr", interface_address, "The interface address");
+    std::string interface_search_string;
+    app.add_option(
+        "--primary-interface", interface_search_string,
+        "The primary interface address. The value can be the identifier, display name, description, MAC or an ip address."
+    );
 
     CLI11_PARSE(app, argc, argv);
 
-    examples::ravenna_node node_example(asio::ip::make_address_v4(interface_address));
+    auto list = rav::NetworkInterfaceList::get_system_interfaces();
+    const auto* primary_interface = list.find_by_string(interface_search_string);
+
+    if (!primary_interface) {
+        RAV_ERROR("Failed to find primary interface for: {}", interface_search_string);
+        return 1;
+    }
+
+    examples::ravenna_node node_example(primary_interface->get_identifier());
 
     for (auto& session : stream_names) {
         rav::RavennaReceiver::ConfigurationUpdate config;
