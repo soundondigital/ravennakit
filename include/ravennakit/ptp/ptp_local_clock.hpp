@@ -66,7 +66,7 @@ class LocalClock {
     void step(const double offset_from_master) {
         TRACY_ZONE_SCOPED;
         last_sync_ = system_monotonic_now();
-        shift_ = -offset_from_master;
+        shift_ += -offset_from_master;
         frequency_ratio_ = 1.0;
         adjustments_since_last_step_ = 0;
     }
