@@ -158,6 +158,7 @@ class wav_file_player: public rav::ptp::Instance::Subscriber {
         }
 
         const auto drift = rav::WrappingUint32(ptp_ts).diff(rav::WrappingUint32(rtp_ts_));
+        std::ignore = drift; // For when Tracy is disabled
         // Positive means audio device is ahead of the PTP clock, negative means behind
 
         TRACY_PLOT("drift", static_cast<int64_t>(drift));

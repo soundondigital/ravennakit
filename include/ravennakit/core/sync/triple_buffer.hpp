@@ -30,7 +30,7 @@ class TripleBuffer {
     void update(T value) {
         storage_[write_index_] = value;
         write_index_ = next_.exchange(write_index_, std::memory_order_acq_rel);
-        write_index_ &= ~k_uninit_bit;
+        write_index_ &= static_cast<uint8_t>(~k_uninit_bit);
     }
 
     /**

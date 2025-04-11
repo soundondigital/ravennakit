@@ -12,8 +12,7 @@
 
 #include "ravennakit/core/net/interfaces/network_interface.hpp"
 #include "ravennakit/core/net/interfaces/network_interface_list.hpp"
-
-#include <nlohmann/json.hpp>
+#include "ravennakit/core/json.hpp"
 
 namespace rav {
 
@@ -64,8 +63,8 @@ struct RavennaConfig {
          */
         [[nodiscard]] nlohmann::json to_json() const {
             nlohmann::json j;
-            j["primary"] = primary.has_value() ? *primary : nlohmann::json {};
-            j["secondary"] = secondary.has_value() ? *secondary : nlohmann::json {};
+            j["primary"] = primary.has_value() ? nlohmann::json(*primary) : nlohmann::json {};
+            j["secondary"] = secondary.has_value() ? nlohmann::json(*secondary) : nlohmann::json {};
             return j;
         }
 
