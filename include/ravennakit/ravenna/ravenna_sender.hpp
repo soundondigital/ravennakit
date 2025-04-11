@@ -176,7 +176,6 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     void set_interface(const asio::ip::address_v4& interface_address);
 
     /**
-     *
      * @return A JSON representation of the sender.
      */
     nlohmann::json to_json() const;

@@ -102,8 +102,8 @@ std::future<rav::Id> rav::RavennaNode::create_sender(const RavennaSender::Config
         auto interface_address =
             config_.network_interfaces.get_ipv4_address(RavennaConfig::NetworkInterfaceConfig::Rank::primary);
         auto new_sender = std::make_unique<RavennaSender>(
-            io_context_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(),
-            generate_unique_session_id(), interface_address, std::move(initial_config)
+            io_context_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), generate_unique_session_id(),
+            interface_address, std::move(initial_config)
         );
         const auto& it = senders_.emplace_back(std::move(new_sender));
         for (const auto& s : subscribers_) {
@@ -412,9 +412,14 @@ std::future<nlohmann::json> rav::RavennaNode::to_json() {
         for (const auto& sender : senders_) {
             senders.push_back(sender->to_json());
         }
+        auto receivers = nlohmann::json::array();
+        for (const auto& receiver : receivers_) {
+            receivers.push_back(receiver->to_json());
+        }
         nlohmann::json root;
         root["config"] = config_.to_json();
         root["senders"] = senders;
+        root["receivers"] = receivers;
         return root;
     };
     return asio::dispatch(io_context_, asio::use_future(work));
@@ -448,6 +453,18 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
                 new_senders.push_back(std::move(new_sender));
             }
 
+            auto receivers = json.at("receivers");
+            std::vector<std::unique_ptr<RavennaReceiver>> new_receivers;
+
+            for (auto& receiver : receivers) {
+                auto config = RavennaReceiver::ConfigurationUpdate::from_json(receiver.at("configuration"));
+                if (!config) {
+                    return tl::unexpected(config.error());
+                }
+                auto new_receiver =
+                    std::make_unique<RavennaReceiver>(rtsp_client_, *rtp_receiver_, id_generator_.next(), *config);
+                new_receivers.push_back(std::move(new_receiver));
+            }
 
             for (const auto& sender : senders_) {
                 for (auto* s : subscribers_) {
@@ -456,12 +473,27 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
                 }
             }
 
+            for (const auto& receiver : receivers_) {
+                for (auto* s : subscribers_) {
+                    RAV_ASSERT(s != nullptr, "Subscriber must be valid");
+                    s->ravenna_receiver_removed(receiver->get_id());
+                }
+            }
+
             std::swap(senders_, new_senders);
+            std::swap(receivers_, new_receivers);
 
             for (const auto& sender : senders_) {
                 for (auto* s : subscribers_) {
                     RAV_ASSERT(s != nullptr, "Subscriber must be valid");
                     s->ravenna_sender_added(*sender);
+                }
+            }
+
+            for (const auto& receiver : receivers_) {
+                for (auto* s : subscribers_) {
+                    RAV_ASSERT(s != nullptr, "Subscriber must be valid");
+                    s->ravenna_receiver_added(*receiver);
                 }
             }
 

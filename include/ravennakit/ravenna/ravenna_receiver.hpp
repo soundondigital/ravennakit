@@ -82,6 +82,11 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
         std::string session_name;
         uint32_t delay_frames {};
         bool enabled {};
+
+        /**
+         * @return The configuration as a JSON object.
+         */
+        [[nodiscard]] nlohmann::json to_json() const;
     };
 
     /**
@@ -92,6 +97,13 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
         std::optional<std::string> session_name;
         std::optional<uint32_t> delay_frames;
         std::optional<bool> enabled;
+
+        /**
+         * Creates a configuration update from a JSON object.
+         * @param json The JSON object to convert.
+         * @return A configuration update object if the JSON is valid, otherwise an error message.
+         */
+        static tl::expected<ConfigurationUpdate, std::string> from_json(const nlohmann::json& json);
     };
 
     /**
@@ -252,6 +264,11 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
      * @return A string representation of ReceiverState.
      */
     [[nodiscard]] static const char* to_string(ReceiverState state);
+
+    /**
+     * @return A JSON representation of the sender.
+     */
+    nlohmann::json to_json() const;
 
     // ravenna_rtsp_client::subscriber overrides
     void on_announced(const RavennaRtspClient::AnnouncedEvent& event) override;

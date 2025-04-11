@@ -34,36 +34,21 @@ tl::expected<rav::RavennaSender::ConfigurationUpdate, std::string>
 rav::RavennaSender::ConfigurationUpdate::from_json(const nlohmann::json& json) {
     try {
         ConfigurationUpdate update {};
-        if (json.contains("session_name")) {
-            auto session_name = json.at("session_name").get<std::string>();
-            update.session_name = json.at("session_name").get<std::string>();
+        update.session_name = json.at("session_name").get<std::string>();
+        update.destination_address = asio::ip::make_address_v4(json.at("destination_address").get<std::string>());
+        update.ttl = json.at("ttl").get<int32_t>();
+        update.payload_type = json.at("payload_type").get<uint8_t>();
+        auto audio_format = AudioFormat::from_json(json.at("audio_format"));
+        if (!audio_format) {
+            return tl::unexpected(audio_format.error());
         }
-        if (json.contains("destination_address")) {
-            update.destination_address = asio::ip::make_address_v4(json.at("destination_address").get<std::string>());
+        update.audio_format = *audio_format;
+        const auto packet_time = aes67::PacketTime::from_json(json.at("packet_time"));
+        if (!packet_time) {
+            return tl::unexpected("Invalid packet time");
         }
-        if (json.contains("ttl")) {
-            update.ttl = json.at("ttl").get<int32_t>();
-        }
-        if (json.contains("payload_type")) {
-            update.payload_type = json.at("payload_type").get<uint8_t>();
-        }
-        if (json.contains("audio_format")) {
-            auto audio_format = AudioFormat::from_json(json.at("audio_format"));
-            if (!audio_format) {
-                return tl::unexpected(audio_format.error());
-            }
-            update.audio_format = *audio_format;
-        }
-        if (json.contains("packet_time")) {
-            const auto packet_time = aes67::PacketTime::from_json(json.at("packet_time"));
-            if (!packet_time) {
-                return tl::unexpected("Invalid packet time");
-            }
-            update.packet_time = *packet_time;
-        }
-        if (json.contains("enabled")) {
-            update.enabled = json.at("enabled").get<bool>();
-        }
+        update.packet_time = *packet_time;
+        update.enabled = json.at("enabled").get<bool>();
         return update;
     } catch (const std::exception& e) {
         return tl::unexpected(e.what());

@@ -55,11 +55,34 @@ const char* rav::RavennaReceiver::to_string(const ReceiverState state) {
     }
 }
 
+nlohmann::json rav::RavennaReceiver::to_json() const {
+    nlohmann::json root;
+    root["configuration"] = configuration_.to_json();
+    return root;
+}
+
 std::string rav::RavennaReceiver::StreamParameters::to_string() const {
     return fmt::format(
         "session={}, selected_audio_format={}, packet_time_frames={}", session.to_string(), audio_format.to_string(),
         packet_time_frames
     );
+}
+
+nlohmann::json rav::RavennaReceiver::Configuration::to_json() const {
+    return nlohmann::json {{"session_name", session_name}, {"delay_frames", delay_frames}, {"enabled", enabled}};
+}
+
+tl::expected<rav::RavennaReceiver::ConfigurationUpdate, std::string>
+rav::RavennaReceiver::ConfigurationUpdate::from_json(const nlohmann::json& json) {
+    try {
+        ConfigurationUpdate update {};
+        update.session_name = json.at("session_name").get<std::string>();
+        update.delay_frames = json.at("delay_frames").get<uint32_t>();
+        update.enabled = json.at("enabled").get<bool>();
+        return update;
+    } catch (const std::exception& e) {
+        return tl::unexpected(e.what());
+    }
 }
 
 rav::RavennaReceiver::RavennaReceiver(
