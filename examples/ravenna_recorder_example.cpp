@@ -70,7 +70,9 @@ class stream_recorder: public rav::RavennaReceiver::Subscriber {
 
         auto file_path = rav::File(receiver_->get_configuration().session_name + ".wav").absolute();
 
-        RAV_INFO("Recording stream: {} to file: {}", receiver_->get_configuration().session_name, file_path.to_string());
+        RAV_INFO(
+            "Recording stream: {} to file: {}", receiver_->get_configuration().session_name, file_path.to_string()
+        );
 
         audio_format_ = event.audio_format;
         file_output_stream_ = std::make_unique<rav::FileOutputStream>(file_path);
@@ -122,7 +124,9 @@ class ravenna_recorder {
         update.enabled = true;
         update.session_name = stream_name;
 
-        auto receiver = std::make_unique<rav::RavennaReceiver>(*rtsp_client_, *rtp_receiver_);
+        auto receiver = std::make_unique<rav::RavennaReceiver>(
+            *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id()
+        );
         auto result = receiver->update_configuration(update);
         if (!result) {
             RAV_ERROR("Failed to update configuration: {}", result.error());

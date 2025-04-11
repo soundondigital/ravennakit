@@ -40,8 +40,9 @@ class wav_file_player: public rav::ptp::Instance::Subscriber {
             throw std::runtime_error("File does not exist: " + file_to_play.path().string());
         }
 
+        auto id = id_generator.next();
         auto sender = std::make_unique<rav::RavennaSender>(
-            io_context, advertiser, rtsp_server, ptp_instance, id_generator.next(), interface_address
+            io_context, advertiser, rtsp_server, ptp_instance, id, id.value(), interface_address
         );
 
         auto file_input_stream = std::make_unique<rav::FileInputStream>(file_to_play);
@@ -156,7 +157,7 @@ class wav_file_player: public rav::ptp::Instance::Subscriber {
             RAV_ERROR("No bytes read");
         }
 
-        const auto drift = rav::WrappingUint32(ptp_ts).diff (rav::WrappingUint32(rtp_ts_));
+        const auto drift = rav::WrappingUint32(ptp_ts).diff(rav::WrappingUint32(rtp_ts_));
         // Positive means audio device is ahead of the PTP clock, negative means behind
 
         TRACY_PLOT("drift", static_cast<int64_t>(drift));

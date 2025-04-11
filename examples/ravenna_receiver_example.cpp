@@ -175,7 +175,9 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
         update.enabled = true;
         update.session_name = stream_name;
 
-        ravenna_receiver_ = std::make_unique<rav::RavennaReceiver>(*rtsp_client_, *rtp_receiver_);
+        ravenna_receiver_ = std::make_unique<rav::RavennaReceiver>(
+            *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id()
+        );
         auto result = ravenna_receiver_->update_configuration(update);
         if (!result) {
             RAV_ERROR("Failed to update configuration: {}", result.error());

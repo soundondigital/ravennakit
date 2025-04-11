@@ -36,9 +36,9 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE INTERNAL "")
 endif ()
 
-#########
-# VCPKG #
-#########
+################
+# Dependencies #
+################
 
 if (RAV_ENABLE_SPDLOG)
     find_package(spdlog CONFIG REQUIRED)
