@@ -699,7 +699,7 @@ std::optional<uint32_t> rav::RavennaReceiver::read_data_realtime(
         const auto num_frames = static_cast<uint32_t>(buffer_size) / lock->selected_audio_format.bytes_per_frame();
 
         const auto read_at = lock->next_ts.value();
-        if (!lock->receiver_buffer.read(read_at, buffer, buffer_size)) {
+        if (!lock->receiver_buffer.read(read_at, buffer, buffer_size, true)) {
             return std::nullopt;
         }
 

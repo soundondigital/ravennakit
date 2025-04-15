@@ -108,4 +108,20 @@ TEST_CASE("rtp_buffer") {
         buffer.resize(480, 2);
         buffer.clear_until(253366016);
     }
+
+    SECTION("Clear after reading") {
+        rav::rtp::Buffer buffer;
+        buffer.resize(4, 2);
+
+        std::array<const uint8_t, 8> input = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8};
+        std::array<uint8_t, 8> output = {};
+
+        const rav::BufferView buffer_view(input.data(), input.size());
+        buffer.write(2, buffer_view);
+        buffer.read(2, output.data(), output.size(), true);
+        REQUIRE(output == std::array<uint8_t, 8> {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8});
+
+        buffer.read(2, output.data(), output.size(), true);
+        REQUIRE(output == std::array<uint8_t, 8> {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0});
+    }
 }
