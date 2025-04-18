@@ -105,7 +105,7 @@ rav::RavennaSender::RavennaSender(
     timeBeginPeriod(1);
 #endif
 
-    if (auto result = update_configuration(initial_config); !result) {
+    if (auto result = set_configuration(initial_config); !result) {
         RAV_ERROR("Failed to update sender configuration: {}", result.error());
     }
 }
@@ -132,7 +132,7 @@ rav::Id rav::RavennaSender::get_id() const {
     return id_;
 }
 
-tl::expected<void, std::string> rav::RavennaSender::update_configuration(const ConfigurationUpdate& update) {
+tl::expected<void, std::string> rav::RavennaSender::set_configuration(const ConfigurationUpdate& update) {
     std::ignore = shared_context_.reclaim();  // TODO: Do somewhere else, maybe on a timer or something.
 
     // Session name
@@ -449,7 +449,7 @@ bool rav::RavennaSender::send_audio_data_realtime(
 void rav::RavennaSender::set_interface(const asio::ip::address_v4& interface_address) {
     rtp_sender_.set_interface(interface_address);
     // Trigger an update to generate a destination address if necessary
-    if (auto result = update_configuration({}); !result) {
+    if (auto result = set_configuration({}); !result) {
         RAV_ERROR("Failed to update sender configuration: {}", result.error());
     }
 }

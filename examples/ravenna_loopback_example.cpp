@@ -59,7 +59,7 @@ class loopback: public rav::RavennaReceiver::Subscriber, public rav::ptp::Instan
         ravenna_receiver_ = std::make_unique<rav::RavennaReceiver>(
             io_context_, *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id(), update
         );
-        auto result = ravenna_receiver_->update_configuration(update);
+        auto result = ravenna_receiver_->set_configuration(update);
         if (!result) {
             RAV_ERROR("Failed to update configuration: {}", result.error());
             return;
@@ -90,7 +90,7 @@ class loopback: public rav::RavennaReceiver::Subscriber, public rav::ptp::Instan
         update.audio_format = parameters.audio_format;
         update.enabled = true;
 
-        auto result = sender_->update_configuration(update);
+        auto result = sender_->set_configuration(update);
         if (!result) {
             RAV_ERROR("Failed to update sender: {}", result.error());
         }

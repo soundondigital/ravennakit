@@ -90,7 +90,7 @@ rav::RavennaNode::update_receiver_configuration(Id receiver_id, RavennaReceiver:
     auto work = [this, receiver_id, u = std::move(update)]() -> tl::expected<void, std::string> {
         for (const auto& receiver : receivers_) {
             if (receiver->get_id() == receiver_id) {
-                return receiver->update_configuration(u);
+                return receiver->set_configuration(u);
             }
         }
         return tl::unexpected("Sender not found");
@@ -145,7 +145,7 @@ rav::RavennaNode::update_sender_configuration(Id sender_id, RavennaSender::Confi
     auto work = [this, sender_id, u = std::move(update)]() -> tl::expected<void, std::string> {
         for (const auto& sender : senders_) {
             if (sender->get_id() == sender_id) {
-                return sender->update_configuration(u);
+                return sender->set_configuration(u);
             }
         }
         return tl::unexpected("Sender not found");

@@ -59,7 +59,7 @@ class wav_file_player: public rav::ptp::Instance::Subscriber {
         update.session_name = session_name;
         update.audio_format = audio_format_.with_byte_order(rav::AudioFormat::ByteOrder::be);
         update.enabled = true;
-        const auto result = sender->update_configuration(update);
+        const auto result = sender->set_configuration(update);
         if (!result) {
             throw std::runtime_error("Failed to update configuration for transmitter: " + result.error());
         }

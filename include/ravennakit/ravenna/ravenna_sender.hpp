@@ -58,8 +58,8 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     };
 
     /**
-     * Field to update in the configuration. Only the fields that are set are taken into account, which allows for
-     * partial updates.
+     * Struct for updating the configuration of the sender. Only the fields that are set are taken into account, which
+     * allows for partial updates.
      */
     struct ConfigurationUpdate {
         std::optional<std::string> session_name;
@@ -71,7 +71,7 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
         std::optional<bool> enabled;
 
         /**
-         * Creates a configuration update from a JSON object.
+         * Creates a configuration changes object from a JSON object.
          * @param json The JSON object to convert.
          * @return A configuration update object if the JSON is valid, otherwise an error message.
          */
@@ -119,7 +119,7 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
      * This allows to update only a subset of the configuration.
      * @param update The configuration to update.
      */
-    [[nodiscard]] tl::expected<void, std::string> update_configuration(const ConfigurationUpdate& update);
+    [[nodiscard]] tl::expected<void, std::string> set_configuration(const ConfigurationUpdate& update);
 
     /**
      * @returns The current configuration of the sender.

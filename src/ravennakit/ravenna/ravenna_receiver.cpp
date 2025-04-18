@@ -162,10 +162,6 @@ nlohmann::json rav::RavennaReceiver::to_json() const {
     return root;
 }
 
-void rav::RavennaReceiver::set_interface(const asio::ip::address_v4& interface_address) {
-    TODO("Implement set_interface");
-}
-
 std::optional<uint32_t> rav::RavennaReceiver::read_data_realtime(
     uint8_t* buffer, const size_t buffer_size, const std::optional<uint32_t> at_timestamp
 ) {
@@ -208,7 +204,7 @@ rav::RavennaReceiver::RavennaReceiver(
         initial_config.delay_frames = 480;  // 10ms at 48KHz
     }
 
-    auto result = update_configuration(initial_config);
+    auto result = set_configuration(initial_config);
     if (!result) {
         RAV_ERROR("Failed to update configuration: {}", result.error());
     }
@@ -247,7 +243,7 @@ rav::Id rav::RavennaReceiver::get_id() const {
     return id_;
 }
 
-tl::expected<void, std::string> rav::RavennaReceiver::update_configuration(const ConfigurationUpdate& update) {
+tl::expected<void, std::string> rav::RavennaReceiver::set_configuration(const ConfigurationUpdate& update) {
     // Session name
     if (update.session_name.has_value()) {
         if (update.session_name->empty()) {

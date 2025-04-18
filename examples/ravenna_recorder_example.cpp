@@ -127,7 +127,7 @@ class ravenna_recorder {
         auto receiver = std::make_unique<rav::RavennaReceiver>(
             io_context_, *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id()
         );
-        auto result = receiver->update_configuration(update);
+        auto result = receiver->set_configuration(update);
         if (!result) {
             RAV_ERROR("Failed to update configuration: {}", result.error());
             return;

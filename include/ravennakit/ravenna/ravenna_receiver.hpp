@@ -39,8 +39,8 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     };
 
     /**
-     * Field to update in the configuration. Only the fields that are set are taken into account, which allows for
-     * partial updates.
+     * Struct for updating the configuration of the receiver. Only the fields that are set are taken into account, which
+     * allows for partial updates.
      */
     struct ConfigurationUpdate {
         std::optional<std::string> session_name;
@@ -122,9 +122,9 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     /**
      * Updates the configuration of the receiver. Only takes into account the fields in the configuration that are set.
      * This allows to update only a subset of the configuration.
-     * @param update The configuration to update.
+     * @param update The configuration changes to apply.
      */
-    [[nodiscard]] tl::expected<void, std::string> update_configuration(const ConfigurationUpdate& update);
+    [[nodiscard]] tl::expected<void, std::string> set_configuration(const ConfigurationUpdate& update);
 
     /**
      * @returns The current configuration of the receiver.
@@ -160,12 +160,6 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
      * @return A JSON representation of the sender.
      */
     nlohmann::json to_json() const;
-
-    /**
-     * Sets the interface to use for this sender.
-     * @param interface_address The address of the interface to use.
-     */
-    void set_interface(const asio::ip::address_v4& interface_address);
 
     /**
      * Reads data from the buffer at the given timestamp.
