@@ -208,6 +208,14 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     // ravenna_rtsp_client::subscriber overrides
     void on_announced(const RavennaRtspClient::AnnouncedEvent& event) override;
 
+    /**
+     * Creates audio receiver parameters from the given SDP.
+     * @param sdp The SDP to create the parameters from.
+     * @return The audio receiver parameters, or an error message if the SDP is invalid.
+     */
+    static tl::expected<rtp::AudioReceiver::Parameters, std::string>
+    create_audio_receiver_parameters(const sdp::SessionDescription& sdp);
+
   private:
     RavennaRtspClient& rtsp_client_;
     rtp::AudioReceiver rtp_audio_receiver_;

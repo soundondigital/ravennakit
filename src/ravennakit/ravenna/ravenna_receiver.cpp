@@ -127,57 +127,30 @@ void rav::RavennaReceiver::on_announced(const RavennaRtspClient::AnnouncedEvent&
 }
 
 namespace {
-tl::expected<rav::rtp::AudioReceiver::Parameters, std::string>
-find_receiver_parameters(const rav::sdp::SessionDescription& sdp) {
-    std::optional<rav::AudioFormat> selected_audio_format;
-    const rav::sdp::MediaDescription* selected_media_description = nullptr;
-    const rav::sdp::ConnectionInfoField* selected_connection_info = nullptr;
 
-    for (auto& media_description : sdp.media_descriptions()) {
-        if (media_description.media_type() != "audio") {
-            RAV_WARNING("Unsupported media type: {}", media_description.media_type());
-            continue;
-        }
-
-        if (media_description.protocol() != "RTP/AVP") {
-            RAV_WARNING("Unsupported protocol {}", media_description.protocol());
-            continue;
-        }
-
-        // The first acceptable payload format from the beginning of the list SHOULD be used for the session.
-        // https://datatracker.ietf.org/doc/html/rfc8866#name-media-descriptions-m
-        selected_audio_format.reset();  // Reset format from previous iteration
-        for (auto& format : media_description.formats()) {
-            selected_audio_format = format.to_audio_format();
-            if (!selected_audio_format) {
-                RAV_WARNING("Not a supported audio format: {}", format.to_string());
-                continue;
-            }
+tl::expected<rav::rtp::AudioReceiver::Stream, std::string> create_stream_from_media_description(
+    const rav::sdp::MediaDescription& media_description, const rav::sdp::SessionDescription& sdp,
+    const rav::AudioFormat& audio_format
+) {
+    bool audio_format_found = false;
+    for (auto format : media_description.formats()) {
+        if (format.to_audio_format() == audio_format) {
+            audio_format_found = true;
             break;
         }
+    }
 
-        if (!selected_audio_format) {
-            RAV_WARNING("No supported audio format found");
+    if (!audio_format_found) {
+        return tl::unexpected("Audio format not found in media description");
+    }
+
+    const rav::sdp::ConnectionInfoField* selected_connection_info = nullptr;
+
+    for (auto& conn : media_description.connection_infos()) {
+        if (!is_connection_info_valid(conn)) {
             continue;
         }
-
-        for (auto& conn : media_description.connection_infos()) {
-            if (!is_connection_info_valid(conn)) {
-                continue;
-            }
-            selected_connection_info = &conn;
-        }
-
-        selected_media_description = &media_description;
-        break;  // We only need the first media description
-    }
-
-    if (!selected_media_description) {
-        return tl::unexpected("No suitable media description found");
-    }
-
-    if (!selected_audio_format) {
-        return tl::unexpected("No media description with supported audio format available");
+        selected_connection_info = &conn;
     }
 
     if (selected_connection_info == nullptr) {
@@ -194,14 +167,14 @@ find_receiver_parameters(const rav::sdp::SessionDescription& sdp) {
     }
 
     uint16_t packet_time_frames = 0;
-    const auto ptime = selected_media_description->ptime();
+    const auto ptime = media_description.ptime();
     if (ptime.has_value()) {
-        packet_time_frames = rav::aes67::PacketTime::framecount(*ptime, selected_audio_format->sample_rate);
+        packet_time_frames = rav::aes67::PacketTime::framecount(*ptime, audio_format.sample_rate);
     }
 
     if (packet_time_frames == 0) {
         RAV_WARNING("No ptime attribute found, falling back to framecount");
-        const auto framecount = selected_media_description->framecount();
+        const auto framecount = media_description.framecount();
         if (!framecount.has_value()) {
             return tl::unexpected("No framecount attribute found");
         }
@@ -213,7 +186,7 @@ find_receiver_parameters(const rav::sdp::SessionDescription& sdp) {
     rav::rtp::Session session;
 
     asio::error_code ec;
-    session.rtp_port = selected_media_description->port();
+    session.rtp_port = media_description.port();
     session.rtcp_port = session.rtp_port + 1;
     session.connection_address = asio::ip::make_address(selected_connection_info->address, ec);
     if (ec) {
@@ -222,7 +195,7 @@ find_receiver_parameters(const rav::sdp::SessionDescription& sdp) {
 
     rav::rtp::Filter filter(session.connection_address);
 
-    const auto& source_filters = selected_media_description->source_filters();
+    const auto& source_filters = media_description.source_filters();
     if (!source_filters.empty()) {
         if (filter.add_filters(source_filters) == 0) {
             RAV_WARNING("No suitable source filters found in SDP");
@@ -236,15 +209,115 @@ find_receiver_parameters(const rav::sdp::SessionDescription& sdp) {
         }
     }
 
-    rav::rtp::AudioReceiver::Parameters parameters;
-    parameters.audio_format = *selected_audio_format;
-    parameters.streams.push_back(rav::rtp::AudioReceiver::Stream {session, filter, packet_time_frames, rav::Rank(0)});
-    return parameters;
+    rav::rtp::AudioReceiver::Stream stream;
+    stream.session = session;
+    stream.filter = filter;
+    stream.packet_time_frames = packet_time_frames;
+    return stream;
 }
+
+const rav::sdp::MediaDescription*
+find_media_description_by_mid(const rav::sdp::SessionDescription& sdp, const std::string& mid) {
+    for (const auto& media_description : sdp.media_descriptions()) {
+        if (media_description.get_mid() == mid) {
+            return &media_description;
+        }
+    }
+    return nullptr;
+}
+
 }  // namespace
 
+tl::expected<rav::rtp::AudioReceiver::Parameters, std::string>
+rav::RavennaReceiver::create_audio_receiver_parameters(const sdp::SessionDescription& sdp) {
+    rtp::AudioReceiver::Parameters parameters;
+
+    for (auto& media_description : sdp.media_descriptions()) {
+        if (media_description.media_type() != "audio") {
+            RAV_WARNING("Unsupported media type: {}", media_description.media_type());
+            continue;
+        }
+
+        if (media_description.protocol() != "RTP/AVP") {
+            RAV_WARNING("Unsupported protocol {}", media_description.protocol());
+            continue;
+        }
+
+        // The first acceptable payload format from the beginning of the list SHOULD be used for the session.
+        // https://datatracker.ietf.org/doc/html/rfc8866#name-media-descriptions-m
+        std::optional<AudioFormat> selected_audio_format;
+
+        for (auto& format : media_description.formats()) {
+            selected_audio_format = format.to_audio_format();
+            if (!selected_audio_format) {
+                RAV_WARNING("Not a supported audio format: {}", format.to_string());
+                continue;
+            }
+            break;
+        }
+
+        if (!selected_audio_format) {
+            RAV_WARNING("No supported audio format found");
+            continue;
+        }
+
+        auto stream = create_stream_from_media_description(media_description, sdp, *selected_audio_format);
+
+        if (!stream) {
+            RAV_WARNING("Failed to create stream from media description: {}", stream.error());
+            continue;
+        }
+
+        auto rank = Rank(0);
+        stream->rank = rank++;
+
+        parameters.audio_format = *selected_audio_format;
+        parameters.streams.push_back(*stream);
+
+        if (auto mid = media_description.get_mid()) {
+            auto group = sdp.get_group();
+            if (!group) {
+                RAV_WARNING("No group found for mid '{}'", *mid);
+                break;  // No group found, treating the found stream as the primary
+            }
+
+            if (group->get_type() != sdp::Group::Type::dup) {
+                RAV_WARNING("Unsupported group type: {}", static_cast<int>(group->get_type()));
+                break;  // Unsupported group type
+            }
+
+            auto tags = group->get_tags();
+            if (std::find(tags.begin(), tags.end(), *mid) == tags.end()) {
+                RAV_WARNING("Mid '{}' not found in group tags", *mid);
+                break;  // Mid not found in group tags
+            }
+
+            tags.erase(std::remove(tags.begin(), tags.end(), *mid), tags.end());
+
+            for (auto& tag : tags) {
+                auto* media_desc = find_media_description_by_mid(sdp, tag);
+                if (!media_desc) {
+                    RAV_WARNING("Media description with mid '{}' not found", tag);
+                    continue;
+                }
+                auto dup_stream = create_stream_from_media_description(*media_desc, sdp, *selected_audio_format);
+                if (!dup_stream) {
+                    RAV_WARNING("Failed to create stream from media description: {}", dup_stream.error());
+                    continue;
+                }
+                dup_stream->rank = rank++;
+                parameters.streams.push_back(*dup_stream);
+            }
+        }
+
+        return parameters;
+    }
+
+    return tl::unexpected("No suitable media description found");
+}
+
 void rav::RavennaReceiver::update_sdp(const sdp::SessionDescription& sdp) {
-    auto parameters = find_receiver_parameters(sdp);
+    auto parameters = create_audio_receiver_parameters(sdp);
 
     if (!parameters) {
         RAV_ERROR("Failed to find primary stream parameters: {}", parameters.error());

@@ -39,6 +39,12 @@ class Rank {
         return !(lhs == rhs);
     }
 
+    Rank operator++(int) {
+        const Rank temp = *this;
+        ++rank_;
+        return temp;
+    }
+
     /**
      * @returns The rank value.
      */
