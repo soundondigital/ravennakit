@@ -56,8 +56,8 @@ std::optional<uint32_t> rav::RavennaReceiver::read_audio_data_realtime(
     return rtp_audio_receiver_.read_audio_data_realtime(output_buffer, at_timestamp);
 }
 
-rav::rtp::AudioReceiver::Stats rav::RavennaReceiver::get_stream_stats() const {
-    return rtp_audio_receiver_.get_stream_stats();
+rav::rtp::AudioReceiver::SessionStats rav::RavennaReceiver::get_stream_stats() const {
+    return rtp_audio_receiver_.get_session_stats();
 }
 
 nlohmann::json rav::RavennaReceiver::Configuration::to_json() const {
@@ -103,11 +103,13 @@ rav::RavennaReceiver::RavennaReceiver(
         }
     });
 
-    rtp_audio_receiver_.on_state_changed([this](const rtp::AudioReceiver::State state) {
-        for (auto* subscriber : subscribers_) {
-            subscriber->ravenna_receiver_state_updated(state);
+    rtp_audio_receiver_.on_state_changed(
+        [this](const rtp::AudioReceiver::Stream& session, const rtp::AudioReceiver::State state) {
+            for (auto* subscriber : subscribers_) {
+                subscriber->ravenna_receiver_stream_state_updated(session, state);
+            }
         }
-    });
+    );
 }
 
 rav::RavennaReceiver::~RavennaReceiver() {
@@ -125,8 +127,8 @@ void rav::RavennaReceiver::on_announced(const RavennaRtspClient::AnnouncedEvent&
 }
 
 namespace {
-tl::expected<rav::rtp::AudioReceiver::Parameters, std::string>
-find_primary_stream_parameters(const rav::sdp::SessionDescription& sdp) {
+tl::expected<std::vector<rav::rtp::AudioReceiver::Stream>, std::string>
+find_stream_sessions(const rav::sdp::SessionDescription& sdp) {
     std::optional<rav::AudioFormat> selected_audio_format;
     const rav::sdp::MediaDescription* selected_media_description = nullptr;
     const rav::sdp::ConnectionInfoField* selected_connection_info = nullptr;
@@ -234,27 +236,25 @@ find_primary_stream_parameters(const rav::sdp::SessionDescription& sdp) {
         }
     }
 
-    rav::rtp::AudioReceiver::Parameters stream_parameters;
-    // TODO: Build stream_parameters from the session description
-    stream_parameters.sessions.push_back(rav::rtp::AudioReceiver::Parameters::SessionInfo{session, filter, rav::Rank(0)});
-    stream_parameters.audio_format = *selected_audio_format;
-    stream_parameters.packet_time_frames = packet_time_frames;
-
-    return stream_parameters;
+    std::vector<rav::rtp::AudioReceiver::Stream> sessions;
+    sessions.push_back(
+        rav::rtp::AudioReceiver::Stream {session, filter, *selected_audio_format, packet_time_frames, rav::Rank(0)}
+    );
+    return sessions;
 }
 }  // namespace
 
 void rav::RavennaReceiver::update_sdp(const sdp::SessionDescription& sdp) {
-    auto primary = find_primary_stream_parameters(sdp);
+    auto primary = find_stream_sessions(sdp);
 
     if (!primary) {
         RAV_ERROR("Failed to find primary stream parameters: {}", primary.error());
         return;
     }
 
-    if (rtp_audio_receiver_.set_parameters(*primary)) {
+    if (rtp_audio_receiver_.set_streams(*primary)) {
         for (auto* subscriber : subscribers_) {
-            subscriber->ravenna_receiver_stream_updated(rtp_audio_receiver_.get_parameters());
+            subscriber->ravenna_receiver_streams_updated(rtp_audio_receiver_.get_streams());
         }
     }
 }
@@ -310,7 +310,16 @@ const rav::RavennaReceiver::Configuration& rav::RavennaReceiver::get_configurati
 bool rav::RavennaReceiver::subscribe(Subscriber* subscriber) {
     if (subscribers_.add(subscriber)) {
         subscriber->ravenna_receiver_configuration_updated(get_id(), configuration_);
-        subscriber->ravenna_receiver_stream_updated(rtp_audio_receiver_.get_parameters());
+        const auto streams = rtp_audio_receiver_.get_streams();
+        subscriber->ravenna_receiver_streams_updated(streams);
+        for (auto& stream : streams) {
+            const auto state = rtp_audio_receiver_.get_state_for_stream(stream.session);
+            if (!state) {
+                RAV_ERROR("Failed to get state for stream {}", stream.session.to_string());
+                continue;
+            }
+            subscriber->ravenna_receiver_stream_state_updated(stream, *state);
+        }
         return true;
     }
     return false;

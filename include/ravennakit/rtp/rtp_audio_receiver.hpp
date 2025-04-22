@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "detail/rtp_buffer.hpp"
 #include "detail/rtp_filter.hpp"
 #include "detail/rtp_packet_stats.hpp"
@@ -35,50 +37,45 @@ class AudioReceiver: public Receiver::Subscriber {
     static constexpr uint32_t k_buffer_size_ms = 200;
 
     /**
-     * The state of the stream.
+     * The state of a session.
      */
     enum class State {
-        /// The receiver is idle which is expected because no parameters have been set.
+        /// The session is idle which is expected because no parameters have been set.
         idle,
-        /// The receiver is waiting for the first data.
+        /// The session is waiting for the first data.
         waiting_for_data,
-        /// The receiver is running, packets are being received and consumed.
+        /// The session is running, packets are being received and consumed.
         ok,
-        /// The receiver is running, packets are being received but not consumed.
+        /// The session is running, packets are being received but not consumed.
         ok_no_consumer,
-        /// The receiver is inactive because no packets have been received for a while.
+        /// The session is inactive because no packets have been received for a while.
         inactive,
     };
 
     /**
-     * Struct to hold the parameters of the stream.
+     * Struct to hold the info for a stream.
      */
-    struct Parameters {
-        struct SessionInfo {
-            Session session;
-            Filter filter;
-            Rank rank;
-
-            friend bool operator==(const SessionInfo& lhs, const SessionInfo& rhs) {
-                return lhs.session == rhs.session && lhs.filter == rhs.filter && lhs.rank == rhs.rank;
-            }
-
-            friend bool operator!=(const SessionInfo& lhs, const SessionInfo& rhs) {
-                return !(lhs == rhs);
-            }
-        };
-
+    struct Stream {
+        Session session;
+        Filter filter;
         AudioFormat audio_format;
         uint16_t packet_time_frames = 0;
-        std::vector<SessionInfo> sessions;
+        Rank rank;
 
-        [[nodiscard]] std::string to_string() const;
+        friend bool operator==(const Stream& lhs, const Stream& rhs) {
+            return lhs.session == rhs.session && lhs.filter == rhs.filter && lhs.rank == rhs.rank
+                && lhs.audio_format == rhs.audio_format && lhs.packet_time_frames == rhs.packet_time_frames;
+        }
+
+        friend bool operator!=(const Stream& lhs, const Stream& rhs) {
+            return !(lhs == rhs);
+        }
     };
 
     /**
      * A struct to hold the packet and interval statistics for the stream.
      */
-    struct Stats {
+    struct SessionStats {
         /// The packet interval statistics.
         SlidingStats::Stats packet_interval_stats;
         /// The packet statistics.
@@ -95,17 +92,17 @@ class AudioReceiver: public Receiver::Subscriber {
     AudioReceiver& operator=(AudioReceiver&&) noexcept = delete;
 
     /**
-     * Sets the parameters for the stream. This will also start the receiver if it is not already running and the
+     * Sets the streams to receive. This will also start the receiver if it is not already running and the
      * receiver will be restarted if necessary.
-     * @param new_parameters The new parameters to set.
-     * @return True if the parameters were changed, false if not.
+     * @param new_streams The new streams to receive.
+     * @return True if the streams were changed, false if not.
      */
-    bool set_parameters(const Parameters& new_parameters);
+    bool set_streams(const std::vector<Stream>& new_streams);
 
     /**
      * @return The current parameters of the stream.
      */
-    const Parameters& get_parameters() const;
+    std::vector<Stream> get_streams() const;
 
     /**
      * Reads data from the buffer at the given timestamp.
@@ -137,7 +134,13 @@ class AudioReceiver: public Receiver::Subscriber {
     /**
      * @return The packet statistics for the first stream, if it exists, otherwise an empty structure.
      */
-    [[nodiscard]] Stats get_stream_stats() const;
+    [[nodiscard]] SessionStats get_session_stats() const;
+
+    /**
+     * @param session The session to get the state for.
+     * @return The state of the session, or std::nullopt if the session is not found.
+     */
+    std::optional<State> get_state_for_stream(const Session& session) const;
 
     /**
      * Sets the delay in frames.
@@ -172,7 +175,7 @@ class AudioReceiver: public Receiver::Subscriber {
      * Sets a callback for when the state of the receiver changes.
      * @param callback The callback to call when the state changes.
      */
-    void on_state_changed(std::function<void(State state)> callback);
+    void on_state_changed(std::function<void(const Stream& stream, State state)> callback);
 
     // Receiver::Subscriber overrides
     void on_rtp_packet(const Receiver::RtpPacketEvent& rtp_event) override;
@@ -193,14 +196,6 @@ class AudioReceiver: public Receiver::Subscriber {
         std::array<uint8_t, aes67::constants::k_max_payload> data;
     };
 
-    /// Holds variables specific to a session.
-    struct SessionContext {
-        Parameters::SessionInfo session_info;
-        WrappingUint64 last_packet_time_ns;
-        PacketStats packet_stats;
-        SlidingStats packet_interval_stats {1000};
-    };
-
     struct SharedContext {
         // Audio thread:
         Buffer receiver_buffer;
@@ -208,8 +203,6 @@ class AudioReceiver: public Receiver::Subscriber {
         std::optional<WrappingUint32> first_packet_timestamp;
         WrappingUint32 next_ts;
         AudioFormat selected_audio_format;
-
-        // Network thread:
 
         // Read by audio and network thread:
         uint32_t delay_frames = 0;
@@ -221,16 +214,27 @@ class AudioReceiver: public Receiver::Subscriber {
         FifoBuffer<IntermediatePacket, Fifo::Spsc> fifo;
     };
 
+    /**
+     * Struct to hold the state and statistics for a session.
+     */
+    struct StreamContext {
+        explicit StreamContext(Stream info);
+
+        Stream stream_info;
+        WrappingUint64 last_packet_time_ns;
+        PacketStats packet_stats;
+        SlidingStats packet_interval_stats {1000};
+        State state {State::idle};
+    };
+
     Receiver& rtp_receiver_;
     asio::steady_timer maintenance_timer_;
     ExclusiveAccessGuard realtime_access_guard_;
 
-    Parameters parameters_;
     uint32_t delay_frames_ {};
     bool enabled_ {};
-    State state_ {State::idle};
 
-    std::vector<std::unique_ptr<SessionContext>> sessions_contexts_;
+    std::vector<std::unique_ptr<StreamContext>> stream_contexts_;
 
     bool is_running_ {false};
     std::optional<WrappingUint32> rtp_ts_;
@@ -246,15 +250,15 @@ class AudioReceiver: public Receiver::Subscriber {
 
     std::function<void(WrappingUint32 packet_timestamp)> on_data_received_callback_;
     std::function<void(WrappingUint32 packet_timestamp)> on_data_ready_callback_;
-    std::function<void(State state)> on_state_changed_callback_;
+    std::function<void(const Stream& stream, State state)> on_state_changed_callback_;
 
     void update_shared_context();
     void do_maintenance();
     void do_realtime_maintenance();
-    void set_state(State state);
+    void set_state(StreamContext& stream_context, State new_state) const;
     void start();
     void stop();
-    SessionContext* find_session_context(const Session& session) const;
+    StreamContext* find_stream_context(const Session& session) const;
 };
 
 }  // namespace rav::rtp

@@ -56,8 +56,15 @@ class stream_recorder: public rav::RavennaReceiver::Subscriber {
         }
     }
 
-    void ravenna_receiver_stream_updated(const rav::rtp::AudioReceiver::Parameters& event) override {
-        if (!event.audio_format.is_valid() || !event.primary_session.valid()) {
+    void ravenna_receiver_streams_updated(const std::vector<rav::rtp::AudioReceiver::Stream>& streams) override {
+        if (streams.empty()) {
+            RAV_WARNING("No streams available");
+            return;
+        }
+
+        auto& stream = streams.front();
+
+        if (!stream.audio_format.is_valid() || !stream.session.valid()) {
             return;
         }
 
@@ -74,13 +81,13 @@ class stream_recorder: public rav::RavennaReceiver::Subscriber {
             "Recording stream: {} to file: {}", receiver_->get_configuration().session_name, file_path.to_string()
         );
 
-        audio_format_ = event.audio_format;
+        audio_format_ = stream.audio_format;
         file_output_stream_ = std::make_unique<rav::FileOutputStream>(file_path);
         wav_writer_ = std::make_unique<rav::WavAudioFormat::Writer>(
             *file_output_stream_, rav::WavAudioFormat::FormatCode::pcm, audio_format_.sample_rate,
             audio_format_.num_channels, audio_format_.bytes_per_sample() * 8
         );
-        audio_data_.resize(event.packet_time_frames * audio_format_.bytes_per_frame());
+        audio_data_.resize(stream.packet_time_frames * audio_format_.bytes_per_frame());
     }
 
     void on_data_ready(const rav::WrappingUint32 timestamp) override {
