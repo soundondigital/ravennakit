@@ -168,7 +168,6 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
         rtsp_client_ = std::make_unique<rav::RavennaRtspClient>(io_context_, browser_);
 
         rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(udp_receiver_);
-        rtp_receiver_->set_interface(asio::ip::make_address_v4(interface_address));
 
         rav::RavennaReceiver::ConfigurationUpdate update;
         update.delay_frames = 480;  // 10ms at 48KHz
@@ -178,6 +177,7 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
         ravenna_receiver_ = std::make_unique<rav::RavennaReceiver>(
             io_context_, *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id()
         );
+        ravenna_receiver_->set_interfaces({{rav::Rank::primary(), asio::ip::make_address_v4(interface_address)}});
         auto result = ravenna_receiver_->set_configuration(update);
         if (!result) {
             RAV_ERROR("Failed to update configuration: {}", result.error());
@@ -229,7 +229,7 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
 
   private:
     asio::io_context io_context_;
-    rav::UdpReceiver udp_receiver_{io_context_};
+    rav::UdpReceiver udp_receiver_ {io_context_};
     rav::RavennaBrowser browser_ {io_context_};
     std::unique_ptr<rav::RavennaRtspClient> rtsp_client_;
     std::unique_ptr<rav::rtp::Receiver> rtp_receiver_;

@@ -114,11 +114,10 @@ class stream_recorder: public rav::RavennaReceiver::Subscriber {
 
 class ravenna_recorder {
   public:
-    explicit ravenna_recorder(const std::string& interface_address) {
+    explicit ravenna_recorder(const std::string& interface_address) :
+        interface_address_(asio::ip::make_address_v4(interface_address)) {
         rtsp_client_ = std::make_unique<rav::RavennaRtspClient>(io_context_, browser_);
-
         rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(udp_receiver_);
-        rtp_receiver_->set_interface(asio::ip::make_address_v4(interface_address));
     }
 
     ~ravenna_recorder() = default;
@@ -132,6 +131,7 @@ class ravenna_recorder {
         auto receiver = std::make_unique<rav::RavennaReceiver>(
             io_context_, *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id()
         );
+        receiver->set_interfaces({{rav::Rank::primary(), interface_address_}});
         auto result = receiver->set_configuration(update);
         if (!result) {
             RAV_ERROR("Failed to update configuration: {}", result.error());
@@ -152,6 +152,7 @@ class ravenna_recorder {
 
   private:
     asio::io_context io_context_;
+    asio::ip::address_v4 interface_address_;
     rav::UdpReceiver udp_receiver_ {io_context_};
     rav::RavennaBrowser browser_ {io_context_};
     std::unique_ptr<rav::RavennaRtspClient> rtsp_client_;

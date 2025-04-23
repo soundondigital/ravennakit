@@ -19,9 +19,9 @@
 namespace examples {
 
 struct ravenna_node final: rav::RavennaNode::Subscriber, rav::RavennaReceiver::Subscriber {
-    explicit ravenna_node(rav::NetworkInterface::Identifier primary_interface) {
+    explicit ravenna_node(const rav::NetworkInterface::Identifier& primary_interface) {
         rav::RavennaConfig::NetworkInterfaceConfig config;
-        config.primary = std::move(primary_interface);
+        config.set_interface(rav::Rank::primary(), primary_interface);
         node.set_network_interface_config(config);
         node.subscribe(this).wait();
     }
