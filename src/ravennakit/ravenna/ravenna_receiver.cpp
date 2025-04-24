@@ -56,8 +56,8 @@ std::optional<uint32_t> rav::RavennaReceiver::read_audio_data_realtime(
     return rtp_audio_receiver_.read_audio_data_realtime(output_buffer, at_timestamp);
 }
 
-rav::rtp::AudioReceiver::SessionStats rav::RavennaReceiver::get_stream_stats() const {
-    return rtp_audio_receiver_.get_session_stats();
+rav::rtp::AudioReceiver::SessionStats rav::RavennaReceiver::get_stream_stats(const Rank rank) const {
+    return rtp_audio_receiver_.get_session_stats(rank);
 }
 
 nlohmann::json rav::RavennaReceiver::Configuration::to_json() const {

@@ -152,13 +152,16 @@ std::optional<uint32_t> rav::rtp::AudioReceiver::read_audio_data_realtime(
     return std::nullopt;
 }
 
-rav::rtp::AudioReceiver::SessionStats rav::rtp::AudioReceiver::get_session_stats() const {
+rav::rtp::AudioReceiver::SessionStats rav::rtp::AudioReceiver::get_session_stats(const Rank rank) const {
     SessionStats s;
     for (auto& session_context : stream_contexts_) {
-        s.packet_stats = session_context->packet_stats.get_total_counts();
-        s.packet_interval_stats = session_context->packet_interval_stats.get_stats();
-        break;
+        if (session_context->stream_info.rank == rank) {
+            s.packet_stats = session_context->packet_stats.get_total_counts();
+            s.packet_interval_stats = session_context->packet_interval_stats.get_stats();
+            return s;
+        }
     }
+    RAV_WARNING("No session context found for rank {}", rank.to_ordinal_latin());
     return s;
 }
 

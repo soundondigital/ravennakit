@@ -209,7 +209,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     /**
      * @return The packet statistics for the first stream, if it exists, otherwise an empty structure.
      */
-    [[nodiscard]] rtp::AudioReceiver::SessionStats get_stream_stats() const;
+    [[nodiscard]] rtp::AudioReceiver::SessionStats get_stream_stats(Rank rank) const;
 
     // ravenna_rtsp_client::subscriber overrides
     void on_announced(const RavennaRtspClient::AnnouncedEvent& event) override;

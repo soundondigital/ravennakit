@@ -149,7 +149,7 @@ class AudioReceiver: public Receiver::Subscriber {
     /**
      * @return The packet statistics for the first stream, if it exists, otherwise an empty structure.
      */
-    [[nodiscard]] SessionStats get_session_stats() const;
+    [[nodiscard]] SessionStats get_session_stats(Rank rank) const;
 
     /**
      * @param session The session to get the state for.

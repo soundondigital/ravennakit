@@ -96,14 +96,14 @@ class Rank {
     /**
      * @return The rank value.
      */
-    uint8_t value() const {
+    [[nodiscard]] uint8_t value() const {
         return rank_;
     }
 
     /**
      * @return The rank value as an ordinal string (1st, 2nd, etc.) up until 10th.
      */
-    const char* to_ordinal() const {
+    [[nodiscard]] const char* to_ordinal() const {
         switch (rank_) {
             case 0:
                 return "1st";
@@ -133,7 +133,7 @@ class Rank {
     /**
      * @return The rank value as an ordinal string (primary, secondary, etc.) up until tenth (10th).
      */
-    const char* to_ordinal_latin(const bool short_form = false) const {
+    [[nodiscard]] const char* to_ordinal_latin(const bool short_form = false) const {
         switch (rank_) {
             case 0:
                 return short_form ? "pri" : "primary";
@@ -161,10 +161,16 @@ class Rank {
         }
     }
 
+    /**
+     * @returns A Rank with value 0, used for clarity.
+     */
     static Rank primary() {
         return Rank(0);
     }
 
+    /**
+     * @returns A Rank with value 1, used for clarity.
+     */
     static Rank secondary() {
         return Rank(1);
     }
