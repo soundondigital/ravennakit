@@ -105,7 +105,11 @@ class NetworkInterface {
         for (const auto& addr : addresses_) {
             if (addr.is_v6() || addr.is_multicast() || addr.is_unspecified())
                 continue;
+#if RAV_WINDOWS
+            fmt::format_to(std::back_inserter(display_name), " ({})", addr.to_string());
+#else
             fmt::format_to(std::back_inserter(display_name), " ({}: {})", identifier_, addr.to_string());
+#endif
             break;
         }
         return display_name;
