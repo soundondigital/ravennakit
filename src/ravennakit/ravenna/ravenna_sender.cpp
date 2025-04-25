@@ -21,7 +21,9 @@
 nlohmann::json rav::RavennaSender::Configuration::to_json() const {
     return nlohmann::json {
         {"session_name", session_name},
-        {"destination_address", destination_address.to_string()},
+        {"destination_address_pri", destination_address_pri.to_string()},
+        {"destination_address_sec", destination_address_sec.to_string()},
+        {"ports", ports.to_string()},
         {"ttl", ttl},
         {"payload_type", payload_type},
         {"audio_format", audio_format.to_json()},
@@ -35,7 +37,11 @@ rav::RavennaSender::ConfigurationUpdate::from_json(const nlohmann::json& json) {
     try {
         ConfigurationUpdate update {};
         update.session_name = json.at("session_name").get<std::string>();
-        update.destination_address = asio::ip::make_address_v4(json.at("destination_address").get<std::string>());
+        update.destination_address_pri =
+            asio::ip::make_address_v4(json.at("destination_address_pri").get<std::string>());
+        update.destination_address_sec =
+            asio::ip::make_address_v4(json.at("destination_address_sec").get<std::string>());
+        update.ports = std::bitset<k_max_num_ports>(json.at("ports").get<std::string>());
         update.ttl = json.at("ttl").get<int32_t>();
         update.payload_type = json.at("payload_type").get<uint8_t>();
         auto audio_format = AudioFormat::from_json(json.at("audio_format"));
@@ -97,6 +103,10 @@ rav::RavennaSender::RavennaSender(
         initial_config.audio_format = audio_format;
     }
 
+    if (!initial_config.ports.has_value()) {
+        initial_config.ports = 0b01;  // Primary interface
+    }
+
     if (!ptp_instance_.subscribe(this)) {
         RAV_ERROR("Failed to subscribe to PTP instance");
     }
@@ -142,13 +152,17 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
         }
     }
 
-    // Destination address
-    if (update.destination_address.has_value()) {
-        if (update.destination_address->is_unspecified()) {
-            return tl::unexpected("Destination address cannot be unspecified");
+    // Primary destination address
+    if (update.destination_address_pri.has_value()) {
+        if (!update.destination_address_pri->is_unspecified() && !update.destination_address_pri->is_multicast()) {
+            return tl::unexpected("Destination address must be multicast");  // At least for now
         }
-        if (!update.destination_address->is_multicast()) {
-            return tl::unexpected("Destination address must be multicast");
+    }
+
+    // Secondary destination address
+    if (update.destination_address_sec.has_value()) {
+        if (!update.destination_address_sec->is_unspecified() && !update.destination_address_sec->is_multicast()) {
+            return tl::unexpected("Destination address must be multicast");  // At least for now
         }
     }
 
@@ -189,17 +203,34 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
         announce = true;
     }
 
-    // Destination address
-    if (update.destination_address.has_value() && update.destination_address != configuration_.destination_address) {
-        configuration_.destination_address = *update.destination_address;
+    // Ports
+    if (update.ports.has_value() && update.ports != configuration_.ports) {
+        configuration_.ports = *update.ports;
+        announce = true;
+        // TODO: Update from which ports to send
+        RAV_TRACE("Sender ports changed to 0b{}", configuration_.ports.to_string());
+    }
+
+    // Primary destination address
+    if (update.destination_address_pri.has_value()
+        && update.destination_address_pri != configuration_.destination_address_pri) {
+        configuration_.destination_address_pri = *update.destination_address_pri;
+        announce = true;
+    }
+
+    // Secondary destination address
+    if (update.destination_address_sec.has_value()
+        && update.destination_address_sec != configuration_.destination_address_sec) {
+        configuration_.destination_address_sec = *update.destination_address_sec;
         announce = true;
     }
 
     // Generate a multicast address if not set
-    if (configuration_.destination_address.is_unspecified() && !rtp_sender_.get_interface_address().is_unspecified()) {
+    if (configuration_.destination_address_pri.is_unspecified()
+        && !rtp_sender_.get_interface_address().is_unspecified()) {
         // Construct a multicast address from the interface address
         const auto interface_address_bytes = rtp_sender_.get_interface_address().to_bytes();
-        configuration_.destination_address = asio::ip::address_v4(
+        configuration_.destination_address_pri = asio::ip::address_v4(
             {239, interface_address_bytes[2], interface_address_bytes[3], static_cast<uint8_t>(id_.value() % 0xff)}
         );
     }
@@ -208,7 +239,7 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
     if (update.ttl.has_value() && update.ttl != configuration_.ttl) {
         configuration_.ttl = *update.ttl;
         announce = true;
-        // TODO: Update socket option for TTL. Probably both multicast and unicast in one go.
+        // TODO: Update socket option for TTL. Probably both multicast and unicast in one go (which are separate opts).
     }
 
     // Payload type
@@ -236,8 +267,8 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
     }
 
     const bool should_be_running = configuration_.enabled && !configuration_.session_name.empty()
-        && configuration_.audio_format.is_valid() && configuration_.destination_address.is_multicast()
-        && configuration_.packet_time.is_valid() && configuration_.ttl > 0;
+        && configuration_.audio_format.is_valid() && configuration_.destination_address_pri.is_multicast()
+        && configuration_.packet_time.is_valid() && configuration_.ttl > 0 && configuration_.ports.any();
 
     if (update_advertisement || !should_be_running) {
         RAV_ASSERT(
@@ -454,6 +485,14 @@ void rav::RavennaSender::set_interface(const asio::ip::address_v4& interface_add
     }
 }
 
+void rav::RavennaSender::set_interfaces(const std::map<Rank, asio::ip::address_v4>& interface_addresses) {
+    if (interface_addresses_ == interface_addresses) {
+        return;  // No change in interface addresses
+    }
+    interface_addresses_ = interface_addresses;
+    rtp_sender_.set_interface(interface_addresses.begin()->second);
+}
+
 nlohmann::json rav::RavennaSender::to_json() const {
     nlohmann::json root;
     root["session_id"] = session_id_;
@@ -514,7 +553,7 @@ void rav::RavennaSender::send_announce() const {
 }
 
 rav::sdp::SessionDescription rav::RavennaSender::build_sdp() const {
-    if (configuration_.destination_address.is_unspecified()) {
+    if (configuration_.destination_address_pri.is_unspecified()) {
         RAV_ERROR("Destination address not set");
         return {};
     }
@@ -532,13 +571,13 @@ rav::sdp::SessionDescription rav::RavennaSender::build_sdp() const {
 
     // Connection info
     const sdp::ConnectionInfoField connection_info {
-        sdp::NetwType::internet, sdp::AddrType::ipv4, configuration_.destination_address.to_string(), 15, {}
+        sdp::NetwType::internet, sdp::AddrType::ipv4, configuration_.destination_address_pri.to_string(), 15, {}
     };
 
     // Source filter
     sdp::SourceFilter filter(
         sdp::FilterMode::include, sdp::NetwType::internet, sdp::AddrType::ipv4,
-        configuration_.destination_address.to_string(), {rtp_sender_.get_interface_address().to_string()}
+        configuration_.destination_address_pri.to_string(), {rtp_sender_.get_interface_address().to_string()}
     );
 
     // Reference clock
@@ -653,7 +692,7 @@ void rav::RavennaSender::update_shared_context() {
     const auto audio_format = configuration_.audio_format;
     const auto packet_size_frames = get_framecount();
     const auto packet_size_bytes = packet_size_frames * audio_format.bytes_per_frame();
-    new_context->destination_endpoint = {configuration_.destination_address, 5004};
+    new_context->destination_endpoint = {configuration_.destination_address_pri, 5004};
     new_context->audio_format = audio_format;
     new_context->packet_time_frames = get_framecount();
     new_context->rtp_packet.payload_type(configuration_.payload_type);

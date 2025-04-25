@@ -18,6 +18,7 @@
 #include "ravennakit/core/containers/fifo_buffer.hpp"
 #include "ravennakit/core/sync/rcu.hpp"
 #include "ravennakit/core/sync/realtime_shared_object.hpp"
+#include "ravennakit/core/util/rank.hpp"
 #include "ravennakit/dnssd/dnssd_advertiser.hpp"
 #include "ravennakit/ptp/ptp_instance.hpp"
 #include "ravennakit/ptp/types/ptp_timestamp.hpp"
@@ -39,12 +40,17 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     /// to an audio device buffer size.
     static constexpr uint32_t k_max_num_frames = 4096;
 
-    /**
+    /// The max number of ports to use for sending. This is usually 2, but can be extended to any number of ports.
+    static constexpr uint32_t k_max_num_ports = 2;
+
+    /*
      * Defines the configuration for the sender.
      */
     struct Configuration {
         std::string session_name;
-        asio::ip::address_v4 destination_address;
+        asio::ip::address_v4 destination_address_pri;
+        asio::ip::address_v4 destination_address_sec;
+        std::bitset<k_max_num_ports> ports {};
         int32_t ttl {};
         uint8_t payload_type {};
         AudioFormat audio_format;
@@ -63,7 +69,9 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
      */
     struct ConfigurationUpdate {
         std::optional<std::string> session_name;
-        std::optional<asio::ip::address_v4> destination_address;
+        std::optional<asio::ip::address_v4> destination_address_pri;
+        std::optional<asio::ip::address_v4> destination_address_sec;
+        std::optional<std::bitset<k_max_num_ports>> ports;
         std::optional<int32_t> ttl;
         std::optional<uint8_t> payload_type;
         std::optional<AudioFormat> audio_format;
@@ -176,6 +184,12 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     void set_interface(const asio::ip::address_v4& interface_address);
 
     /**
+     * Sets the interface address for the receiver.
+     * @param interface_addresses A map of interface addresses to set. The key is the rank of the interface address.
+     */
+    void set_interfaces(const std::map<Rank, asio::ip::address_v4>& interface_addresses);
+
+    /**
      * @return A JSON representation of the sender.
      */
     nlohmann::json to_json() const;
@@ -202,6 +216,7 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     int32_t clock_domain_ {};
     ptp::ClockIdentity grandmaster_identity_;
     rtp::Sender rtp_sender_;
+    std::map<Rank, asio::ip::address_v4> interface_addresses_;
 
     asio::high_resolution_timer timer_;
     SubscriberList<Subscriber> subscribers_;

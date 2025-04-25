@@ -104,7 +104,7 @@ std::future<rav::Id> rav::RavennaNode::create_sender(const RavennaSender::Config
         auto interface_address = config_.network_interfaces.get_interface_ipv4_address(Rank(0));
         auto new_sender = std::make_unique<RavennaSender>(
             io_context_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), generate_unique_session_id(),
-            interface_address, std::move(initial_config)
+            interface_address, initial_config
         );
         const auto& it = senders_.emplace_back(std::move(new_sender));
         for (const auto& s : subscribers_) {
