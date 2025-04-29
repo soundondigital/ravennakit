@@ -96,9 +96,12 @@ void rav::ptp::Port::apply_state_decision_algorithm(
     // recommended the port should go into listening state. However, when this instance is also the best master
     // according to the state decision algorithm, it will never go into slave state. Since the result is a
     // recommendation anyway, I'm taking the liberty to place the PTP instance into slave state instead of listening
-    // state. Since the state decision codes are either master (m1, m2, m3) or passive (p1, p2), the recommended state
-    // should become s1 when slave only.
-    if (default_ds.slave_only) {
+    // state.
+
+    const bool recommended_master = *recommended_state == StateDecisionCode::m1
+        || *recommended_state == StateDecisionCode::m2 || *recommended_state == StateDecisionCode::m3;
+
+    if (recommended_master && default_ds.slave_only) {
         recommended_state = StateDecisionCode::s1;
     }
 
