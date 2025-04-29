@@ -161,7 +161,6 @@ rav::rtp::AudioReceiver::SessionStats rav::rtp::AudioReceiver::get_session_stats
             return s;
         }
     }
-    RAV_WARNING("No session context found for rank {}", rank.to_ordinal_latin());
     return s;
 }
 
