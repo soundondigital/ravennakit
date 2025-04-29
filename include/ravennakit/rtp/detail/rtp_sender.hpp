@@ -37,7 +37,11 @@ class Sender {
     void send_to(const ByteBuffer& packet, const asio::ip::udp::endpoint& endpoint) {
         RAV_ASSERT(packet.data() != nullptr, "Packet data is null");
         RAV_ASSERT(packet.size() > 0, "Packet size is 0");
-        socket_.send_to(asio::buffer(packet.data(), packet.size()), endpoint);
+        asio::error_code ec;
+        socket_.send_to(asio::buffer(packet.data(), packet.size()), endpoint, 0, ec);
+        if (set_error(ec)) {
+            RAV_ERROR("Failed to send RTP packet: {}", ec.message());
+        }
     }
 
     /**
@@ -48,7 +52,11 @@ class Sender {
     void send_to(const BufferView<const uint8_t>& packet, const asio::ip::udp::endpoint& endpoint) {
         RAV_ASSERT(packet.data() != nullptr, "Packet data is null");
         RAV_ASSERT(!packet.empty(), "Packet is empty");
-        socket_.send_to(asio::buffer(packet.data(), packet.size()), endpoint);
+        asio::error_code ec;
+        socket_.send_to(asio::buffer(packet.data(), packet.size()), endpoint, 0, ec);
+        if (set_error(ec)) {
+            RAV_ERROR("Failed to send RTP packet: {}", ec.message());
+        }
     }
 
     /**
@@ -60,7 +68,11 @@ class Sender {
     void send_to(const uint8_t* data, const size_t data_size, const asio::ip::udp::endpoint& endpoint) {
         RAV_ASSERT(data != nullptr, "Packet data is null");
         RAV_ASSERT(data_size != 0, "Packet is empty");
-        socket_.send_to(asio::buffer(data, data_size), endpoint);
+        asio::error_code ec;
+        socket_.send_to(asio::buffer(data, data_size), endpoint, 0, ec);
+        if (set_error(ec)) {
+            RAV_ERROR("Failed to send RTP packet: {}", ec.message());
+        }
     }
 
     /**
@@ -87,6 +99,20 @@ class Sender {
   private:
     asio::ip::udp::socket socket_;
     asio::ip::address_v4 interface_address_;
+    asio::error_code last_error_;  // Used to avoid log spamming
+
+    /**
+     * Convenience function to set the error code and prevent log spamming.
+     * @param ec The error code to set.
+     * @return The error code if it's not the same as the last error, otherwise an empty error code.
+     */
+    asio::error_code set_error(const asio::error_code& ec) {
+        if (ec == last_error_) {
+            return {};
+        }
+        last_error_ = ec;
+        return last_error_;
+    }
 };
 
 }  // namespace rav::rtp

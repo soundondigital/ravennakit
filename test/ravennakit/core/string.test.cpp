@@ -394,3 +394,39 @@ TEST_CASE("string | string_compare_case_insensitive") {
         REQUIRE_FALSE(rav::string_compare_case_insensitive("abc", "abcd"));
     }
 }
+
+TEST_CASE("string | string_to_upper") {
+    SECTION("Lower") {
+        const std::string str("abc");
+        REQUIRE(rav::string_to_upper(str) == "ABC");
+        REQUIRE(rav::string_to_upper(str, 1) == "Abc");
+        REQUIRE(rav::string_to_upper(str, 2) == "ABc");
+        REQUIRE(rav::string_to_upper(str, 3) == "ABC");
+    }
+
+    SECTION("Upper") {
+        const std::string str("ABC");
+        REQUIRE(rav::string_to_upper(str) == "ABC");
+        REQUIRE(rav::string_to_upper(str, 1) == "ABC");
+        REQUIRE(rav::string_to_upper(str, 2) == "ABC");
+        REQUIRE(rav::string_to_upper(str, 3) == "ABC");
+    }
+}
+
+TEST_CASE("string | string_to_lower") {
+    SECTION("Upper") {
+        const std::string str("ABC");
+        REQUIRE(rav::string_to_lower(str) == "abc");
+        REQUIRE(rav::string_to_lower(str, 1) == "aBC");
+        REQUIRE(rav::string_to_lower(str, 2) == "abC");
+        REQUIRE(rav::string_to_lower(str, 3) == "abc");
+    }
+
+    SECTION("Lower") {
+        const std::string str("abc");
+        REQUIRE(rav::string_to_lower(str) == "abc");
+        REQUIRE(rav::string_to_lower(str, 1) == "abc");
+        REQUIRE(rav::string_to_lower(str, 2) == "abc");
+        REQUIRE(rav::string_to_lower(str, 3) == "abc");
+    }
+}

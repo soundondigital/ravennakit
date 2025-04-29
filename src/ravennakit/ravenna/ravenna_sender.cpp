@@ -266,9 +266,14 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
         configuration_.enabled ? start_timer() : stop_timer();
     }
 
-    const bool should_be_running = configuration_.enabled && !configuration_.session_name.empty()
-        && configuration_.audio_format.is_valid() && !configuration_.destinations.empty()
-        && configuration_.packet_time.is_valid() && configuration_.ttl > 0;
+    auto state_valid = validate_state();
+    if (!state_valid) {
+        update_status_message(std::move(state_valid.error()));
+    } else {
+        update_status_message({});
+    }
+
+    const bool should_be_running = configuration_.enabled && state_valid;
 
     if (update_advertisement || !should_be_running) {
         RAV_ASSERT(
@@ -342,6 +347,7 @@ float rav::RavennaSender::get_signaled_ptime() const {
 bool rav::RavennaSender::subscribe(Subscriber* subscriber) {
     if (subscribers_.add(subscriber)) {
         subscriber->ravenna_sender_configuration_updated(id_, configuration_);
+        subscriber->ravenna_sender_status_message_updated(id_, status_message_);
         return true;
     }
     return false;
@@ -484,6 +490,10 @@ void rav::RavennaSender::set_interfaces(const std::map<Rank, asio::ip::address_v
     interface_addresses_ = interface_addresses;
     generate_auto_addresses_if_needed();
     update_rtp_senders();
+    auto result = set_configuration({});  // Trigger configuration update
+    if (!result) {
+        RAV_ERROR("Failed to update sender configuration: {}", result.error());
+    }
 }
 
 nlohmann::json rav::RavennaSender::to_json() const {
@@ -494,14 +504,35 @@ nlohmann::json rav::RavennaSender::to_json() const {
 }
 
 void rav::RavennaSender::on_request(const rtsp::Connection::RequestEvent event) const {
+    rtsp::Response error_response(204, "No Content");
+    if (const auto* cseq = event.rtsp_request.rtsp_headers.get("cseq")) {
+        error_response.rtsp_headers.set(*cseq);
+    }
+
     const auto sdp = build_sdp();  // Should the SDP be cached and updated on changes?
-    RAV_TRACE("SDP:\n{}", sdp.to_string("\n").value());
-    const auto encoded = sdp.to_string();
-    if (!encoded) {
-        RAV_ERROR("Failed to encode SDP");
+    if (!sdp) {
+        RAV_ERROR("Failed to build SDP: {}", sdp.error());
+        event.rtsp_connection.async_send_response(error_response);
         return;
     }
-    auto response = rtsp::Response(200, "OK", *encoded);
+
+    const auto sdp_debug_string = sdp->to_string("\n");
+    if (!sdp_debug_string) {
+        RAV_ERROR("Failed to build SDP debug string: {}", sdp_debug_string.error());
+        event.rtsp_connection.async_send_response(error_response);
+        return;
+    }
+
+    RAV_TRACE("SDP:\n{}", sdp_debug_string.value());
+
+    const auto sdp_string = sdp->to_string("\r\n");
+    if (!sdp_string) {
+        RAV_ERROR("Failed to encode SDP");
+        event.rtsp_connection.async_send_response(error_response);
+        return;
+    }
+
+    auto response = rtsp::Response(200, "OK", *sdp_string);
     if (const auto* cseq = event.rtsp_request.rtsp_headers.get("cseq")) {
         response.rtsp_headers.set(*cseq);
     }
@@ -528,9 +559,16 @@ void rav::RavennaSender::send_announce() const {
         RAV_ERROR("No interface addresses set");
         return;
     }
-    auto sdp = build_sdp().to_string();
+
+    auto sdp = build_sdp();
     if (!sdp) {
         RAV_ERROR("Failed to encode SDP: {}", sdp.error());
+        return;
+    }
+
+    auto sdp_string = sdp->to_string("\r\n");
+    if (!sdp_string) {
+        RAV_ERROR("Failed to encode SDP");
         return;
     }
 
@@ -539,7 +577,7 @@ void rav::RavennaSender::send_announce() const {
     rtsp::Request request;
     request.method = "ANNOUNCE";
     request.rtsp_headers.set("content-type", "application/sdp");
-    request.data = std::move(sdp.value());
+    request.data = std::move(*sdp_string);
     request.uri =
         Uri::encode("rtsp", interface_address_string + ":" + std::to_string(rtsp_server_.port()), rtsp_path_by_name_);
     std::ignore = rtsp_server_.send_request(rtsp_path_by_name_, request);
@@ -549,26 +587,22 @@ void rav::RavennaSender::send_announce() const {
     std::ignore = rtsp_server_.send_request(rtsp_path_by_id_, request);
 }
 
-rav::sdp::SessionDescription rav::RavennaSender::build_sdp() const {
+tl::expected<rav::sdp::SessionDescription, std::string> rav::RavennaSender::build_sdp() const {
     if (configuration_.session_name.empty()) {
-        RAV_ERROR("Session name not set");
-        return {};
-    }
-
-    if (interface_addresses_.empty()) {
-        RAV_ERROR("No interface addresses set");
-        return {};
+        return tl::unexpected("Session name not set");
     }
 
     if (configuration_.destinations.empty()) {
-        RAV_ERROR("No destinations set");
-        return {};
+        return tl::unexpected("No destinations set");
     }
 
     const auto sdp_format = sdp::Format::from_audio_format(configuration_.audio_format);
     if (!sdp_format) {
-        RAV_ERROR("Failed to convert audio format to SDP format");
-        return {};
+        return tl::unexpected("Invalid audio format");
+    }
+
+    if (interface_addresses_.empty()) {
+        return tl::unexpected("No interface addresses set");
     }
 
     // Reference clock
@@ -607,9 +641,15 @@ rav::sdp::SessionDescription rav::RavennaSender::build_sdp() const {
         }
     }
 
+    sdp::Group group;
+
     for (auto& dst : configuration_.destinations) {
         if (!dst.enabled) {
             continue;
+        }
+
+        if (dst.endpoint.address().is_unspecified()) {
+            return tl::unexpected("Destination endpoint is unspecified");
         }
 
         std::string dst_address_str = dst.endpoint.address().to_string();
@@ -619,18 +659,15 @@ rav::sdp::SessionDescription rav::RavennaSender::build_sdp() const {
             sdp::NetwType::internet, sdp::AddrType::ipv4, dst_address_str, 15, {}
         };
 
-        std::string interface_address_str;
         auto it = interface_addresses_.find(dst.interface_by_rank);
-        if (it != interface_addresses_.end()) {
-            interface_address_str = it->second.to_string();
-        } else {
-            interface_address_str = asio::ip::address_v4().to_string();
+        if (it == interface_addresses_.end()) {
+            return tl::unexpected(fmt::format("No interface address for rank {}", dst.interface_by_rank.value()));
         }
 
         // Source filter
         sdp::SourceFilter filter(
             sdp::FilterMode::include, sdp::NetwType::internet, sdp::AddrType::ipv4, dst_address_str,
-            {interface_address_str}
+            {it->second.to_string()}
         );
 
         sdp::MediaDescription media;
@@ -647,7 +684,16 @@ rav::sdp::SessionDescription rav::RavennaSender::build_sdp() const {
         media.set_ptime(get_signaled_ptime());
         media.set_framecount(get_framecount());
 
+        if (num_active_destinations > 1) {
+            media.set_mid(dst.interface_by_rank.to_ordinal_latin());
+            group.add_tag(dst.interface_by_rank.to_ordinal_latin());
+        }
+
         sdp.add_media_description(std::move(media));
+    }
+
+    if (!group.empty()) {
+        sdp.set_group(group);
     }
 
     return sdp;
@@ -745,7 +791,7 @@ void rav::RavennaSender::generate_auto_addresses_if_needed() {
             auto it = interface_addresses_.find(dst.interface_by_rank);
             if (it != interface_addresses_.end()) {
                 if (it->second.is_unspecified()) {
-                    RAV_TRACE("No interface address for rank {}", dst.interface_by_rank.value());
+                    RAV_WARNING("Invalid interface address for rank {}", dst.interface_by_rank.value());
                     continue;
                 }
                 // Construct a multicast address from the interface address
@@ -757,8 +803,11 @@ void rav::RavennaSender::generate_auto_addresses_if_needed() {
                     )
                 );
                 changed = true;
-            } else {
-                RAV_TRACE("No interface address for rank {}", dst.interface_by_rank.value());
+
+                RAV_TRACE(
+                    "Generated {} multicast address {}", dst.interface_by_rank.to_ordinal_latin(),
+                    dst.endpoint.address().to_string()
+                );
             }
         }
     }
@@ -776,12 +825,8 @@ void rav::RavennaSender::update_rtp_senders() {
     for (auto& dst : configuration_.destinations) {
         if (dst.enabled && rtp_senders_.find(dst.interface_by_rank) == rtp_senders_.end()) {
             auto it = interface_addresses_.find(dst.interface_by_rank);
-            if (it == interface_addresses_.end()) {
-                RAV_TRACE("No interface address for rank {}", dst.interface_by_rank.value());
-                continue;
-            }
-            if (it->second.is_unspecified()) {
-                RAV_TRACE("Interface address is unspecified for rank {}", dst.interface_by_rank.value());
+            if (it == interface_addresses_.end() || it->second.is_unspecified()) {
+                RAV_TRACE("{} interface not set", rav::string_to_upper(dst.interface_by_rank.to_ordinal_latin(), 1));
                 continue;
             }
             rtp_senders_.insert({dst.interface_by_rank, rtp::Sender {io_context_, it->second}});
@@ -804,4 +849,72 @@ void rav::RavennaSender::update_rtp_senders() {
             ++it;
         }
     }
+}
+
+tl::expected<void, std::string> rav::RavennaSender::validate_destinations() const {
+    if (configuration_.destinations.empty()) {
+        return tl::unexpected("no destinations set");
+    }
+
+    int num_enabled_destinations = 0;
+
+    for (const auto& dst : configuration_.destinations) {
+        if (!dst.enabled) {
+            continue;
+        }
+        num_enabled_destinations++;
+        auto it = interface_addresses_.find(dst.interface_by_rank);
+        if (it == interface_addresses_.end() || it->second.is_unspecified()) {
+            return tl::unexpected(fmt::format("{} interface not set", dst.interface_by_rank.to_ordinal_latin()));
+        }
+        if (dst.endpoint.address().is_unspecified()) {
+            return tl::unexpected(
+                fmt::format("{} destination address is unspecified", dst.interface_by_rank.to_ordinal_latin())
+            );
+        }
+        if (dst.endpoint.port() == 0) {
+            return tl::unexpected(fmt::format("{} destination port is 0", dst.interface_by_rank.to_ordinal_latin()));
+        }
+    }
+
+    if (num_enabled_destinations == 0) {
+        return tl::unexpected("no destinations");
+    }
+
+    return {};
+}
+
+void rav::RavennaSender::update_status_message(std::string message) {
+    if (status_message_ == message) {
+        return;  // No change
+    }
+    status_message_ = std::move(message);
+    for (const auto& subscriber : subscribers_) {
+        subscriber->ravenna_sender_status_message_updated(id_, status_message_);
+    }
+}
+
+tl::expected<void, std::string> rav::RavennaSender::validate_state() const {
+    if (configuration_.session_name.empty()) {
+        return tl::unexpected("empty session name");
+    }
+
+    if (!configuration_.audio_format.is_valid()) {
+        return tl::unexpected("invalid audio format");
+    }
+
+    auto valid = validate_destinations();
+    if (!valid) {
+        return valid;
+    }
+
+    if (!configuration_.packet_time.is_valid()) {
+        return tl::unexpected("invalid packet time");
+    }
+
+    if (configuration_.ttl <= 0) {
+        return tl::unexpected("invalid TTL");
+    }
+
+    return {};
 }

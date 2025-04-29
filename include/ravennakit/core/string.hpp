@@ -214,7 +214,6 @@ std::optional<Type> ston(std::string_view string, const bool strict = false, con
     return {};
 }
 
-
 /**
  * String to float - converts a string to a float, or returns an empty optional if the conversion failed.
  * @param str String to convert.
@@ -338,6 +337,42 @@ inline bool string_compare_case_insensitive(const std::string_view lhs, const st
     }
 
     return true;
+}
+
+/**
+ * Converts the first `count` characters of a string to upper case.
+ * @param str The string to convert.
+ * @param count The number of leading characters to convert to upper case.
+ * @return A new string with the first `count` characters converted to upper case.
+ */
+inline std::string string_to_upper(const std::string& str, std::size_t count = std::numeric_limits<size_t>::max()) {
+    if (str.empty() || count == 0) {
+        return str;
+    }
+    std::string result = str;
+    count = std::min(count, result.size());
+    for (std::size_t i = 0; i < count; ++i) {
+        result[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(result[i])));
+    }
+    return result;
+}
+
+/**
+ * Converts the first `count` characters of a string to lower case.
+ * @param str The string to convert.
+ * @param count The number of leading characters to convert to lower case.
+ * @return A new string with the first `count` characters converted to lower case.
+ */
+inline std::string string_to_lower(const std::string& str, std::size_t count = std::numeric_limits<size_t>::max()) {
+    if (str.empty() || count == 0) {
+        return str;
+    }
+    std::string result = str;
+    count = std::min(count, result.size());
+    for (std::size_t i = 0; i < count; ++i) {
+        result[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(result[i])));
+    }
+    return result;
 }
 
 }  // namespace rav

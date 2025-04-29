@@ -42,6 +42,10 @@ tl::expected<std::string, std::string> rav::sdp::Group::to_string() const {
     return fmt::format("a=group:DUP {}", fmt::join(tags_, " "));
 }
 
+bool rav::sdp::Group::empty() const {
+    return tags_.empty();
+}
+
 tl::expected<rav::sdp::Group, std::string> rav::sdp::Group::parse_new(const std::string_view line) {
     StringParser parser(line);
 

@@ -62,6 +62,11 @@ class Group {
     [[nodiscard]] tl::expected<std::string, std::string> to_string() const;
 
     /**
+     * @return True if the group is empty (no tags), false otherwise.
+     */
+    [[nodiscard]] bool empty() const;
+
+    /**
      * Parses a group line from an SDP message.
      * @param line The line to parse.
      * @return A tl::expected object containing the parsed group or an error message.
