@@ -14,7 +14,7 @@
 
 #include "ravennakit/core/util.hpp"
 
-TEST_CASE("string | up_to_first_occurrence_of", "[string]") {
+TEST_CASE("string | up_to_first_occurrence_of") {
     constexpr std::string_view haystack("one test two test three test");
 
     SECTION("Without substring included") {
@@ -28,7 +28,7 @@ TEST_CASE("string | up_to_first_occurrence_of", "[string]") {
     }
 }
 
-TEST_CASE("string | up_to_the_nth_occurrence_of", "[string]") {
+TEST_CASE("string | up_to_the_nth_occurrence_of") {
     std::string_view haystack("/one/two/three/four");
 
     SECTION("First occurrence") {
@@ -72,7 +72,7 @@ TEST_CASE("string | up_to_the_nth_occurrence_of", "[string]") {
     }
 }
 
-TEST_CASE("string | up_to_last_occurrence_of", "[string]") {
+TEST_CASE("string | up_to_last_occurrence_of") {
     constexpr std::string_view haystack("one test two test three test");
 
     SECTION("Without substring included") {
@@ -88,7 +88,7 @@ TEST_CASE("string | up_to_last_occurrence_of", "[string]") {
     }
 }
 
-TEST_CASE("string | from_first_occurrence_of", "[string]") {
+TEST_CASE("string | from_first_occurrence_of") {
     constexpr std::string_view haystack("one test two test three test");
 
     SECTION("Without substring included") {
@@ -103,7 +103,7 @@ TEST_CASE("string | from_first_occurrence_of", "[string]") {
     }
 }
 
-TEST_CASE("string | from_nth_occurrence_of", "[string]") {
+TEST_CASE("string | from_nth_occurrence_of") {
     std::string_view haystack("/one/two/three/four");
 
     SECTION("First occurrence") {
@@ -137,7 +137,7 @@ TEST_CASE("string | from_nth_occurrence_of", "[string]") {
     }
 }
 
-TEST_CASE("string | from_last_occurrence_of", "[string]") {
+TEST_CASE("string | from_last_occurrence_of") {
     constexpr std::string_view haystack("one test two test three test");
 
     SECTION("Without substring included") {
@@ -153,7 +153,7 @@ TEST_CASE("string | from_last_occurrence_of", "[string]") {
     }
 }
 
-TEST_CASE("string | string_contains", "[string]") {
+TEST_CASE("string | string_contains") {
     SECTION("Without substring included") {
         REQUIRE(rav::string_contains("ABC", 'C'));
         REQUIRE_FALSE(rav::string_contains("ABC", 'c'));
@@ -161,7 +161,7 @@ TEST_CASE("string | string_contains", "[string]") {
     }
 }
 
-TEST_CASE("string | from_string_strict", "[string]") {
+TEST_CASE("string | from_string_strict") {
     SECTION("An integer should be successfully parsed") {
         auto result = rav::ston<int>("1", true);
         REQUIRE(result.has_value());
@@ -200,7 +200,7 @@ TEST_CASE("string | from_string_strict", "[string]") {
     }
 }
 
-TEST_CASE("string | from_string", "[string]") {
+TEST_CASE("string | from_string") {
     SECTION("An integer should be successfully parsed") {
         auto result = rav::ston<int>("1");
         REQUIRE(result.has_value());
@@ -241,47 +241,35 @@ TEST_CASE("string | from_string", "[string]") {
     }
 }
 
-TEST_CASE("string | remove_prefix", "[string]") {
+TEST_CASE("string | remove_prefix") {
     SECTION("Remove valid prefix") {
-        std::string_view str = "some/random/string";
-        REQUIRE(rav::remove_prefix(str, "some/"));
-        REQUIRE(str == "random/string");
+        REQUIRE(rav::string_remove_prefix("some/random/string", "some/") == "random/string");
     }
 
     SECTION("Remove invalid prefix") {
-        std::string_view str = "some/random/string";
-        REQUIRE_FALSE(rav::remove_prefix(str, "noexist/"));
-        REQUIRE(str == "some/random/string");
+        REQUIRE(rav::string_remove_prefix("some/random/string", "noexist/") == "some/random/string");
     }
 
     SECTION("Remove invalid prefix") {
-        std::string_view str = "test/some/random/string";
-        REQUIRE_FALSE(rav::remove_prefix(str, "some/"));
-        REQUIRE(str == "test/some/random/string");
+        REQUIRE(rav::string_remove_prefix("test/some/random/string", "some/") == "test/some/random/string");
     }
 }
 
-TEST_CASE("string | remove_suffix", "[string]") {
+TEST_CASE("string | remove_suffix") {
     SECTION("Remove valid suffix") {
-        std::string_view str = "some/random/string";
-        REQUIRE(rav::remove_suffix(str, "/string"));
-        REQUIRE(str == "some/random");
+        REQUIRE(rav::string_remove_suffix("some/random/string", "/string") == "some/random");
     }
 
     SECTION("Remove invalid suffix") {
-        std::string_view str = "some/random/string";
-        REQUIRE_FALSE(rav::remove_suffix(str, "/noexist"));
-        REQUIRE(str == "some/random/string");
+        REQUIRE(rav::string_remove_suffix("some/random/string", "/noexist") == "some/random/string");
     }
 
     SECTION("Remove invalid suffix") {
-        std::string_view str = "some/random/string/test";
-        REQUIRE_FALSE(rav::remove_suffix(str, "/string"));
-        REQUIRE(str == "some/random/string/test");
+        REQUIRE(rav::string_remove_suffix("some/random/string/test", "/string") == "some/random/string/test");
     }
 }
 
-TEST_CASE("string | split_string", "[string]") {
+TEST_CASE("string | split_string") {
     SECTION("Test string with char delimiter") {
         const std::string text = "line1 line2 line3";
         auto result = rav::string_split(text, ' ');
@@ -317,7 +305,7 @@ TEST_CASE("string | split_string", "[string]") {
     }
 }
 
-TEST_CASE("string | stod", "[string]") {
+TEST_CASE("string | stod") {
     SECTION("1.0") {
         const auto v = rav::stod("1.0");
         REQUIRE(v.has_value());
@@ -346,7 +334,7 @@ TEST_CASE("string | stod", "[string]") {
     }
 }
 
-TEST_CASE("string | string_replace", "[string]") {
+TEST_CASE("string | string_replace") {
     SECTION("Replace single char") {
         std::string original("abcdef");
         REQUIRE(rav::string_replace(original, "c", "!") == "ab!def");

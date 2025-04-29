@@ -164,37 +164,35 @@ inline std::string_view from_last_occurrence_of(
 }
 
 /**
- * Removes given prefix from given string_view, if prefix is found at the beginning of string.
+ * Returns a copy of string with given prefix removed, if prefix is found at the end of string.
  * @param string String to remove prefix from.
  * @param prefix_to_remove Prefix to find and remove.
- * @return True if prefix was removed, or false if prefix was not found and string was not altered.
+ * @return The string with the prefix removed, or the original string if the suffix was not found.
  */
-inline bool remove_prefix(std::string_view& string, const std::string_view prefix_to_remove) {
+inline std::string_view string_remove_prefix(const std::string_view& string, const std::string_view prefix_to_remove) {
     const auto pos = string.find(prefix_to_remove);
 
-    if (pos != 0)  // If prefix doesn't start at the beginning.
-        return false;
+    if (pos != 0) {
+        return string;
+    }
 
-    string = string.substr(pos + prefix_to_remove.size());
-    return true;
+    return string.substr(pos + prefix_to_remove.size());
 }
 
 /**
- * Removes given suffix from given string_view, if suffix is found at the end of string.
+ * Returns a copy of string with given suffix removed, if suffix is found at the end of string.
  * @param string String to remove suffix from.
  * @param suffix_to_remove Suffix to find and remove.
- * @return True if suffix was removed, or false if suffix was not found and string was not altered.
+ * @return The string with the suffix removed, or the original string if the suffix was not found.
  */
-inline bool remove_suffix(std::string_view& string, const std::string_view suffix_to_remove) {
+inline std::string_view string_remove_suffix(const std::string_view& string, const std::string_view suffix_to_remove) {
     const auto pos = string.rfind(suffix_to_remove);
 
     if (pos != string.size() - suffix_to_remove.size()) {
-        return false;
+        return string;
     }
 
-    string = string.substr(0, pos);
-
-    return true;
+    return string.substr(0, pos);
 }
 
 /**

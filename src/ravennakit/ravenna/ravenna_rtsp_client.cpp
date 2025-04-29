@@ -59,7 +59,7 @@ bool rav::RavennaRtspClient::subscribe_to_session(Subscriber* subscriber_to_add,
     return true;
 }
 
-bool rav::RavennaRtspClient::unsubscribe_from_all_sessions(Subscriber* subscriber_to_remove) {
+bool rav::RavennaRtspClient::unsubscribe_from_all_sessions(const Subscriber* subscriber_to_remove) {
     RAV_ASSERT(subscriber_to_remove != nullptr, "Subscriber must not be nullptr");
 
     auto count = 0;
@@ -190,10 +190,10 @@ rav::RavennaRtspClient::find_connection(const std::string& host_target, const ui
 void rav::RavennaRtspClient::update_session_with_service(
     SessionContext& session, const dnssd::ServiceDescription& service
 ) {
-    session.host_target = service.host_target;
+    session.host_target = string_remove_suffix(service.host_target, ".");
     session.port = service.port;
 
-    auto& connection = find_or_create_connection(service.host_target, service.port);
+    auto& connection = find_or_create_connection(session.host_target, session.port);
     connection.client.async_describe(fmt::format("/by-name/{}", session.session_name));
 }
 

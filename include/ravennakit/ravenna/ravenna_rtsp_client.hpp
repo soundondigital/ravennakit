@@ -63,7 +63,7 @@ class RavennaRtspClient: public RavennaBrowser::Subscriber {
      * @param subscriber_to_remove The subscriber to remove.
      * @return true if the subscriber was removed from at least one session, or false if it wasn't.
      */
-    [[nodiscard]] bool unsubscribe_from_all_sessions(Subscriber* subscriber_to_remove);
+    [[nodiscard]] bool unsubscribe_from_all_sessions(const Subscriber* subscriber_to_remove);
 
     /**
      * Tries to find the SDP for the given session.
