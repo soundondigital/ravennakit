@@ -64,7 +64,7 @@ sdpoker test tool:
 
 ### C++ web servers
 
-https://github.com/oatpp/oatpp
+https://github.com/oatpp/oatpp  
 https://github.com/civetweb/civetweb  
 https://github.com/drogonframework/drogon  
 https://github.com/uNetworking/uWebSockets  
@@ -83,3 +83,15 @@ Secret Rabbit Code (libsamplerate):
 https://github.com/libsndfile/libsamplerate  
 Offers dynamic ratio for asrc purposes but does not provide methods for getting the internal state (phase) for precise
 resampling.
+
+## Howtos
+
+### vcpkg
+
+Reset vcpkg to a clean state
+
+```bash
+cd submodules/vcpkg
+git clean -ffdx
+cd - 
+```

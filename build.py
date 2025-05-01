@@ -14,11 +14,13 @@ import boto3
 import pygit2
 
 from docs import generate
+from submodules.build_tools.macos.universal import lipo
 from submodules.build_tools.cmake import Config, CMake
 
 test_report_folder = Path('test-reports')
 test_report_file = Path('ravennakit_test_report.xml')
 ravennakit_tests_target = 'ravennakit_tests'
+ravennakit_benchmarks_target = 'ravennakit_benchmarks'
 
 # Script location matters, cwd does not
 script_path = Path(__file__)
@@ -61,9 +63,9 @@ def upload_to_spaces(args, file: Path):
     print("Uploaded artefacts to {}/{}".format(bucket, file_name))
 
 
-def build_macos(args, build_config: Config, subfolder: str, spdlog: bool = False, asan: bool = False,
-                tsan: bool = False):
-    path_to_build = Path(args.path_to_build) / subfolder
+def build_macos_for_arch(args, build_config: Config, path_to_build: Path, arch: str, spdlog: bool = False,
+                         asan: bool = False, tsan: bool = False):
+    path_to_build = path_to_build / arch
 
     if args.skip_build:
         return path_to_build
@@ -77,10 +79,12 @@ def build_macos(args, build_config: Config, subfolder: str, spdlog: bool = False
     cmake.generator('Ninja')
     cmake.parallel(multiprocessing.cpu_count())
 
+    triplet = f'macos-{arch.replace("_", "-")}'
+
     cmake.option('CMAKE_TOOLCHAIN_FILE', 'submodules/vcpkg/scripts/buildsystems/vcpkg.cmake')
     cmake.option('VCPKG_OVERLAY_TRIPLETS', 'triplets')
-    cmake.option('VCPKG_TARGET_TRIPLET', 'macos-universal')
-    cmake.option('CMAKE_OSX_ARCHITECTURES', 'x86_64;arm64')
+    cmake.option('VCPKG_TARGET_TRIPLET', triplet)
+    cmake.option('CMAKE_OSX_ARCHITECTURES', arch)
     cmake.option('CMAKE_OSX_DEPLOYMENT_TARGET', args.macos_deployment_target)
     cmake.option('CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY', 'Apple Development')
     cmake.option('CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM', args.macos_development_team)
@@ -98,6 +102,19 @@ def build_macos(args, build_config: Config, subfolder: str, spdlog: bool = False
 
     cmake.configure()
     cmake.build()
+
+    return path_to_build
+
+
+def build_macos(args, build_config: Config, subfolder: str, spdlog: bool = False, asan: bool = False,
+                tsan: bool = False):
+    path_to_build = Path(args.path_to_build) / subfolder
+
+    x86_64 = build_macos_for_arch(args, build_config, path_to_build, 'x86_64', spdlog=spdlog, asan=asan, tsan=tsan)
+    arm64 = build_macos_for_arch(args, build_config, path_to_build, 'arm64', spdlog=spdlog, asan=asan, tsan=tsan)
+
+    lipo(x86_64, arm64, path_to_build, Path(ravennakit_tests_target))
+    lipo(x86_64, arm64, path_to_build, Path(ravennakit_benchmarks_target))
 
     return path_to_build
 
@@ -268,7 +285,7 @@ def build_dist(args):
     zip_path.unlink(missing_ok=True)
     shutil.make_archive(archive_path, 'zip', path_to_dist)
 
-    return zip_path # Only returning the dist package since that is the one we want to upload
+    return zip_path  # Only returning the dist package since that is the one we want to upload
 
 
 def build(args):
@@ -308,6 +325,7 @@ def build(args):
         else:
             path_to_build = build_macos(args, build_config, 'macos_universal')
             run_test(path_to_build / ravennakit_tests_target, 'macos_universal')
+            subprocess.run([path_to_build / ravennakit_benchmarks_target], check=True)
 
             if args.asan:
                 path_to_build = build_macos(args, build_config, 'macos_universal_spdlog_asan', spdlog=True, asan=True)
@@ -320,16 +338,18 @@ def build(args):
     elif platform.system() == 'Windows':
         path_to_build = build_windows(args, 'x64', build_config, 'windows_x64')
         run_test(path_to_build / build_config.value / f'{ravennakit_tests_target}.exe', 'windows_x64')
+        subprocess.run([path_to_build / build_config.value / ravennakit_benchmarks_target], check=True)
 
         path_to_build = build_windows(args, 'x64', build_config, 'windows_x64_spdlog', spdlog=True)
         run_test(path_to_build / build_config.value / f'{ravennakit_tests_target}.exe', 'windows_x64_spdlog')
 
     elif platform.system() == 'Linux':
         path_to_build = build_linux(args, 'x64', build_config, 'linux_x64')
-        run_test(path_to_build / f'{ravennakit_tests_target}', 'linux_x64')
+        run_test(path_to_build / ravennakit_tests_target, 'linux_x64')
+        subprocess.run([path_to_build / ravennakit_benchmarks_target], check=True)
 
         path_to_build = build_linux(args, 'x64', build_config, 'linux_x64_spdlog', spdlog=True)
-        run_test(path_to_build / f'{ravennakit_tests_target}', 'linux_x64_spdlog')
+        run_test(path_to_build / ravennakit_tests_target, 'linux_x64_spdlog')
 
         # TODO: path_to_build_arm64 = build_linux(args, 'arm64', build_config)
 
@@ -425,7 +445,7 @@ def main():
 
         parser.add_argument("--windows-version",
                             help="Specify the minimum supported version of Windows",
-                            default="0x0A00") # Windows 10
+                            default="0x0A00")  # Windows 10
 
     build(parser.parse_args())
 
