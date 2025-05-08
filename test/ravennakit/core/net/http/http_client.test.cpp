@@ -22,7 +22,7 @@ TEST_CASE("HttpClient") {
         io_context.run();
         REQUIRE(response.has_value());
         REQUIRE(response->result() == boost::beast::http::status::ok);
-        REQUIRE(response->body().size() > 0);
+        REQUIRE(!response->body().empty());
 
         auto json_body = nlohmann::json::parse(response->body());
         REQUIRE(json_body.at("url") == "http://httpbin.cpp.al/get");
