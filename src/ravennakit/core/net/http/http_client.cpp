@@ -10,42 +10,64 @@
 
 #include "ravennakit/core/net/http/http_client.hpp"
 
+#include <utility>
+
 #include "ravennakit/core/assert.hpp"
 
 rav::HttpClient::HttpClient(boost::asio::io_context& io_context, const boost::urls::url& url) :
-    io_context_(io_context), url_(url) {}
+    io_context_(io_context) {
+    host_ = url.host();
+    service_ = url.port();
+    target_ = url.path();
+}
 
-rav::HttpClient::HttpClient(boost::asio::io_context& io_context, const std::string_view url) :
-    io_context_(io_context), url_(url) {}
+rav::HttpClient::HttpClient(boost::asio::io_context& io_context, const boost::asio::ip::tcp::endpoint& endpoint) :
+    io_context_(io_context) {
+    host_ = endpoint.address().to_string();
+    service_ = std::to_string(endpoint.port());
+}
+
+rav::HttpClient::HttpClient(
+    boost::asio::io_context& io_context, const boost::asio::ip::address& address, const uint16_t port
+) : io_context_(io_context){
+    host_ = address.to_string();
+    service_ = std::to_string(port);
+}
+
+rav::HttpClient::HttpClient(boost::asio::io_context& io_context, const std::string_view url) : io_context_(io_context) {
+    const boost::urls::url parsed_url(url);
+    host_ = parsed_url.host();
+    service_ = parsed_url.port();
+    target_ = parsed_url.path();
+}
 
 boost::system::result<boost::beast::http::response<boost::beast::http::basic_string_body<char>>>
 rav::HttpClient::get(const std::string_view target) const {
-    return request(io_context_, http::verb::get, url_.host(), url_.port(), target, {}, {});
+    return request(io_context_, http::verb::get, host_, service_, target, {}, {});
 }
 
 boost::system::result<boost::beast::http::response<boost::beast::http::basic_string_body<char>>>
 rav::HttpClient::get() const {
-    return request(io_context_, http::verb::get, url_.host(), url_.port(), url_.path(), {}, {});
+    return request(io_context_, http::verb::get, host_, service_, target_, {}, {});
 }
 
 boost::system::result<boost::beast::http::response<boost::beast::http::basic_string_body<char>>>
 rav::HttpClient::post(std::string body, const std::string_view content_type) const {
-    return request(io_context_, http::verb::post, url_.host(), url_.port(), url_.path(), std::move(body), content_type);
+    return request(io_context_, http::verb::post, host_, service_, target_, std::move(body), content_type);
 }
 
 boost::system::result<boost::beast::http::response<boost::beast::http::basic_string_body<char>>>
 rav::HttpClient::post(const std::string_view target, std::string body, const std::string_view content_type) const {
-    return request(io_context_, http::verb::post, url_.host(), url_.port(), target, std::move(body), content_type);
+    return request(io_context_, http::verb::post, host_, service_, target, std::move(body), content_type);
 }
 
 void rav::HttpClient::get_async(const std::string_view target, CallbackType callback) const {
-    return request_async(io_context_, http::verb::get, url_.host(), url_.port(), target, {}, {}, std::move(callback));
+    return request_async(io_context_, http::verb::get, host_, service_, target, {}, {}, std::move(callback));
 }
 
 void rav::HttpClient::post_async(std::string body, CallbackType callback, const std::string_view content_type) const {
     return request_async(
-        io_context_, http::verb::post, url_.host(), url_.port(), url_.path(), std::move(body), content_type,
-        std::move(callback)
+        io_context_, http::verb::post, host_, service_, target_, std::move(body), content_type, std::move(callback)
     );
 }
 
@@ -53,15 +75,12 @@ void rav::HttpClient::post_async(
     const std::string_view target, std::string body, CallbackType callback, const std::string_view content_type
 ) const {
     return request_async(
-        io_context_, http::verb::post, url_.host(), url_.port(), target, std::move(body), content_type,
-        std::move(callback)
+        io_context_, http::verb::post, host_, service_, target, std::move(body), content_type, std::move(callback)
     );
 }
 
 void rav::HttpClient::get_async(CallbackType callback) const {
-    return request_async(
-        io_context_, http::verb::get, url_.host(), url_.port(), url_.path(), {}, {}, std::move(callback)
-    );
+    return request_async(io_context_, http::verb::get, host_, service_, target_, {}, {}, std::move(callback));
 }
 
 boost::system::result<boost::beast::http::response<boost::beast::http::basic_string_body<char>>>

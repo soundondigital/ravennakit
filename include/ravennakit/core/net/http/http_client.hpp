@@ -30,6 +30,9 @@ class HttpClient {
     /// When no port is specified in the urls, the default port is used.
     static constexpr auto k_default_port = "80";
 
+    using Request = http::request<http::string_body>;
+    using Response = http::response<http::string_body>;
+
     /// Callback type for async requests.
     using CallbackType = std::function<void(boost::system::result<http::response<http::string_body>> response)>;
 
@@ -46,6 +49,21 @@ class HttpClient {
      * @param url The url to request.
      */
     HttpClient(boost::asio::io_context& io_context, const boost::urls::url& url);
+
+    /**
+     * Constructs a new HttpClient using the given io_context and url.
+     * @param io_context The io_context to use for the request.
+     * @param endpoint The endpoint to request.
+     */
+    HttpClient(boost::asio::io_context& io_context, const boost::asio::ip::tcp::endpoint& endpoint);
+
+    /**
+     * Constructs a new HttpClient using the given io_context and url.
+     * @param io_context The io_context to use for the request.
+     * @param address The address to request.
+     * @param port The port to request.
+     */
+    HttpClient(boost::asio::io_context& io_context, const boost::asio::ip::address& address, uint16_t port);
 
     /**
      * Synchronous GET request to the target of the URL, or the root if no target is specified.
@@ -166,7 +184,9 @@ class HttpClient {
     };
 
     boost::asio::io_context& io_context_;
-    boost::urls::url url_;
+    std::string host_;
+    std::string service_;
+    std::string target_;
 };
 
 }  // namespace rav

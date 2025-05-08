@@ -10,13 +10,18 @@
 
 #pragma once
 
+#include "http_router.hpp"
 #include "detail/http_fmt_adapters.hpp"
 
+#include <map>
 #include <boost/asio.hpp>
 #include <boost/beast/core/error.hpp>
 #include <boost/beast/http/message_generator.hpp>
 #include <boost/beast/http/string_body_fwd.hpp>
 #include <boost/system/result.hpp>
+#include <boost/url.hpp>
+
+#include <functional>
 
 namespace rav {
 
@@ -25,6 +30,10 @@ namespace rav {
  */
 class HttpServer {
   public:
+    using Request = boost::beast::http::request<boost::beast::http::string_body>;
+    using Response = boost::beast::http::response<boost::beast::http::string_body>;
+    using Handler = std::function<void(const Request&, Response&)>;
+
     /// The time to wait for a request before closing the connection.
     static constexpr auto k_timeout_seconds = 5;
 
@@ -63,6 +72,24 @@ class HttpServer {
      */
     [[nodiscard]] size_t get_client_count() const;
 
+    /**
+     * Adds a handler for GET requests to the given pattern.
+     * @param pattern The pattern to match against the request path.
+     * @param handler The handler to call when a request matches the pattern.
+     */
+    void get(const std::string_view pattern, Handler handler) {
+        router_.insert(boost::beast::http::verb::get, pattern, std::move(handler));
+    }
+
+    /**
+     * Adds a handler for POST requests to the given pattern.
+     * @param pattern The pattern to match against the request path.
+     * @param handler The handler to call when a request matches the pattern.
+     */
+    void post(const std::string_view pattern, Handler handler) {
+        router_.insert(boost::beast::http::verb::post, pattern, std::move(handler));
+    }
+
   private:
     class Listener;
     std::shared_ptr<Listener> listener_;
@@ -72,10 +99,12 @@ class HttpServer {
 
     boost::asio::io_context& io_context_;
 
+    HttpRouter<Handler> router_;
+
     void on_accept(boost::asio::ip::tcp::socket socket);
     void on_listener_error(const boost::beast::error_code& ec, std::string_view what) const;
     void on_client_error(const boost::beast::error_code& ec, std::string_view what) const;
-    boost::beast::http::message_generator on_request(boost::beast::http::request<boost::beast::http::string_body>);
+    boost::beast::http::message_generator on_request(const boost::beast::http::request<boost::beast::http::string_body>&);
     void remove_client_session(const ClientSession* session);
 };
 

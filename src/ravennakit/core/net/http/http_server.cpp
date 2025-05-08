@@ -189,7 +189,7 @@ class rav::HttpServer::Listener: public std::enable_shared_from_this<Listener> {
     void set_owner(HttpServer* owner) {
         owner_ = owner;
 
-        if (owner_ && acceptor_.is_open()) {
+        if (owner_ == nullptr && acceptor_.is_open()) {
             boost::beast::error_code ec;
             acceptor_.close(ec);
             if (ec) {
@@ -297,26 +297,27 @@ void rav::HttpServer::on_client_error(const boost::beast::error_code& ec, std::s
 }
 
 boost::beast::http::message_generator
-rav::HttpServer::on_request(boost::beast::http::request<boost::beast::http::string_body> request) {
+rav::HttpServer::on_request(const boost::beast::http::request<boost::beast::http::string_body>& request) {
     RAV_TRACE("Received request: {} {}", request.method_string(), request.target());
 
-    if (request.method() == boost::beast::http::verb::get && request.target() == "/shutdown") {
-        stop();
+    if (const auto* match = router_.match(request.method(), request.target())) {
+        Response response;
+        response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+        response.keep_alive(request.keep_alive());
+        response.version(request.version());
+        (*match)(request, response);
+        return response;
     }
 
-    auto const hello_world = [&request](const boost::beast::string_view why) {
-        boost::beast::http::response<boost::beast::http::string_body> res {
-            boost::beast::http::status::ok, request.version()
-        };
-        res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(boost::beast::http::field::content_type, "text/html");
-        res.keep_alive(request.keep_alive());
-        res.body() = std::string(why);
-        res.prepare_payload();
-        return res;
+    boost::beast::http::response<boost::beast::http::string_body> res {
+        boost::beast::http::status::bad_request, request.version()
     };
-
-    return {hello_world("Hello world")};
+    res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+    res.set(boost::beast::http::field::content_type, "text/html");
+    res.keep_alive(request.keep_alive());
+    res.body() = std::string("No matching handler");
+    res.prepare_payload();
+    return res;
 }
 
 void rav::HttpServer::remove_client_session(const ClientSession* session) {

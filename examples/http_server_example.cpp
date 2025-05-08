@@ -21,6 +21,24 @@ int main() {
     // Create a server instance
     rav::HttpServer server(io_context);
 
+    server.get("/", [](const rav::HttpServer::Request&, rav::HttpServer::Response& response) {
+        response.result(boost::beast::http::status::ok);
+        response.set(boost::beast::http::field::content_type, "text/plain");
+        response.body() = "Hello, World!";
+        response.prepare_payload();
+    });
+
+    server.get("/shutdown", [&io_context, &server](const rav::HttpServer::Request&, rav::HttpServer::Response& response) {
+        response.result(boost::beast::http::status::ok);
+        response.set(boost::beast::http::field::content_type, "text/plain");
+        response.body() = "Shutting down server...";
+        response.prepare_payload();
+
+        boost::asio::post(io_context, [&server] {
+            server.stop();
+        });
+    });
+
     // Start the server
     const auto result = server.start("127.0.0.1", 8080);
     if (result.has_error()) {
