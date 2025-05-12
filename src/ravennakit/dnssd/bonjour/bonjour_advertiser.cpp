@@ -39,12 +39,10 @@ rav::Id rav::dnssd::BonjourAdvertiser::register_service(
         flags |= kDNSServiceFlagsNoAutoRename;
     }
 
-    if (local_only) {
-        flags |= kDNSServiceInterfaceIndexLocalOnly;
-    }
+    const uint32_t interface_index = local_only ? kDNSServiceInterfaceIndexLocalOnly : kDNSServiceInterfaceIndexAny;
 
     const auto result = DNSServiceRegister(
-        &service_ref, flags, 0, name, reg_type.c_str(), domain, nullptr, htons(port), record.length(),
+        &service_ref, flags, interface_index, name, reg_type.c_str(), domain, nullptr, htons(port), record.length(),
         record.bytes_ptr(), register_service_callback, this
     );
 
