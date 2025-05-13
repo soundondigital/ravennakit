@@ -42,7 +42,7 @@ struct ApiVersion {
      * Creates an ApiVersion from a string.
      * @return An optional ApiVersion. If the string is not valid, an empty optional is returned.
      */
-    static std::optional<ApiVersion> from_string(const std::string& str) {
+    static std::optional<ApiVersion> from_string(const std::string_view str) {
         StringParser parser(str);
 
         if (!parser.skip('v')) {

@@ -149,7 +149,8 @@ class NodeRunner {
 TEST_CASE("Test nmos::Node against NMOS Test API") {
     auto url = rav::nmos::NmosTestApiClient::get_test_api_url_from_env();
     if (!url) {
-        FAIL("NMOS_TEST_API_URL environment variable is not set");
+        RAV_WARNING("NMOS_TEST_API_URL environment variable is not set");
+        return;
     }
 
     RAV_INFO("NMOS_TEST_API_URL: {}", *url);

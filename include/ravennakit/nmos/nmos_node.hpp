@@ -112,6 +112,14 @@ class Node {
   private:
     HttpServer http_server_;
     boost::uuids::uuid uuid_ = boost::uuids::random_generator()();
+
+    void handle_request(
+        boost::beast::http::verb method, std::string_view target,
+        const boost::beast::http::request<boost::beast::http::string_body>& req,
+        boost::beast::http::response<boost::beast::http::string_body>& res
+    );
+
+    static void serve_root(ApiVersion api_version, HttpServer::Response& res);
 };
 
 /// Overload the output stream operator for the Node::Error enum class
