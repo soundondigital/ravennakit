@@ -78,12 +78,8 @@ int main(int const argc, char* argv[]) {
     });
 
     advertiser->subscribe(subscriber);
-    advertiser->register_service(
-        args[0], "Test service", nullptr, static_cast<uint16_t>(port_number), txt_record, true, false
-    );
-
-    const auto service_id2 = advertiser->register_service(
-        args[0], "Test service", nullptr, static_cast<uint16_t>(port_number + 1), txt_record, true, false
+    const auto service_id = advertiser->register_service(
+        args[0], "Test service", nullptr, static_cast<uint16_t>(port_number), txt_record, true, true
     );
 
     std::thread io_context_thread([&io_context] {
@@ -100,14 +96,14 @@ int main(int const argc, char* argv[]) {
         }
 
         if (cmd == "r" || cmd == "R") {
-            advertiser->unregister_service(service_id2);
+            advertiser->unregister_service(service_id);
             continue;
         }
         try {
             if (examples::parse_txt_record(txt_record, cmd)) {
                 // Schedule the updates on the io_context thread because the advertiser is not thread-safe.
                 boost::asio::post(io_context, [=, &advertiser] {
-                    advertiser->update_txt_record(service_id2, txt_record);
+                    advertiser->update_txt_record(service_id, txt_record);
                     RAV_INFO("Updated txt record");
                 });
             }

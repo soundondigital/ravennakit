@@ -66,6 +66,8 @@ class Advertiser {
      * Updates the TXT record of this service. The given TXT record will replace the previous one.
      * Function is not thread safe.
      *
+     * Note: updating the TXT record will not trigger a callback for local_only services.
+     *
      * @param id
      * @param txt_record The new TXT record.
      * @throws When an error occurs during updating.
