@@ -32,7 +32,7 @@ class HttpServer {
   public:
     using Request = boost::beast::http::request<boost::beast::http::string_body>;
     using Response = boost::beast::http::response<boost::beast::http::string_body>;
-    using Handler = std::function<void(const Request&, Response&)>;
+    using Handler = std::function<void(const Request&, Response&, PathMatcher::Parameters&)>;
 
     /// The time to wait for a request before closing the connection.
     static constexpr auto k_timeout_seconds = 5;

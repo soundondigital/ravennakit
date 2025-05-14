@@ -59,7 +59,7 @@ class MacAddress {
             RAV_THROW_EXCEPTION("Invalid MAC address format: {}", str);
         }
         for (size_t i = 0; i < 6; ++i) {
-            auto number = rav::ston<uint8_t>(std::string_view(parts[i]), true, 16);
+            auto number = rav::string_to_int<uint8_t>(std::string_view(parts[i]), true, 16);
             if (!number) {
                 RAV_THROW_EXCEPTION("Failed to parse MAC address part: {}", parts[i]);
             }

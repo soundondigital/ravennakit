@@ -28,7 +28,7 @@ namespace rav {
  * not.
  * @return The truncated string, or an empty string when no needle was found.
  */
-inline std::string_view up_to_first_occurrence_of(
+inline std::string_view string_up_to_first_occurrence_of(
     std::string_view string_to_search_in, const std::string_view string_to_search_for,
     const bool include_sub_string_in_result
 ) {
@@ -49,7 +49,7 @@ inline std::string_view up_to_first_occurrence_of(
  * not.
  * @return The truncated string, or an empty string when no needle was found.
  */
-inline std::string_view up_to_the_nth_occurrence_of(
+inline std::string_view string_up_to_the_nth_occurrence_of(
     const size_t nth, std::string_view string_to_search_in, const std::string_view string_to_search_for,
     const bool include_sub_string_in_result
 ) {
@@ -78,7 +78,7 @@ inline std::string_view up_to_the_nth_occurrence_of(
  * not.
  * @return The truncated string, or an empty string when no needle was found.
  */
-inline std::string_view up_to_last_occurrence_of(
+inline std::string_view string_up_to_last_occurrence_of(
     const std::string_view string_to_search_in, const std::string_view string_to_search_for,
     const bool include_sub_string_in_result
 ) {
@@ -98,7 +98,7 @@ inline std::string_view up_to_last_occurrence_of(
  * not.
  * @return The truncated string, or an empty string when no needle was found.
  */
-inline std::string_view from_first_occurrence_of(
+inline std::string_view string_from_first_occurrence_of(
     std::string_view string_to_search_in, const std::string_view string_to_search_for,
     const bool include_sub_string_in_result
 ) {
@@ -119,7 +119,7 @@ inline std::string_view from_first_occurrence_of(
  * not.
  * @return The truncated string, or an empty string when no needle was found.
  */
-inline std::string_view from_nth_occurrence_of(
+inline std::string_view string_from_nth_occurrence_of(
     const size_t nth, std::string_view string_to_search_in, const std::string_view string_to_search_for,
     const bool include_sub_string_in_result
 ) {
@@ -150,7 +150,7 @@ inline std::string_view from_nth_occurrence_of(
  * not.
  * @return The truncated string, or an empty string when no needle was found.
  */
-inline std::string_view from_last_occurrence_of(
+inline std::string_view string_from_last_occurrence_of(
     const std::string_view string_to_search_in, const std::string_view string_to_search_for,
     const bool include_sub_string_in_result
 ) {
@@ -167,13 +167,22 @@ inline std::string_view from_last_occurrence_of(
  * Returns a copy of string with given prefix removed, if prefix is found at the end of string.
  * @param string String to remove prefix from.
  * @param prefix_to_remove Prefix to find and remove.
+ * @param found If not null, will be set to true if the prefix was found and removed, false otherwise.
  * @return The string with the prefix removed, or the original string if the suffix was not found.
  */
-inline std::string_view string_remove_prefix(const std::string_view& string, const std::string_view prefix_to_remove) {
+inline std::string_view
+string_remove_prefix(const std::string_view& string, const std::string_view prefix_to_remove, bool* found = nullptr) {
     const auto pos = string.find(prefix_to_remove);
 
     if (pos != 0) {
+        if (found) {
+            *found = false;
+        }
         return string;
+    }
+
+    if (found) {
+        *found = true;
     }
 
     return string.substr(pos + prefix_to_remove.size());
@@ -185,11 +194,19 @@ inline std::string_view string_remove_prefix(const std::string_view& string, con
  * @param suffix_to_remove Suffix to find and remove.
  * @return The string with the suffix removed, or the original string if the suffix was not found.
  */
-inline std::string_view string_remove_suffix(const std::string_view& string, const std::string_view suffix_to_remove) {
+inline std::string_view
+string_remove_suffix(const std::string_view& string, const std::string_view suffix_to_remove, bool* found = nullptr) {
     const auto pos = string.rfind(suffix_to_remove);
 
     if (pos != string.size() - suffix_to_remove.size()) {
+        if (found) {
+            *found = false;
+        }
         return string;
+    }
+
+    if (found) {
+        *found = true;
     }
 
     return string.substr(0, pos);
@@ -205,7 +222,8 @@ inline std::string_view string_remove_suffix(const std::string_view& string, con
  * @return The converted value as optional, which will contain a value on success or will be empty on failure.
  */
 template<typename Type>
-std::optional<Type> ston(std::string_view string, const bool strict = false, const int base = 10) {
+std::enable_if_t<std::is_integral_v<Type>, std::optional<Type>>
+string_to_int(std::string_view string, const bool strict = false, const int base = 10) {
     Type result {};
     auto [p, ec] = std::from_chars(string.data(), string.data() + string.size(), result, base);
     if (ec == std::errc() && (!strict || p >= string.data() + string.size()))
@@ -218,7 +236,7 @@ std::optional<Type> ston(std::string_view string, const bool strict = false, con
  * @param str String to convert.
  * @return The converted float, or an empty optional if the conversion failed.
  */
-inline std::optional<float> stof(const std::string& str) {
+inline std::optional<float> string_to_float(const std::string& str) {
     try {
         return std::stof(str);
     } catch (...) {
@@ -231,7 +249,7 @@ inline std::optional<float> stof(const std::string& str) {
  * @param str String to convert.
  * @return The converted double, or an empty optional if the conversion failed.
  */
-inline std::optional<double> stod(const std::string& str) {
+inline std::optional<double> string_to_double(const std::string& str) {
     try {
         return std::stod(str);
     } catch (...) {

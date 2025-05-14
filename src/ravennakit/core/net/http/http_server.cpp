@@ -304,12 +304,13 @@ boost::beast::http::message_generator
 rav::HttpServer::on_request(const boost::beast::http::request<boost::beast::http::string_body>& request) {
     RAV_TRACE("Received request: {} {}", request.method_string(), request.target());
 
-    if (const auto* match = router_.match(request.method(), request.target())) {
+    PathMatcher::Parameters parameters;
+    if (const auto* match = router_.match(request.method(), request.target(), &parameters)) {
         Response response;
         response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
         response.keep_alive(request.keep_alive());
         response.version(request.version());
-        (*match)(request, response);
+        (*match)(request, response, parameters);
         return response;
     }
 

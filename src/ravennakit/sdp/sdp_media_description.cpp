@@ -60,7 +60,7 @@ rav::sdp::MediaDescription::parse_new(const std::string_view line) {
 
     // Formats
     while (const auto format_str = parser.split(' ')) {
-        if (const auto value = rav::ston<uint8_t>(*format_str)) {
+        if (const auto value = rav::string_to_int<uint8_t>(*format_str)) {
             media.formats_.push_back({*value, {}, {}, {}});
         } else {
             return ParseResult<MediaDescription>::err("media: format integer parsing failed");
@@ -108,7 +108,7 @@ rav::sdp::MediaDescription::ParseResult<void> rav::sdp::MediaDescription::parse_
         }
     } else if (key == k_sdp_ptime) {
         if (const auto value = parser.read_until_end()) {
-            if (const auto ptime = stof(value->data())) {
+            if (const auto ptime = string_to_float(value->data())) {
                 if (*ptime < 0) {
                     return ParseResult<void>::err("media: ptime must be a positive number");
                 }
@@ -121,7 +121,7 @@ rav::sdp::MediaDescription::ParseResult<void> rav::sdp::MediaDescription::parse_
         }
     } else if (key == k_sdp_max_ptime) {
         if (const auto value = parser.read_until_end()) {
-            if (const auto maxptime = stof(value->data())) {
+            if (const auto maxptime = string_to_float(value->data())) {
                 if (*maxptime < 0) {
                     return ParseResult<void>::err("media: maxptime must be a positive number");
                 }

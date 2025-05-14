@@ -55,7 +55,7 @@ boost::system::result<void, rav::nmos::Node::Error> rav::nmos::Node::Configurati
 }
 
 rav::nmos::Node::Node(boost::asio::io_context& io_context) : http_server_(io_context) {
-    http_server_.get("/", [this](const HttpServer::Request&, HttpServer::Response& res) {
+    http_server_.get("/", [this](const HttpServer::Request&, HttpServer::Response& res, PathMatcher::Parameters&) {
         boost::json::array array;
         array.push_back("x-nmos/");
 
@@ -65,7 +65,7 @@ rav::nmos::Node::Node(boost::asio::io_context& io_context) : http_server_(io_con
         res.prepare_payload();
     });
 
-    http_server_.get("/x-nmos", [this](const HttpServer::Request&, HttpServer::Response& res) {
+    http_server_.get("/x-nmos", [this](const HttpServer::Request&, HttpServer::Response& res, PathMatcher::Parameters&) {
         boost::json::array array;
         array.push_back("node/");
 
@@ -75,7 +75,7 @@ rav::nmos::Node::Node(boost::asio::io_context& io_context) : http_server_(io_con
         res.prepare_payload();
     });
 
-    http_server_.get("**", [this](const HttpServer::Request& req, HttpServer::Response& res) {
+    http_server_.get("**", [this](const HttpServer::Request& req, HttpServer::Response& res, PathMatcher::Parameters&) {
         handle_request(boost::beast::http::verb::get, req.target(), req, res);
     });
 }

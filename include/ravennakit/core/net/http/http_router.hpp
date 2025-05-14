@@ -56,12 +56,21 @@ class HttpRouter {
      * Matches the given method and path to a handler. If a matching route is found, the handler is returned.
      * @param method The HTTP method to match (e.g., GET, POST).
      * @param path The path to match.
+     * @param parameters The parameters to fill with the extracted values from the path.
      * @return A pointer to the matching handler, or nullptr if no match is found.
      */
-    HandlerType* match(const boost::beast::http::verb method, const std::string_view path) {
+    HandlerType*
+    match(const boost::beast::http::verb method, const std::string_view path, PathMatcher::Parameters* parameters) {
         for (auto& route : routes_) {
-            if (route.method == method && PathMatcher::match(path, route.pattern)) {
-                return &route.handler;
+            if (route.method == method) {
+                auto match_result = PathMatcher::match(path, route.pattern, parameters);
+                if (match_result.has_error()) {
+                    RAV_ERROR("Error matching path: {}", match_result.error());
+                    continue;
+                }
+                if (match_result.value()) {
+                    return &route.handler;
+                }
             }
         }
         return nullptr;  // No matching route found

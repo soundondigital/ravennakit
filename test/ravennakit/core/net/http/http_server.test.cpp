@@ -22,11 +22,14 @@ TEST_CASE("HttpServer") {
         const auto endpoint = server.get_local_endpoint();
         REQUIRE(endpoint.port() != 0);
 
-        server.get("/", [](const rav::HttpServer::Request&, rav::HttpServer::Response& response) {
-            response.result(boost::beast::http::status::ok);
-            response.body() = "Hello, World!";
-            response.prepare_payload();
-        });
+        server.get(
+            "/",
+            [](const rav::HttpServer::Request&, rav::HttpServer::Response& response, rav::PathMatcher::Parameters&) {
+                response.result(boost::beast::http::status::ok);
+                response.body() = "Hello, World!";
+                response.prepare_payload();
+            }
+        );
 
         rav::HttpClient client(io_context, endpoint);
         client.get_async("/", [](auto response) {
@@ -35,6 +38,7 @@ TEST_CASE("HttpServer") {
         });
 
         client.get_async("/non-existent", [&server](auto response) {
+            fmt::println("Response: {}", response.value());
             REQUIRE(response.has_value());
             REQUIRE(response->result() == boost::beast::http::status::bad_request);
             server.stop();
@@ -51,18 +55,24 @@ TEST_CASE("HttpServer") {
         const auto endpoint = server.get_local_endpoint();
         REQUIRE(endpoint.port() != 0);
 
-        // The order of the handlers matters. The catch-all handler should be last.
-        server.get("/test", [](const rav::HttpServer::Request&, rav::HttpServer::Response& response) {
-            response.result(boost::beast::http::status::ok);
-            response.body() = "/test";
-            response.prepare_payload();
-        });
+        server.get(
+            "/test",
+            [](const rav::HttpServer::Request&, rav::HttpServer::Response& response, rav::PathMatcher::Parameters&) {
+                response.result(boost::beast::http::status::ok);
+                response.body() = "/test";
+                response.prepare_payload();
+            }
+        );
 
-        server.get("**", [](const rav::HttpServer::Request&, rav::HttpServer::Response& response) {
-            response.result(boost::beast::http::status::ok);
-            response.body() = "**";
-            response.prepare_payload();
-        });
+        // The order of the handlers matters. The catch-all handler should be last.
+        server.get(
+            "**",
+            [](const rav::HttpServer::Request&, rav::HttpServer::Response& response, rav::PathMatcher::Parameters&) {
+                response.result(boost::beast::http::status::ok);
+                response.body() = "**";
+                response.prepare_payload();
+            }
+        );
 
         rav::HttpClient client(io_context, endpoint);
         client.get_async("/", [](auto response) {

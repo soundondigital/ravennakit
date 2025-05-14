@@ -65,7 +65,7 @@ class Headers {
      */
     [[nodiscard]] std::optional<size_t> get_content_length() const {
         if (const auto* h = get("content-length"); h) {
-            return rav::ston<size_t>(h->value);
+            return rav::string_to_int<size_t>(h->value);
         }
         return std::nullopt;
     }

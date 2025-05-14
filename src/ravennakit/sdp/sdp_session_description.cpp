@@ -328,7 +328,7 @@ rav::sdp::SessionDescription::parse_version(const std::string_view line) {
         return ParseResult<int>::err("expecting line to start with 'v='");
     }
 
-    if (const auto v = rav::ston<int>(line.substr(2)); v.has_value()) {
+    if (const auto v = rav::string_to_int<int>(line.substr(2)); v.has_value()) {
         if (*v != 0) {
             return ParseResult<int>::err("invalid version");
         }

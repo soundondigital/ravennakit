@@ -63,31 +63,31 @@
     #include "ravennakit/core/format.hpp"
 
     #ifndef RAV_TRACE
-        #define RAV_TRACE(...) fmt::println(__VA_ARGS__)
+        #define RAV_TRACE(...) fmt::println("[T] " __VA_ARGS__)
     #endif
 
     #ifndef RAV_DEBUG
-        #define RAV_DEBUG(...) fmt::println(__VA_ARGS__)
+        #define RAV_DEBUG(...) fmt::println("[D] " __VA_ARGS__)
     #endif
 
     #ifndef RAV_CRITICAL
-        #define RAV_CRITICAL(...) fmt::println(__VA_ARGS__)
+        #define RAV_CRITICAL(...) fmt::println("[C] " __VA_ARGS__)
     #endif
 
     #ifndef RAV_ERROR
-        #define RAV_ERROR(...) fmt::println(__VA_ARGS__)
+        #define RAV_ERROR(...) fmt::println("[E] " __VA_ARGS__)
     #endif
 
     #ifndef RAV_WARNING
-        #define RAV_WARNING(...) fmt::println(__VA_ARGS__)
+        #define RAV_WARNING(...) fmt::println("[W] " __VA_ARGS__)
     #endif
 
     #ifndef RAV_INFO
-        #define RAV_INFO(...) fmt::println(__VA_ARGS__)
+        #define RAV_INFO(...) fmt::println("[I] " __VA_ARGS__)
     #endif
 
     #ifndef RAV_LOG
-        #define RAV_LOG(...) fmt::println(__VA_ARGS__)
+        #define RAV_LOG(...) fmt::println("[L] " __VA_ARGS__)
     #endif
 
 #endif
