@@ -40,7 +40,7 @@ TEST_CASE("HttpServer") {
         client.get_async("/non-existent", [&server](auto response) {
             fmt::println("Response: {}", response.value());
             REQUIRE(response.has_value());
-            REQUIRE(response->result() == boost::beast::http::status::bad_request);
+            REQUIRE(response->result() == boost::beast::http::status::not_found);
             server.stop();
         });
 

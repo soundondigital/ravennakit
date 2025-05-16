@@ -40,7 +40,7 @@ struct Version {
     /**
      * @return A string representation of the version in the format "seconds.nanoseconds".
      */
-    std::string to_string() const {
+    [[nodiscard]] std::string to_string() const {
         return fmt::format("{}:{}", seconds, nanoseconds);
     }
 
@@ -58,7 +58,7 @@ struct Version {
         if (!seconds) {
             return std::nullopt;
         }
-        if (!parser.skip('.')) {
+        if (!parser.skip(':')) {
             return std::nullopt;
         }
         const auto nanoseconds = parser.read_int<uint32_t>();

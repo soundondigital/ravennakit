@@ -31,24 +31,24 @@ TEST_CASE("nmos::Version") {
 
     SECTION("to_string") {
         version = {1439299836, 10};
-        CHECK(version.to_string() == "1439299836.10");
+        CHECK(version.to_string() == "1439299836:10");
 
         version = {0, 123456789};
-        CHECK(version.to_string() == "0.123456789");
+        CHECK(version.to_string() == "0:123456789");
     }
 
     SECTION("From string") {
-        auto v = rav::nmos::Version::from_string("1439299836.10");
+        auto v = rav::nmos::Version::from_string("1439299836:10");
         REQUIRE(v.has_value());
         CHECK(v->seconds == 1439299836);
         CHECK(v->nanoseconds == 10);
 
         // Leading whitespace
-        v = rav::nmos::Version::from_string(" 1439299836.10");
+        v = rav::nmos::Version::from_string(" 1439299836:10");
         REQUIRE_FALSE(v.has_value());
 
         // Trailing whitespace
-        v = rav::nmos::Version::from_string("1439299836.10 ");
+        v = rav::nmos::Version::from_string("1439299836:10 ");
         REQUIRE_FALSE(v.has_value());
     }
 }
