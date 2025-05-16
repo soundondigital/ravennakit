@@ -111,8 +111,8 @@ class StringParser {
     }
 
     /**
-     * Reads until given delimiter or until the end of the string. It's like splitting string, but only returning the
-     * first part.
+     * Reads until the given delimiter or until the end of the string. It's like splitting string but only returning
+     * (and consuming) the first part.
      * @param delimiter The character sequence to read until.
      * @param include_delimiter Whether to include the delimiter in the returned string.
      * @return The read string, or an empty optional if the string is exhausted.

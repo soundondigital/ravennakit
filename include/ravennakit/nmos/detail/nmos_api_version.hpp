@@ -14,6 +14,7 @@
 
 #include <string>
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 
 namespace rav::nmos {
 
@@ -87,4 +88,14 @@ struct ApiVersion {
     }
 };
 
+inline std::ostream& operator<<(std::ostream& os, const ApiVersion version) {
+    os << version.to_string();
+    return os;
+}
+
 }  // namespace rav::nmos
+
+
+// Make ApiVersion compatible with fmt
+template<>
+struct fmt::formatter<rav::nmos::ApiVersion>: ostream_formatter {};

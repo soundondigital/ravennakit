@@ -33,15 +33,15 @@ struct Version {
      * A version is considered valid if either the `seconds` or `nanoseconds` component is non-zero.
      * @return true if the version is valid, false otherwise.
      */
-    bool is_valid() const {
+    [[nodiscard]] bool is_valid() const {
         return seconds != 0 || nanoseconds != 0;
     }
 
     /**
      * @return A string representation of the version in the format "seconds.nanoseconds".
      */
-    std::string to_string() {
-        return fmt::format("{}.{}", seconds, nanoseconds);
+    std::string to_string() const {
+        return fmt::format("{}:{}", seconds, nanoseconds);
     }
 
     /**

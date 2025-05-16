@@ -302,7 +302,7 @@ void rav::HttpServer::on_client_error(const boost::beast::error_code& ec, std::s
 
 boost::beast::http::message_generator
 rav::HttpServer::on_request(const boost::beast::http::request<boost::beast::http::string_body>& request) {
-    RAV_TRACE("Received request: {} {}", request.method_string(), request.target());
+    RAV_INFO("Received request: {} {}", request.method_string(), request.target());
 
     PathMatcher::Parameters parameters;
     if (const auto* match = router_.match(request.method(), request.target(), &parameters)) {
@@ -311,17 +311,19 @@ rav::HttpServer::on_request(const boost::beast::http::request<boost::beast::http
         response.keep_alive(request.keep_alive());
         response.version(request.version());
         (*match)(request, response, parameters);
+        RAV_INFO("Response: {} {}", response.result_int(), response.reason());
         return response;
     }
 
     boost::beast::http::response<boost::beast::http::string_body> res {
-        boost::beast::http::status::bad_request, request.version()
+        boost::beast::http::status::not_found, request.version()
     };
     res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(boost::beast::http::field::content_type, "text/html");
     res.keep_alive(request.keep_alive());
     res.body() = std::string("No matching handler");
     res.prepare_payload();
+    RAV_INFO("Response: {} {}", res.result_int(), res.reason());
     return res;
 }
 

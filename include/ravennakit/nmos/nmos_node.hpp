@@ -11,6 +11,7 @@
 #pragma once
 
 #include "detail/nmos_api_version.hpp"
+#include "models/nmos_device.hpp"
 #include "ravennakit/core/net/http/http_server.hpp"
 
 #include <boost/uuid.hpp>
@@ -109,9 +110,35 @@ class Node {
      */
     [[nodiscard]] boost::asio::ip::tcp::endpoint get_local_endpoint() const;
 
+    /**
+     * Adds the given device to the node or updates an existing device if it already exists (based on the uuid).
+     * @param device The device to set or update.
+     */
+    bool set_device(Device device);
+
+    /**
+     * Removes the device with the given uuid from the node.
+     * @param uuid The uuid of the device to remove.
+     */
+    const Device* get_device(boost::uuids::uuid uuid) const;
+
+    /**
+     * @return The uuid of the node.
+     */
+    [[nodiscard]] const boost::uuids::uuid& get_uuid() const;
+
+    /**
+     * @return The list of devices in the node.
+     */
+    [[nodiscard]] const std::vector<Device>& get_devices() const;
+
   private:
     HttpServer http_server_;
     boost::uuids::uuid uuid_ = boost::uuids::random_generator()();
+    std::vector<Device> devices_;
+
+    static bool is_version_supported(const ApiVersion& version);
+    void node_api_root(const HttpServer::Request& req, HttpServer::Response& res);
 };
 
 /// Overload the output stream operator for the Node::Error enum class

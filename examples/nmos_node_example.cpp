@@ -20,10 +20,24 @@ int main() {
     boost::asio::io_context io_context;
 
     rav::nmos::Node node(io_context);
-    const auto result = node.start("127.0.0.1", 0);
+    const auto result = node.start("127.0.0.1", 5555);
     if (result.has_error()) {
         RAV_ERROR("Failed to start NMOS node: {}", result.error().message());
         return 1;
+    }
+
+    for (uint32_t i = 0; i < 5; ++i) {
+        rav::nmos::Device::Control control;
+        control.href = fmt::format("http://localhost:{}", i + 6000);
+        control.type = fmt::format("urn:x-manufacturer:control:generic.{}", i + 1);
+        control.authorization = i % 2 == 0;
+        rav::nmos::Device device;
+        device.id = boost::uuids::random_generator()();
+        device.description = fmt::format("Device {} desc", i + 1);
+        device.label = fmt::format("Device {} label", i + 1);
+        device.version = rav::nmos::Version {i + 1, (i + 1) * 1000};
+        device.controls.push_back(control);
+        node.set_device(device);
     }
 
     std::string url =
