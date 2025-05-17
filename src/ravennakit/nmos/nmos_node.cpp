@@ -11,6 +11,7 @@
 #include "ravennakit/nmos/nmos_node.hpp"
 
 #include "ravennakit/nmos/models/nmos_error.hpp"
+#include "ravennakit/nmos/models/nmos_self.hpp"
 
 #include <boost/json/serialize.hpp>
 #include <boost/json/value_from.hpp>
@@ -173,6 +174,26 @@ boost::system::result<void, rav::nmos::Node::Error> rav::nmos::Node::Configurati
 }
 
 rav::nmos::Node::Node(boost::asio::io_context& io_context) : http_server_(io_context) {
+    self_.id = boost::uuids::random_generator()();
+    self_.version = Version {1, 0};
+    self_.label = "NMOS Node";
+    self_.description = "NMOS Node description";
+    self_.interfaces = {Self::Interface {std::nullopt, "00-1a-2b-3c-4d-5e", "eth0"}};
+
+    auto local_clock = ClockInternal {};
+    local_clock.name = "clk01";
+
+    auto ptp_clock = ClockPtp {};
+    ptp_clock.name = "clk02";
+    ptp_clock.gmid = "00-1a-2b-00-00-3c-4d-5e";
+
+    self_.clocks.emplace_back(local_clock);
+    self_.clocks.emplace_back(ptp_clock);
+
+    for (auto& v : k_supported_api_versions) {
+        self_.api.versions.push_back(v.to_string());
+    }
+
     http_server_.get("/", [](const HttpServer::Request&, HttpServer::Response& res, PathMatcher::Parameters&) {
         ok_response(res, boost::json::serialize(boost::json::array({"x-nmos/"})));
     });
@@ -183,7 +204,7 @@ rav::nmos::Node::Node(boost::asio::io_context& io_context) : http_server_(io_con
 
     http_server_.get(
         "/x-nmos/node",
-        [this](const HttpServer::Request&, HttpServer::Response& res, PathMatcher::Parameters&) {
+        [](const HttpServer::Request&, HttpServer::Response& res, PathMatcher::Parameters&) {
             res.result(boost::beast::http::status::ok);
             set_default_headers(res);
 
@@ -199,7 +220,7 @@ rav::nmos::Node::Node(boost::asio::io_context& io_context) : http_server_(io_con
 
     http_server_.get(
         "/x-nmos/node/{version}",
-        [this](const HttpServer::Request&, HttpServer::Response& res, const PathMatcher::Parameters& params) {
+        [](const HttpServer::Request&, HttpServer::Response& res, const PathMatcher::Parameters& params) {
             if (!get_valid_version_from_parameters(res, params)) {
                 return;
             }
@@ -210,6 +231,17 @@ rav::nmos::Node::Node(boost::asio::io_context& io_context) : http_server_(io_con
                     boost::json::array({"self/", "sources/", "flows/", "devices/", "senders/", "receivers/"})
                 )
             );
+        }
+    );
+
+    http_server_.get(
+        "/x-nmos/node/{version}/self",
+        [this](const HttpServer::Request&, HttpServer::Response& res, const PathMatcher::Parameters& params) {
+            if (!get_valid_version_from_parameters(res, params)) {
+                return;
+            }
+
+            ok_response(res, boost::json::serialize(boost::json::value_from(self_)));
         }
     );
 
@@ -262,7 +294,22 @@ rav::nmos::Node::Node(boost::asio::io_context& io_context) : http_server_(io_con
 }
 
 boost::system::result<void> rav::nmos::Node::start(const std::string_view bind_address, const uint16_t port) {
-    return http_server_.start(bind_address, port);
+    const auto result = http_server_.start(bind_address, port);
+    if (result.has_error()) {
+        return result;
+    }
+
+    // TODO: I'm not sure if this is the right value for href, but unless a web interface is served this is the best we
+    // got.
+    const auto endpoint = http_server_.get_local_endpoint();
+    self_.href = fmt::format(
+        "http://{}:{}/x-nmos/node/{}", endpoint.address().to_string(), endpoint.port(),
+        k_supported_api_versions.back().to_string()
+    );
+
+    self_.api.endpoints = {Self::Endpoint {endpoint.address().to_string(), endpoint.port(), "http", false}};
+
+    return result;
 }
 
 void rav::nmos::Node::stop() {
@@ -279,7 +326,7 @@ bool rav::nmos::Node::set_device(Device device) {
         return false;
     }
 
-    device.node_id = uuid_;
+    device.node_id = self_.id;
 
     for (auto& existing_device : devices_) {
         if (existing_device.id == device.id) {
@@ -304,7 +351,7 @@ const rav::nmos::Device* rav::nmos::Node::get_device(boost::uuids::uuid uuid) co
 }
 
 const boost::uuids::uuid& rav::nmos::Node::get_uuid() const {
-    return uuid_;
+    return self_.id;
 }
 
 const std::vector<rav::nmos::Device>& rav::nmos::Node::get_devices() const {

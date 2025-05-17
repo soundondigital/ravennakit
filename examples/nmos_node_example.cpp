@@ -37,7 +37,7 @@ int main() {
         device.label = fmt::format("Device {} label", i + 1);
         device.version = rav::nmos::Version {i + 1, (i + 1) * 1000};
         device.controls.push_back(control);
-        node.set_device(device);
+        std::ignore = node.set_device(device);
     }
 
     std::string url =

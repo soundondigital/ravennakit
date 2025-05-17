@@ -12,6 +12,7 @@
 
 #include "detail/nmos_api_version.hpp"
 #include "models/nmos_device.hpp"
+#include "models/nmos_self.hpp"
 #include "ravennakit/core/net/http/http_server.hpp"
 
 #include <boost/uuid.hpp>
@@ -134,7 +135,7 @@ class Node {
 
   private:
     HttpServer http_server_;
-    boost::uuids::uuid uuid_ = boost::uuids::random_generator()();
+    Self self_;
     std::vector<Device> devices_;
 };
 

@@ -51,19 +51,14 @@ inline void tag_invoke(const boost::json::value_from_tag&, boost::json::value& j
     }
 }
 
-inline void tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const Device& device) {
-    jv = {
-        {"id", to_string(device.id)},
-        {"version", device.version.to_string()},
-        {"label", device.label},
-        {"description", device.description},
-        {"tags", boost::json::value_from(device.tags)},
-        {"type", device.type},
-        {"node_id", to_string(device.node_id)},
-        {"controls", boost::json::value_from(device.controls)},
-        {"receivers", boost::json::array()},  // TODO: Add receivers
-        {"senders", boost::json::array()},    // TODO: Add senders
-    };
+inline void tag_invoke(const boost::json::value_from_tag& tag, boost::json::value& jv, const Device& device) {
+    tag_invoke(tag, jv, static_cast<const Resource&>(device));
+    auto& object = jv.as_object();
+    object["type"] = device.type;
+    object["node_id"] = to_string(device.node_id);
+    object["controls"] = boost::json::value_from(device.controls);
+    object["receivers"] = boost::json::array();  // TODO: Add receivers
+    object["senders"] = boost::json::array();    // TODO: Add senders
 }
 
 }  // namespace rav::nmos

@@ -12,7 +12,10 @@
 
 #include "ravennakit/nmos/detail/nmos_version.hpp"
 
+#include <boost/json/value.hpp>
+#include <boost/json/value_from.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include <map>
 
@@ -36,5 +39,15 @@ struct Resource {
     /// strings. Can be empty.
     std::map<std::string, std::vector<std::string>> tags;
 };
+
+inline void tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const Resource& resource) {
+    jv = {
+        {"id", boost::uuids::to_string(resource.id)},
+        {"version", resource.version.to_string()},
+        {"label", resource.label},
+        {"description", resource.description},
+        {"tags", boost::json::value_from(resource.tags)},
+    };
+}
 
 }  // namespace rav::nmos
