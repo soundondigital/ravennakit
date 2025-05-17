@@ -302,7 +302,7 @@ void rav::HttpServer::on_client_error(const boost::beast::error_code& ec, std::s
 
 boost::beast::http::message_generator
 rav::HttpServer::on_request(const boost::beast::http::request<boost::beast::http::string_body>& request) {
-    RAV_INFO("Received request: {} {}", request.method_string(), request.target());
+    RAV_INFO("Request: {} {}", request.method_string(), request.target());
     try {
         PathMatcher::Parameters parameters;
 

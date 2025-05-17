@@ -114,13 +114,13 @@ class Node {
      * Adds the given device to the node or updates an existing device if it already exists (based on the uuid).
      * @param device The device to set or update.
      */
-    bool set_device(Device device);
+    [[nodiscard]] bool set_device(Device device);
 
     /**
      * Removes the device with the given uuid from the node.
      * @param uuid The uuid of the device to remove.
      */
-    const Device* get_device(boost::uuids::uuid uuid) const;
+    [[nodiscard]] const Device* get_device(boost::uuids::uuid uuid) const;
 
     /**
      * @return The uuid of the node.
@@ -136,9 +136,6 @@ class Node {
     HttpServer http_server_;
     boost::uuids::uuid uuid_ = boost::uuids::random_generator()();
     std::vector<Device> devices_;
-
-    static bool is_version_supported(const ApiVersion& version);
-    void node_api_root(const HttpServer::Request& req, HttpServer::Response& res);
 };
 
 /// Overload the output stream operator for the Node::Error enum class

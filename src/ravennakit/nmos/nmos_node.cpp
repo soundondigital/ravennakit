@@ -19,6 +19,12 @@
 
 namespace {
 
+/**
+ * Sets the default headers for the response.
+ * Warning: these headers are probably not suitable for production use, see:
+ * https://specs.amwa.tv/is-04/releases/v1.3.3/docs/APIs_-_Server_Side_Implementation_Notes.html#cross-origin-resource-sharing-cors
+ * @param res
+ */
 void set_default_headers(rav::HttpServer::Response& res) {
     res.set("Content-Type", "application/json");
     res.set("Access-Control-Allow-Origin", "*");
@@ -27,6 +33,13 @@ void set_default_headers(rav::HttpServer::Response& res) {
     res.set("Access-Control-Max-Age", "3600");
 }
 
+/**
+ * Sets the error response with the given status, error message, and debug information.
+ * @param res The response to set.
+ * @param status The HTTP status code.
+ * @param error The error message.
+ * @param debug The debug information.
+ */
 void set_error_response(
     boost::beast::http::response<boost::beast::http::string_body>& res, const boost::beast::http::status status,
     const std::string& error, const std::string& debug
@@ -38,6 +51,10 @@ void set_error_response(
     res.prepare_payload();
 }
 
+/**
+ * Sets the error response for an invalid API version.
+ * @param res The response to set.
+ */
 void invalid_api_version_response(boost::beast::http::response<boost::beast::http::string_body>& res) {
     set_error_response(
         res, boost::beast::http::status::bad_request, "Invalid API version",
@@ -45,6 +62,11 @@ void invalid_api_version_response(boost::beast::http::response<boost::beast::htt
     );
 }
 
+/**
+ * Sets the error response for an unsupported API version.
+ * @param res The response to set.
+ * @param version The unsupported API version.
+ */
 void version_not_supported_response(
     boost::beast::http::response<boost::beast::http::string_body>& res, const rav::nmos::ApiVersion& version
 ) {
@@ -54,11 +76,58 @@ void version_not_supported_response(
     );
 }
 
+/**
+ * Sets the response to indicate that the request was successful and optionally adds the body (if not empty).
+ * @param res The response to set.
+ * @param body The body of the response.
+ */
 void ok_response(boost::beast::http::response<boost::beast::http::string_body>& res, std::string body) {
     res.result(boost::beast::http::status::ok);
     set_default_headers(res);
     res.body() = std::move(body);
     res.prepare_payload();
+}
+
+/**
+ * Checks if the given API version is supported.
+ * @param version The API version to check.
+ * @return True if the version is supported, false otherwise.
+ */
+bool is_version_supported(const rav::nmos::ApiVersion& version) {
+    return std::any_of(
+        rav::nmos::Node::k_supported_api_versions.begin(), rav::nmos::Node::k_supported_api_versions.end(),
+        [&version](const auto& supported_version) {
+            return supported_version == version;
+        }
+    );
+}
+
+/**
+ * Gets the valid API version from the request parameters.
+ * @param res The response to set.
+ * @param params The request parameters.
+ * @param param_name The name of the parameter to check (default: "version").
+ * @return The valid API version, or std::nullopt if not found or invalid.
+ */
+std::optional<rav::nmos::ApiVersion> get_valid_version_from_parameters(
+    rav::HttpServer::Response& res, const rav::PathMatcher::Parameters& params,
+    const std::string_view param_name = "version"
+) {
+    const auto version_str = params.get(param_name);
+    if (version_str == nullptr) {
+        invalid_api_version_response(res);
+        return std::nullopt;
+    }
+    const auto version = rav::nmos::ApiVersion::from_string(*version_str);
+    if (!version) {
+        invalid_api_version_response(res);
+        return std::nullopt;
+    }
+    if (!is_version_supported(*version)) {
+        version_not_supported_response(res, *version);
+        return std::nullopt;
+    }
+    return version;
 }
 
 }  // namespace
@@ -113,9 +182,77 @@ rav::nmos::Node::Node(boost::asio::io_context& io_context) : http_server_(io_con
     });
 
     http_server_.get(
-        "/x-nmos/node/**",
-        [this](const HttpServer::Request& req, HttpServer::Response& res, const PathMatcher::Parameters&) {
-            node_api_root(req, res);
+        "/x-nmos/node",
+        [this](const HttpServer::Request&, HttpServer::Response& res, PathMatcher::Parameters&) {
+            res.result(boost::beast::http::status::ok);
+            set_default_headers(res);
+
+            boost::json::array versions;
+            for (const auto& version : k_supported_api_versions) {
+                versions.push_back({fmt::format("{}/", version.to_string())});
+            }
+
+            res.body() = boost::json::serialize(versions);
+            res.prepare_payload();
+        }
+    );
+
+    http_server_.get(
+        "/x-nmos/node/{version}",
+        [this](const HttpServer::Request&, HttpServer::Response& res, const PathMatcher::Parameters& params) {
+            if (!get_valid_version_from_parameters(res, params)) {
+                return;
+            }
+
+            ok_response(
+                res,
+                boost::json::serialize(
+                    boost::json::array({"self/", "sources/", "flows/", "devices/", "senders/", "receivers/"})
+                )
+            );
+        }
+    );
+
+    http_server_.get(
+        "/x-nmos/node/{version}/devices",
+        [this](const HttpServer::Request&, HttpServer::Response& res, const PathMatcher::Parameters& params) {
+            if (!get_valid_version_from_parameters(res, params)) {
+                return;
+            }
+
+            ok_response(res, boost::json::serialize(boost::json::value_from(devices_)));
+        }
+    );
+
+    http_server_.get(
+        "/x-nmos/node/{version}/devices/{device_id}",
+        [this](const HttpServer::Request&, HttpServer::Response& res, const PathMatcher::Parameters& params) {
+            if (!get_valid_version_from_parameters(res, params)) {
+                return;
+            }
+
+            const auto* uuid_str = params.get("device_id");
+            if (uuid_str == nullptr) {
+                set_error_response(
+                    res, boost::beast::http::status::bad_request, "Invalid device ID", "Device ID is empty"
+                );
+                return;
+            }
+
+            const auto uuid = boost::lexical_cast<boost::uuids::uuid>(*uuid_str);
+            if (uuid.is_nil()) {
+                set_error_response(
+                    res, boost::beast::http::status::bad_request, "Invalid device ID", "Device ID is not a valid UUID"
+                );
+                return;
+            }
+
+            if (auto* device = get_device(uuid)) {
+                ok_response(res, boost::json::serialize(boost::json::value_from(*device)));
+                return;
+            }
+
+            set_error_response(res, boost::beast::http::status::not_found, "Not found", "Device not found");
         }
     );
 
@@ -172,95 +309,6 @@ const boost::uuids::uuid& rav::nmos::Node::get_uuid() const {
 
 const std::vector<rav::nmos::Device>& rav::nmos::Node::get_devices() const {
     return devices_;
-}
-
-bool rav::nmos::Node::is_version_supported(const ApiVersion& version) {
-    return std::any_of(
-        k_supported_api_versions.begin(), k_supported_api_versions.end(),
-        [&version](const auto& supported_version) {
-            return supported_version == version;
-        }
-    );
-}
-
-void rav::nmos::Node::node_api_root(const HttpServer::Request& req, HttpServer::Response& res) {
-    const boost::urls::url_view target(req.target());
-
-    const auto segments = target.segments();
-    auto segment = segments.begin();
-
-    auto next = [&] {
-        ++segment;
-        return segment != segments.end() && !(*segment).empty();
-    };
-
-    if (segment == segments.end() || *segment != "x-nmos") {
-        set_error_response(
-            res, boost::beast::http::status::bad_request, "Invalid target",
-            "The request was incorrectly routed to the node API"
-        );
-        return;
-    }
-
-    // Expect: /node
-    if (!next() || *segment != "node") {
-        set_error_response(
-            res, boost::beast::http::status::bad_request, "Invalid target",
-            "The request was incorrectly routed to the node API"
-        );
-        return;
-    }
-
-    // Serve /x-nmos/node
-    if (!next()) {
-        boost::json::array versions;
-        for (const auto& version : k_supported_api_versions) {
-            versions.push_back({fmt::format("{}/", version.to_string())});
-        }
-        ok_response(res, boost::json::serialize(versions));
-        return;
-    }
-
-    const auto api_version = ApiVersion::from_string(*segment);
-    if (!api_version) {
-        invalid_api_version_response(res);
-        return;
-    }
-
-    if (!is_version_supported(*api_version)) {
-        version_not_supported_response(res, *api_version);
-        return;
-    }
-
-    // Serve /x-nmos/node/{version}
-    if (!next()) {
-        ok_response(
-            res,
-            boost::json::serialize(
-                boost::json::array({"self/", "sources/", "flows/", "devices/", "senders/", "receivers/"})
-            )
-        );
-        return;
-    }
-
-    // Serve /x-nmos/node/{version}/devices
-    if (*segment == "devices") {
-        if (!next()) {
-            ok_response(res, boost::json::serialize(boost::json::value_from(devices_)));
-            return;
-        }
-
-        const auto uuid = boost::lexical_cast<boost::uuids::uuid>(*segment);
-        if (auto* device = get_device(uuid)) {
-            ok_response(res, boost::json::serialize(boost::json::value_from(*device)));
-            return;
-        }
-
-        set_error_response(res, boost::beast::http::status::not_found, "Not found", "Device not found");
-        return;
-    }
-
-    set_error_response(res, boost::beast::http::status::not_found, "Not found", "No matching route");
 }
 
 std::ostream& rav::nmos::operator<<(std::ostream& os, const Node::Error error) {
