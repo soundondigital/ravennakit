@@ -111,15 +111,12 @@ class BonjourBrowser: public Browser {
     [[nodiscard]] const ServiceDescription* find_service(const std::string& service_name) const override;
     [[nodiscard]] std::vector<ServiceDescription> get_services() const override;
 
-    void subscribe(Subscriber& s) override;
-
   private:
     boost::asio::ip::tcp::socket service_socket_;
     BonjourSharedConnection shared_connection_;
     std::map<std::string, Service> services_;                         // fullname -> service
     std::map<std::string, BonjourScopedDnsServiceRef> browsers_;  // reg_type -> DNSServiceRef
     size_t process_results_failed_attempts_ = 0;
-    Subscriber subscribers_;
 
     void async_process_results();
 
@@ -149,10 +146,8 @@ class BonjourBrowser: public Browser {
      * @param event The event to emit.
      */
     template<class T>
-    void emit(const T& event) {
-        subscribers_.foreach ([&event](auto& n) {
-            n->emit(event);
-        });
+    void emit(T&& event) {
+        event_emitter_.emit(std::forward<T>(event));
     }
 };
 

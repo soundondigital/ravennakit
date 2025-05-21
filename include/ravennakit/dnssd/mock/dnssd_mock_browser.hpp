@@ -62,13 +62,11 @@ class MockBrowser final: public Browser {
     void browse_for(const std::string& service_type) override;
     [[nodiscard]] const ServiceDescription* find_service(const std::string& service_name) const override;
     [[nodiscard]] std::vector<ServiceDescription> get_services() const override;
-    void subscribe(Subscriber& s) override;
 
   private:
     boost::asio::io_context& io_context_;
     std::map<std::string, ServiceDescription> services_;  // fullname -> service description
     std::set<std::string> browsers_; // reg_type
-    Subscriber subscribers_;
 
     /**
      * Emits fiven event to all subscribers.
@@ -77,9 +75,7 @@ class MockBrowser final: public Browser {
      */
     template<class T>
     void emit(const T& event) {
-        subscribers_.foreach ([&event](auto& s) {
-            s->emit(event);
-        });
+        event_emitter_.emit(event);
     }
 };
 

@@ -84,10 +84,7 @@ class RavennaBrowser {
 
   private:
     std::unique_ptr<dnssd::Browser> node_browser_;
-    dnssd::Browser::Subscriber node_browser_subscriber_;
-
     std::unique_ptr<dnssd::Browser> session_browser_;
-    dnssd::Browser::Subscriber session_browser_subscriber_;
 
     SubscriberList<Subscriber> subscribers_;
 };

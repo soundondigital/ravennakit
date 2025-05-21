@@ -20,14 +20,12 @@ TEST_CASE("mock_browser") {
         std::vector<rav::dnssd::ServiceDescription> discovered_services;
         std::vector<rav::dnssd::ServiceDescription> removed_services;
 
-        rav::dnssd::Browser::Subscriber subscriber;
-        subscriber->on<rav::dnssd::Browser::ServiceDiscovered>([&](const auto& event) {
+        browser.on<rav::dnssd::Browser::ServiceDiscovered>([&](const auto& event) {
             discovered_services.push_back(event.description);
         });
-        subscriber->on<rav::dnssd::Browser::ServiceRemoved>([&](const auto& event) {
+        browser.on<rav::dnssd::Browser::ServiceRemoved>([&](const auto& event) {
             removed_services.push_back(event.description);
         });
-        browser.subscribe(subscriber);
 
         browser.browse_for("reg_type");
         browser.mock_discovering_service("fullname", "name", "reg_type", "domain");
@@ -51,11 +49,9 @@ TEST_CASE("mock_browser") {
     SECTION("Mock resolving a service") {
         std::vector<rav::dnssd::ServiceDescription> resolved_services;
 
-        rav::dnssd::Browser::Subscriber subscriber;
-        subscriber->on<rav::dnssd::Browser::ServiceResolved>([&](const auto& event) {
+        browser.on<rav::dnssd::Browser::ServiceResolved>([&](const auto& event) {
             resolved_services.push_back(event.description);
         });
-        browser.subscribe(subscriber);
 
         browser.browse_for("reg_type");
         browser.mock_discovering_service("fullname", "name", "reg_type", "domain");
@@ -78,14 +74,12 @@ TEST_CASE("mock_browser") {
         std::vector<rav::dnssd::ServiceDescription> addresses_added;
         std::vector<rav::dnssd::ServiceDescription> addresses_removed;
 
-        rav::dnssd::Browser::Subscriber subscriber;
-        subscriber->on<rav::dnssd::Browser::AddressAdded>([&](const auto& event) {
+        browser.on<rav::dnssd::Browser::AddressAdded>([&](const auto& event) {
             addresses_added.push_back(event.description);
         });
-        subscriber->on<rav::dnssd::Browser::AddressRemoved>([&](const auto& event) {
+        browser.on<rav::dnssd::Browser::AddressRemoved>([&](const auto& event) {
             addresses_removed.push_back(event.description);
         });
-        browser.subscribe(subscriber);
 
         browser.browse_for("reg_type");
         browser.mock_discovering_service("fullname", "name", "reg_type", "domain");
@@ -144,29 +138,26 @@ TEST_CASE("mock_browser") {
     }
 
     SECTION("Subscribe") {
+        std::vector<rav::dnssd::ServiceDescription> discovered_services;
+        std::vector<rav::dnssd::ServiceDescription> resolved_services;
+        std::vector<rav::dnssd::ServiceDescription> addresses_added;
+
+        browser.on<rav::dnssd::Browser::ServiceDiscovered>([&](const auto& event) {
+            discovered_services.push_back(event.description);
+        });
+        browser.on<rav::dnssd::Browser::ServiceResolved>([&](const auto& event) {
+            resolved_services.push_back(event.description);
+        });
+        browser.on<rav::dnssd::Browser::AddressAdded>([&](const auto& event) {
+            addresses_added.push_back(event.description);
+        });
+
         browser.browse_for("reg_type");
         browser.mock_discovering_service("fullname", "name", "reg_type", "domain");
         browser.mock_resolved_service("fullname", "host_target", 1234, {});
         browser.mock_adding_address("fullname", "address", 1);
 
         io_context.run();
-
-        std::vector<rav::dnssd::ServiceDescription> discovered_services;
-        std::vector<rav::dnssd::ServiceDescription> resolved_services;
-        std::vector<rav::dnssd::ServiceDescription> addresses_added;
-
-        rav::dnssd::Browser::Subscriber subscriber;
-        subscriber->on<rav::dnssd::Browser::ServiceDiscovered>([&](const auto& event) {
-            discovered_services.push_back(event.description);
-        });
-        subscriber->on<rav::dnssd::Browser::ServiceResolved>([&](const auto& event) {
-            resolved_services.push_back(event.description);
-        });
-        subscriber->on<rav::dnssd::Browser::AddressAdded>([&](const auto& event) {
-            addresses_added.push_back(event.description);
-        });
-
-        browser.subscribe(subscriber);
 
         REQUIRE(discovered_services.size() == 1);
         REQUIRE(discovered_services[0].fullname == "fullname");

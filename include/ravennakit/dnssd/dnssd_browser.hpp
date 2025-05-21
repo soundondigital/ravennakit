@@ -77,8 +77,8 @@ class Browser {
         const std::string& error_message;
     };
 
-    using Subscriber = LinkedNode<
-        EventEmitter<ServiceDiscovered, ServiceRemoved, ServiceResolved, AddressAdded, AddressRemoved, BrowseError>>;
+    using EventEmitterType =
+        EventEmitter<ServiceDiscovered, ServiceRemoved, ServiceResolved, AddressAdded, AddressRemoved, BrowseError>;
 
     virtual ~Browser() = default;
 
@@ -109,11 +109,17 @@ class Browser {
     [[nodiscard]] virtual std::vector<ServiceDescription> get_services() const = 0;
 
     /**
-     * Subscribes given subscriber to the browser. The subscriber will receive future events as well event to get
-     * up-to-date with the current state (i.e. existing discovered services).
-     * @param s The subscriber to subscribe.
+     * Sets given function as callback for the given event.
+     * @tparam Fn The type of the function to be called.
+     * @param f The function to be called when the event occurs.
      */
-    virtual void subscribe(Subscriber& s) = 0;
+    template<typename Fn>
+    void on(EventEmitterType::handler<Fn> f) {
+        event_emitter_.on(f);
+    }
+
+  protected:
+    EventEmitterType event_emitter_;
 };
 
 }  // namespace rav::dnssd

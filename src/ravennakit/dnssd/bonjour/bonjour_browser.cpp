@@ -263,8 +263,7 @@ void rav::dnssd::BonjourBrowser::browse_for(const std::string& service) {
     // From here the serviceRef is under RAII inside the ScopedDnsServiceRef class
 }
 
-const rav::dnssd::ServiceDescription* rav::dnssd::BonjourBrowser::find_service(const std::string& service_name
-) const {
+const rav::dnssd::ServiceDescription* rav::dnssd::BonjourBrowser::find_service(const std::string& service_name) const {
     for (auto& service : services_) {
         if (service.second.description().name == service_name) {
             return &service.second.description();
@@ -275,23 +274,11 @@ const rav::dnssd::ServiceDescription* rav::dnssd::BonjourBrowser::find_service(c
 
 std::vector<rav::dnssd::ServiceDescription> rav::dnssd::BonjourBrowser::get_services() const {
     std::vector<ServiceDescription> result;
+    result.reserve(services_.size());
     for (auto& service : services_) {
         result.push_back(service.second.description());
     }
     return result;
-}
-
-void rav::dnssd::BonjourBrowser::subscribe(Subscriber& s) {
-    subscribers_.push_back(s);
-    for (auto& [fullname, service] : services_) {
-        s->emit(ServiceDiscovered {service.description()});
-        s->emit(ServiceResolved {service.description()});
-        for (auto& [iface_index, addrs] : service.description().interfaces) {
-            for (auto& addr : addrs) {
-                s->emit(AddressAdded {service.description(), addr, iface_index});
-            }
-        }
-    }
 }
 
 #endif

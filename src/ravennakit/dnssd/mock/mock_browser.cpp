@@ -117,16 +117,3 @@ std::vector<rav::dnssd::ServiceDescription> rav::dnssd::MockBrowser::get_service
     }
     return result;
 }
-
-void rav::dnssd::MockBrowser::subscribe(Subscriber& s) {
-    subscribers_.push_back(s);
-    for (auto& [fullname, service] : services_) {
-        s->emit(ServiceDiscovered {service});
-        s->emit(ServiceResolved {service});
-        for (auto& [iface_index, addrs] : service.interfaces) {
-            for (auto& addr : addrs) {
-                s->emit(AddressAdded {service, addr, iface_index});
-            }
-        }
-    }
-}
