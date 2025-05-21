@@ -12,7 +12,7 @@
 namespace rav::dnssd {
 
 /**
- * Interface class which represents a Bonjour browser.
+ * Base class for dnssd browser implementations.
  */
 class Browser {
   public:

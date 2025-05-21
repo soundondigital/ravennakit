@@ -14,7 +14,7 @@
 namespace rav::dnssd {
 
 /**
- * Interface class which represents a dnssd advertiser object, which is able to present itself onto the network.
+ * Base class for all dnssd advertiser implementations.
  */
 class Advertiser {
   public:
@@ -33,7 +33,7 @@ class Advertiser {
         const char* name;
     };
 
-    using Subscriber = LinkedNode<EventEmitter<AdvertiserError, NameConflict>>;
+    using EventEmitterType = EventEmitter<AdvertiserError, NameConflict>;
 
     explicit Advertiser() = default;
     virtual ~Advertiser() = default;
@@ -87,10 +87,17 @@ class Advertiser {
     static std::unique_ptr<Advertiser> create(boost::asio::io_context& io_context);
 
     /**
-     * Subscribes given subscriber to the advertiser. The subscriber will receive future events.
-     * @param s The subscriber to subscribe.
+     * Sets given function as callback for the given event.
+     * @tparam Fn The type of the function to be called.
+     * @param f The function to be called when the event occurs.
      */
-    virtual void subscribe(Subscriber& s) = 0;
+    template<typename Fn>
+    void on(EventEmitterType::handler<Fn> f) {
+        event_emitter_.on(f);
+    }
+
+  protected:
+    EventEmitterType event_emitter_;
 };
 
 }  // namespace rav::dnssd

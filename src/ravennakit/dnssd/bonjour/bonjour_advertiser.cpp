@@ -66,10 +66,6 @@ void rav::dnssd::BonjourAdvertiser::unregister_service(Id id) {
     );
 }
 
-void rav::dnssd::BonjourAdvertiser::subscribe(Subscriber& s) {
-    subscribers_.push_back(s);
-}
-
 void rav::dnssd::BonjourAdvertiser::async_process_results() {
     service_socket_.async_wait(boost::asio::ip::tcp::socket::wait_read, [this](const boost::system::error_code& ec) {
         if (ec) {
