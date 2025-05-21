@@ -1,13 +1,10 @@
 #pragma once
 
-#include <utility>
 #include <memory>
 
 #include "dnssd_service_description.hpp"
-#include "../core/events/event_emitter.hpp"
-#include "../core/util/linked_node.hpp"
-#include "ravennakit/core/result.hpp"
 #include "ravennakit/core/util/id.hpp"
+#include "ravennakit/core/util/safe_function.hpp"
 
 #include <boost/asio/io_context.hpp>
 
@@ -19,21 +16,17 @@ namespace rav::dnssd {
 class Advertiser {
   public:
     /**
-     * Event for when a service was discovered.
+     * Called when an error occurs during registration.
+     * @param error_message The error message.
      */
-    struct AdvertiserError {
-        const std::string& error_message;
-    };
+    SafeFunction<void(const std::string& error_message)> on_error;
 
     /**
-     * Event for when a DNS-SD service registration failed due to a name conflict.
+     * Called when a name conflict occurs during registration.
+     * @param reg_type The service type.
+     * @param name The service name.
      */
-    struct NameConflict {
-        const char* reg_type;
-        const char* name;
-    };
-
-    using EventEmitterType = EventEmitter<AdvertiserError, NameConflict>;
+    SafeFunction<void(const char* reg_type, const char* name)> on_name_conflict;
 
     explicit Advertiser() = default;
     virtual ~Advertiser() = default;
@@ -85,19 +78,6 @@ class Advertiser {
      * @return The created dnssd_advertiser instance, or nullptr if no implementation is available.
      */
     static std::unique_ptr<Advertiser> create(boost::asio::io_context& io_context);
-
-    /**
-     * Sets given function as callback for the given event.
-     * @tparam Fn The type of the function to be called.
-     * @param f The function to be called when the event occurs.
-     */
-    template<typename Fn>
-    void on(EventEmitterType::handler<Fn> f) {
-        event_emitter_.on(f);
-    }
-
-  protected:
-    EventEmitterType event_emitter_;
 };
 
 }  // namespace rav::dnssd

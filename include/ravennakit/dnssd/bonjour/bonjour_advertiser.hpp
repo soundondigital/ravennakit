@@ -58,16 +58,6 @@ class BonjourAdvertiser: public Advertiser {
     );
 
     registered_service* find_registered_service(Id id);
-
-    /**
-     * Emits given event to all subscribers.
-     * @tparam T The type of the event.
-     * @param event The event to emit.
-     */
-    template<class T>
-    void emit(T&& event) {
-        event_emitter_.emit(std::forward<T>(event));
-    }
 };
 
 }  // namespace rav::dnssd

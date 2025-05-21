@@ -67,13 +67,12 @@ int main(int const argc, char* argv[]) {
         return -1;
     }
 
-    advertiser->on<rav::dnssd::Advertiser::AdvertiserError>([](const auto& event) {
-        RAV_ERROR("Advertiser error: {}", event.error_message);
-    });
-
-    advertiser->on<rav::dnssd::Advertiser::NameConflict>([](const auto& event) {
-        RAV_CRITICAL("Name conflict: {} {}", event.reg_type, event.name);
-    });
+    advertiser->on_error = [](const auto& error_message) {
+        RAV_ERROR("Advertiser error: {}", error_message);
+    };
+    advertiser->on_name_conflict = [](const auto* reg_type, const auto* name) {
+        RAV_CRITICAL("Name conflict: {} {}", reg_type, name);
+    };
 
     const auto service_id = advertiser->register_service(
         args[0], "Test service", nullptr, static_cast<uint16_t>(port_number), txt_record, true, true

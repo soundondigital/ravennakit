@@ -79,10 +79,10 @@ void rav::dnssd::BonjourAdvertiser::async_process_results() {
 
         if (result != kDNSServiceErr_NoError) {
             RAV_ERROR("DNSServiceError: {}", dns_service_error_to_string(result));
-            emit(AdvertiserError {fmt::format("Process result error: {}", dns_service_error_to_string(result))});
+            on_error(fmt::format("Process result error: {}", dns_service_error_to_string(result)));
             if (++process_results_failed_attempts_ > 10) {
                 RAV_ERROR("Too many failed attempts to process results, stopping");
-                emit(AdvertiserError {"Too many failed attempts to process results, stopping"});
+                on_error("Too many failed attempts to process results, stopping");
                 return;
             }
         } else {
@@ -100,14 +100,14 @@ void rav::dnssd::BonjourAdvertiser::register_service_callback(
 ) {
     RAV_ASSERT(context != nullptr, "Expected non-null context");
 
-    auto* advertiser = static_cast<BonjourAdvertiser*>(context);
+    const auto* advertiser = static_cast<BonjourAdvertiser*>(context);
     if (error_code == kDNSServiceErr_NameConflict) {
-        advertiser->emit(NameConflict {reg_type, service_name});
+        advertiser->on_name_conflict(reg_type, service_name);
         return;
     }
 
     if (error_code != kDNSServiceErr_NoError) {
-        advertiser->emit(AdvertiserError {fmt::format("Failed to register service: {}", error_code)});
+        advertiser->on_error(fmt::format("Failed to register service: {}", error_code));
         return;
     }
 }
