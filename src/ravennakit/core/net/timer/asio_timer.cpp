@@ -35,7 +35,7 @@ class rav::AsioTimer::Impl: public std::enable_shared_from_this<Impl> {
     boost::asio::steady_timer timer_;
     Callback callback_;
     bool repeating_ = false;
-    std::mutex mutex_;
+    std::recursive_mutex mutex_;
 
     void async_wait(const std::chrono::milliseconds duration) {
         timer_.expires_after(duration);
@@ -48,25 +48,18 @@ class rav::AsioTimer::Impl: public std::enable_shared_from_this<Impl> {
                 return;
             }
 
-            Callback callback;
-            bool repeat {};
+            std::lock_guard lock(self->mutex_);
 
-            {
-                std::lock_guard lock(self->mutex_);
-                if (self->callback_ == nullptr) {
-                    return;
-                }
-                callback = self->callback_;
-                repeat = self->repeating_;
-                if (!repeat) {
-                    self->callback_ = nullptr;
-                }
+            if (self->callback_ == nullptr) {
+                return;
             }
 
-            callback(ec);
+            self->callback_(ec);
 
-            if (repeat) {
+            if (self->repeating_) {
                 self->async_wait(duration);
+            } else {
+                self->callback_ = nullptr;
             }
         });
     }
