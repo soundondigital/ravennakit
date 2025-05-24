@@ -71,6 +71,8 @@ class HttpClient {
      */
     HttpClient(boost::asio::io_context& io_context, const boost::asio::ip::address& address, uint16_t port);
 
+    ~HttpClient();
+
     /**
      * Sets the host to connect to.
      * @param url The url with the host info.
@@ -97,7 +99,7 @@ class HttpClient {
      * callback is called.
      * @param callback The callback to call when the request is complete.
      */
-    void get_async(CallbackType callback) const;
+    void get_async(CallbackType callback);
 
     /**
      * Asynchronous GET request.
@@ -106,13 +108,13 @@ class HttpClient {
      * @param target The target to request.
      * @param callback The callback to call when the request is complete.
      */
-    void get_async(std::string_view target, CallbackType callback) const;
+    void get_async(std::string_view target, CallbackType callback);
 
     /**
      * Synchronous POST request to the target of the URL, or the root if no target is specified.
      * @return The response from the server, which may contain an error.
      */
-    void post_async(std::string body, CallbackType callback, std::string_view content_type = "application/json") const;
+    void post_async(std::string body, CallbackType callback, std::string_view content_type = "application/json");
 
     /**
      * Synchronous POST request to the target of the URL, or the root if no target is specified.
@@ -121,23 +123,27 @@ class HttpClient {
     void post_async(
         std::string_view target, std::string body, CallbackType callback,
         std::string_view content_type = "application/json"
-    ) const;
+    );
 
     /**
      * Asynchronous request.
-     * @param io_context The io_context to use for the request.
      * @param method The HTTP method to use for the request.
-     * @param host The host to request.
-     * @param service The service (port) to use for the request.
      * @param target The target to request.
      * @param body The optional body to send with the request.
      * @param content_type
      * @param callback The callback to call when the request is complete.
      */
-    static void request_async(
-        boost::asio::io_context& io_context, http::verb method, std::string_view host, std::string_view service,
-        std::string_view target, std::string body, std::string_view content_type, CallbackType callback
+    void request_async(
+        http::verb method, std::string_view target, std::string body, std::string_view content_type,
+        CallbackType callback
     );
+
+    /**
+     * Clears all scheduled requests if there are any. Otherwise this function has no effect.
+     */
+    void clear_scheduled_requests() {
+        requests_ = {};
+    }
 
   private:
     /**
@@ -145,21 +151,24 @@ class HttpClient {
      */
     class Session: public std::enable_shared_from_this<Session> {
       public:
-        explicit Session(boost::asio::io_context& io_context);
+        enum class State {
+            disconnected, resolving, connecting, connected, waiting_for_send, waiting_for_response
+        };
+        explicit Session(boost::asio::io_context& io_context, HttpClient* owner);
 
-        void request(
-            http::request<http::string_body> request, std::string_view host, std::string_view port,
-            CallbackType callback
-        );
+        void send_requests();
+        void clear_owner();
 
       private:
+        HttpClient* owner_ = nullptr;
         boost::asio::ip::tcp::resolver resolver_;
         boost::beast::tcp_stream stream_;
-        http::request<http::string_body> request_;
         http::response<http::string_body> response_;
         boost::beast::flat_buffer buffer_;
-        CallbackType callback_;
+        State state_ = State::disconnected;
 
+        void async_connect();
+        void async_send();
         void on_resolve(const boost::beast::error_code& ec, const tcp::resolver::results_type& results);
         void on_connect(const boost::beast::error_code& ec, const tcp::resolver::results_type::endpoint_type&);
         void on_write(const boost::beast::error_code& ec, std::size_t bytes_transferred);
@@ -170,6 +179,8 @@ class HttpClient {
     std::string host_;
     std::string service_;
     std::string target_;
+    std::queue<std::pair<http::request<http::string_body>, CallbackType>> requests_;
+    std::shared_ptr<Session> session_;
 };
 
 }  // namespace rav

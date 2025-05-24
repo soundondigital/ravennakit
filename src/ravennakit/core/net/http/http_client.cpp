@@ -35,6 +35,12 @@ rav::HttpClient::HttpClient(
     service_ = std::to_string(port);
 }
 
+rav::HttpClient::~HttpClient() {
+    if (session_) {
+        session_->clear_owner();
+    }
+}
+
 void rav::HttpClient::set_host(const boost::urls::url& url) {
     host_ = url.host();
     service_ = url.port();
@@ -63,39 +69,33 @@ rav::HttpClient::HttpClient(boost::asio::io_context& io_context, const std::stri
     target_ = parsed_url.path();
 }
 
-void rav::HttpClient::get_async(const std::string_view target, CallbackType callback) const {
-    request_async(io_context_, http::verb::get, host_, service_, target, {}, {}, std::move(callback));
+void rav::HttpClient::get_async(const std::string_view target, CallbackType callback) {
+    request_async(http::verb::get, target, {}, {}, std::move(callback));
 }
 
-void rav::HttpClient::post_async(std::string body, CallbackType callback, const std::string_view content_type) const {
-    request_async(
-        io_context_, http::verb::post, host_, service_, target_, std::move(body), content_type, std::move(callback)
-    );
+void rav::HttpClient::post_async(std::string body, CallbackType callback, const std::string_view content_type) {
+    request_async(http::verb::post, target_, std::move(body), content_type, std::move(callback));
 }
 
 void rav::HttpClient::post_async(
     const std::string_view target, std::string body, CallbackType callback, const std::string_view content_type
-) const {
-    request_async(
-        io_context_, http::verb::post, host_, service_, target, std::move(body), content_type, std::move(callback)
-    );
+) {
+    request_async(http::verb::post, target, std::move(body), content_type, std::move(callback));
 }
 
-void rav::HttpClient::get_async(CallbackType callback) const {
-    request_async(io_context_, http::verb::get, host_, service_, target_, {}, {}, std::move(callback));
+void rav::HttpClient::get_async(CallbackType callback) {
+    request_async(http::verb::get, target_, {}, {}, std::move(callback));
 }
 
 void rav::HttpClient::request_async(
-    boost::asio::io_context& io_context, const http::verb method, const std::string_view host,
-    const std::string_view service, const std::string_view target, std::string body,
-    const std::string_view content_type, CallbackType callback
+    const http::verb method, const std::string_view target, std::string body, const std::string_view content_type,
+    CallbackType callback
 ) {
-    RAV_ASSERT(!host.empty(), "Host cannot be empty");
-
     auto request = http::request<http::string_body>(method, target.empty() ? "/" : target, 11);
-    request.set(http::field::host, host);
+    request.set(http::field::host, host_);
     request.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
     request.set(http::field::accept, "*/*");
+    request.keep_alive(true);
 
     if (!body.empty()) {
         request.set(http::field::content_type, content_type);
@@ -103,29 +103,76 @@ void rav::HttpClient::request_async(
         request.prepare_payload();
     }
 
-    const auto session = std::make_shared<Session>(io_context);
-    session->request(std::move(request), host, service.empty() ? k_default_port : service, std::move(callback));
+    requests_.emplace(std::move(request), std::move(callback));
+
+    if (!session_) {
+        session_ = std::make_shared<Session>(io_context_, this);
+        fmt::print("HttpClient: Created new session for {}:{}\n", host_, service_.empty() ? k_default_port : service_);
+    }
+
+    session_->send_requests();
 }
 
-rav::HttpClient::Session::Session(boost::asio::io_context& io_context) : resolver_(io_context), stream_(io_context) {}
+rav::HttpClient::Session::Session(boost::asio::io_context& io_context, HttpClient* owner) :
+    owner_(owner), resolver_(io_context), stream_(io_context) {}
 
-void rav::HttpClient::Session::request(
-    http::request<http::string_body> request, const std::string_view host, const std::string_view port,
-    CallbackType callback
-) {
-    request_ = std::move(request);
-    callback_ = std::move(callback);
+void rav::HttpClient::Session::send_requests() {
+    RAV_ASSERT(owner_ != nullptr, "HttpClient::Session must have an owner");
+    if (owner_->requests_.empty()) {
+        return;
+    }
+    if (state_ == State::disconnected) {
+        async_connect();  // Start the connection process
+    } else if (state_ == State::connected) {
+        async_send();  // If already connected, just write the next request
+    }
+}
+
+void rav::HttpClient::Session::clear_owner() {
+    owner_ = nullptr;
+}
+
+void rav::HttpClient::Session::async_connect() {
+    RAV_ASSERT(owner_ != nullptr, "HttpClient::Session must have an owner");
+    fmt::print(
+        "HttpClient::Session: Resolving {}:{}\n", owner_->host_,
+        owner_->service_.empty() ? k_default_port : owner_->service_
+    );
     resolver_.async_resolve(
-        host, port.empty() ? k_default_port : port,
+        owner_->host_, owner_->service_.empty() ? k_default_port : owner_->service_,
         boost::beast::bind_front_handler(&Session::on_resolve, shared_from_this())
     );
+    state_ = State::resolving;
+}
+
+void rav::HttpClient::Session::async_send() {
+    // Set a timeout on the operation
+    stream_.expires_after(std::chrono::seconds(30));
+
+    // Send the HTTP request to the remote host
+    http::async_write(
+        stream_, owner_->requests_.front().first,
+        boost::beast::bind_front_handler(&Session::on_write, shared_from_this())
+    );
+
+    state_ = State::waiting_for_send;
 }
 
 void rav::HttpClient::Session::on_resolve(
     const boost::beast::error_code& ec, const tcp::resolver::results_type& results
 ) {
+    if (owner_ == nullptr) {
+        return;  // Session was abandoned, nothing to do.
+    }
+
+    RAV_ASSERT(!owner_->requests_.empty(), "No requests available");
+
     if (ec) {
-        callback_(ec);
+        if (const auto& cb = owner_->requests_.front().second) {
+            cb(ec);
+        }
+        owner_->requests_.pop();
+        return;  // Error resolving the host
     }
 
     // Set a timeout on the operation
@@ -133,48 +180,107 @@ void rav::HttpClient::Session::on_resolve(
 
     // Make the connection on the IP address we get from a lookup
     stream_.async_connect(results, boost::beast::bind_front_handler(&Session::on_connect, shared_from_this()));
+
+    state_ = State::connecting;
 }
 
 void rav::HttpClient::Session::
     on_connect(const boost::beast::error_code& ec, const tcp::resolver::results_type::endpoint_type&) {
-    if (ec) {
-        return callback_(ec);
+    if (owner_ == nullptr) {
+        return;  // Session was abandoned, nothing to do.
     }
 
-    // Set a timeout on the operation
-    stream_.expires_after(std::chrono::seconds(30));
+    RAV_ASSERT(!owner_->requests_.empty(), "No requests available");
 
-    // Send the HTTP request to the remote host
-    http::async_write(stream_, request_, boost::beast::bind_front_handler(&Session::on_write, shared_from_this()));
+    if (ec) {
+        state_ = State::disconnected;
+        if (const auto& cb = owner_->requests_.front().second) {
+            cb(ec);
+        }
+        owner_->requests_.pop();
+        return;
+    }
+
+    state_ = State::connected;
+
+    async_send();  // Start writing the first request
 }
 
 void rav::HttpClient::Session::on_write(const boost::beast::error_code& ec, std::size_t bytes_transferred) {
     boost::ignore_unused(bytes_transferred);
 
-    if (ec) {
-        return callback_(ec);
+    if (owner_ == nullptr) {
+        return;  // Session was abandoned, nothing to do.
     }
+
+    RAV_ASSERT(!owner_->requests_.empty(), "No requests available");
+
+    if (ec) {
+        state_ = State::disconnected;
+        if (const auto& cb = owner_->requests_.front().second) {
+            cb(ec);
+        }
+        owner_->requests_.pop();
+        return;
+    }
+
+    response_ = {};
 
     // Receive the HTTP response
     http::async_read(
         stream_, buffer_, response_, boost::beast::bind_front_handler(&Session::on_read, shared_from_this())
     );
+
+    state_ = State::waiting_for_response;
 }
 
 void rav::HttpClient::Session::on_read(boost::beast::error_code ec, std::size_t bytes_transferred) {
     boost::ignore_unused(bytes_transferred);
 
+    if (owner_ == nullptr) {
+        return;  // Session was abandoned, nothing to do.
+    }
+
+    RAV_ASSERT(!owner_->requests_.empty(), "No requests available");
+
     if (ec) {
-        return callback_(ec);
+        state_ = State::disconnected;
+        if (const auto& cb = owner_->requests_.front().second) {
+            cb(ec);
+        }
+        owner_->requests_.pop();
+        return;
     }
 
-    // Gracefully close the socket
-    stream_.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-
-    // not_connected happens sometimes so don't bother reporting it.
-    if (ec && ec != boost::beast::errc::not_connected) {
-        return callback_(ec);
+    if (const auto& cb = owner_->requests_.front().second) {
+        cb(response_);
     }
 
-    callback_(response_);
+    owner_->requests_.pop();
+
+    if (!response_.keep_alive()) {
+        // Gracefully close the socket
+        stream_.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+
+        // not_connected happens sometimes, so don't bother reporting it.
+        if (ec && ec != boost::beast::errc::not_connected) {
+            RAV_ERROR("HttpClient::Session::on_read: Error closing socket: {}", ec.message());
+        }
+
+        if (!owner_->requests_.empty()) {
+            async_connect();  // If there are more requests, reconnect.
+            return;
+        }
+
+        state_ = State::disconnected;
+        return;
+    }
+
+    if (!owner_->requests_.empty()) {
+        async_send();  // If there are more requests, send the next one.
+        return;
+    }
+
+    // Otherwise set the state to connected so that send_requests will schedule requests for sending.
+    state_ = State::connected;
 }
