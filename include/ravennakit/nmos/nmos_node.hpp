@@ -16,14 +16,12 @@
 #include "detail/nmos_registry_browser.hpp"
 #include "models/nmos_device.hpp"
 #include "models/nmos_flow.hpp"
-#include "models/nmos_flow_audio_raw.hpp"
 #include "models/nmos_receiver.hpp"
 #include "models/nmos_self.hpp"
 #include "models/nmos_sender.hpp"
 #include "models/nmos_source.hpp"
 #include "ravennakit/core/net/http/http_client.hpp"
 #include "ravennakit/core/net/http/http_server.hpp"
-#include "ravennakit/dnssd/dnssd_browser.hpp"
 
 #include <boost/uuid.hpp>
 #include <boost/system/result.hpp>
@@ -101,10 +99,8 @@ class Node {
         DiscoverMode discover_mode {};
         /// The port of the local node api.
         uint16_t node_api_port {};
-        /// Whether the node is registered with a registry or not.
+        /// Whether the node is currently registered with a registry or not.
         bool is_registered {};
-        /// Failed connection attempts
-        uint32_t failed_connection_attempts {};
     };
 
     explicit Node(boost::asio::io_context& io_context, const ConfigurationUpdate& configuration = {});
@@ -217,12 +213,10 @@ class Node {
     static constexpr uint8_t k_max_failed_heartbeats = 5;
     static constexpr auto k_heartbeat_interval = std::chrono::seconds(5);
 
-    boost::asio::io_context& io_context_;
     Configuration configuration_;
     State state_;
     HttpServer http_server_;
     RegistryBrowser registry_browser_;
-    HttpClient http_client_;
 
     Self self_;
     std::vector<Device> devices_;
@@ -232,6 +226,7 @@ class Node {
     std::vector<Source> sources_;
 
     uint8_t failed_heartbeat_count_ = 0;
+    HttpClient http_client_;
     AsioTimer heartbeat_timer_;  // Keep below http_client_ to avoid dangling reference
 
     /**
@@ -245,10 +240,10 @@ class Node {
      */
     void stop_internal();
 
-    [[nodiscard]] bool connect_to_registry();
-    [[nodiscard]] bool connect_to_registry(std::string_view host_target, uint16_t port);
-    [[nodiscard]] bool post_resource(const char* type, const boost::json::value& resource) const;
-    void send_heartbeat();
+    void connect_to_registry_async();
+    void connect_to_registry_async(std::string_view host_target, uint16_t port);
+    void post_resource_async(std::string type, boost::json::value resource);
+    void send_heartbeat_async();
 
     [[nodiscard]] bool add_receiver_to_device(const Receiver& receiver);
     [[nodiscard]] bool add_sender_to_device(const Sender& sender);

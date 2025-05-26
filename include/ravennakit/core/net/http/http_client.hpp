@@ -125,7 +125,7 @@ class HttpClient {
     );
 
     /**
-     * Clears all scheduled requests if there are any. Otherwise this function has no effect.
+     * Clears all scheduled requests if there are any. Otherwise, this function has no effect.
      */
     void cancel_outstanding_requests() {
         requests_ = {};

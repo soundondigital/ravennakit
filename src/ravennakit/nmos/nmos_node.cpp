@@ -206,11 +206,7 @@ void rav::nmos::Node::ConfigurationUpdate::apply_to_config(Configuration& config
 }
 
 rav::nmos::Node::Node(boost::asio::io_context& io_context, const ConfigurationUpdate& configuration) :
-    io_context_(io_context),
-    http_server_(io_context),
-    registry_browser_(io_context),
-    http_client_(io_context),
-    heartbeat_timer_(io_context) {
+    http_server_(io_context), registry_browser_(io_context), http_client_(io_context), heartbeat_timer_(io_context) {
     self_.id = boost::uuids::random_generator()();
     self_.version = Version {1, 0};
     self_.label = "ravennakit";
@@ -594,10 +590,7 @@ boost::system::result<void, rav::nmos::Node::Error> rav::nmos::Node::start_inter
 
     self_.api.endpoints = {Self::Endpoint {endpoint.address().to_string(), endpoint.port(), "http", false}};
 
-    if (!connect_to_registry()) {
-        RAV_ERROR("Failed to connect to registry");
-        // Not returning because we want to keep the http server running.
-    }
+    connect_to_registry_async();
 
     rollback.commit();
 
@@ -609,44 +602,37 @@ void rav::nmos::Node::stop_internal() {
     http_server_.stop();
 }
 
-bool rav::nmos::Node::connect_to_registry() {
+void rav::nmos::Node::connect_to_registry_async() {
     if (configuration_.operation_mode == OperationMode::registered
         || configuration_.operation_mode == OperationMode::registered_p2p) {
         if (configuration_.discover_mode == DiscoverMode::manual) {
             if (configuration_.registry_address.empty()) {
                 RAV_ERROR("Registry address is empty");
-                return false;
+                return;
             }
 
             const boost::urls::url_view url(configuration_.registry_address);
-            return connect_to_registry(url.host(), url.port_number());
+            connect_to_registry_async(url.host(), url.port_number());
+            return;
         }
         registry_browser_.find_most_suitable_registry_async(
             configuration_.discover_mode, configuration_.api_version,
             [this](const std::optional<dnssd::ServiceDescription>& registry) {
                 if (registry) {
-                    if (!connect_to_registry(registry->host_target, registry->port)) {
-                        RAV_ERROR("Failed to connect to registry: {}", registry->to_string());
-                    }
-                } else {
-                    RAV_INFO("No registry found after timeout");
+                    connect_to_registry_async(registry->host_target, registry->port);
+                    return;
                 }
+                RAV_WARNING("No registry found after timeout");
             }
         );
-        return true;
     }
     // In p2p mode, we don't connect to a registry.
-    return true;
 }
 
-bool rav::nmos::Node::connect_to_registry(std::string_view host_target, uint16_t port) {
+void rav::nmos::Node::connect_to_registry_async(std::string_view host_target, uint16_t port) {
     host_target = string_remove_suffix(host_target, ".");
 
     RAV_TRACE("Try to register with registry at {}:{}", host_target, port);
-
-    Rollback rollback([this] {
-        state_.failed_connection_attempts++;
-    });
 
     http_client_.set_host(host_target, std::to_string(port));
 
@@ -655,107 +641,95 @@ bool rav::nmos::Node::connect_to_registry(std::string_view host_target, uint16_t
     // requests. Ideally, we would send the requests asynchronously and wait for the previous one to finish before
     // sending the next one, but that would require a more complex implementation.
 
-    if (!post_resource("node", boost::json::value_from(self_))) {
-        return false;
-    }
+    post_resource_async("node", boost::json::value_from(self_));
 
     for (auto& device : devices_) {
-        if (!post_resource("device", boost::json::value_from(device))) {
-            return false;
-        }
+        post_resource_async("device", boost::json::value_from(device));
     }
 
     for (auto& source : sources_) {
-        if (!post_resource("source", boost::json::value_from(source))) {
-            return false;
-        }
+        post_resource_async("source", boost::json::value_from(source));
     }
 
     for (auto& flow : flows_) {
-        if (!post_resource("flow", boost::json::value_from(flow))) {
-            return false;
-        }
+        post_resource_async("flow", boost::json::value_from(flow));
     }
 
     for (auto& sender : senders_) {
-        if (!post_resource("sender", boost::json::value_from(sender))) {
-            return false;
-        }
+        post_resource_async("sender", boost::json::value_from(sender));
     }
 
     for (auto& receiver : receivers_) {
-        if (!post_resource("receiver", boost::json::value_from(receiver))) {
-            return false;
-        }
+        post_resource_async("receiver", boost::json::value_from(receiver));
     }
 
     failed_heartbeat_count_ = 0;
-    state_.failed_connection_attempts = 0;
 
     heartbeat_timer_.start(k_heartbeat_interval, [this] {
-        send_heartbeat();
+        send_heartbeat_async();
     });
 
-    rollback.commit();
-
-    RAV_INFO("Registered with registry at {}:{}", host_target, port);
-
-    return true;
+    // Send heartbeat immediately after registration to update the connected status.
+    send_heartbeat_async();
 }
 
-bool rav::nmos::Node::post_resource(const char* type, const boost::json::value& resource) const {
+void rav::nmos::Node::post_resource_async(std::string type, boost::json::value resource) {
     const auto target = fmt::format("/x-nmos/registration/{}/resource", configuration_.api_version.to_string());
-    const auto result = http_client_.post(
-        std::string_view(target), boost::json::serialize(boost::json::value {{"type", type}, {"data", resource}})
+
+    auto body = boost::json::serialize(boost::json::value {{"type", type}, {"data", std::move(resource)}});
+
+    http_client_.post_async(
+        target, body,
+        [body, type](const boost::system::result<http::response<http::string_body>>& result) mutable {
+            if (result.has_error()) {
+                RAV_ERROR("Failed to register with registry: {}", result.error().message());
+                return;
+            }
+
+            const auto& res = result.value();
+
+            if (res.result() == http::status::ok) {
+                RAV_INFO("Updated {} in registry: {}", type, body);
+            } else if (res.result() == http::status::created) {
+                RAV_INFO("Created {} in registry: {}", type, body);
+            } else if (http::to_status_class(res.result()) == http::status_class::successful) {
+                RAV_WARNING("Unexpected response from registry: {}", res.result_int());
+            } else {
+                RAV_ERROR("Failed to post resource {}: {}", res, body);
+            }
+        }
     );
-
-    if (result.has_error()) {
-        RAV_ERROR("Failed to register with registry: {}", result.error().message());
-        return false;
-    }
-
-    const auto& res = result.value();
-
-    if (res.result() == http::status::ok) {
-        RAV_INFO("Updated {} in registry: {}", type, target);
-    } else if (res.result() == http::status::created) {
-        RAV_INFO("Created {} in registry at {}", type, target);
-    } else if (http::to_status_class(res.result()) == http::status_class::successful) {
-        RAV_WARNING("Unexpected response from registry: {}", res.result_int());
-    } else {
-        RAV_ERROR("Failed to post resource: {} at {}", res, target);
-        return false;
-    }
-
-    return true;
 }
 
-void rav::nmos::Node::send_heartbeat() {
+void rav::nmos::Node::send_heartbeat_async() {
     const auto target = fmt::format(
         "/x-nmos/registration/{}/health/nodes/{}", configuration_.api_version.to_string(), to_string(self_.id)
     );
-    auto result = http_client_.post(std::string_view(target), {});
 
-    if (result.has_value() && result.value().result() == http::status::ok) {
-        failed_heartbeat_count_ = 0;
-        RAV_TRACE("Heartbeat sent to {}", target);
-        return;
-    }
+    http_client_.post_async(target, {}, [this](const boost::system::result<http::response<http::string_body>>& result) {
+        if (result.has_value() && result.value().result() == http::status::ok) {
+            failed_heartbeat_count_ = 0;
+            if (!std::exchange(state_.is_registered, true)) {
+                RAV_INFO("Node registered with the registry");
+            }
+            RAV_TRACE("NMOS heartbeat sent");
+            return;
+        }
+        if (result.has_error()) {
+            RAV_ERROR("Failed to send heartbeat: {}", result.error().message());
+        } else {
+            RAV_ERROR("Sending heartbeat failed: {}", result->result_int());
+        }
+        if (failed_heartbeat_count_ < k_max_failed_heartbeats) {
+            failed_heartbeat_count_++;
+            return;  // Don't try to reconnect yet, just try the next heartbeat.
+        }
+        http_client_.cancel_outstanding_requests();
+        RAV_ERROR("Failed to send heartbeat {} times, try reconnecting to registry", failed_heartbeat_count_);
 
-    if (result.has_error()) {
-        RAV_ERROR("Failed to send heartbeat: {}", result.error().message());
-    } else {
-        RAV_ERROR("Sending heartbeat failed: {}", result->result_int());
-    }
-
-    if (failed_heartbeat_count_ < k_max_failed_heartbeats) {
-        failed_heartbeat_count_++;
-        return;  // Don't try to reconnect yet, just try the next heartbeat.
-    }
-
-    RAV_ERROR("Failed to send heartbeat {} times, try reconnecting to registry", failed_heartbeat_count_);
-
-    std::ignore = connect_to_registry();
+        state_.is_registered = false;
+        connect_to_registry_async();
+    });
 }
 
 bool rav::nmos::Node::add_receiver_to_device(const Receiver& receiver) {
