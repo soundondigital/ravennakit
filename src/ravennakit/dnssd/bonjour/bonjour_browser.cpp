@@ -55,7 +55,7 @@ void rav::dnssd::BonjourBrowser::Service::resolve_callback(
         return;
     }
 
-    browser_service->description_.host_target = host_target;
+    browser_service->description_.host_target = string_remove_suffix(host_target, ".");
     browser_service->description_.port = ntohs(port);
     browser_service->description_.txt = BonjourTxtRecord::get_txt_record_from_raw_bytes(txt_record, txt_len);
 
