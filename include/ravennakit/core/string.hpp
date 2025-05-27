@@ -267,6 +267,20 @@ inline bool string_starts_with(const std::string_view text, const std::string_vi
     return text.rfind(starts_with, 0) == 0;
 }
 
+
+/**
+ * Tests whether given text ends with a certain string.
+ * @param text The text to test.
+ * @param ends_with The string to test for.
+ * @return True if text ends with ends_with, false otherwise.
+ */
+inline bool string_ends_with(const std::string_view text, const std::string_view ends_with) {
+    if (ends_with.length() > text.length()) {
+        return false;
+    }
+    return text.compare(text.length() - ends_with.length(), ends_with.length(), ends_with) == 0;
+}
+
 /**
  * Returns whether given string contains a certain character.
  * @param string String to look into.

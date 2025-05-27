@@ -305,6 +305,34 @@ TEST_CASE("string | split_string") {
     }
 }
 
+TEST_CASE("string_starts_with") {
+    SECTION("Starts with valid prefix") {
+        REQUIRE(rav::string_starts_with("some/random/string", "some/"));
+    }
+
+    SECTION("Does not start with invalid prefix") {
+        REQUIRE_FALSE(rav::string_starts_with("some/random/string", "noexist/"));
+    }
+
+    SECTION("Does not start with invalid prefix") {
+        REQUIRE_FALSE(rav::string_starts_with("test/some/random/string", "some/"));
+    }
+}
+
+TEST_CASE("string_ends_with") {
+    SECTION("Ends with valid suffix") {
+        REQUIRE(rav::string_ends_with("some/random/string", "/string"));
+    }
+
+    SECTION("Does not end with invalid suffix") {
+        REQUIRE_FALSE(rav::string_ends_with("some/random/string", "/noexist"));
+    }
+
+    SECTION("Does not end with invalid suffix") {
+        REQUIRE_FALSE(rav::string_ends_with("some/random/string/test", "/string"));
+    }
+}
+
 TEST_CASE("string | stod") {
     SECTION("1.0") {
         const auto v = rav::string_to_double("1.0");

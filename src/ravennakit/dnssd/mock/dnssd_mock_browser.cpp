@@ -11,10 +11,11 @@
 #include "ravennakit/dnssd/mock/dnssd_mock_browser.hpp"
 
 #include "ravennakit/core/exception.hpp"
+#include "ravennakit/core/string.hpp"
 
 rav::dnssd::MockBrowser::MockBrowser(boost::asio::io_context& io_context) : io_context_(io_context) {}
 
-void rav::dnssd::MockBrowser::mock_discovering_service(
+void rav::dnssd::MockBrowser::mock_discovered_service(
     const std::string& fullname, const std::string& name, const std::string& reg_type, const std::string& domain
 ) {
     boost::asio::dispatch(io_context_, [=] {
@@ -24,8 +25,8 @@ void rav::dnssd::MockBrowser::mock_discovering_service(
         ServiceDescription service;
         service.fullname = fullname;
         service.name = name;
-        service.reg_type = reg_type;
-        service.domain = domain;
+        service.reg_type = string_ends_with(reg_type, ".") ? reg_type : reg_type + ".";
+        service.domain = string_ends_with(domain, ".") ? domain : domain + ".";
         const auto [it, inserted] = services_.emplace(fullname, service);
         on_service_discovered(it->second);
     });
@@ -46,7 +47,7 @@ void rav::dnssd::MockBrowser::mock_resolved_service(
     });
 }
 
-void rav::dnssd::MockBrowser::mock_adding_address(
+void rav::dnssd::MockBrowser::mock_added_address(
     const std::string& fullname, const std::string& address, const uint32_t interface_index
 ) {
     boost::asio::dispatch(io_context_, [=] {
@@ -59,7 +60,7 @@ void rav::dnssd::MockBrowser::mock_adding_address(
     });
 }
 
-void rav::dnssd::MockBrowser::mock_removing_address(
+void rav::dnssd::MockBrowser::mock_removed_address(
     const std::string& fullname, const std::string& address, uint32_t interface_index
 ) {
     boost::asio::dispatch(io_context_, [=] {
@@ -83,7 +84,7 @@ void rav::dnssd::MockBrowser::mock_removing_address(
     });
 }
 
-void rav::dnssd::MockBrowser::mock_removing_service(const std::string& fullname) {
+void rav::dnssd::MockBrowser::mock_removed_service(const std::string& fullname) {
     boost::asio::dispatch(io_context_, [=] {
         const auto it = services_.find(fullname);
         if (it == services_.end()) {
@@ -112,6 +113,7 @@ const rav::dnssd::ServiceDescription* rav::dnssd::MockBrowser::find_service(cons
 
 std::vector<rav::dnssd::ServiceDescription> rav::dnssd::MockBrowser::get_services() const {
     std::vector<ServiceDescription> result;
+    result.reserve(services_.size());
     for (auto& [_, service] : services_) {
         result.push_back(service);
     }

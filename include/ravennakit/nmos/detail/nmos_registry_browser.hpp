@@ -23,8 +23,15 @@ class RegistryBrowser {
     SafeFunction<void(const dnssd::ServiceDescription&)> on_registry_discovered;
 
     using Callback = std::function<void(std::optional<dnssd::ServiceDescription>)>;
+    using BrowserFactory = std::function<std::unique_ptr<dnssd::Browser>(boost::asio::io_context&)>;
 
-    explicit RegistryBrowser(boost::asio::io_context& io_context) : io_context_(io_context) {}
+    explicit RegistryBrowser(
+        boost::asio::io_context& io_context, BrowserFactory unicast_browser_factory = nullptr,
+        BrowserFactory multicast_browser_factory = nullptr
+    ) :
+        io_context_(io_context),
+        unicast_browser_factory_(std::move(unicast_browser_factory)),
+        multicast_browser_factory_(std::move(multicast_browser_factory)) {}
 
     void start(const DiscoverMode discover_mode, const ApiVersion api_version) {
         discover_mode_ = discover_mode;
@@ -38,8 +45,10 @@ class RegistryBrowser {
 
         // Unicast
         if (discover_mode_ == DiscoverMode::dns || discover_mode_ == DiscoverMode::udns) {
-            unicast_browser_ = dnssd::Browser::create(io_context_);
-            // TODO: Start a unicast query
+            unicast_browser_ =
+                unicast_browser_factory_ ? unicast_browser_factory_(io_context_) : dnssd::Browser::create(io_context_);
+            unicast_browser_->browse_for("_nmos-register._tcp");
+            unicast_browser_->browse_for("_nmos-registration._tcp");  // For v1.2 compatibility
         } else {
             unicast_browser_.reset();
         }
@@ -47,7 +56,8 @@ class RegistryBrowser {
         // Multicast
         if (discover_mode_ == DiscoverMode::dns || discover_mode_ == DiscoverMode::mdns) {
             if (multicast_browser_ == nullptr) {
-                multicast_browser_ = dnssd::Browser::create(io_context_);
+                multicast_browser_ = multicast_browser_factory_ ? multicast_browser_factory_(io_context_)
+                                                                : dnssd::Browser::create(io_context_);
                 multicast_browser_->on_service_resolved = [this](const dnssd::ServiceDescription& desc) {
                     if (filter_and_get_pri(desc).has_value()) {
                         on_registry_discovered(desc);
@@ -122,6 +132,8 @@ class RegistryBrowser {
 
   private:
     boost::asio::io_context& io_context_;
+    BrowserFactory unicast_browser_factory_;
+    BrowserFactory multicast_browser_factory_;
     DiscoverMode discover_mode_ {};
     ApiVersion api_version_;
     std::unique_ptr<dnssd::Browser> unicast_browser_;

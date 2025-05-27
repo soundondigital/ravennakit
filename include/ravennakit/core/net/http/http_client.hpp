@@ -94,6 +94,11 @@ class HttpClient {
 
     ~HttpClient();
 
+    HttpClient(const HttpClient&) = delete;
+    HttpClient& operator=(const HttpClient&) = delete;
+    HttpClient(HttpClient&&) = delete;
+    HttpClient& operator=(HttpClient&&) = delete;
+
     /**
      * Sets the host to connect to.
      * @param url The url with the host info.
