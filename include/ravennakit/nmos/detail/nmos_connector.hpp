@@ -30,14 +30,21 @@ namespace rav::nmos {
  */
 class Connector {
   public:
-    static constexpr auto k_default_timeout = std::chrono::milliseconds(1000);
+    static constexpr auto k_default_timeout = std::chrono::milliseconds(2000);
     static constexpr uint8_t k_max_failed_heartbeats = 5;
     static constexpr auto k_heartbeat_interval = std::chrono::seconds(5);
 
-    SafeFunction<void(bool connected)> on_connected_status_changed;
+    enum class Status {
+        idle,
+        connected,
+        disconnected,
+        p2p,
+    };
+
+    SafeFunction<void(Status status)> on_status_changed;
 
     explicit Connector(boost::asio::io_context& io_context) :
-        registry_browser_(io_context), http_client_(io_context, k_default_timeout), timer_(io_context) {}
+        registry_browser_(io_context), http_client_(io_context), timer_(io_context) {}
 
     void start(
         const OperationMode operation_mode, const DiscoverMode discover_mode, const ApiVersion api_version,
@@ -45,39 +52,15 @@ class Connector {
     ) {
         operation_mode_ = operation_mode;
         api_version_ = api_version;
+        selected_registry_.reset();
 
         timer_.stop();
 
-        // Registry browser
-        if ((operation_mode == OperationMode::registered || operation_mode == OperationMode::registered_p2p)
-            && discover_mode != DiscoverMode::manual) {
-            registry_browser_.on_registry_discovered.reset();
-            registry_browser_.start(discover_mode, api_version);
-
-            timer_.once(k_default_timeout, [this] {
-                // Subscribe to future registry discoveries
-                registry_browser_.on_registry_discovered = [this](const dnssd::ServiceDescription& desc) {
-                    handle_discovered_registry(desc);
-                };
-                if (const auto reg = registry_browser_.find_most_suitable_registry()) {
-                    connect_to_registry_async(*reg);
-                } else if (operation_mode_ == OperationMode::registered_p2p) {
-                    set_p2p_fallback_active(true);
-                }
-            });
-        } else {
-            registry_browser_.stop();
-        }
-
-        // Node browser
-        if ((operation_mode == OperationMode::registered_p2p || operation_mode == OperationMode::p2p)
-            && discover_mode != DiscoverMode::manual) {
-            // TODO: Start Node browser
-        } else {
-            // TODO: Stop Node browser
-        }
-
         if (discover_mode == DiscoverMode::manual) {
+            RAV_ASSERT(
+                operation_mode == OperationMode::registered, "When connecting manually only registered mode is allowed"
+            );
+
             if (registry_address.empty()) {
                 RAV_ERROR("Registry address is empty");
                 return;
@@ -86,12 +69,40 @@ class Connector {
             const boost::urls::url_view url(registry_address);
             // connect_to_registry_async(url.host(), url.port_number());
             // TODO: connect to registry using the provided address
+            return;
         }
+
+        if (operation_mode == OperationMode::p2p) {
+            selected_registry_.reset();
+            registry_browser_.stop();
+            set_status(Status::p2p);
+            return;
+        }
+
+        // All other cases require a timeout to wait for the registry to be discovered
+
+        registry_browser_.on_registry_discovered.reset();
+        registry_browser_.start(discover_mode, api_version);
+
+        timer_.once(k_default_timeout, [this] {
+            // Subscribe to future registry discoveries
+            registry_browser_.on_registry_discovered = [this](const dnssd::ServiceDescription& desc) {
+                handle_registry_discovered(desc);
+            };
+            if (const auto reg = registry_browser_.find_most_suitable_registry()) {
+                select_registry(*reg);
+            } else if (operation_mode_ == OperationMode::registered_p2p) {
+                set_status(Status::p2p);
+            } else {
+                set_status(Status::idle);
+            }
+        });
     }
 
     void stop() {
         timer_.stop();
         registry_browser_.stop();
+        set_status(Status::idle);
     }
 
     void post_async(
@@ -108,70 +119,112 @@ class Connector {
         http_client_.cancel_outstanding_requests();
     }
 
-    void try_reconnect() {
-        reconnect_to_registry_async();
-    }
-
   private:
     OperationMode operation_mode_ = OperationMode::registered_p2p;
     ApiVersion api_version_ = ApiVersion::v1_3();
-    bool p2p_fallback_active_ = false;
-    bool is_connected_to_registry_ = false;
-    std::optional<std::string> registry_fullname_;
+    Status status_ = Status::idle;
+    std::optional<dnssd::ServiceDescription> selected_registry_;
     RegistryBrowser registry_browser_;
     HttpClient http_client_;
     AsioTimer timer_;
 
-    void handle_discovered_registry(const dnssd::ServiceDescription& desc) {
-        RAV_INFO("Discovered NMOS registry: {}", desc.name);
-
+    void handle_registry_discovered(const dnssd::ServiceDescription& desc) {
+        RAV_INFO("Discovered NMOS registry: {}", desc.to_string());
         if (operation_mode_ == OperationMode::registered_p2p || operation_mode_ == OperationMode::registered) {
-            if (p2p_fallback_active_) {
-                set_p2p_fallback_active(false);
-            } else {
-                if (desc.fullname == registry_fullname_) {
-                    RAV_TRACE("Already connected to the discovered registry: {}", desc.fullname);
-                    return;  // Already connected to this registry
-                }
-            }
-            connect_to_registry_async(desc);
+            select_registry(desc);
         }
     }
 
-    void connect_to_registry_async(const dnssd::ServiceDescription& desc) {
-        if (desc.fullname == registry_fullname_) {
-            RAV_TRACE("Already connected to the discovered registry: {}", desc.fullname);
-            return;  // Already connected to this registry
+    bool select_registry(const dnssd::ServiceDescription& desc) {
+        if (selected_registry_ && selected_registry_->host_target == desc.host_target
+            && selected_registry_->port == desc.port) {
+            return false;  // Already connected to this registry
         }
-        RAV_INFO("Connecting to NMOS registry: {}", desc.fullname);
-        http_client_.set_host(string_remove_suffix(desc.host_target, "."), std::to_string(desc.port));
-        registry_fullname_ = desc.fullname;
-        reconnect_to_registry_async();
+        selected_registry_ = desc;
+        connect_to_registry_async();
+        return true;  // Successfully selected a new registry
     }
 
-    void reconnect_to_registry_async() {
+    void connect_to_registry_async() {
+        if (!selected_registry_.has_value()) {
+            RAV_ASSERT_FALSE("A registry must be selected at this point");
+            return;  // No registry selected
+        }
+        http_client_.set_host(selected_registry_->host_target, std::to_string(selected_registry_->port));
         http_client_.get_async("/", [this](const boost::system::result<http::response<http::string_body>>& result) {
-            set_connected(result.has_value() && result.value().result() == http::status::ok);
+            if (result.has_error()) {
+                RAV_ERROR("Error connecting to NMOS registry: {}", result.error().message());
+                set_status(Status::disconnected);
+            } else if (result.value().result() != http::status::ok) {
+                RAV_ERROR("Unexpected response from NMOS registry: {}", result.value().result_int());
+                set_status(Status::disconnected);
+            } else {
+                set_status(Status::connected);
+            }
         });
     }
 
-    void set_connected(bool is_connected) {
-        if (std::exchange(is_connected_to_registry_, is_connected) != is_connected) {
-            on_connected_status_changed(is_connected);
+    void set_status(const Status status) {
+        if (status_ == status) {
+            return;  // No change in status
         }
-    }
 
-    void set_p2p_fallback_active(const bool active) {
-        if (p2p_fallback_active_ == active) {
-            return;  // No change in state
+        status_ = status;
+
+        switch (status) {
+            case Status::connected: {
+                RAV_ASSERT(selected_registry_.has_value(), "No registry selected");
+                RAV_INFO(
+                    "Connected to NMOS registry {} at {}:{}", selected_registry_->name, selected_registry_->host_target,
+                    selected_registry_->port
+                );
+                break;
+            }
+            case Status::disconnected: {
+                RAV_INFO(
+                    "Disconnected from NMOS registry at {}:{}", http_client_.get_host(), http_client_.get_service()
+                );
+                break;
+            }
+            case Status::p2p:
+                if (operation_mode_ == OperationMode::p2p) {
+                    RAV_INFO("Switching to p2p mode");
+                } else {
+                    RAV_INFO("Falling back to p2p mode, registry not available");
+                }
+                break;
+            case Status::idle:
+            default: {
+                RAV_INFO("NMOS Connector status changed to {}", status);
+                break;
+            }
         }
-        if (active) {
-            RAV_INFO("Falling back to p2p mode due to no suitable registry found");
-        } else {
-            RAV_INFO("Disabling p2p mode because a suitable registry was found");
-        }
-        p2p_fallback_active_ = active;
+
+        on_status_changed(status);
     }
 };
 
+/// Overload the output stream operator for the Node::Error enum class
+inline std::ostream& operator<<(std::ostream& os, const Connector::Status status) {
+    switch (status) {
+        case Connector::Status::p2p:
+            os << "p2p";
+            break;
+        case Connector::Status::idle:
+            os << "idle";
+            break;
+        case Connector::Status::connected:
+            os << "connected";
+            break;
+        case Connector::Status::disconnected:
+            os << "disconnected";
+            break;
+    }
+    return os;
+}
+
 }  // namespace rav::nmos
+
+/// Make Connector::Status printable with fmt
+template<>
+struct fmt::formatter<rav::nmos::Connector::Status>: ostream_formatter {};

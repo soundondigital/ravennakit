@@ -24,7 +24,6 @@ rav::HttpClient::HttpClient(
     const boost::urls::url parsed_url(url);
     host_ = parsed_url.host();
     service_ = parsed_url.port();
-    target_ = parsed_url.path();
 }
 
 rav::HttpClient::HttpClient(
@@ -33,7 +32,6 @@ rav::HttpClient::HttpClient(
     io_context_(io_context), timeout_seconds_(timeout_seconds) {
     host_ = url.host();
     service_ = url.port();
-    target_ = url.path();
 }
 
 rav::HttpClient::HttpClient(
@@ -61,7 +59,7 @@ rav::HttpClient::~HttpClient() {
 }
 
 void rav::HttpClient::set_host(const boost::urls::url& url) {
-    set_host(url.host(), url.port(), url.path());
+    set_host(url.host(), url.port());
 }
 
 void rav::HttpClient::set_host(const std::string_view url) {
@@ -69,10 +67,8 @@ void rav::HttpClient::set_host(const std::string_view url) {
     set_host(parsed_url);
 }
 
-void rav::HttpClient::set_host(
-    const std::string_view host, const std::string_view service, const std::string_view target
-) {
-    if (host == host_ && service == service_ && target == target_) {
+void rav::HttpClient::set_host(const std::string_view host, const std::string_view service) {
+    if (host == host_ && service == service_) {
         return;  // No change, no need to reset the session.
     }
     if (session_) {
@@ -81,7 +77,6 @@ void rav::HttpClient::set_host(
     }
     host_ = host;
     service_ = service;
-    target_ = target;
 }
 
 void rav::HttpClient::get_async(const std::string_view target, CallbackType callback) {
@@ -117,6 +112,18 @@ void rav::HttpClient::request_async(
     }
 
     session_->send_requests();
+}
+
+void rav::HttpClient::cancel_outstanding_requests() {
+    requests_ = {};
+}
+
+std::string rav::HttpClient::get_host() const {
+    return host_;
+}
+
+std::string rav::HttpClient::get_service() const {
+    return service_;
 }
 
 rav::HttpClient::Session::Session(
@@ -178,6 +185,7 @@ void rav::HttpClient::Session::on_resolve(
         if (!owner_->requests_.empty()) {
             owner_->requests_.pop();
         }
+        state_ = State::disconnected;
         return;  // Error resolving the host
     }
 
@@ -231,6 +239,7 @@ void rav::HttpClient::Session::on_write(const boost::beast::error_code& ec, std:
         if (!owner_->requests_.empty()) {
             owner_->requests_.pop();
         }
+        state_ = State::disconnected;
         return;
     }
 
@@ -261,6 +270,7 @@ void rav::HttpClient::Session::on_read(boost::beast::error_code ec, std::size_t 
         if (!owner_->requests_.empty()) {
             owner_->requests_.pop();
         }
+        state_ = State::disconnected;
         return;
     }
 

@@ -508,12 +508,9 @@ rav::nmos::Node::Node(boost::asio::io_context& io_context, const ConfigurationUp
         }
     );
 
-    http_server_.get(
-        "/**",
-        [](const HttpServer::Request&, HttpServer::Response& res, PathMatcher::Parameters&) {
-            set_error_response(res, http::status::not_found, "Not found", "No matching route");
-        }
-    );
+    http_server_.get("/**", [](const HttpServer::Request&, HttpServer::Response& res, PathMatcher::Parameters&) {
+        set_error_response(res, http::status::not_found, "Not found", "No matching route");
+    });
 
     const auto result = set_configuration(configuration, true);
     if (result.has_error()) {
@@ -578,9 +575,15 @@ boost::system::result<void, rav::nmos::Node::Error> rav::nmos::Node::start_inter
     self_.api.endpoints = {Self::Endpoint {endpoint.address().to_string(), endpoint.port(), "http", false}};
 
     // This kicks things off
-    connector_.on_connected_status_changed = [this](const bool is_connected) {
-        if (is_connected) {
+    connector_.on_status_changed = [this](const Connector::Status status) {
+        if (status == Connector::Status::connected) {
             register_async();
+        }
+
+        if (status == Connector::Status::p2p) {
+            // TODO: Start p2p advertising the node.
+        } else {
+            // TODO: Stop p2p advertising the node.
         }
     };
     connector_.start(
@@ -670,18 +673,23 @@ void rav::nmos::Node::send_heartbeat_async() {
             }
             return;
         }
+        failed_heartbeat_count_++;
         if (result.has_error()) {
             RAV_ERROR("Failed to send heartbeat: {}", result.error().message());
+            // When this case happens, it's pretty reasonable to assume that the connection is lost.
         } else {
             RAV_ERROR("Sending heartbeat failed: {}", result->result_int());
-        }
-        if (failed_heartbeat_count_ < k_max_failed_heartbeats) {
-            failed_heartbeat_count_++;
-            return;  // Don't try to reconnect yet, just try the next heartbeat.
+            if (failed_heartbeat_count_ < k_max_failed_heartbeats) {
+                return;  // Don't try to reconnect yet, just try the next heartbeat.
+            }
         }
         connector_.cancel_outstanding_requests();
-        RAV_ERROR("Failed to send heartbeat {} times, disconnect from registry", failed_heartbeat_count_);
+        RAV_ERROR("Failed to send heartbeat {} times, restart connection", failed_heartbeat_count_);
         state_.is_registered = false;
+        connector_.start(
+            configuration_.operation_mode, configuration_.discover_mode, configuration_.api_version,
+            configuration_.registry_address
+        );
         heartbeat_timer_.stop();
     });
 }

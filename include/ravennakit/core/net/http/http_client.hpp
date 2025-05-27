@@ -51,30 +51,46 @@ class HttpClient {
      * Constructs a new HttpClient using the given io_context and url.
      * @param io_context The io_context to use for the request.
      * @param url The url to request.
+     * @param timeout_seconds The timeout in seconds for the requests. Defaults to 30 seconds.
      */
-    HttpClient(boost::asio::io_context& io_context, std::string_view url, std::chrono::milliseconds timeout_seconds = std::chrono::milliseconds(30'000));
+    HttpClient(
+        boost::asio::io_context& io_context, std::string_view url,
+        std::chrono::milliseconds timeout_seconds = std::chrono::milliseconds(30'000)
+    );
 
     /**
      * Constructs a new HttpClient using the given io_context and url.
      * @param io_context The io_context to use for the request.
      * @param url The url to request.
+     * @param timeout_seconds The timeout in seconds for the requests. Defaults to 30 seconds.
      */
-    HttpClient(boost::asio::io_context& io_context, const boost::urls::url& url, std::chrono::milliseconds timeout_seconds = std::chrono::milliseconds(30'000));
+    HttpClient(
+        boost::asio::io_context& io_context, const boost::urls::url& url,
+        std::chrono::milliseconds timeout_seconds = std::chrono::milliseconds(30'000)
+    );
 
     /**
      * Constructs a new HttpClient using the given io_context and url.
      * @param io_context The io_context to use for the request.
      * @param endpoint The endpoint to request.
+     * @param timeout_seconds The timeout in seconds for the requests. Defaults to 30 seconds.
      */
-    HttpClient(boost::asio::io_context& io_context, const boost::asio::ip::tcp::endpoint& endpoint, std::chrono::milliseconds timeout_seconds = std::chrono::milliseconds(30'000));
+    HttpClient(
+        boost::asio::io_context& io_context, const boost::asio::ip::tcp::endpoint& endpoint,
+        std::chrono::milliseconds timeout_seconds = std::chrono::milliseconds(30'000)
+    );
 
     /**
      * Constructs a new HttpClient using the given io_context and url.
      * @param io_context The io_context to use for the request.
      * @param address The address to request.
      * @param port The port to request.
+     * @param timeout_seconds The timeout in seconds for the requests. Defaults to 30 seconds.
      */
-    HttpClient(boost::asio::io_context& io_context, const boost::asio::ip::address& address, uint16_t port, std::chrono::milliseconds timeout_seconds = std::chrono::milliseconds(30'000));
+    HttpClient(
+        boost::asio::io_context& io_context, const boost::asio::ip::address& address, uint16_t port,
+        std::chrono::milliseconds timeout_seconds = std::chrono::milliseconds(30'000)
+    );
 
     ~HttpClient();
 
@@ -94,9 +110,8 @@ class HttpClient {
      * Sets the host to connect to.
      * @param host The host to connect to.
      * @param service The service (port) to connect to.
-     * @param target The target to connect to.
      */
-    void set_host(std::string_view host, std::string_view service, std::string_view target = {});
+    void set_host(std::string_view host, std::string_view service);
 
     /**
      * Asynchronous GET request.
@@ -132,9 +147,17 @@ class HttpClient {
     /**
      * Clears all scheduled requests if there are any. Otherwise, this function has no effect.
      */
-    void cancel_outstanding_requests() {
-        requests_ = {};
-    }
+    void cancel_outstanding_requests();
+
+    /**
+     * @return The host that is currently set for this client.
+     */
+    [[nodiscard]] std::string get_host() const;
+
+    /**
+     * @return The service (port) that this current client is set for this client.
+     */
+    [[nodiscard]] std::string get_service() const;
 
   private:
     /**
@@ -171,7 +194,6 @@ class HttpClient {
     std::chrono::milliseconds timeout_seconds_ = std::chrono::milliseconds(30);
     std::string host_;
     std::string service_;
-    std::string target_;
     std::queue<std::pair<http::request<http::string_body>, CallbackType>> requests_;
     std::shared_ptr<Session> session_;
 };

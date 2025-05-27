@@ -49,7 +49,6 @@ class RegistryBrowser {
             if (multicast_browser_ == nullptr) {
                 multicast_browser_ = dnssd::Browser::create(io_context_);
                 multicast_browser_->on_service_resolved = [this](const dnssd::ServiceDescription& desc) {
-                    RAV_TRACE("Considering discovered service: {}", desc.to_string());
                     if (filter_and_get_pri(desc).has_value()) {
                         on_registry_discovered(desc);
                     } else {
