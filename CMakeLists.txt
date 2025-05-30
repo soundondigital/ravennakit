@@ -36,6 +36,10 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE INTERNAL "")
 endif ()
 
+if (MSVC)
+    add_link_options("/VERBOSE:LIB" "/NODEFAULTLIB:libcmt.lib" "/NODEFAULTLIB:libcmtd.lib" "/NODEFAULTLIB:msvcrtd.lib")
+endif()
+
 ################
 # Dependencies #
 ################
