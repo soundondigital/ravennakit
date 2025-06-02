@@ -22,7 +22,6 @@
 #include "models/nmos_self.hpp"
 #include "models/nmos_sender.hpp"
 #include "models/nmos_source.hpp"
-#include "ravennakit/core/net/http/http_client.hpp"
 #include "ravennakit/core/net/http/http_server.hpp"
 
 #include <boost/uuid.hpp>
@@ -38,8 +37,6 @@ namespace rav::nmos {
 class Node {
   public:
     static std::array<ApiVersion, 2> k_supported_api_versions;
-
-
 
     /**
      * The configuration of the NMOS node.

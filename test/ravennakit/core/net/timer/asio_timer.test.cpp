@@ -13,9 +13,9 @@
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("AsioTimer") {
-    SECTION("once") {
+    SECTION("Once") {
         boost::asio::io_context io_context;
-        const rav::AsioTimer timer(io_context);
+        rav::AsioTimer timer(io_context);
 
         bool callback_called = false;
         timer.once(std::chrono::milliseconds(100), [&] {
@@ -28,7 +28,7 @@ TEST_CASE("AsioTimer") {
 
     SECTION("Repeatedly") {
         boost::asio::io_context io_context;
-        const rav::AsioTimer timer(io_context);
+        rav::AsioTimer timer(io_context);
 
         int callback_count = 0;
         timer.start(std::chrono::milliseconds(100), [&] {
@@ -50,7 +50,7 @@ TEST_CASE("AsioTimer") {
         int creation_count = 0;
         for (auto i = 0; i < times; ++i) {
             boost::asio::post(io_context, [&io_context, &callback_count, &creation_count, i] {
-                const rav::AsioTimer timer(io_context);
+                rav::AsioTimer timer(io_context);
                 timer.start(std::chrono::milliseconds(i), [&] {
                     callback_count++;
                 });
@@ -60,7 +60,7 @@ TEST_CASE("AsioTimer") {
 
         for (auto i = 0; i < times; ++i) {
             boost::asio::post(io_context, [&io_context, &callback_count, &creation_count, i] {
-                const rav::AsioTimer timer(io_context);
+                rav::AsioTimer timer(io_context);
                 timer.once(std::chrono::milliseconds(i), [&] {
                     callback_count++;
                 });
@@ -92,7 +92,7 @@ TEST_CASE("AsioTimer") {
         int creation_count = 0;
         for (auto i = 0; i < times; ++i) {
             boost::asio::post(io_context, [&io_context, &callback_count, &creation_count, i] {
-                const rav::AsioTimer t(io_context);
+                rav::AsioTimer t(io_context);
                 t.start(std::chrono::milliseconds(i), [&] {
                     callback_count++;
                 });
@@ -102,7 +102,7 @@ TEST_CASE("AsioTimer") {
 
         for (auto i = 0; i < times; ++i) {
             boost::asio::post(io_context, [&io_context, &callback_count, &creation_count, i] {
-                const rav::AsioTimer t(io_context);
+                rav::AsioTimer t(io_context);
                 t.once(std::chrono::milliseconds(i), [&] {
                     callback_count++;
                 });
