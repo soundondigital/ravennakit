@@ -11,7 +11,6 @@
 #pragma once
 
 #include "detail/nmos_api_version.hpp"
-#include "detail/nmos_discover_mode.hpp"
 #include "detail/nmos_error.hpp"
 #include "detail/nmos_operating_mode.hpp"
 #include "detail/nmos_registry_browser.hpp"
@@ -43,8 +42,7 @@ class Node {
      * The configuration of the NMOS node.
      */
     struct Configuration {
-        OperationMode operation_mode {OperationMode::registered_p2p};
-        DiscoverMode discover_mode {DiscoverMode::dns};
+        OperationMode operation_mode {OperationMode::mdns_p2p};
         ApiVersion api_version {ApiVersion::v1_2()};
         std::string registry_address;  // For when operation_mode is registered and discover_mode is manual.
         bool enabled {false};          // Whether the node is enabled or not.
@@ -57,7 +55,7 @@ class Node {
         [[nodiscard]] boost::system::result<void, Error> validate() const;
 
         [[nodiscard]] auto constexpr tie() const {
-            return std::tie(operation_mode, discover_mode, api_version, registry_address, enabled);
+            return std::tie(operation_mode, api_version, registry_address, enabled);
         }
 
         friend bool operator==(const Configuration& lhs, const Configuration& rhs) {
@@ -75,7 +73,6 @@ class Node {
      */
     struct ConfigurationUpdate {
         std::optional<OperationMode> operation_mode;
-        std::optional<DiscoverMode> discover_mode;
         std::optional<ApiVersion> api_version;
         std::optional<std::string> registry_address;
         std::optional<bool> enabled;
@@ -267,7 +264,7 @@ class Node {
     void stop_internal();
 
     void register_async();
-    void post_resource_async(std::string type, boost::json::value resource);
+    void post_resource_async(std::string type, boost::json::value resource) const;
     void send_heartbeat_async();
     void connect_to_registry_async();
     void connect_to_registry_async(std::string_view host, std::string_view service);

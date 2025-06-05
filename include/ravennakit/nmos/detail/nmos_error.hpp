@@ -17,7 +17,6 @@ namespace rav::nmos {
  * Errors used in the NMOS node.
  */
 enum class Error {
-    incompatible_discover_mode,
     invalid_registry_address,
     invalid_api_version,
     failed_to_start_http_server,
@@ -27,9 +26,6 @@ enum class Error {
 inline std::ostream& operator<<(std::ostream& os, const Error error) {
     {
         switch (error) {
-            case Error::incompatible_discover_mode:
-                os << "incompatible_discover_mode";
-                break;
             case Error::invalid_registry_address:
                 os << "invalid_registry_address";
                 break;

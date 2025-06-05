@@ -153,46 +153,18 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::Configuration::va
         return Error::invalid_api_version;
     }
 
-    if (operation_mode == OperationMode::registered_p2p) {
-        if (discover_mode == DiscoverMode::dns || discover_mode == DiscoverMode::mdns) {
-            return {};
+    if (operation_mode == OperationMode::manual) {
+        if (registry_address.empty()) {
+            return Error::invalid_registry_address;
         }
-        // Unicast DNS and manual mode are not valid in registered_p2p mode because they are not valid for p2p
-        return Error::incompatible_discover_mode;
     }
 
-    if (operation_mode == OperationMode::registered) {
-        if (discover_mode == DiscoverMode::dns || discover_mode == DiscoverMode::udns
-            || discover_mode == DiscoverMode::mdns) {
-            return {};
-        }
-        if (discover_mode == DiscoverMode::manual) {
-            if (registry_address.empty()) {
-                return Error::invalid_registry_address;
-            }
-            return {};
-        }
-        return Error::incompatible_discover_mode;
-    }
-
-    if (operation_mode == OperationMode::p2p) {
-        if (discover_mode == DiscoverMode::mdns) {
-            return {};
-        }
-        // Unicast DNS and manual mode are not valid in p2p mode
-        return Error::incompatible_discover_mode;
-    }
-
-    RAV_ASSERT_FALSE("Should not have reached this line");
     return {};
 }
 
 void rav::nmos::Node::ConfigurationUpdate::apply_to_config(Configuration& config) const {
     if (operation_mode.has_value()) {
         config.operation_mode = *operation_mode;
-    }
-    if (discover_mode.has_value()) {
-        config.discover_mode = *discover_mode;
     }
     if (api_version.has_value()) {
         config.api_version = *api_version;
@@ -587,28 +559,21 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::start_internal() 
     self_.api.endpoints = {Self::Endpoint {endpoint.address().to_string(), endpoint.port(), "http", false}};
 
     // Start the HTTP client to connect to the registry.
-    if (configuration_.discover_mode == DiscoverMode::manual) {
-        RAV_ASSERT(
-            configuration_.operation_mode == OperationMode::registered,
-            "When connecting manually, only registered mode is allowed"
-        );
-
+    if (configuration_.operation_mode == OperationMode::manual) {
         if (configuration_.registry_address.empty()) {
             RAV_ERROR("Registry address is empty");
             return Error::invalid_registry_address;
         }
 
-        const boost::urls::url_view url(configuration_.registry_address);
-        const auto host = url.host();
-        const auto port = url.port();
-        if (host.empty() || port.empty()) {
+        auto url = boost::urls::parse_uri_reference(configuration_.registry_address);
+        if (url.has_error()) {
             RAV_ERROR(
                 "Invalid registry address: {} (should be in the form of: scheme://host:port)",
                 configuration_.registry_address
             );
             return Error::invalid_registry_address;
         }
-        connect_to_registry_async(host, port);
+        connect_to_registry_async(url->host(), url->port());
         return {};
     }
 
@@ -622,7 +587,7 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::start_internal() 
     // All other cases require a timeout to wait for the registry to be discovered
 
     registry_browser_->on_registry_discovered.reset();
-    registry_browser_->start(configuration_.discover_mode, configuration_.api_version);
+    registry_browser_->start(configuration_.operation_mode, configuration_.api_version);
 
     timer_.once(k_default_timeout, [this] {
         // Subscribe to future registry discoveries
@@ -631,8 +596,6 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::start_internal() 
         };
         if (const auto reg = registry_browser_->find_most_suitable_registry()) {
             select_registry(*reg);
-        } else if (configuration_.operation_mode == OperationMode::registered_p2p) {
-            update_status({});
         } else {
             update_status({});
         }
@@ -685,7 +648,7 @@ void rav::nmos::Node::register_async() {
     });
 }
 
-void rav::nmos::Node::post_resource_async(std::string type, boost::json::value resource) {
+void rav::nmos::Node::post_resource_async(std::string type, boost::json::value resource) const {
     RAV_ASSERT(http_client_ != nullptr, "HTTP client should not be null");
 
     const auto target = fmt::format("/x-nmos/registration/{}/resource", configuration_.api_version.to_string());
@@ -813,8 +776,11 @@ bool rav::nmos::Node::select_registry(const dnssd::ServiceDescription& desc) {
 
 void rav::nmos::Node::handle_registry_discovered(const dnssd::ServiceDescription& desc) {
     RAV_INFO("Discovered NMOS registry: {}", desc.to_string());
-    if (configuration_.operation_mode == OperationMode::registered_p2p
-        || configuration_.operation_mode == OperationMode::registered) {
+    if (selected_registry_.has_value()) {
+        RAV_TRACE("Already connected to a registry, ignoring discovery: {}", selected_registry_->to_string());
+        return;
+    }
+    if (configuration_.operation_mode == OperationMode::mdns_p2p) {
         select_registry(desc);
     }
 }

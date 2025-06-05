@@ -18,23 +18,22 @@ namespace rav::nmos {
  * The mode of operation for the NMOS node.
  */
 enum class OperationMode {
-    /// The node registers itself with a registry or falls back to peer-to-peer discovery if no registry is
-    /// available. When a registry comes online during p2p operation, the node will switch to registered mode.
-    registered_p2p,
-    /// The node registers itself with a registry and does not use peer-to-peer discovery.
-    registered,
-    /// The node only uses peer-to-peer discovery and does not register with a registry.
+    /// Discovers registries via mDNS, falling back to p2p if no registry is available.
+    mdns_p2p,
+    /// Connects to a registry via a manually specified address.
+    manual,
+    /// The node does not register with a registry and only does peer-to-peer discovery.
     p2p,
 };
 
 /// Overload the output stream operator for the Node::Error enum class
 inline std::ostream& operator<<(std::ostream& os, const OperationMode operation_mode) {
     switch (operation_mode) {
-        case OperationMode::registered_p2p:
-            os << "registered_p2p";
+        case OperationMode::mdns_p2p:
+            os << "mdns_p2p";
             break;
-        case OperationMode::registered:
-            os << "registered";
+        case OperationMode::manual:
+            os << "manual";
             break;
         case OperationMode::p2p:
             os << "p2p";

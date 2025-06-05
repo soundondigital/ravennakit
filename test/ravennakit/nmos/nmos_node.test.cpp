@@ -21,8 +21,8 @@ class NodeTestRegistryBrowser final: public rav::nmos::RegistryBrowserBase {
     mutable int calls_to_find_most_suitable_registry = 0;
     std::optional<rav::dnssd::ServiceDescription> most_suitable_registry;
 
-    void start(rav::nmos::DiscoverMode discover_mode, rav::nmos::ApiVersion api_version) override {
-        calls_to_start.emplace_back(discover_mode, api_version);
+    void start(rav::nmos::OperationMode operation_mode, rav::nmos::ApiVersion api_version) override {
+        calls_to_start.emplace_back(operation_mode, api_version);
     }
 
     void stop() override {
