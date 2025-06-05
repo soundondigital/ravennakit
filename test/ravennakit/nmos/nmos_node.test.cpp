@@ -120,11 +120,10 @@ TEST_CASE("nmos::Node") {
 
         SECTION("Validate discover mode in registered mode") {
             // Not valid because no address is specified
+            REQUIRE(config.validate() == rav::nmos::Error::no_registry_address_given);
+            config.registry_address = "not-a-valid-address";
             REQUIRE(config.validate() == rav::nmos::Error::invalid_registry_address);
-
             config.registry_address = "http://localhost:8080";
-
-            // Valid because an address is specified
             REQUIRE(config.validate());
         }
     }
@@ -149,7 +148,8 @@ TEST_CASE("nmos::Node") {
         node.update_configuration(config_update, true);
         REQUIRE(browser->calls_to_start.size() == 1);
         REQUIRE(
-            browser->calls_to_start[0] == std::make_tuple(rav::nmos::OperationMode::mdns_p2p, rav::nmos::ApiVersion::v1_3())
+            browser->calls_to_start[0]
+            == std::make_tuple(rav::nmos::OperationMode::mdns_p2p, rav::nmos::ApiVersion::v1_3())
         );
         REQUIRE(browser->calls_to_stop == 1);
         REQUIRE(browser->calls_to_find_most_suitable_registry == 0);

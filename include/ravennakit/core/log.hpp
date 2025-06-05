@@ -142,6 +142,8 @@ inline void set_log_level(const char* level) {
         fmt::println("Invalid log level: {}. Setting log level to info.", level);
         spdlog::set_level(spdlog::level::info);
     }
+#else
+    std::ignore = level;
 #endif
 }
 
