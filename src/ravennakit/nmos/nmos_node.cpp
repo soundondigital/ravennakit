@@ -10,6 +10,7 @@
 
 #include "ravennakit/nmos/nmos_node.hpp"
 
+#include "ravennakit/core/json.hpp"
 #include "ravennakit/core/rollback.hpp"
 #include "ravennakit/core/util/todo.hpp"
 #include "ravennakit/nmos/models/nmos_api_error.hpp"
@@ -534,24 +535,21 @@ void rav::nmos::Node::update_configuration(const ConfigurationUpdate& update, co
 
     on_configuration_changed(configuration_);
 
-    auto result = configuration_.validate();
-    if (result.has_error()) {
-        Status status;
-        status.error_message = fmt::format("Invalid configuration: {}", result.error());
-        update_status(std::move(status));
-        return;
-    }
-
-    update_status({});
-
     if (configuration_.enabled) {
-        result = start_internal();
+        auto result = configuration_.validate();
         if (result.has_error()) {
-            Status status;
-            status.error_message = fmt::format("Failed to start: {}", result.error());
-            update_status(std::move(status));
+            RAV_ERROR("Invalid configuration: {}", result.error());
+            update_status(Status::error);
             return;
         }
+
+        result = start_internal();
+        if (result.has_error()) {
+            RAV_ERROR("Failed to start NMOS node: {}", result.error());
+            update_status(Status::error);
+        }
+    } else {
+        update_status(Status::disabled);
     }
 }
 
@@ -598,7 +596,7 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::start_internal() 
     if (configuration_.operation_mode == OperationMode::p2p) {
         selected_registry_.reset();
         registry_browser_->stop();
-        update_status({});
+        update_status(Status::p2p);
         return {};
     }
 
@@ -614,8 +612,9 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::start_internal() 
         };
         if (const auto reg = registry_browser_->find_most_suitable_registry()) {
             select_registry(*reg);
+        } else if (configuration_.operation_mode == OperationMode::mdns_p2p) {
         } else {
-            update_status({});
+            update_status(Status::p2p);  // TODO:
         }
     });
 
@@ -634,6 +633,8 @@ void rav::nmos::Node::stop_internal() {
 }
 
 void rav::nmos::Node::register_async() {
+    post_resource_error_count_ = 0;
+
     post_resource_async("node", boost::json::value_from(self_));
 
     for (auto& device : devices_) {
@@ -658,6 +659,29 @@ void rav::nmos::Node::register_async() {
 
     failed_heartbeat_count_ = 0;
 
+    http_client_->get_async("/", [this](const boost::system::result<http::response<http::string_body>>& result) {
+        if (result.has_error()) {
+            RAV_ERROR("Failed to connect to NMOS registry: {}", result.error().message());
+            update_status(Status::error);
+            return;
+        }
+
+        if (result.value().result() != http::status::ok) {
+            RAV_ERROR("Unexpected response from NMOS registry: {}", result.value().result_int());
+            update_status(Status::error);
+            return;
+        }
+
+        if (post_resource_error_count_ > 0) {
+            RAV_ERROR("Failed to post one or more resources to the NMOS registry");
+            update_status(Status::error);
+            return;
+        }
+
+        RAV_INFO("Registered with NMOS registry");
+        update_status(Status::registered);
+    });
+
     // Send heartbeat immediately after registration to update the connected status.
     send_heartbeat_async();
 
@@ -666,7 +690,7 @@ void rav::nmos::Node::register_async() {
     });
 }
 
-void rav::nmos::Node::post_resource_async(std::string type, boost::json::value resource) const {
+void rav::nmos::Node::post_resource_async(std::string type, boost::json::value resource) {
     RAV_ASSERT(http_client_ != nullptr, "HTTP client should not be null");
 
     const auto target = fmt::format("/x-nmos/registration/{}/resource", configuration_.api_version.to_string());
@@ -675,9 +699,10 @@ void rav::nmos::Node::post_resource_async(std::string type, boost::json::value r
 
     http_client_->post_async(
         target, body,
-        [body, type](const boost::system::result<http::response<http::string_body>>& result) mutable {
+        [this, body, type](const boost::system::result<http::response<http::string_body>>& result) mutable {
             if (result.has_error()) {
                 RAV_ERROR("Failed to register with registry: {}", result.error().message());
+                post_resource_error_count_++;
                 return;
             }
 
@@ -690,7 +715,13 @@ void rav::nmos::Node::post_resource_async(std::string type, boost::json::value r
             } else if (http::to_status_class(res.result()) == http::status_class::successful) {
                 RAV_WARNING("Unexpected response from registry: {}", res.result_int());
             } else {
-                RAV_ERROR("Failed to post resource {}: {}", res, body);
+                post_resource_error_count_++;
+                if (const auto error = parse_json<ApiError>(res.body())) {
+                    RAV_ERROR("Failed to post resource: {} ({})", error->code, error->error);
+                } else {
+                    RAV_ERROR("Failed to post resource: {} ({})", res.result_int(), res.body());
+                }
+                update_status(Status::error);
             }
         },
         {}
@@ -707,14 +738,12 @@ void rav::nmos::Node::send_heartbeat_async() {
         [this](const boost::system::result<http::response<http::string_body>>& result) {
             if (result.has_value() && result.value().result() == http::status::ok) {
                 failed_heartbeat_count_ = 0;
-                if (!std::exchange(is_registered_, true)) {
-                    RAV_INFO("Node registered with the registry");
-                }
                 return;
             }
             failed_heartbeat_count_++;
             if (result.has_error()) {
                 RAV_ERROR("Failed to send heartbeat: {}", result.error().message());
+                update_status(Status::error);
                 // When this case happens, it's pretty reasonable to assume that the connection is lost.
             } else {
                 RAV_ERROR("Sending heartbeat failed: {}", result->result_int());
@@ -724,7 +753,7 @@ void rav::nmos::Node::send_heartbeat_async() {
             }
             http_client_->cancel_outstanding_requests();
             RAV_ERROR("Failed to send heartbeat {} times, stopping heartbeat", failed_heartbeat_count_);
-            is_registered_ = false;
+            update_status(Status::error);
             heartbeat_timer_.stop();
             connect_to_registry_async();
         },
@@ -736,29 +765,23 @@ void rav::nmos::Node::connect_to_registry_async() {
     http_client_->get_async("/", [this](const boost::system::result<http::response<http::string_body>>& result) {
         if (result.has_error()) {
             RAV_INFO("Error connecting to NMOS registry: {}", result.error().message());
-            Status state = {};
-            state.error_message = fmt::format("Error connecting to NMOS registry: {}", result.error().message());
-            update_status(state);
+            update_status(Status::error);
             timer_.once(k_default_timeout, [this] {
                 connect_to_registry_async();  // Retry connection
             });
         } else if (result.value().result() != http::status::ok) {
             RAV_ERROR("Unexpected response from NMOS registry: {}", result.value().result_int());
-            Status state;
-            state.error_message =
-                fmt::format("Unexpected response from NMOS registry: {}", result.value().result_int());
-            update_status(state);
+            update_status(Status::error);
         } else {
             register_async();
-            Status state;
-            state.registered = true;
-            update_status(state);
+            update_status(Status::connected);
         }
     });
 }
 
 void rav::nmos::Node::connect_to_registry_async(const std::string_view host, const std::string_view service) {
     http_client_->set_host(host, service);
+    update_status(Status::connecting);
     connect_to_registry_async();
 }
 
@@ -803,11 +826,30 @@ void rav::nmos::Node::handle_registry_discovered(const dnssd::ServiceDescription
     }
 }
 
-void rav::nmos::Node::update_status(Status new_status) {
-    if (status_ != new_status) {
-        status_ = std::move(new_status);
-        on_status_changed(status_);
+void rav::nmos::Node::update_status(const Status new_status) {
+    if (status_ == new_status) {
+        return;  // No change in status, nothing to do.
     }
+    status_ = new_status;
+    on_status_changed(status_);
+}
+
+const char* rav::nmos::to_string(const Node::Status& status) {
+    switch (status) {
+        case Node::Status::disabled:
+            return "disabled";
+        case Node::Status::connecting:
+            return "connecting";
+        case Node::Status::connected:
+            return "connected";
+        case Node::Status::registered:
+            return "registered";
+        case Node::Status::p2p:
+            return "p2p";
+        case Node::Status::error:
+            return "error";
+    }
+    return "unknown";
 }
 
 boost::asio::ip::tcp::endpoint rav::nmos::Node::get_local_endpoint() const {

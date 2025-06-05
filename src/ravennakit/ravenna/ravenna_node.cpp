@@ -25,7 +25,7 @@ rav::RavennaNode::RavennaNode() :
         }
     };
 
-    nmos_node_.on_status_changed = [this](const nmos::Node::Status& status) {
+    nmos_node_.on_status_changed = [this](const nmos::Node::Status status) {
         for (const auto& s : subscribers_) {
             s->nmos_node_status_changed(status);
         }

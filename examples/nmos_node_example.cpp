@@ -24,11 +24,7 @@ int main() {
     config.node_api_port = 8000;  // Set the port for the NMOS node API
 
     rav::nmos::Node node(io_context);
-    auto result = node.update_configuration(config, true);
-    if (result.has_error()) {
-        RAV_ERROR("Failed to start NMOS node: {}", result.error());
-        return 1;
-    }
+    node.update_configuration(config, true);
 
     static constexpr uint32_t k_num_devices = 2;
     static constexpr uint32_t k_num_sources_per_device = 2;

@@ -8,6 +8,7 @@
  * Copyright (c) 2025 Owllab. All rights reserved.
  */
 
+#include "ravennakit/core/json.hpp"
 #include "ravennakit/nmos/models/nmos_api_error.hpp"
 
 #include <boost/json/parse.hpp>
@@ -15,7 +16,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("nmos::Error") {
+TEST_CASE("nmos::ApiError") {
     SECTION("To json") {
         rav::nmos::ApiError error;
         error.code = 404;
@@ -46,6 +47,26 @@ TEST_CASE("nmos::Error") {
             REQUIRE(error.code == 404);
             REQUIRE(error.error == "Not found");
             REQUIRE(error.debug.empty());
+        }
+    }
+
+    SECTION("Parse") {
+        SECTION("Valid JSON") {
+            auto result = rav::parse_json<rav::nmos::ApiError>(
+                R"({"code":400,"error":"Bad Request; request for registration with version 1:0 conflicts with the existing registration with version 1:0","debug":null})"
+            );
+            REQUIRE(result.has_value());
+            REQUIRE(result->code == 400);
+            REQUIRE(
+                result->error
+                == "Bad Request; request for registration with version 1:0 conflicts with the existing registration with version 1:0"
+            );
+            REQUIRE(result->debug.empty());
+        }
+
+        SECTION("Invalid JSON") {
+            auto result = rav::parse_json<rav::nmos::ApiError>(R"({"code":404,"error":"Not found",})");
+            REQUIRE(result.has_error());
         }
     }
 }

@@ -21,3 +21,19 @@
 #else
     #define RAV_HAS_NLOHMANN_JSON 0
 #endif
+
+#include <boost/json.hpp>
+
+namespace rav {
+
+template<typename T>
+boost::system::result<T> parse_json(const std::string_view json_str) {
+    boost::system::error_code ec;
+    const auto jv = boost::json::parse(json_str, ec);
+    if (ec) {
+        return ec;
+    }
+    return boost::json::try_value_to<T>(jv);
+}
+
+}  // namespace rav

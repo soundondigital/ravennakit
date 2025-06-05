@@ -81,30 +81,9 @@ class Node {
         void apply_to_config(Configuration& config) const;
     };
 
-    struct Status {
-        /// Whether the node is registered with a registry.
-        bool registered {false};
-        /// The name of the registry server if registered.
-        std::string registry_server_name;
-        /// The address of the registry server if registered.
-        std::string registry_server_address;  // http://<host>:<port>
-        /// An error message if anything went wrong.
-        std::string error_message;
+    enum class Status { disabled, connecting, connected, registered, p2p, error };
 
-        auto tie() const {
-            return std::tie(registered, registry_server_name, registry_server_address, error_message);
-        }
-
-        friend bool operator==(const Status& lhs, const Status& rhs) {
-            return lhs.tie() == rhs.tie();
-        }
-
-        friend bool operator!=(const Status& lhs, const Status& rhs) {
-            return lhs.tie() != rhs.tie();
-        }
-    };
-
-    SafeFunction<void(const Status& state)> on_status_changed;
+    SafeFunction<void(const Status& status)> on_status_changed;
     SafeFunction<void(const Configuration& config)> on_configuration_changed;
 
     explicit Node(
@@ -222,7 +201,7 @@ class Node {
     [[nodiscard]] const std::vector<Device>& get_devices() const;
 
     /**
-     * @return The current status.
+     * @return The current state.
      */
     const Status& get_status() const;
 
@@ -239,7 +218,7 @@ class Node {
 
     Configuration configuration_;
     Status status_;
-    bool is_registered_ = false;
+    int post_resource_error_count_ = 0;
 
     std::optional<dnssd::ServiceDescription> selected_registry_;
 
@@ -263,7 +242,7 @@ class Node {
     void stop_internal();
 
     void register_async();
-    void post_resource_async(std::string type, boost::json::value resource) const;
+    void post_resource_async(std::string type, boost::json::value resource);
     void send_heartbeat_async();
     void connect_to_registry_async();
     void connect_to_registry_async(std::string_view host, std::string_view service);
@@ -273,7 +252,10 @@ class Node {
 
     bool select_registry(const dnssd::ServiceDescription& desc);
     void handle_registry_discovered(const dnssd::ServiceDescription& desc);
+
     void update_status(Status new_status);
 };
+
+const char* to_string(const Node::Status& status);
 
 }  // namespace rav::nmos

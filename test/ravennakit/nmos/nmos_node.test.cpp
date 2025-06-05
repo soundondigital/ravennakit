@@ -146,8 +146,7 @@ TEST_CASE("nmos::Node") {
         REQUIRE(http_client != nullptr);
 
         rav::nmos::Node node(io_context, std::move(test_browser), std::move(test_http_client));
-        auto result = node.update_configuration(config_update, true);
-        REQUIRE(result.has_value());
+        node.update_configuration(config_update, true);
         REQUIRE(browser->calls_to_start.size() == 1);
         REQUIRE(
             browser->calls_to_start[0] == std::make_tuple(rav::nmos::OperationMode::mdns_p2p, rav::nmos::ApiVersion::v1_3())

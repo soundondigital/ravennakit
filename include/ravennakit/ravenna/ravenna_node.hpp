@@ -94,10 +94,10 @@ class RavennaNode {
         }
 
         /**
-         * Called when the NMOS node status changed.
+         * Called when the NMOS node state changed.
          * @param status The updated NMOS node state.
          */
-        virtual void nmos_node_status_changed(const nmos::Node::Status& status) {
+        virtual void nmos_node_status_changed(nmos::Node::Status status) {
             std::ignore = status;
         }
 
@@ -372,10 +372,10 @@ class RavennaNode {
     std::unique_ptr<dnssd::Advertiser> advertiser_;
     rtsp::Server rtsp_server_;
     ptp::Instance ptp_instance_;
-    std::map<Rank, uint16_t> ptp_ports_; // Mapping between interface by rank and ptp port number
+    std::map<Rank, uint16_t> ptp_ports_;  // Mapping between interface by rank and ptp port number
     std::vector<std::unique_ptr<RavennaSender>> senders_;
 
-    nmos::Node nmos_node_{io_context_};
+    nmos::Node nmos_node_ {io_context_};
 
     SubscriberList<Subscriber> subscribers_;
     RealtimeSharedObject<realtime_shared_context> realtime_shared_context_;
