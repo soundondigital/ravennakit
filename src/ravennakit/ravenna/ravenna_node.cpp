@@ -463,6 +463,7 @@ std::future<nlohmann::json> rav::RavennaNode::to_json() {
         root["config"] = config_.to_json();
         root["senders"] = senders;
         root["receivers"] = receivers;
+        root["nmos_node"] = nmos_node_.to_json();
         return root;
     };
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
@@ -546,6 +547,19 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
                         RAV_ASSERT(s != nullptr, "Subscriber must be valid");
                         s->ravenna_receiver_added(*receiver);
                     }
+                }
+            }
+
+            {
+                auto nmos_node = json.find("nmos_node");
+                if (nmos_node != json.end()) {
+                    auto config = nmos::Node::ConfigurationUpdate::from_json(nmos_node->at("configuration"));
+                    if (!config) {
+                        return tl::unexpected(config.error());
+                    }
+                    nmos_node_.update_configuration(*config);
+                } else {
+                    RAV_TRACE("No NMOS node configuration found in JSON");
                 }
             }
 

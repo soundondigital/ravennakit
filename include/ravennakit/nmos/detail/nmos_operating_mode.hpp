@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "ravennakit/core/json.hpp"
+
 #include <fmt/ostream.h>
 
 namespace rav::nmos {
@@ -26,19 +28,34 @@ enum class OperationMode {
     p2p,
 };
 
-/// Overload the output stream operator for the Node::Error enum class
-inline std::ostream& operator<<(std::ostream& os, const OperationMode operation_mode) {
+inline const char* to_string(const OperationMode operation_mode) {
     switch (operation_mode) {
         case OperationMode::mdns_p2p:
-            os << "mdns_p2p";
-            break;
+            return "mdns_p2p";
         case OperationMode::manual:
-            os << "manual";
-            break;
+            return "manual";
         case OperationMode::p2p:
-            os << "p2p";
-            break;
+            return "p2p";
     }
+    return "unknown";
+}
+
+inline std::optional<OperationMode> operation_mode_from_string(const std::string_view str) {
+    if (str == "mdns_p2p") {
+        return OperationMode::mdns_p2p;
+    }
+    if (str == "manual") {
+        return OperationMode::manual;
+    }
+    if (str == "p2p") {
+        return OperationMode::p2p;
+    }
+    return std::nullopt;
+}
+
+/// Overload the output stream operator for the Node::Error enum class
+inline std::ostream& operator<<(std::ostream& os, const OperationMode operation_mode) {
+    os << to_string(operation_mode);
     return os;
 }
 

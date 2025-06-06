@@ -174,6 +174,16 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::Configuration::va
     return {};
 }
 
+nlohmann::json rav::nmos::Node::Configuration::to_json() const {
+    return nlohmann::json {
+        {"operation_mode", to_string(operation_mode)},
+        {"api_version", api_version.to_string()},
+        {"registry_address", registry_address},
+        {"enabled", enabled},
+        {"node_api_port", node_api_port},
+    };
+}
+
 void rav::nmos::Node::ConfigurationUpdate::apply_to_config(Configuration& config) const {
     if (operation_mode.has_value()) {
         config.operation_mode = *operation_mode;
@@ -189,6 +199,36 @@ void rav::nmos::Node::ConfigurationUpdate::apply_to_config(Configuration& config
     }
     if (node_api_port.has_value()) {
         config.node_api_port = *node_api_port;
+    }
+}
+
+tl::expected<rav::nmos::Node::ConfigurationUpdate, std::string>
+rav::nmos::Node::ConfigurationUpdate::from_json(const nlohmann::json& json) {
+    try {
+        ConfigurationUpdate update {};
+
+        // Operation mode
+        const auto operation_mode_str = json.at("operation_mode").get<std::string>();
+        const auto operation_mode = operation_mode_from_string(operation_mode_str);
+        if (!operation_mode.has_value()) {
+            return tl::unexpected(fmt::format("Invalid operation mode: {}", operation_mode_str));
+        }
+        update.operation_mode = *operation_mode;
+
+        // Api version
+        const auto api_version_str = json.at("api_version").get<std::string>();
+        const auto api_version = ApiVersion::from_string(api_version_str);
+        if (!api_version) {
+            return tl::unexpected(fmt::format("Invalid API version: {}", api_version_str));
+        }
+        update.api_version = *api_version;
+
+        update.registry_address = json.at("registry_address").get<std::string>();
+        update.enabled = json.at("enabled").get<bool>();
+        update.node_api_port = json.at("node_api_port").get<uint16_t>();
+        return update;
+    } catch (const std::exception& e) {
+        return tl::unexpected(e.what());
     }
 }
 
@@ -1013,4 +1053,10 @@ const std::vector<rav::nmos::Device>& rav::nmos::Node::get_devices() const {
 
 const rav::nmos::Node::Status& rav::nmos::Node::get_status() const {
     return status_;
+}
+
+nlohmann::json rav::nmos::Node::to_json() const {
+    nlohmann::json root;
+    root["configuration"] = configuration_.to_json();
+    return root;
 }

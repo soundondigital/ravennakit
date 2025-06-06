@@ -117,7 +117,7 @@ struct AudioFormat {
     /**
      * @return A JSON object representing this AudioFormat.
      */
-    nlohmann::json to_json() const {
+    [[nodiscard]] nlohmann::json to_json() const {
         return nlohmann::json {
             {"encoding", audio_encoding_to_string(encoding)},
             {"sample_rate", sample_rate},

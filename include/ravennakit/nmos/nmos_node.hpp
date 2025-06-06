@@ -20,6 +20,7 @@
 #include "models/nmos_self.hpp"
 #include "models/nmos_sender.hpp"
 #include "models/nmos_source.hpp"
+#include "ravennakit/core/json.hpp"
 #include "ravennakit/core/net/http/http_client.hpp"
 #include "ravennakit/core/net/http/http_server.hpp"
 
@@ -65,6 +66,11 @@ class Node {
         friend bool operator!=(const Configuration& lhs, const Configuration& rhs) {
             return lhs.tie() != rhs.tie();
         }
+
+        /**
+         * @return The configuration as a JSON object.
+         */
+        [[nodiscard]] nlohmann::json to_json() const;
     };
 
     /**
@@ -79,6 +85,13 @@ class Node {
         std::optional<uint16_t> node_api_port;
 
         void apply_to_config(Configuration& config) const;
+
+        /**
+         * Creates a configuration update from a JSON object.
+         * @param json The JSON object to convert.
+         * @return A configuration update object if the JSON is valid, otherwise an error message.
+         */
+        static tl::expected<ConfigurationUpdate, std::string> from_json(const nlohmann::json& json);
     };
 
     enum class Status { disabled, connecting, connected, registered, p2p, error };
@@ -203,7 +216,12 @@ class Node {
     /**
      * @return The current state.
      */
-    const Status& get_status() const;
+    [[nodiscard]] const Status& get_status() const;
+
+    /**
+     * @return A JSON representation of the Node.
+     */
+    [[nodiscard]] nlohmann::json to_json() const;
 
   private:
     static constexpr uint8_t k_max_failed_heartbeats = 5;
@@ -217,7 +235,7 @@ class Node {
     std::vector<Source> sources_;
 
     Configuration configuration_;
-    Status status_;
+    Status status_ {Status::disabled};
     int post_resource_error_count_ = 0;
 
     std::optional<dnssd::ServiceDescription> selected_registry_;
