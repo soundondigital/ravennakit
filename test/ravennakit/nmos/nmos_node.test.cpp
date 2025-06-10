@@ -149,7 +149,9 @@ TEST_CASE("nmos::Node") {
         auto* http_client = test_http_client.get();
         REQUIRE(http_client != nullptr);
 
-        rav::nmos::Node node(io_context, std::move(test_browser), std::move(test_http_client));
+        rav::ptp::Instance ptp_instance(io_context);
+
+        rav::nmos::Node node(io_context, ptp_instance, std::move(test_browser), std::move(test_http_client));
         node.update_configuration(config_update, true);
         REQUIRE(browser->calls_to_start.size() == 1);
         REQUIRE(

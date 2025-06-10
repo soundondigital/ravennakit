@@ -232,7 +232,7 @@ void rav::ptp::Port::trigger_announce_receipt_timeout_expires_event() {
     TRACY_ZONE_SCOPED;
 
     erbest_.reset();
-    if (parent_.default_ds().slave_only) {
+    if (parent_.get_default_ds().slave_only) {
         set_state(State::listening);
     } else {
         RAV_ASSERT_FALSE("Master state not implemented");

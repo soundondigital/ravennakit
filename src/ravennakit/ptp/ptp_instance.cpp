@@ -128,12 +128,16 @@ bool rav::ptp::Instance::set_port_interface(
     return false;
 }
 
-const rav::ptp::DefaultDs& rav::ptp::Instance::default_ds() const {
+const rav::ptp::DefaultDs& rav::ptp::Instance::get_default_ds() const {
     return default_ds_;
 }
 
 const rav::ptp::ParentDs& rav::ptp::Instance::get_parent_ds() const {
     return parent_ds_;
+}
+
+const rav::ptp::TimePropertiesDs& rav::ptp::Instance::get_time_properties_ds() const {
+    return time_properties_ds_;
 }
 
 bool rav::ptp::Instance::set_recommended_state(

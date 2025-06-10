@@ -246,11 +246,14 @@ class HttpClient: public HttpClientBase {
         void send_requests();
         void clear_owner();
 
+        ResponseCallback callback_;
+
       private:
         HttpClient* owner_ = nullptr;
         std::chrono::milliseconds timeout_seconds_ = std::chrono::seconds(30);
         boost::asio::ip::tcp::resolver resolver_;
         boost::beast::tcp_stream stream_;
+        http::request<http::string_body> request_;
         http::response<http::string_body> response_;
         boost::beast::flat_buffer buffer_;
         State state_ = State::disconnected;
@@ -261,6 +264,8 @@ class HttpClient: public HttpClientBase {
         void on_connect(const boost::beast::error_code& ec, const tcp::resolver::results_type::endpoint_type&);
         void on_write(const boost::beast::error_code& ec, std::size_t bytes_transferred);
         void on_read(boost::beast::error_code ec, std::size_t bytes_transferred);
+
+        bool take_next_request();
     };
 
     boost::asio::io_context& io_context_;
@@ -269,12 +274,6 @@ class HttpClient: public HttpClientBase {
     std::string service_;
     std::queue<std::pair<http::request<http::string_body>, ResponseCallback>> requests_;
     std::shared_ptr<Session> session_;
-
-    void remove_first_request() {
-        if (!requests_.empty()) {
-            requests_.pop();
-        }
-    }
 };
 
 }  // namespace rav

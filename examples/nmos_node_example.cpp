@@ -23,7 +23,8 @@ int main() {
     config.enabled = true;
     config.node_api_port = 8000;  // Set the port for the NMOS node API
 
-    rav::nmos::Node node(io_context);
+    rav::ptp::Instance ptp_instance(io_context);
+    rav::nmos::Node node(io_context, ptp_instance);
     node.update_configuration(config, true);
 
     static constexpr uint32_t k_num_devices = 2;

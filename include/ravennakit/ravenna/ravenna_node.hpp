@@ -378,7 +378,7 @@ class RavennaNode {
     std::map<Rank, uint16_t> ptp_ports_;  // Mapping between interface by rank and ptp port number
     std::vector<std::unique_ptr<RavennaSender>> senders_;
 
-    nmos::Node nmos_node_ {io_context_};
+    nmos::Node nmos_node_ {io_context_, ptp_instance_};
 
     SubscriberList<Subscriber> subscribers_;
     RealtimeSharedObject<realtime_shared_context> realtime_shared_context_;

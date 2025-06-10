@@ -143,6 +143,7 @@ void rav::HttpClient::Session::send_requests() {
     if (owner_->requests_.empty()) {
         return;
     }
+
     if (state_ == State::disconnected) {
         async_connect();  // Start the connection process
     } else if (state_ == State::connected) {
@@ -164,7 +165,7 @@ void rav::HttpClient::Session::async_connect() {
 }
 
 void rav::HttpClient::Session::async_send() {
-    if (owner_->requests_.empty()) {
+    if (!take_next_request()) {
         return;  // No requests to send
     }
 
@@ -172,10 +173,7 @@ void rav::HttpClient::Session::async_send() {
     stream_.expires_after(timeout_seconds_);
 
     // Send the HTTP request to the remote host
-    http::async_write(
-        stream_, owner_->requests_.front().first,
-        boost::beast::bind_front_handler(&Session::on_write, shared_from_this())
-    );
+    http::async_write(stream_, request_, boost::beast::bind_front_handler(&Session::on_write, shared_from_this()));
 
     state_ = State::waiting_for_send;
 }
@@ -188,10 +186,8 @@ void rav::HttpClient::Session::on_resolve(
     }
 
     if (ec) {
-        if (!owner_->requests_.empty()) {
-            if (const auto& cb = owner_->requests_.front().second) {
-                cb(ec);
-            }
+        if (callback_) {
+            callback_(ec);
         }
         state_ = State::disconnected;
         return;  // Error resolving the host
@@ -212,15 +208,10 @@ void rav::HttpClient::Session::
         return;  // Session was abandoned, nothing to do.
     }
 
-    if (owner_->requests_.empty()) {
-        state_ = State::connected;
-        return;  // No requests to process
-    }
-
     if (ec) {
         state_ = State::disconnected;
-        if (const auto& cb = owner_->requests_.front().second) {
-            cb(ec);
+        if (callback_) {
+            callback_(ec);
         }
         return;
     }
@@ -237,14 +228,11 @@ void rav::HttpClient::Session::on_write(const boost::beast::error_code& ec, std:
         return;  // Session was abandoned, nothing to do.
     }
 
-    RAV_ASSERT(!owner_->requests_.empty(), "No requests available");
-
     if (ec) {
         state_ = State::disconnected;
-        if (const auto& cb = owner_->requests_.front().second) {
-            cb(ec);
+        if (callback_) {
+            callback_(ec);
         }
-        state_ = State::disconnected;
         return;
     }
 
@@ -265,24 +253,17 @@ void rav::HttpClient::Session::on_read(boost::beast::error_code ec, std::size_t 
         return;  // Session was abandoned, nothing to do.
     }
 
-    RAV_ASSERT(!owner_->requests_.empty(), "No requests available");
-
     if (ec) {
         state_ = State::disconnected;
-        if (const auto& cb = owner_->requests_.front().second) {
-            cb(ec);
+        if (callback_) {
+            callback_(ec);
         }
-        state_ = State::disconnected;
         return;
     }
 
-    // Move the callback function so that the lifetime is extended to until the callback returned, in case requests are
-    // cleared through cancel_outstanding_requests.
-    if (const auto cb = std::move(owner_->requests_.front().second)) {
-        cb(response_);
+    if (callback_) {
+        callback_(response_);
     }
-
-    owner_->remove_first_request();
 
     if (!response_.keep_alive()) {
         // Gracefully close the socket
@@ -309,4 +290,15 @@ void rav::HttpClient::Session::on_read(boost::beast::error_code ec, std::size_t 
 
     // Otherwise set the state to connected so that send_requests will schedule requests for sending.
     state_ = State::connected;
+}
+
+bool rav::HttpClient::Session::take_next_request() {
+    RAV_ASSERT(owner_ != nullptr, "HttpClient::Session must have an owner");
+    if (!owner_->requests_.empty()) {
+        request_ = std::move(owner_->requests_.front().first);
+        callback_ = std::move(owner_->requests_.front().second);
+        owner_->requests_.pop();
+        return true;
+    }
+    return false;
 }

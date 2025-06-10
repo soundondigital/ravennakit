@@ -247,7 +247,7 @@ rav::nmos::Node::ConfigurationUpdate::from_json(const nlohmann::json& json) {
         update.enabled = json.at("enabled").get<bool>();
         update.node_api_port = json.at("node_api_port").get<uint16_t>();
         update.label = json.value("label", std::string {});
-        update.description = json.value("description", std::string{});
+        update.description = json.value("description", std::string {});
         return update;
     } catch (const std::exception& e) {
         return tl::unexpected(e.what());
@@ -255,9 +255,10 @@ rav::nmos::Node::ConfigurationUpdate::from_json(const nlohmann::json& json) {
 }
 
 rav::nmos::Node::Node(
-    boost::asio::io_context& io_context, std::unique_ptr<RegistryBrowserBase> registry_browser,
-    std::unique_ptr<HttpClientBase> http_client
+    boost::asio::io_context& io_context, ptp::Instance& ptp_instance,
+    std::unique_ptr<RegistryBrowserBase> registry_browser, std::unique_ptr<HttpClientBase> http_client
 ) :
+    ptp_instance_(ptp_instance),
     http_server_(io_context),
     http_client_(std::move(http_client)),
     registry_browser_(std::move(registry_browser)),
@@ -271,19 +272,7 @@ rav::nmos::Node::Node(
     }
 
     configuration_.uuid = boost::uuids::random_generator()();
-    self_.id = configuration_.uuid;
-    self_.version.inc();
-    self_.interfaces = {Self::Interface {std::nullopt, "00-1a-2b-3c-4d-5e", "eth0"}};
-
-    auto local_clock = ClockInternal {};
-    local_clock.name = "clk01";
-
-    auto ptp_clock = ClockPtp {};
-    ptp_clock.name = "clk02";
-    ptp_clock.gmid = "00-1a-2b-00-00-3c-4d-5e";
-
-    self_.clocks.emplace_back(local_clock);
-    self_.clocks.emplace_back(ptp_clock);
+    update_self();
 
     for (auto& v : k_supported_api_versions) {
         self_.api.versions.push_back(v.to_string());
@@ -571,6 +560,16 @@ rav::nmos::Node::Node(
     http_server_.get("/**", [](const HttpServer::Request&, HttpServer::Response& res, PathMatcher::Parameters&) {
         set_error_response(res, http::status::not_found, "Not found", "No matching route");
     });
+
+    if (!ptp_instance_.subscribe(this)) {
+        RAV_ERROR("Failed to subscribe to PTP instance");
+    }
+}
+
+rav::nmos::Node::~Node() {
+    if (!ptp_instance_.unsubscribe(this)) {
+        RAV_ERROR("Failed to unsubscribe from PTP instance");
+    }
 }
 
 boost::system::result<void, rav::nmos::Error> rav::nmos::Node::start() {
@@ -592,47 +591,64 @@ void rav::nmos::Node::update_configuration(const ConfigurationUpdate& update, co
         return;  // Nothing changed, so we should be in the correct state.
     }
 
-    stop_internal();
-
-    bool unregister_required = false;
+    bool unregister = false;
 
     if (status_ == Status::registered) {
         if (configuration_.api_version != new_config.api_version) {
-            unregister_required = true;
+            unregister = true;
         }
 
         if (configuration_.uuid != new_config.uuid) {
-            unregister_required = true;
+            unregister = true;
         }
 
         if (!new_config.enabled) {
-            unregister_required = true;
+            unregister = true;
         }
     }
 
-    if (unregister_required) {
+    if (unregister) {
         unregister_async();  // Before configuration_ is overwritten
     }
 
-    configuration_ = std::move(new_config);
+    const bool enablement_changed = configuration_.enabled != new_config.enabled;
+    const bool operation_mode_changed = configuration_.operation_mode != new_config.operation_mode;
 
+    configuration_ = std::move(new_config);
+    if (status_ == Status::registered) {
+        update_and_post_self_async();
+    }
     on_configuration_changed(configuration_);
 
-    if (configuration_.enabled) {
-        auto result = configuration_.validate();
-        if (result.has_error()) {
-            RAV_ERROR("Invalid configuration: {}", result.error());
-            update_status(Status::error);
+    if (enablement_changed) {
+        if (configuration_.enabled) {
+            auto result = configuration_.validate();
+            if (result.has_error()) {
+                RAV_ERROR("Invalid configuration: {}", result.error());
+                update_status(Status::error);
+                return;
+            }
+
+            result = start_internal();
+            if (result.has_error()) {
+                RAV_ERROR("Failed to start NMOS node: {}", result.error());
+                update_status(Status::error);
+            }
             return;
         }
 
-        result = start_internal();
+        stop_internal();
+        update_status(Status::disabled);
+        return;
+    }
+
+    if (operation_mode_changed) {
+        stop_internal();
+        const auto result = start_internal();
         if (result.has_error()) {
             RAV_ERROR("Failed to start NMOS node: {}", result.error());
             update_status(Status::error);
         }
-    } else {
-        update_status(Status::disabled);
     }
 }
 
@@ -687,6 +703,11 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::start_internal() 
         return {};
     }
 
+    if (selected_registry_.has_value()) {
+        connect_to_registry_async();
+        return {};
+    }
+
     // All other cases require a timeout to wait for the registry to be discovered
 
     registry_browser_->on_registry_discovered.reset();
@@ -718,13 +739,14 @@ void rav::nmos::Node::stop_internal() {
     http_server_.stop();
     RAV_ASSERT(registry_browser_ != nullptr, "Registry browser should not be null");
     registry_browser_->stop();
+    selected_registry_.reset();
     registry_info_ = {};
 }
 
 void rav::nmos::Node::register_async() {
     post_resource_error_count_ = 0;
 
-    post_self_async();
+    update_and_post_self_async();
 
     for (auto& device : devices_) {
         post_resource_async("device", boost::json::value_from(device));
@@ -791,7 +813,7 @@ void rav::nmos::Node::post_resource_async(std::string type, boost::json::value r
 
     http_client_->post_async(
         target, body,
-        [this, target, body, type](const boost::system::result<http::response<http::string_body>>& result) mutable {
+        [this, target, body](const boost::system::result<http::response<http::string_body>>& result) mutable {
             if (result.has_error()) {
                 RAV_ERROR("Failed to register with registry: {}", result.error().message());
                 post_resource_error_count_++;
@@ -854,14 +876,18 @@ void rav::nmos::Node::delete_resource_async(std::string resource_type, const boo
 }
 
 void rav::nmos::Node::update_self() {
-    self_.version.inc();
+    const auto now = get_local_clock().now();
+    self_.version = {now.raw_seconds(), now.raw_nanoseconds()};
     self_.id = configuration_.uuid;
     self_.label = configuration_.label;
     self_.description = configuration_.description;
 }
 
-void rav::nmos::Node::post_self_async() {
+void rav::nmos::Node::update_and_post_self_async() {
     update_self();
+    if (status_ != Status::registered) {
+        return;
+    }
     post_resource_async("node", boost::json::value_from(self_));
 }
 
@@ -945,7 +971,7 @@ bool rav::nmos::Node::add_sender_to_device(const Sender& sender) {
 
 bool rav::nmos::Node::select_registry(const dnssd::ServiceDescription& desc) {
     if (selected_registry_ && selected_registry_->host_target == desc.host_target
-        && selected_registry_->port == desc.port) {
+        && selected_registry_->port == desc.port && status_ == Status::registered) {
         return false;  // Already connected to this registry
     }
     selected_registry_ = desc;
@@ -970,6 +996,9 @@ void rav::nmos::Node::update_status(const Status new_status) {
         return;  // No change in status, nothing to do.
     }
     status_ = new_status;
+    if (status_ == Status::disabled) {
+        selected_registry_.reset();
+    }
     on_status_changed(status_, registry_info_);
 }
 
@@ -1188,4 +1217,35 @@ std::optional<size_t> rav::nmos::Node::index_of_supported_api_version(const ApiV
         return std::distance(k_supported_api_versions.begin(), it);
     }
     return std::nullopt;
+}
+
+void rav::nmos::Node::ptp_parent_changed(const ptp::ParentDs& parent) {
+    ClockPtp clock;
+    clock.gmid = parent.grandmaster_identity.to_string();
+    clock.name = "clk0";
+    clock.traceable = ptp_instance_.get_time_properties_ds().time_traceable;
+    self_.clocks = {clock};
+    update_and_post_self_async();
+}
+
+void rav::nmos::Node::ptp_port_changed_state(const ptp::Port&) {
+    if (self_.clocks.empty()) {
+        RAV_ERROR("No clocks available to update PTP state");
+        return;
+    }
+
+    auto locked = get_local_clock().is_locked();
+
+    std::visit(
+        [locked](auto& clock) {
+            if constexpr (std::is_same_v<ClockPtp, std::decay_t<decltype(clock)>>) {
+                clock.locked = locked;
+            } else {
+                RAV_ERROR("Unsupported clock type for PTP port state change");
+            }
+        },
+        self_.clocks.front()
+    );
+
+    update_and_post_self_async();
 }

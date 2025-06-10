@@ -24,6 +24,7 @@
 #include "ravennakit/core/net/http/http_client.hpp"
 #include "ravennakit/core/net/http/http_server.hpp"
 #include "ravennakit/core/net/interfaces/network_interface_config.hpp"
+#include "ravennakit/ptp/ptp_instance.hpp"
 
 #include <boost/uuid.hpp>
 #include <boost/system/result.hpp>
@@ -35,7 +36,7 @@ namespace rav::nmos {
  * Implements the NMOS node as defined in the NMOS specifications.
  * https://specs.amwa.tv/nmos/branches/main/docs/Technical_Overview.html#nmos-model-and-terminology
  */
-class Node {
+class Node: public ptp::Instance::Subscriber {
   public:
     static std::array<ApiVersion, 2> k_supported_api_versions;
     static constexpr auto k_default_timeout = std::chrono::milliseconds(2000);
@@ -112,9 +113,12 @@ class Node {
     SafeFunction<void(const Configuration& config)> on_configuration_changed;
 
     explicit Node(
-        boost::asio::io_context& io_context, std::unique_ptr<RegistryBrowserBase> registry_browser = nullptr,
+        boost::asio::io_context& io_context, ptp::Instance& ptp_instance,
+        std::unique_ptr<RegistryBrowserBase> registry_browser = nullptr,
         std::unique_ptr<HttpClientBase> http_client = nullptr
     );
+
+    ~Node() override;
 
     /**
      * Starts the services of this node (HTTP server, advertisements, etc.).
@@ -252,10 +256,14 @@ class Node {
      */
     [[nodiscard]] static std::optional<size_t> index_of_supported_api_version(const ApiVersion& version);
 
+    void ptp_parent_changed(const ptp::ParentDs& parent) override;
+    void ptp_port_changed_state(const ptp::Port& port) override;
+
   private:
     static constexpr uint8_t k_max_failed_heartbeats = 5;
     static constexpr auto k_heartbeat_interval = std::chrono::seconds(5);
 
+    ptp::Instance& ptp_instance_;
     Self self_;
     std::vector<Device> devices_;
     std::vector<Flow> flows_;
@@ -294,7 +302,7 @@ class Node {
     void post_resource_async(std::string type, boost::json::value resource);
     void delete_resource_async(std::string resource_type, const boost::uuids::uuid& id);
     void update_self();
-    void post_self_async();
+    void update_and_post_self_async();
     void send_heartbeat_async();
     void connect_to_registry_async();
     void connect_to_registry_async(std::string_view host, std::string_view service);

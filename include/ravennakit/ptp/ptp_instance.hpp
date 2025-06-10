@@ -117,12 +117,17 @@ class Instance {
     /**
      * @return The default data set of the PTP instance.
      */
-    [[nodiscard]] const DefaultDs& default_ds() const;
+    [[nodiscard]] const DefaultDs& get_default_ds() const;
 
     /**
      * @returns The parent ds of the PTP instance.
      */
     [[nodiscard]] const ParentDs& get_parent_ds() const;
+
+    /**
+     * @return The time properties data set of the PTP instance.
+     */
+    [[nodiscard]] const TimePropertiesDs& get_time_properties_ds() const;
 
     /**
      * Updates the data sets of the PTP instance based on the state decision code.
