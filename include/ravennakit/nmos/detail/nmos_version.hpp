@@ -29,6 +29,18 @@ struct Version {
     uint32_t nanoseconds = 0;  // nanoseconds since the last second
 
     /**
+     * Increases the version by one nanosecond.
+     */
+    void inc() {
+        if (nanoseconds < 999999999) {
+            ++nanoseconds;
+        } else {
+            nanoseconds = 0;
+            ++seconds;
+        }
+    }
+
+    /**
      * Checks whether the NMOS resource version is valid.
      * A version is considered valid if either the `seconds` or `nanoseconds` component is non-zero.
      * @return true if the version is valid, false otherwise.

@@ -77,6 +77,11 @@ class NodeTestHttpClient final: public rav::HttpClientBase {
         std::ignore = content_type;
     }
 
+    void delete_async(std::string_view target, ResponseCallback callback) override {
+        std::ignore = target;
+        std::ignore = callback;
+    }
+
     void cancel_outstanding_requests() override {}
 
     [[nodiscard]] const std::string& get_host() const override {

@@ -44,11 +44,14 @@ class Node {
      * The configuration of the NMOS node.
      */
     struct Configuration {
+        boost::uuids::uuid uuid;  // The UUID of the NMOS node.
         OperationMode operation_mode {OperationMode::mdns_p2p};
         ApiVersion api_version {ApiVersion::v1_3()};
         std::string registry_address;  // For when operation_mode is registered and discover_mode is manual.
         bool enabled {false};          // Whether the node is enabled or not.
         uint16_t node_api_port {0};    // The port of the local node API.
+        std::string label;             // Freeform string label for the resource.
+        std::string description;       // Detailed description of the resource.
 
         /**
          * Checks if the configuration is semantically valid, return a message if not.
@@ -57,7 +60,7 @@ class Node {
         [[nodiscard]] boost::system::result<void, Error> validate() const;
 
         [[nodiscard]] auto constexpr tie() const {
-            return std::tie(operation_mode, api_version, registry_address, enabled);
+            return std::tie(uuid, operation_mode, api_version, registry_address, enabled, label, description);
         }
 
         friend bool operator==(const Configuration& lhs, const Configuration& rhs) {
@@ -79,11 +82,14 @@ class Node {
      * which allows for partial updates.
      */
     struct ConfigurationUpdate {
+        std::optional<boost::uuids::uuid> uuid;
         std::optional<OperationMode> operation_mode;
         std::optional<ApiVersion> api_version;
         std::optional<std::string> registry_address;
         std::optional<bool> enabled;
         std::optional<uint16_t> node_api_port;
+        std::optional<std::string> label;
+        std::optional<std::string> description;
 
         void apply_to_config(Configuration& config) const;
 
@@ -287,6 +293,8 @@ class Node {
     void unregister_async();
     void post_resource_async(std::string type, boost::json::value resource);
     void delete_resource_async(std::string resource_type, const boost::uuids::uuid& id);
+    void update_self();
+    void post_self_async();
     void send_heartbeat_async();
     void connect_to_registry_async();
     void connect_to_registry_async(std::string_view host, std::string_view service);

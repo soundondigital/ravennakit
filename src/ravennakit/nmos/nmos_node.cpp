@@ -176,15 +176,21 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::Configuration::va
 
 nlohmann::json rav::nmos::Node::Configuration::to_json() const {
     return nlohmann::json {
+        {"uuid", to_string(uuid)},
         {"operation_mode", to_string(operation_mode)},
         {"api_version", api_version.to_string()},
         {"registry_address", registry_address},
         {"enabled", enabled},
         {"node_api_port", node_api_port},
+        {"label", label},
+        {"description", description},
     };
 }
 
 void rav::nmos::Node::ConfigurationUpdate::apply_to_config(Configuration& config) const {
+    if (uuid.has_value()) {
+        config.uuid = *uuid;
+    }
     if (operation_mode.has_value()) {
         config.operation_mode = *operation_mode;
     }
@@ -200,12 +206,26 @@ void rav::nmos::Node::ConfigurationUpdate::apply_to_config(Configuration& config
     if (node_api_port.has_value()) {
         config.node_api_port = *node_api_port;
     }
+    if (label.has_value()) {
+        config.label = *label;
+    }
+    if (description.has_value()) {
+        config.description = *description;
+    }
 }
 
 tl::expected<rav::nmos::Node::ConfigurationUpdate, std::string>
 rav::nmos::Node::ConfigurationUpdate::from_json(const nlohmann::json& json) {
     try {
         ConfigurationUpdate update {};
+
+        // UUID
+        const auto uuid_str = json.at("uuid").get<std::string>();
+        const auto uuid = boost::lexical_cast<boost::uuids::uuid>(uuid_str);
+        if (uuid.is_nil()) {
+            return tl::unexpected("Invalid UUID");
+        }
+        update.uuid = uuid;
 
         // Operation mode
         const auto operation_mode_str = json.at("operation_mode").get<std::string>();
@@ -226,6 +246,8 @@ rav::nmos::Node::ConfigurationUpdate::from_json(const nlohmann::json& json) {
         update.registry_address = json.at("registry_address").get<std::string>();
         update.enabled = json.at("enabled").get<bool>();
         update.node_api_port = json.at("node_api_port").get<uint16_t>();
+        update.label = json.value("label", std::string {});
+        update.description = json.value("description", std::string{});
         return update;
     } catch (const std::exception& e) {
         return tl::unexpected(e.what());
@@ -247,10 +269,10 @@ rav::nmos::Node::Node(
     if (!registry_browser_) {
         registry_browser_ = std::make_unique<RegistryBrowser>(io_context);
     }
-    self_.id = boost::uuids::random_generator()();
-    self_.version = Version {1, 0};
-    self_.label = "ravennakit";
-    self_.description = "RAVENNAKIT NMOS Node";
+
+    configuration_.uuid = boost::uuids::random_generator()();
+    self_.id = configuration_.uuid;
+    self_.version.inc();
     self_.interfaces = {Self::Interface {std::nullopt, "00-1a-2b-3c-4d-5e", "eth0"}};
 
     auto local_clock = ClockInternal {};
@@ -579,13 +601,17 @@ void rav::nmos::Node::update_configuration(const ConfigurationUpdate& update, co
             unregister_required = true;
         }
 
+        if (configuration_.uuid != new_config.uuid) {
+            unregister_required = true;
+        }
+
         if (!new_config.enabled) {
             unregister_required = true;
         }
     }
 
     if (unregister_required) {
-        unregister_async();  // Before configuration is updated
+        unregister_async();  // Before configuration_ is overwritten
     }
 
     configuration_ = std::move(new_config);
@@ -698,7 +724,7 @@ void rav::nmos::Node::stop_internal() {
 void rav::nmos::Node::register_async() {
     post_resource_error_count_ = 0;
 
-    post_resource_async("node", boost::json::value_from(self_));
+    post_self_async();
 
     for (auto& device : devices_) {
         post_resource_async("device", boost::json::value_from(device));
@@ -743,10 +769,12 @@ void rav::nmos::Node::register_async() {
 
         RAV_INFO("Registered with NMOS registry");
         update_status(Status::registered);
-    });
 
-    heartbeat_timer_.start(k_heartbeat_interval, [this] {
         send_heartbeat_async();
+
+        heartbeat_timer_.start(k_heartbeat_interval, [this] {
+            send_heartbeat_async();
+        });
     });
 }
 
@@ -823,6 +851,18 @@ void rav::nmos::Node::delete_resource_async(std::string resource_type, const boo
             }
         }
     );
+}
+
+void rav::nmos::Node::update_self() {
+    self_.version.inc();
+    self_.id = configuration_.uuid;
+    self_.label = configuration_.label;
+    self_.description = configuration_.description;
+}
+
+void rav::nmos::Node::post_self_async() {
+    update_self();
+    post_resource_async("node", boost::json::value_from(self_));
 }
 
 void rav::nmos::Node::send_heartbeat_async() {
