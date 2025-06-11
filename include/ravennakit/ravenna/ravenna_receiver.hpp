@@ -20,6 +20,8 @@
 #include "ravennakit/rtp/detail/rtp_receiver.hpp"
 #include "ravennakit/sdp/sdp_session_description.hpp"
 
+#include <boost/uuid/random_generator.hpp>
+
 namespace rav {
 
 class RavennaReceiver: public RavennaRtspClient::Subscriber {
@@ -177,7 +179,14 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     /**
      * @return A JSON representation of the sender.
      */
-    nlohmann::json to_json() const;
+    [[nodiscard]] nlohmann::json to_json() const;
+
+    /**
+     * Restores the receiver from a JSON representation.
+     * @param json The JSON representation of the receiver.
+     * @return A result indicating whether the restoration was successful or not.
+     */
+    [[nodiscard]] tl::expected<void, std::string> restore_from_json(const nlohmann::json& json);
 
     /**
      * Reads data from the buffer at the given timestamp.
@@ -224,6 +233,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
 
   private:
     RavennaRtspClient& rtsp_client_;
+    boost::uuids::uuid uuid_ = boost::uuids::random_generator()();
     rtp::AudioReceiver rtp_audio_receiver_;
     Id id_;
     Configuration configuration_;

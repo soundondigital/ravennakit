@@ -183,7 +183,7 @@ std::future<void> rav::RavennaNode::update_nmos_configuration(nmos::Node::Config
         auto device = devices.front();
 
         if (u.label.has_value()) {
-            device.label  = *u.label;
+            device.label = *u.label;
         }
 
         if (u.description.has_value()) {
@@ -546,13 +546,13 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
                 std::vector<std::unique_ptr<RavennaReceiver>> new_receivers;
 
                 for (auto& receiver : receivers) {
-                    auto config = RavennaReceiver::ConfigurationUpdate::from_json(receiver.at("configuration"));
-                    if (!config) {
-                        return tl::unexpected(config.error());
-                    }
                     auto new_receiver = std::make_unique<RavennaReceiver>(
-                        io_context_, rtsp_client_, *rtp_receiver_, id_generator_.next(), *config
+                        io_context_, rtsp_client_, *rtp_receiver_, id_generator_.next()
                     );
+
+                    if (auto result = new_receiver->restore_from_json(receiver); !result) {
+                        return tl::unexpected(result.error());
+                    }
 
                     new_receiver->set_interfaces(interface_addresses);
                     new_receivers.push_back(std::move(new_receiver));

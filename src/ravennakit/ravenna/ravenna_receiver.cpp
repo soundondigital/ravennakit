@@ -16,6 +16,9 @@
 #include "ravennakit/core/util/todo.hpp"
 #include "ravennakit/rtp/detail/rtp_filter.hpp"
 
+#include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 namespace {
 
 bool is_connection_info_valid(const rav::sdp::ConnectionInfoField& conn) {
@@ -41,7 +44,29 @@ bool is_connection_info_valid(const rav::sdp::ConnectionInfoField& conn) {
 nlohmann::json rav::RavennaReceiver::to_json() const {
     nlohmann::json root;
     root["configuration"] = configuration_.to_json();
+    root["uuid"] = boost::uuids::to_string(uuid_);
     return root;
+}
+
+tl::expected<void, std::string> rav::RavennaReceiver::restore_from_json(const nlohmann::json& json) {
+    try {
+        auto config = ConfigurationUpdate::from_json(json.at("configuration"));
+        if (!config) {
+            return tl::unexpected(config.error());
+        }
+
+        const auto uuid_str = json.at("uuid").get<std::string>();
+        uuid_ = boost::uuids::string_generator()(uuid_str);
+
+        auto result = set_configuration(*config);
+        if (!result) {
+            return tl::unexpected(result.error());
+        }
+
+        return {};
+    } catch (const std::exception& e) {
+        return tl::unexpected(fmt::format("Failed to restore RavennaReceiver from JSON: {}", e.what()));
+    }
 }
 
 std::optional<uint32_t> rav::RavennaReceiver::read_data_realtime(
