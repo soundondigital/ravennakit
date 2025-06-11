@@ -134,6 +134,11 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     [[nodiscard]] Id get_id() const;
 
     /**
+     * @return The unique UUID of the receiver.
+     */
+    [[nodiscard]] const boost::uuids::uuid& get_uuid() const;
+
+    /**
      * Updates the configuration of the receiver. Only takes into account the fields in the configuration that are set.
      * This allows to update only a subset of the configuration.
      * @param update The configuration changes to apply.

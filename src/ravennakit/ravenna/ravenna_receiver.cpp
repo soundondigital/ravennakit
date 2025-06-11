@@ -360,6 +360,10 @@ rav::Id rav::RavennaReceiver::get_id() const {
     return id_;
 }
 
+const boost::uuids::uuid& rav::RavennaReceiver::get_uuid() const {
+    return uuid_;
+}
+
 tl::expected<void, std::string> rav::RavennaReceiver::set_configuration(const ConfigurationUpdate& update) {
     // Session name
     if (update.session_name.has_value()) {

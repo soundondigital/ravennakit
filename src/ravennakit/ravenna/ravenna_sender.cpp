@@ -15,6 +15,9 @@
 #include "ravennakit/core/audio/audio_data.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
 
+#include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 #if RAV_WINDOWS
     #include <timeapi.h>
 #endif
@@ -169,6 +172,14 @@ rav::RavennaSender::~RavennaSender() {
 
 rav::Id rav::RavennaSender::get_id() const {
     return id_;
+}
+
+const boost::uuids::uuid& rav::RavennaSender::get_uuid() const {
+    return uuid_;
+}
+
+uint32_t rav::RavennaSender::get_session_id() const {
+    return session_id_;
 }
 
 tl::expected<void, std::string> rav::RavennaSender::set_configuration(const ConfigurationUpdate& update) {
@@ -500,7 +511,35 @@ nlohmann::json rav::RavennaSender::to_json() const {
     nlohmann::json root;
     root["session_id"] = session_id_;
     root["configuration"] = configuration_.to_json();
+    root["uuid"] = boost::uuids::to_string(uuid_);
     return root;
+}
+
+tl::expected<void, std::string> rav::RavennaSender::restore_from_json(const nlohmann::json& json) {
+    try {
+        auto config = ConfigurationUpdate::from_json(json.at("configuration"));
+        if (!config) {
+            return tl::unexpected(config.error());
+        }
+
+        const auto session_id = json.at("session_id").get<uint32_t>();
+        if (session_id == 0) {
+            return tl::unexpected("Session ID must be valid");
+        }
+
+        const auto uuid_str = json.at("uuid").get<std::string>();
+        uuid_ = boost::uuids::string_generator()(uuid_str);
+
+        auto result = set_configuration(*config);
+        if (!result) {
+            return tl::unexpected(fmt::format("Failed to update sender configuration: {}", result.error()));
+        }
+
+        session_id_ = session_id;
+        return {};
+    } catch (const std::exception& e) {
+        return tl::unexpected(fmt::format("Failed to restore RavennaSender from JSON: {}", e.what()));
+    }
 }
 
 void rav::RavennaSender::on_request(const rtsp::Connection::RequestEvent event) const {

@@ -511,15 +511,12 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
                 std::vector<std::unique_ptr<RavennaSender>> new_senders;
 
                 for (auto& sender : senders) {
-                    auto config = RavennaSender::ConfigurationUpdate::from_json(sender.at("configuration"));
-                    if (!config) {
-                        return tl::unexpected(config.error());
-                    }
-                    auto session_id = sender.at("session_id").get<uint32_t>();
                     auto new_sender = std::make_unique<RavennaSender>(
-                        io_context_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), session_id,
-                        *config
+                        io_context_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), 1
                     );
+                    if (auto result = new_sender->restore_from_json(sender); !result) {
+                        return tl::unexpected(result.error());
+                    }
                     new_sender->set_interfaces(interface_addresses);
                     new_senders.push_back(std::move(new_sender));
                 }

@@ -26,6 +26,9 @@
 #include "ravennakit/rtsp/rtsp_server.hpp"
 #include "ravennakit/sdp/sdp_session_description.hpp"
 
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid.hpp>
+
 namespace rav {
 
 class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Subscriber {
@@ -137,11 +140,14 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     [[nodiscard]] Id get_id() const;
 
     /**
+     * @return The unique UUID of the sender.
+     */
+    [[nodiscard]] const boost::uuids::uuid& get_uuid() const;
+
+    /**
      * @return The session ID of the sender.
      */
-    [[nodiscard]] uint32_t get_session_id() const {
-        return session_id_;
-    }
+    [[nodiscard]] uint32_t get_session_id() const;
 
     /**
      * Updates the configuration of the sender. Only takes into account the fields in the configuration that are set.
@@ -209,6 +215,13 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
      */
     nlohmann::json to_json() const;
 
+    /**
+    * Restores the sender from a JSON representation.
+    * @param json The JSON representation of the sender.
+    * @return A result indicating whether the restoration was successful or not.
+    */
+    [[nodiscard]] tl::expected<void, std::string> restore_from_json(const nlohmann::json& json);
+
     // rtsp_server::handler overrides
     void on_request(rtsp::Connection::RequestEvent event) const override;
 
@@ -221,6 +234,7 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     rtsp::Server& rtsp_server_;
     ptp::Instance& ptp_instance_;
 
+    boost::uuids::uuid uuid_ = boost::uuids::random_generator()();
     Id id_;
     uint32_t session_id_ {};
     Configuration configuration_;
