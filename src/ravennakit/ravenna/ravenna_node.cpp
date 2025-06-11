@@ -497,80 +497,49 @@ std::future<nlohmann::json> rav::RavennaNode::to_json() {
 std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json(const nlohmann::json& json) {
     auto work = [this, json]() -> tl::expected<void, std::string> {
         try {
+            // Configuration
+
             auto ravenna_config = RavennaConfig::from_json(json.at("config"));
             if (!ravenna_config) {
                 return tl::unexpected(ravenna_config.error());
             }
 
-            set_network_interface_config(ravenna_config->network_interfaces).wait();
-
             auto interface_addresses = ravenna_config->network_interfaces.get_interface_ipv4_addresses();
 
-            {
-                auto senders = json.at("senders");
-                std::vector<std::unique_ptr<RavennaSender>> new_senders;
+            // Senders
 
-                for (auto& sender : senders) {
-                    auto new_sender = std::make_unique<RavennaSender>(
-                        io_context_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), 1
-                    );
-                    if (auto result = new_sender->restore_from_json(sender); !result) {
-                        return tl::unexpected(result.error());
-                    }
-                    new_sender->set_interfaces(interface_addresses);
-                    new_senders.push_back(std::move(new_sender));
+            auto senders = json.at("senders");
+            std::vector<std::unique_ptr<RavennaSender>> new_senders;
+
+            for (auto& sender : senders) {
+                auto new_sender = std::make_unique<RavennaSender>(
+                    io_context_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), 1
+                );
+                if (auto result = new_sender->restore_from_json(sender); !result) {
+                    return tl::unexpected(result.error());
                 }
-
-                for (const auto& sender : senders_) {
-                    for (auto* s : subscribers_) {
-                        RAV_ASSERT(s != nullptr, "Subscriber must be valid");
-                        s->ravenna_sender_removed(sender->get_id());
-                    }
-                }
-
-                std::swap(senders_, new_senders);
-
-                for (const auto& sender : senders_) {
-                    for (auto* s : subscribers_) {
-                        RAV_ASSERT(s != nullptr, "Subscriber must be valid");
-                        s->ravenna_sender_added(*sender);
-                    }
-                }
+                new_sender->set_interfaces(interface_addresses);
+                new_senders.push_back(std::move(new_sender));
             }
 
-            {
-                auto receivers = json.at("receivers");
-                std::vector<std::unique_ptr<RavennaReceiver>> new_receivers;
+            // Receivers
 
-                for (auto& receiver : receivers) {
-                    auto new_receiver = std::make_unique<RavennaReceiver>(
-                        io_context_, rtsp_client_, *rtp_receiver_, id_generator_.next()
-                    );
+            auto receivers = json.at("receivers");
+            std::vector<std::unique_ptr<RavennaReceiver>> new_receivers;
 
-                    if (auto result = new_receiver->restore_from_json(receiver); !result) {
-                        return tl::unexpected(result.error());
-                    }
+            for (auto& receiver : receivers) {
+                auto new_receiver =
+                    std::make_unique<RavennaReceiver>(io_context_, rtsp_client_, *rtp_receiver_, id_generator_.next());
 
-                    new_receiver->set_interfaces(interface_addresses);
-                    new_receivers.push_back(std::move(new_receiver));
+                if (auto result = new_receiver->restore_from_json(receiver); !result) {
+                    return tl::unexpected(result.error());
                 }
 
-                for (const auto& receiver : receivers_) {
-                    for (auto* s : subscribers_) {
-                        RAV_ASSERT(s != nullptr, "Subscriber must be valid");
-                        s->ravenna_receiver_removed(receiver->get_id());
-                    }
-                }
-
-                std::swap(receivers_, new_receivers);
-
-                for (const auto& receiver : receivers_) {
-                    for (auto* s : subscribers_) {
-                        RAV_ASSERT(s != nullptr, "Subscriber must be valid");
-                        s->ravenna_receiver_added(*receiver);
-                    }
-                }
+                new_receiver->set_interfaces(interface_addresses);
+                new_receivers.push_back(std::move(new_receiver));
             }
+
+            // NMOS Node
 
             auto nmos_node = json.find("nmos_node");
             if (nmos_node != json.end()) {
@@ -581,6 +550,45 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
             } else {
                 RAV_TRACE("No NMOS node state found in JSON");
             }
+
+            set_network_interface_config(ravenna_config->network_interfaces).wait();
+
+            // Swap senders
+
+            for (const auto& sender : senders_) {
+                for (auto* s : subscribers_) {
+                    RAV_ASSERT(s != nullptr, "Subscriber must be valid");
+                    s->ravenna_sender_removed(sender->get_id());
+                }
+            }
+
+            std::swap(senders_, new_senders);
+
+            for (const auto& sender : senders_) {
+                for (auto* s : subscribers_) {
+                    RAV_ASSERT(s != nullptr, "Subscriber must be valid");
+                    s->ravenna_sender_added(*sender);
+                }
+            }
+
+            // Swap receivers
+
+            for (const auto& receiver : receivers_) {
+                for (auto* s : subscribers_) {
+                    RAV_ASSERT(s != nullptr, "Subscriber must be valid");
+                    s->ravenna_receiver_removed(receiver->get_id());
+                }
+            }
+
+            std::swap(receivers_, new_receivers);
+
+            for (const auto& receiver : receivers_) {
+                for (auto* s : subscribers_) {
+                    RAV_ASSERT(s != nullptr, "Subscriber must be valid");
+                    s->ravenna_receiver_added(*receiver);
+                }
+            }
+
         } catch (const std::exception& e) {
             return tl::unexpected(fmt::format("Failed to parse RavennaNode JSON: {}", e.what()));
         }
