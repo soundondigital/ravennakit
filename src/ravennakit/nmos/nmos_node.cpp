@@ -619,7 +619,8 @@ void rav::nmos::Node::update_configuration(const ConfigurationUpdate& update, co
 
     configuration_ = std::move(new_config);
     if (status_ == Status::registered) {
-        update_and_post_self_async();
+        update_self();
+        send_updated_resources_async();
     }
     on_configuration_changed(configuration_);
 
@@ -741,30 +742,11 @@ void rav::nmos::Node::stop_internal() {
 
 void rav::nmos::Node::register_async() {
     post_resource_error_count_ = 0;
-
-    update_and_post_self_async();
-
-    for (auto& device : devices_) {
-        post_resource_async("device", boost::json::value_from(device));
-    }
-
-    for (auto& source : sources_) {
-        post_resource_async("source", boost::json::value_from(source));
-    }
-
-    for (auto& flow : flows_) {
-        post_resource_async("flow", boost::json::value_from(flow));
-    }
-
-    for (auto& sender : senders_) {
-        post_resource_async("sender", boost::json::value_from(sender));
-    }
-
-    for (auto& receiver : receivers_) {
-        post_resource_async("receiver", boost::json::value_from(receiver));
-    }
-
     failed_heartbeat_count_ = 0;
+
+    update_self();
+    update_all_resources_to_now();
+    send_updated_resources_async();
 
     http_client_->get_async("/", [this](const boost::system::result<http::response<http::string_body>>& result) {
         if (result.has_error()) {
@@ -869,13 +851,12 @@ void rav::nmos::Node::delete_resource_async(std::string resource_type, const boo
     );
 }
 
-void rav::nmos::Node::update_and_post_self_async() {
+void rav::nmos::Node::update_self() {
     const auto now = get_local_clock().now();
     self_.version.update(now);
     self_.id = configuration_.id;
     self_.label = configuration_.label;
     self_.description = configuration_.description;
-    post_resource_async("node", boost::json::value_from(self_));
 }
 
 void rav::nmos::Node::send_heartbeat_async() {
@@ -938,8 +919,8 @@ void rav::nmos::Node::connect_to_registry_async(const std::string_view host, con
 
 bool rav::nmos::Node::add_receiver_to_device(const Receiver& receiver) {
     for (auto& device : devices_) {
-        if (device.id == receiver.device_id()) {
-            device.receivers.push_back(receiver.id());
+        if (device.id == receiver.get_device_id()) {
+            device.receivers.push_back(receiver.get_id());
             return true;
         }
     }
@@ -989,6 +970,72 @@ void rav::nmos::Node::update_status(const Status new_status) {
     on_status_changed(status_, registry_info_);
 }
 
+void rav::nmos::Node::update_all_resources_to_now() {
+    const auto version = Version(get_local_clock().now());
+
+    self_.version = version;
+
+    for (auto& device : devices_) {
+        device.version = version;
+    }
+
+    for (auto& source : sources_) {
+        source.set_version(version);
+    }
+
+    for (auto& flow : flows_) {
+        flow.set_version(version);
+    }
+
+    for (auto& sender : senders_) {
+        sender.version = version;
+    }
+
+    for (auto& receiver : receivers_) {
+        receiver.set_version(version);
+    }
+}
+
+void rav::nmos::Node::send_updated_resources_async() {
+    auto new_version = Version(get_local_clock().now());
+
+    if (self_.version > current_version_) {
+        post_resource_async("node", boost::json::value_from(self_));
+    }
+
+    for (auto& device : devices_) {
+        if (device.version > current_version_) {
+            post_resource_async("device", boost::json::value_from(device));
+        }
+    }
+
+    for (auto& source : sources_) {
+        if (source.get_version() > current_version_) {
+            post_resource_async("source", boost::json::value_from(source));
+        }
+    }
+
+    for (auto& flow : flows_) {
+        if (flow.get_version() > current_version_) {
+            post_resource_async("flow", boost::json::value_from(flow));
+        }
+    }
+
+    for (auto& sender : senders_) {
+        if (sender.version > current_version_) {
+            post_resource_async("sender", boost::json::value_from(sender));
+        }
+    }
+
+    for (auto& receiver : receivers_) {
+        if (receiver.get_version() > current_version_) {
+            post_resource_async("receiver", boost::json::value_from(receiver));
+        }
+    }
+
+    current_version_ = Version(new_version);
+}
+
 const char* rav::nmos::to_string(const Node::Status& status) {
     switch (status) {
         case Node::Status::disabled:
@@ -1020,20 +1067,21 @@ bool rav::nmos::Node::add_or_update_device(Device device) {
     device.node_id = self_.id;
     device.version.update(get_local_clock().now());
 
+    bool updated = false;
     for (auto& existing_device : devices_) {
         if (existing_device.id == device.id) {
             existing_device = std::move(device);
-            if (status_ == Status::registered) {
-                post_resource_async("device", boost::json::value_from(existing_device));
-            }
-            return true;
+            updated = true;
+            break;
         }
     }
 
-    devices_.push_back(std::move(device));
+    if (!updated) {
+        devices_.push_back(std::move(device));
+    }
 
     if (status_ == Status::registered) {
-        post_resource_async("device", boost::json::value_from(devices_.back()));
+        send_updated_resources_async();
     }
 
     return true;
@@ -1077,13 +1125,13 @@ const rav::nmos::Flow* rav::nmos::Node::find_flow(boost::uuids::uuid uuid) const
 }
 
 bool rav::nmos::Node::add_or_update_receiver(Receiver receiver) {
-    if (receiver.id().is_nil()) {
+    if (receiver.get_id().is_nil()) {
         RAV_ERROR("Flow ID should not be nil");
         return false;
     }
 
     for (auto& existing_receiver : receivers_) {
-        if (existing_receiver.id() == receiver.id()) {
+        if (existing_receiver.get_id() == receiver.get_id()) {
             existing_receiver = std::move(receiver);
             return true;
         }
@@ -1100,7 +1148,7 @@ bool rav::nmos::Node::add_or_update_receiver(Receiver receiver) {
 
 const rav::nmos::Receiver* rav::nmos::Node::find_receiver(boost::uuids::uuid uuid) const {
     const auto it = std::find_if(receivers_.begin(), receivers_.end(), [uuid](const Receiver& receiver) {
-        return receiver.id() == uuid;
+        return receiver.get_id() == uuid;
     });
     if (it != receivers_.end()) {
         return &*it;
@@ -1141,13 +1189,13 @@ const rav::nmos::Sender* rav::nmos::Node::find_sender(boost::uuids::uuid uuid) c
 }
 
 bool rav::nmos::Node::add_or_update_source(Source source) {
-    if (source.id().is_nil()) {
+    if (source.get_id().is_nil()) {
         RAV_ERROR("Source ID should not be nil");
         return false;
     }
 
     for (auto& existing_source : sources_) {
-        if (existing_source.id() == source.id()) {
+        if (existing_source.get_id() == source.get_id()) {
             existing_source = std::move(source);
             return true;
         }
@@ -1159,7 +1207,7 @@ bool rav::nmos::Node::add_or_update_source(Source source) {
 
 const rav::nmos::Source* rav::nmos::Node::find_source(boost::uuids::uuid uuid) const {
     const auto it = std::find_if(sources_.begin(), sources_.end(), [uuid](const Source& source) {
-        return source.id() == uuid;
+        return source.get_id() == uuid;
     });
     if (it != sources_.end()) {
         return &*it;
@@ -1185,12 +1233,9 @@ const rav::nmos::Node::RegistryInfo& rav::nmos::Node::get_registry_info() const 
 
 boost::json::value rav::nmos::Node::to_json() const {
     return {
-        {"configuration", configuration_.to_json()},
-        {"devices", boost::json::value_from(devices_)},
-        {"flows", boost::json::value_from(flows_)},
-        {"senders", boost::json::value_from(senders_)},
-        {"receivers", boost::json::value_from(receivers_)},
-        {"sources", boost::json::value_from(sources_)},
+        {"configuration", configuration_.to_json()},        {"devices", boost::json::value_from(devices_)},
+        {"flows", boost::json::value_from(flows_)},         {"senders", boost::json::value_from(senders_)},
+        {"receivers", boost::json::value_from(receivers_)}, {"sources", boost::json::value_from(sources_)},
     };
 }
 
@@ -1232,8 +1277,10 @@ void rav::nmos::Node::set_network_interface_config(const NetworkInterfaceConfig&
         self_.api.endpoints.emplace_back(Self::Endpoint {ip.to_string(), http_endpoint.port(), "http", false});
     }
 
+    self_.version.update(get_local_clock().now());
+
     if (status_ == Status::registered) {
-        update_and_post_self_async();
+        send_updated_resources_async();
     }
 }
 
@@ -1251,8 +1298,10 @@ void rav::nmos::Node::ptp_parent_changed(const ptp::ParentDs& parent) {
     clock.name = "clk0";
     clock.traceable = ptp_instance_.get_time_properties_ds().time_traceable;
     self_.clocks = {clock};
+    self_.version.update(get_local_clock().now());
+
     if (status_ == Status::registered) {
-        update_and_post_self_async();
+        send_updated_resources_async();
     }
 }
 
@@ -1281,7 +1330,10 @@ void rav::nmos::Node::ptp_port_changed_state(const ptp::Port&) {
         self_.clocks.front()
     );
 
-    if (changed && status_ == Status::registered) {
-        update_and_post_self_async();
+    if (changed) {
+        self_.version.update(get_local_clock().now());
+        if (status_ == Status::registered) {
+            send_updated_resources_async();
+        }
     }
 }

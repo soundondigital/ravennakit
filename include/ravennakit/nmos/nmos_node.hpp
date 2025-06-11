@@ -292,6 +292,7 @@ class Node: public ptp::Instance::Subscriber {
 
     uint8_t failed_heartbeat_count_ = 0;
     AsioTimer heartbeat_timer_;  // Keep below connector_ to avoid dangling reference
+    Version current_version_;
 
     /**
      * Starts the services of this node (HTTP server, advertisements, etc.).
@@ -308,7 +309,7 @@ class Node: public ptp::Instance::Subscriber {
     void unregister_async();
     void post_resource_async(std::string type, boost::json::value resource);
     void delete_resource_async(std::string resource_type, const boost::uuids::uuid& id);
-    void update_and_post_self_async();
+    void update_self();
     void send_heartbeat_async();
     void connect_to_registry_async();
     void connect_to_registry_async(std::string_view host, std::string_view service);
@@ -320,6 +321,8 @@ class Node: public ptp::Instance::Subscriber {
     void handle_registry_discovered(const dnssd::ServiceDescription& desc);
 
     void update_status(Status new_status);
+    void update_all_resources_to_now();
+    void send_updated_resources_async();
 };
 
 const char* to_string(const Node::Status& status);

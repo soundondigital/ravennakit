@@ -23,7 +23,7 @@ namespace rav::nmos {
 struct Receiver {
     std::variant<ReceiverAudio> any_of;
 
-    [[nodiscard]] boost::uuids::uuid id() const {
+    [[nodiscard]] boost::uuids::uuid get_id() const {
         return std::visit(
             [](const auto& receiver_variant) {
                 return receiver_variant.id;
@@ -32,10 +32,28 @@ struct Receiver {
         );
     }
 
-    boost::uuids::uuid device_id() const {
+    [[nodiscard]] boost::uuids::uuid get_device_id() const {
         return std::visit(
             [](const auto& receiver_variant) {
                 return receiver_variant.device_id;
+            },
+            any_of
+        );
+    }
+
+    [[nodiscard]] Version get_version() const {
+        return std::visit(
+            [](const auto& source) {
+                return source.version;
+            },
+            any_of
+        );
+    }
+
+    void set_version(const Version& version) {
+        std::visit(
+            [&version](auto& source) {
+                source.version = version;
             },
             any_of
         );

@@ -27,6 +27,24 @@ struct Flow {
             any_of
         );
     }
+
+    [[nodiscard]] Version get_version() const {
+        return std::visit(
+            [](const auto& source) {
+                return source.version;
+            },
+            any_of
+        );
+    }
+
+    void set_version(const Version& version) {
+        std::visit(
+            [&version](auto& source) {
+                source.version = version;
+            },
+            any_of
+        );
+    }
 };
 
 inline void tag_invoke(const boost::json::value_from_tag& tag, boost::json::value& jv, const Flow& flow) {

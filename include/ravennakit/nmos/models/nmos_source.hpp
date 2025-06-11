@@ -23,10 +23,28 @@ namespace rav::nmos {
 struct Source {
     std::variant<SourceAudio> any_of;
 
-    [[nodiscard]] boost::uuids::uuid id() const {
+    [[nodiscard]] boost::uuids::uuid get_id() const {
         return std::visit(
             [](const auto& source) {
                 return source.id;
+            },
+            any_of
+        );
+    }
+
+    [[nodiscard]] Version get_version() const {
+        return std::visit(
+            [](const auto& source) {
+                return source.version;
+            },
+            any_of
+        );
+    }
+
+    void set_version(const Version& version) {
+        std::visit(
+            [&version](auto& source) {
+                source.version = version;
             },
             any_of
         );

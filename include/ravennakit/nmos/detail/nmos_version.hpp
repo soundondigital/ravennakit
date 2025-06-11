@@ -29,6 +29,31 @@ struct Version {
     uint64_t seconds = 0;      // seconds since epoch
     uint32_t nanoseconds = 0;  // nanoseconds since the last second
 
+    Version() = default;
+
+    Version(const uint64_t seconds_, const uint32_t nanoseconds_) : seconds(seconds_), nanoseconds(nanoseconds_) {
+        RAV_ASSERT(nanoseconds < 1000000000, "Nanoseconds must be less than 1 billion.");
+    }
+
+    explicit Version(const ptp::Timestamp timestamp) :
+        seconds(timestamp.raw_seconds()), nanoseconds(timestamp.raw_nanoseconds()) {}
+
+    friend bool operator<(const Version& lhs, const Version& rhs) {
+        return lhs.seconds < rhs.seconds || (lhs.seconds == rhs.seconds && lhs.nanoseconds < rhs.nanoseconds);
+    }
+
+    friend bool operator<=(const Version& lhs, const Version& rhs) {
+        return rhs >= lhs;
+    }
+
+    friend bool operator>(const Version& lhs, const Version& rhs) {
+        return rhs < lhs;
+    }
+
+    friend bool operator>=(const Version& lhs, const Version& rhs) {
+        return !(lhs < rhs);
+    }
+
     /**
      * Increases the version by one nanosecond.
      */
@@ -48,7 +73,7 @@ struct Version {
      * @param timestamp The new timestamp to update the version with.
      */
     void update(const ptp::Timestamp timestamp) {
-        if (timestamp > ptp::Timestamp (seconds, nanoseconds)) {
+        if (timestamp > ptp::Timestamp(seconds, nanoseconds)) {
             seconds = timestamp.raw_seconds();
             nanoseconds = timestamp.raw_nanoseconds();
         } else {
