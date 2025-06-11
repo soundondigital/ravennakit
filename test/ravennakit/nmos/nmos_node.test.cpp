@@ -158,7 +158,7 @@ TEST_CASE("nmos::Node") {
             browser->calls_to_start[0]
             == std::make_tuple(rav::nmos::OperationMode::mdns_p2p, rav::nmos::ApiVersion::v1_3())
         );
-        REQUIRE(browser->calls_to_stop == 1);
+        REQUIRE(browser->calls_to_stop == 0);
         REQUIRE(browser->calls_to_find_most_suitable_registry == 0);
 
         rav::dnssd::ServiceDescription desc;
