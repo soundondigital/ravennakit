@@ -146,13 +146,6 @@ class Node: public ptp::Instance::Subscriber {
     [[nodiscard]] const Device* find_device(const boost::uuids::uuid& uuid) const;
 
     /**
-     * Adds the given flow to the node or updates an existing flow if it already exists (based on the uuid).
-     * @param flow The flow to set.
-     * @return True if the flow was set successfully, false otherwise.
-     */
-    [[nodiscard]] bool add_or_update_flow(Flow flow);
-
-    /**
      * Removes a device from the node by its uuid. Resources associated with the device will be removed as well.
      * @param uuid The uuid of the device to remove.
      * @return True if the device was removed successfully, false otherwise.
@@ -160,11 +153,25 @@ class Node: public ptp::Instance::Subscriber {
     [[nodiscard]] bool remove_device(boost::uuids::uuid uuid);
 
     /**
+     * Adds the given flow to the node or updates an existing flow if it already exists (based on the uuid).
+     * @param flow The flow to set.
+     * @return True if the flow was set successfully, false otherwise.
+     */
+    [[nodiscard]] bool add_or_update_flow(Flow flow);
+
+    /**
      * Finds a flow by its uuid.
      * @param uuid The uuid of the flow to find.
      * @return A pointer to the flow if found, or nullptr if not found.
      */
     [[nodiscard]] const Flow* find_flow(const boost::uuids::uuid& uuid) const;
+
+    /**
+     * Removes a flow from the node by its uuid.
+     * @param uuid The uuid of the flow to remove.
+     * @return True if the flow was removed successfully, false otherwise.
+     */
+    [[nodiscard]] bool remove_flow(const boost::uuids::uuid& uuid);
 
     /**
      * Adds the given receiver to the node or updates an existing receiver if it already exists (based on the uuid).
@@ -202,6 +209,13 @@ class Node: public ptp::Instance::Subscriber {
     [[nodiscard]] const Sender* find_sender(const boost::uuids::uuid& uuid) const;
 
     /**
+     * Removes a sender from the node by its uuid.
+     * @param uuid The uuid of the sender to remove.
+     * @return True if the sender was removed successfully, false otherwise.
+     */
+    [[nodiscard]] bool remove_sender(boost::uuids::uuid uuid);
+
+    /**
      * Adds the given source to the node or updates an existing source if it already exists (based on the uuid).
      * @param source The source to set.
      * @return True if the source was set successfully, false otherwise.
@@ -214,6 +228,13 @@ class Node: public ptp::Instance::Subscriber {
      * @return A pointer to the source if found, or nullptr if not found.
      */
     [[nodiscard]] const Source* find_source(const boost::uuids::uuid& uuid) const;
+
+    /**
+     * Removes a source from the node by its uuid.
+     * @param uuid The uuid of the source to remove.
+     * @return True if the source was removed successfully, false otherwise.
+     */
+    [[nodiscard]] bool remove_source(boost::uuids::uuid uuid);
 
     /**
      * @return The uuid of the node.

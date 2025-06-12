@@ -19,6 +19,7 @@
 #include "ravennakit/core/sync/rcu.hpp"
 #include "ravennakit/core/util/rank.hpp"
 #include "ravennakit/dnssd/dnssd_advertiser.hpp"
+#include "ravennakit/nmos/nmos_node.hpp"
 #include "ravennakit/ptp/ptp_instance.hpp"
 #include "ravennakit/rtp/rtp_packet.hpp"
 #include "ravennakit/rtp/detail/rtp_buffer.hpp"
@@ -176,6 +177,18 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     [[nodiscard]] bool unsubscribe(const Subscriber* subscriber);
 
     /**
+     * Sets the NMOS node for the receiver.
+     * @param nmos_node The NMOS node to set. May be nullptr if NMOS is not used.
+     */
+    void set_nmos_node(nmos::Node* nmos_node);
+
+    /**
+     * Sets the NMOS device ID for the receiver.
+     * @param device_id The device ID to set.
+     */
+    void set_nmos_device_id(const boost::uuids::uuid& device_id);
+
+    /**
      * @return The packet time in milliseconds as signaled using SDP. If the packet time is 1ms and the sample
      * rate is 44.1kHz, then the signaled packet time is 1.09.
      */
@@ -216,10 +229,10 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     nlohmann::json to_json() const;
 
     /**
-    * Restores the sender from a JSON representation.
-    * @param json The JSON representation of the sender.
-    * @return A result indicating whether the restoration was successful or not.
-    */
+     * Restores the sender from a JSON representation.
+     * @param json The JSON representation of the sender.
+     * @return A result indicating whether the restoration was successful or not.
+     */
     [[nodiscard]] tl::expected<void, std::string> restore_from_json(const nlohmann::json& json);
 
     // rtsp_server::handler overrides
@@ -233,8 +246,8 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     dnssd::Advertiser& advertiser_;
     rtsp::Server& rtsp_server_;
     ptp::Instance& ptp_instance_;
+    nmos::Node* nmos_node_ {nullptr};
 
-    boost::uuids::uuid uuid_ = boost::uuids::random_generator()();
     Id id_;
     uint32_t session_id_ {};
     Configuration configuration_;
@@ -246,7 +259,11 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     std::map<Rank, boost::asio::ip::address_v4> interface_addresses_;
     std::map<Rank, rtp::Sender> rtp_senders_;
 
-    boost::asio::high_resolution_timer timer_;
+    nmos::SourceAudio nmos_source_;
+    nmos::FlowAudioRaw nmos_flow_;
+    nmos::Sender nmos_sender_;
+
+    boost::asio::high_resolution_timer timer_; // TODO: Replace with AsioTimer to avoid crashes on shutdown
     SubscriberList<Subscriber> subscribers_;
     std::string status_message_;
 
@@ -288,7 +305,6 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     void update_status_message(std::string message);
     tl::expected<void, std::string> validate_state() const;
     tl::expected<void, std::string> validate_destinations() const;
-
 };
 
 }  // namespace rav

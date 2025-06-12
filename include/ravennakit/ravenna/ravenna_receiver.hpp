@@ -169,6 +169,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
 
     /**
      * Sets the NMOS node for the receiver.
+     * @param nmos_node The NMOS node to set. May be nullptr if NMOS is not used.
      */
     void set_nmos_node(nmos::Node* nmos_node);
 
@@ -253,7 +254,6 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
   private:
     RavennaRtspClient& rtsp_client_;
     nmos::Node* nmos_node_ {nullptr};
-    boost::uuids::uuid uuid_ = boost::uuids::random_generator()();
     rtp::AudioReceiver rtp_audio_receiver_;
     Id id_;
     Configuration configuration_;

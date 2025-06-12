@@ -52,6 +52,22 @@ struct Sender: ResourceCore {
 
     /// Object indicating how this Sender is currently configured to send data.
     Subscription subscription;
+
+    /**
+     * @return True if the sender is valid, loosely following the NMOS JSON schema, or false otherwise.
+     */
+    bool is_valid() const {
+        if (id.is_nil()) {
+            return false;
+        }
+        if (device_id.is_nil()) {
+            return false;
+        }
+        if (flow_id.has_value() && flow_id->is_nil()) {
+            return false;
+        }
+        return true;
+    }
 };
 
 inline void

@@ -27,6 +27,19 @@ struct SourceAudio: SourceCore {
 
     /// Array of objects describing the audio channels
     std::vector<Channel> channels;
+
+    /**
+     * @return True if the receiver is valid, loosely following the NMOS JSON schema, or false otherwise.
+     */
+    bool is_valid() const {
+        if (id.is_nil()) {
+            return false;
+        }
+        if (channels.empty()) {
+            return false;
+        }
+        return true;
+    }
 };
 
 inline void

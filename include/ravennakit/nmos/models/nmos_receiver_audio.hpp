@@ -31,8 +31,7 @@ struct ReceiverAudio: ReceiverCore {
     Capabilities caps;
 
     /**
-     *
-     * @return True if the receiver is valid, loosely following the NMOS JSON schema.
+     * @return True if the receiver is valid, loosely following the NMOS JSON schema, or false otherwise.
      */
     [[nodiscard]] bool is_valid() const {
         if (id.is_nil()) {

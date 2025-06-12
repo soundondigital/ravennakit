@@ -20,6 +20,25 @@ struct FlowAudioRaw: FlowAudio {
 
     /// Bit depth of the audio samples.
     int bit_depth {};           // 8, 16, 20, 24
+
+    /**
+     * @return True if the flow is valid, loosely following the NMOS JSON schema, or false otherwise.
+     */
+    bool is_valid() const {
+        if (id.is_nil()) {
+            return false;
+        }
+        if (media_type.empty()) {
+            return false;
+        }
+        if (bit_depth <= 0) {
+            return false;
+        }
+        if (sample_rate.numerator <= 0 || sample_rate.denominator <= 0) {
+            return false;
+        }
+        return true;
+    }
 };
 
 inline void tag_invoke(

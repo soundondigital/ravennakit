@@ -13,6 +13,7 @@
 
 #include "ravennakit/aes67/aes67_constants.hpp"
 #include "ravennakit/core/audio/audio_data.hpp"
+#include "ravennakit/nmos/detail/nmos_media_types.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
 
 #include <boost/uuid/string_generator.hpp>
@@ -106,6 +107,14 @@ rav::RavennaSender::RavennaSender(
     RAV_ASSERT(id_.is_valid(), "Sender ID must be valid");
     RAV_ASSERT(session_id != 0, "Session ID must be valid");
 
+    nmos_source_.id = boost::uuids::random_generator()();
+
+    nmos_flow_.id = boost::uuids::random_generator()();
+    nmos_flow_.source_id = nmos_source_.id;
+
+    nmos_sender_.id = boost::uuids::random_generator()();
+    nmos_sender_.flow_id = nmos_flow_.id;
+
     if (!initial_config.session_name.has_value()) {
         initial_config.session_name = "Sender " + std::to_string(session_id_);
     }
@@ -168,6 +177,18 @@ rav::RavennaSender::~RavennaSender() {
     }
 
     rtsp_server_.unregister_handler(this);
+
+    if (nmos_node_ != nullptr) {
+        if (!nmos_node_->remove_sender(nmos_sender_.id)) {
+            RAV_ERROR("Failed to remove NMOS receiver with ID: {}", boost::uuids::to_string(nmos_sender_.id));
+        }
+        if (!nmos_node_->remove_flow(nmos_flow_.id)) {
+            RAV_ERROR("Failed to remove NMOS flow with ID: {}", boost::uuids::to_string(nmos_flow_.id));
+        }
+        if (!nmos_node_->remove_source(nmos_source_.id)) {
+            RAV_ERROR("Failed to remove NMOS source with ID: {}", boost::uuids::to_string(nmos_source_.id));
+        }
+    }
 }
 
 rav::Id rav::RavennaSender::get_id() const {
@@ -175,7 +196,7 @@ rav::Id rav::RavennaSender::get_id() const {
 }
 
 const boost::uuids::uuid& rav::RavennaSender::get_uuid() const {
-    return uuid_;
+    return nmos_sender_.id;
 }
 
 uint32_t rav::RavennaSender::get_session_id() const {
@@ -210,13 +231,14 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
 
     // Audio format
     if (update.audio_format.has_value()) {
-        if (!update.audio_format->is_valid()) {
+        const auto& audio_format = *update.audio_format;
+        if (!audio_format.is_valid()) {
             return tl::unexpected("Invalid audio format");
         }
-        if (update.audio_format->ordering != AudioFormat::ChannelOrdering::interleaved) {
+        if (audio_format.ordering != AudioFormat::ChannelOrdering::interleaved) {
             return tl::unexpected("Only interleaved audio formats are supported");
         }
-        if (update.audio_format->byte_order != AudioFormat::ByteOrder::be) {
+        if (audio_format.byte_order != AudioFormat::ByteOrder::be) {
             return tl::unexpected("Only big endian audio formats are supported");
         }
     }
@@ -230,12 +252,18 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
 
     bool update_advertisement = false;
     bool announce = false;
+    bool update_nmos = false;
 
     // Session name
     if (update.session_name.has_value() && update.session_name != configuration_.session_name) {
         configuration_.session_name = *update.session_name;
         update_advertisement = true;
         announce = true;
+        update_nmos = true;
+
+        nmos_sender_.label = configuration_.session_name;
+        nmos_flow_.label = configuration_.session_name;
+        nmos_source_.label = configuration_.session_name;
     }
 
     // Destinations
@@ -263,6 +291,17 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
     if (update.audio_format.has_value() && update.audio_format != configuration_.audio_format) {
         configuration_.audio_format = *update.audio_format;
         announce = true;
+        update_nmos = true;
+
+        const auto& audio_format = *update.audio_format;
+        nmos_source_.channels.resize(audio_format.num_channels);
+        for (uint32_t i = 0; i < audio_format.num_channels; ++i) {
+            nmos_source_.channels[i].label = fmt::format("Channel {}", i + 1);
+        }
+
+        nmos_flow_.media_type = nmos::audio_format_to_nmos_media_type(audio_format);
+        nmos_flow_.sample_rate = {static_cast<int>(audio_format.sample_rate), 1};
+        nmos_flow_.bit_depth = audio_format.bytes_per_sample() * 8;
     }
 
     // Packet time
@@ -303,6 +342,18 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
             RAV_TRACE("Unregistering sender advertisement");
             advertiser_.unregister_service(advertisement_id_);
             advertisement_id_ = {};
+        }
+    }
+
+    if (update_nmos && nmos_node_ != nullptr) {
+        if (!nmos_node_->add_or_update_source({nmos_source_})) {
+            RAV_ERROR("Failed to add NMOS source with ID: {}", boost::uuids::to_string(nmos_source_.id));
+        }
+        if (!nmos_node_->add_or_update_flow({nmos_flow_})) {
+            RAV_ERROR("Failed to add NMOS flow with ID: {}", boost::uuids::to_string(nmos_flow_.id));
+        }
+        if (!nmos_node_->add_or_update_sender(nmos_sender_)) {
+            RAV_ERROR("Failed to add NMOS sender with ID: {}", boost::uuids::to_string(nmos_sender_.id));
         }
     }
 
@@ -366,6 +417,33 @@ bool rav::RavennaSender::subscribe(Subscriber* subscriber) {
 
 bool rav::RavennaSender::unsubscribe(const Subscriber* subscriber) {
     return subscribers_.remove(subscriber);
+}
+
+void rav::RavennaSender::set_nmos_node(nmos::Node* nmos_node) {
+    if (nmos_node_ == nmos_node) {
+        return;
+    }
+    nmos_node_ = nmos_node;
+    if (nmos_node_ != nullptr) {
+        RAV_ASSERT(nmos_sender_.is_valid(), "NMOS receiver must be valid at this point");
+        RAV_ASSERT(nmos_flow_.is_valid(), "NMOS flow must be valid at this point");
+        RAV_ASSERT(nmos_source_.is_valid(), "NMOS source must be valid at this point");
+        if (!nmos_node_->add_or_update_source({nmos_source_})) {
+            RAV_ERROR("Failed to add NMOS source with ID: {}", boost::uuids::to_string(nmos_source_.id));
+        }
+        if (!nmos_node_->add_or_update_flow({nmos_flow_})) {
+            RAV_ERROR("Failed to add NMOS flow with ID: {}", boost::uuids::to_string(nmos_flow_.id));
+        }
+        if (!nmos_node_->add_or_update_sender(nmos_sender_)) {
+            RAV_ERROR("Failed to add NMOS sender with ID: {}", boost::uuids::to_string(nmos_sender_.id));
+        }
+    }
+}
+
+void rav::RavennaSender::set_nmos_device_id(const boost::uuids::uuid& device_id) {
+    nmos_source_.device_id = device_id;
+    nmos_flow_.device_id = device_id;
+    nmos_sender_.device_id = device_id;
 }
 
 uint32_t rav::RavennaSender::get_framecount() const {
@@ -511,7 +589,9 @@ nlohmann::json rav::RavennaSender::to_json() const {
     nlohmann::json root;
     root["session_id"] = session_id_;
     root["configuration"] = configuration_.to_json();
-    root["uuid"] = boost::uuids::to_string(uuid_);
+    root["nmos_sender_uuid"] = boost::uuids::to_string(nmos_sender_.id);
+    root["nmos_source_uuid"] = boost::uuids::to_string(nmos_source_.id);
+    root["nmos_flow_uuid"] = boost::uuids::to_string(nmos_flow_.id);
     return root;
 }
 
@@ -527,8 +607,13 @@ tl::expected<void, std::string> rav::RavennaSender::restore_from_json(const nloh
             return tl::unexpected("Session ID must be valid");
         }
 
-        const auto uuid_str = json.at("uuid").get<std::string>();
-        uuid_ = boost::uuids::string_generator()(uuid_str);
+        nmos_source_.id = boost::uuids::string_generator()(json.at("nmos_source_uuid").get<std::string>());
+
+        nmos_flow_.id = boost::uuids::string_generator()(json.at("nmos_flow_uuid").get<std::string>());
+        nmos_flow_.source_id = nmos_source_.id;
+
+        nmos_sender_.id = boost::uuids::string_generator()(json.at("nmos_sender_uuid").get<std::string>());
+        nmos_sender_.flow_id = nmos_flow_.id;
 
         auto result = set_configuration(*config);
         if (!result) {

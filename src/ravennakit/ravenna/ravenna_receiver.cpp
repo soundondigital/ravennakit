@@ -14,6 +14,7 @@
 #include "ravennakit/core/audio/audio_data.hpp"
 #include "ravennakit/core/chrono/high_resolution_clock.hpp"
 #include "ravennakit/core/util/todo.hpp"
+#include "ravennakit/nmos/detail/nmos_media_types.hpp"
 #include "ravennakit/rtp/detail/rtp_filter.hpp"
 
 #include <boost/uuid/string_generator.hpp>
@@ -39,33 +40,12 @@ bool is_connection_info_valid(const rav::sdp::ConnectionInfoField& conn) {
     return true;
 }
 
-const char* audio_format_to_nmos_media_type(const rav::AudioFormat& format) {
-    switch (format.encoding) {
-        case rav::AudioEncoding::undefined:
-            return "audio/undefined";
-        case rav::AudioEncoding::pcm_s8:
-            return "audio/L8";
-        case rav::AudioEncoding::pcm_u8:
-            return "audio/U8";  // Non-standard
-        case rav::AudioEncoding::pcm_s16:
-            return "audio/L16";
-        case rav::AudioEncoding::pcm_s24:
-            return "audio/L24";
-        case rav::AudioEncoding::pcm_s32:
-            return "audio/L32";
-        case rav::AudioEncoding::pcm_f32:
-            return "audio/F32";
-        case rav::AudioEncoding::pcm_f64:
-            return "audio/F64";
-    }
-}
-
 }  // namespace
 
 nlohmann::json rav::RavennaReceiver::to_json() const {
     nlohmann::json root;
     root["configuration"] = configuration_.to_json();
-    root["uuid"] = boost::uuids::to_string(uuid_);
+    root["nmos_receiver_uuid"] = boost::uuids::to_string(nmos_receiver_.id);
     return root;
 }
 
@@ -76,8 +56,7 @@ tl::expected<void, std::string> rav::RavennaReceiver::restore_from_json(const nl
             return tl::unexpected(config.error());
         }
 
-        const auto uuid_str = json.at("uuid").get<std::string>();
-        uuid_ = boost::uuids::string_generator()(uuid_str);
+        nmos_receiver_.id = boost::uuids::string_generator()(json.at("nmos_receiver_uuid").get<std::string>());
 
         auto result = set_configuration(*config);
         if (!result) {
@@ -134,7 +113,7 @@ rav::RavennaReceiver::RavennaReceiver(
 
     nmos_receiver_.id = boost::uuids::random_generator()();
     nmos_receiver_.caps.media_types.push_back(
-        audio_format_to_nmos_media_type(rtp_audio_receiver_.get_parameters().audio_format)
+        nmos::audio_format_to_nmos_media_type(rtp_audio_receiver_.get_parameters().audio_format)
     );
 
     auto result = set_configuration(initial_config);
@@ -381,9 +360,9 @@ void rav::RavennaReceiver::update_sdp(const sdp::SessionDescription& sdp) {
     }
 
     if (rtp_audio_receiver_.set_parameters(*parameters)) {
-        RAV_ASSERT(nmos_receiver_.caps.media_types.size() == 1, "Expected exactly one media type");
         nmos_receiver_.label = sdp.session_name();
-        nmos_receiver_.caps.media_types.front() = audio_format_to_nmos_media_type(parameters->audio_format);
+        RAV_ASSERT(nmos_receiver_.caps.media_types.size() == 1, "Expected exactly one media type");
+        nmos_receiver_.caps.media_types.front() = nmos::audio_format_to_nmos_media_type(parameters->audio_format);
         if (nmos_node_ != nullptr) {
             if (!nmos_node_->add_or_update_receiver({nmos_receiver_})) {
                 RAV_ERROR("Failed to update NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));
@@ -400,7 +379,7 @@ rav::Id rav::RavennaReceiver::get_id() const {
 }
 
 const boost::uuids::uuid& rav::RavennaReceiver::get_uuid() const {
-    return uuid_;
+    return nmos_receiver_.id;
 }
 
 tl::expected<void, std::string> rav::RavennaReceiver::set_configuration(const ConfigurationUpdate& update) {
@@ -475,7 +454,6 @@ void rav::RavennaReceiver::set_nmos_node(nmos::Node* nmos_node) {
     }
     nmos_node_ = nmos_node;
     if (nmos_node_ != nullptr) {
-        RAV_ASSERT(!nmos_node_->get_devices().empty(), "NMOS node must have at least one device");
         RAV_ASSERT(nmos_receiver_.is_valid(), "NMOS receiver must be valid at this point");
         if (!nmos_node_->add_or_update_receiver({nmos_receiver_})) {
             RAV_ERROR("Failed to add NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));

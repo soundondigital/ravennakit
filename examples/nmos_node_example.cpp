@@ -73,8 +73,8 @@ int main() {
                 flow.bit_depth = 24;
                 flow.sample_rate = {48000, 1};
                 flow.media_type = "audio/L24";
-                flow.source_id = source.id;
                 flow.device_id = device.id;
+                flow.source_id = source.id;
                 std::ignore = node.add_or_update_flow({flow});
 
                 // Sender
@@ -85,8 +85,8 @@ int main() {
                     fmt::format("RAVENNAKIT Device {} sender {}", device_count + 1, sender_count + 1);
                 sender.version = rav::nmos::Version {i_sender + 1, (i_sender + 1) * 1000};
                 sender.device_id = device.id;
-                sender.transport = "urn:x-nmos:transport:rtp";
                 sender.flow_id = flow.id;
+                sender.transport = "urn:x-nmos:transport:rtp";
                 std::ignore = node.add_or_update_sender(sender);
 
                 flow_count++;

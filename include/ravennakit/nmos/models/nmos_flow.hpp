@@ -19,7 +19,7 @@ namespace rav::nmos {
 struct Flow {
     std::variant<FlowAudioRaw> any_of;
 
-    [[nodiscard]] boost::uuids::uuid id() const {
+    [[nodiscard]] boost::uuids::uuid get_id() const {
         return std::visit(
             [](const auto& flow_variant) {
                 return flow_variant.id;
