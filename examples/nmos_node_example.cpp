@@ -19,7 +19,7 @@ int main() {
 
     boost::asio::io_context io_context;
 
-    rav::nmos::Node::ConfigurationUpdate config;
+    rav::nmos::Node::Configuration config;
     config.enabled = true;
     config.node_api_port = 8000;  // Set the port for the NMOS node API
 

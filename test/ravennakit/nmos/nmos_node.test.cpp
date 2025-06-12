@@ -136,11 +136,11 @@ TEST_CASE("nmos::Node") {
     SECTION("Finding and connecting to a registry in registered mode using mdns") {
         boost::asio::io_context io_context;
 
-        rav::nmos::Node::ConfigurationUpdate config_update;
-        config_update.operation_mode = rav::nmos::OperationMode::mdns_p2p;
-        config_update.api_version = rav::nmos::ApiVersion::v1_3();
-        config_update.enabled = true;
-        config_update.node_api_port = 8080;
+        rav::nmos::Node::Configuration config;
+        config.operation_mode = rav::nmos::OperationMode::mdns_p2p;
+        config.api_version = rav::nmos::ApiVersion::v1_3();
+        config.enabled = true;
+        config.node_api_port = 8080;
 
         auto test_browser = std::make_unique<NodeTestRegistryBrowser>();
         auto* browser = test_browser.get();
@@ -152,7 +152,7 @@ TEST_CASE("nmos::Node") {
         rav::ptp::Instance ptp_instance(io_context);
 
         rav::nmos::Node node(io_context, ptp_instance, std::move(test_browser), std::move(test_http_client));
-        node.set_configuration(config_update, true);
+        node.set_configuration(config, true);
         REQUIRE(browser->calls_to_start.size() == 1);
         REQUIRE(
             browser->calls_to_start[0]
