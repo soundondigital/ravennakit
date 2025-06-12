@@ -65,9 +65,9 @@ struct ravenna_node final: rav::RavennaNode::Subscriber, rav::RavennaReceiver::S
     }
 
     void ravenna_receiver_configuration_updated(
-        const rav::Id receiver_id, const rav::RavennaReceiver::Configuration& configuration
+        const rav::RavennaReceiver& receiver, const rav::RavennaReceiver::Configuration& configuration
     ) override {
-        RAV_INFO("RAVENNA configuration updated for receiver {}", receiver_id.value());
+        RAV_INFO("RAVENNA configuration updated for receiver: {}", receiver.get_id().value());
         std::ignore = configuration;
     }
 

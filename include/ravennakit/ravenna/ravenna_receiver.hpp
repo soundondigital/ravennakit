@@ -14,6 +14,8 @@
 #include "ravennakit/core/util/exclusive_access_guard.hpp"
 #include "ravennakit/core/containers/fifo_buffer.hpp"
 #include "ravennakit/core/util/id.hpp"
+#include "ravennakit/nmos/nmos_node.hpp"
+#include "ravennakit/nmos/models/nmos_receiver_audio.hpp"
 #include "ravennakit/rtp/rtp_audio_receiver.hpp"
 #include "ravennakit/rtp/detail/rtp_filter.hpp"
 #include "ravennakit/rtp/detail/rtp_packet_stats.hpp"
@@ -74,11 +76,12 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
 
         /**
          * Called when the configuration of the stream has changed.
-         * @param receiver_id The id of the receiver.
+         * @param receiver The id of the receiver.
          * @param configuration The new configuration.
          */
-        virtual void ravenna_receiver_configuration_updated(const Id receiver_id, const Configuration& configuration) {
-            std::ignore = receiver_id;
+        virtual void
+        ravenna_receiver_configuration_updated(const RavennaReceiver& receiver, const Configuration& configuration) {
+            std::ignore = receiver;
             std::ignore = configuration;
         }
 
@@ -165,6 +168,17 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     [[nodiscard]] bool unsubscribe(const Subscriber* subscriber);
 
     /**
+     * Sets the NMOS node for the receiver.
+     */
+    void set_nmos_node(nmos::Node* nmos_node);
+
+    /**
+     * Sets the NMOS device ID for the receiver.
+     * @param device_id The device ID to set.
+     */
+    void set_nmos_device_id(const boost::uuids::uuid& device_id);
+
+    /**
      * @return The SDP for the session.
      */
     std::optional<sdp::SessionDescription> get_sdp() const;
@@ -238,10 +252,12 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
 
   private:
     RavennaRtspClient& rtsp_client_;
+    nmos::Node* nmos_node_ {nullptr};
     boost::uuids::uuid uuid_ = boost::uuids::random_generator()();
     rtp::AudioReceiver rtp_audio_receiver_;
     Id id_;
     Configuration configuration_;
+    nmos::ReceiverAudio nmos_receiver_;
     SubscriberList<Subscriber> subscribers_;
 
     void update_sdp(const sdp::SessionDescription& sdp);

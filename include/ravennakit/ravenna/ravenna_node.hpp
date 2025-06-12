@@ -362,13 +362,6 @@ class RavennaNode {
         std::vector<RavennaSender*> senders;
     };
 
-    struct NmosDeviceSynchronizer: RavennaReceiver::Subscriber, RavennaSender::Subscriber {
-        explicit NmosDeviceSynchronizer(nmos::Node& nmos_node) : nmos_node_(nmos_node) {}
-        void update_nmos_device() const;
-        nmos::Node& nmos_node_;
-        boost::uuids::uuid device_id_ = boost::uuids::random_generator()();
-    };
-
     boost::asio::io_context io_context_;
     UdpReceiver udp_receiver_ {io_context_};
     std::thread maintenance_thread_;
@@ -387,7 +380,7 @@ class RavennaNode {
     std::vector<std::unique_ptr<RavennaSender>> senders_;
 
     nmos::Node nmos_node_ {io_context_, ptp_instance_};
-    NmosDeviceSynchronizer nmos_device_synchronizer_ {nmos_node_};
+    nmos::Device nmos_device_;
 
     SubscriberList<Subscriber> subscribers_;
     RealtimeSharedObject<RealtimeSharedContext> realtime_shared_context_;

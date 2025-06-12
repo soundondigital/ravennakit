@@ -39,6 +39,27 @@ bool is_connection_info_valid(const rav::sdp::ConnectionInfoField& conn) {
     return true;
 }
 
+const char* audio_format_to_nmos_media_type(const rav::AudioFormat& format) {
+    switch (format.encoding) {
+        case rav::AudioEncoding::undefined:
+            return "audio/undefined";
+        case rav::AudioEncoding::pcm_s8:
+            return "audio/L8";
+        case rav::AudioEncoding::pcm_u8:
+            return "audio/U8";  // Non-standard
+        case rav::AudioEncoding::pcm_s16:
+            return "audio/L16";
+        case rav::AudioEncoding::pcm_s24:
+            return "audio/L24";
+        case rav::AudioEncoding::pcm_s32:
+            return "audio/L32";
+        case rav::AudioEncoding::pcm_f32:
+            return "audio/F32";
+        case rav::AudioEncoding::pcm_f64:
+            return "audio/F64";
+    }
+}
+
 }  // namespace
 
 nlohmann::json rav::RavennaReceiver::to_json() const {
@@ -111,6 +132,11 @@ rav::RavennaReceiver::RavennaReceiver(
         initial_config.delay_frames = 480;  // 10ms at 48KHz
     }
 
+    nmos_receiver_.id = boost::uuids::random_generator()();
+    nmos_receiver_.caps.media_types.push_back(
+        audio_format_to_nmos_media_type(rtp_audio_receiver_.get_parameters().audio_format)
+    );
+
     auto result = set_configuration(initial_config);
     if (!result) {
         RAV_ERROR("Failed to update configuration: {}", result.error());
@@ -139,6 +165,11 @@ rav::RavennaReceiver::RavennaReceiver(
 
 rav::RavennaReceiver::~RavennaReceiver() {
     std::ignore = rtsp_client_.unsubscribe_from_all_sessions(this);
+    if (nmos_node_ != nullptr) {
+        if (!nmos_node_->remove_receiver(nmos_receiver_.id)) {
+            RAV_ERROR("Failed to remove NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));
+        }
+    }
 }
 
 void rav::RavennaReceiver::on_announced(const RavennaRtspClient::AnnouncedEvent& event) {
@@ -350,6 +381,14 @@ void rav::RavennaReceiver::update_sdp(const sdp::SessionDescription& sdp) {
     }
 
     if (rtp_audio_receiver_.set_parameters(*parameters)) {
+        RAV_ASSERT(nmos_receiver_.caps.media_types.size() == 1, "Expected exactly one media type");
+        nmos_receiver_.label = sdp.session_name();
+        nmos_receiver_.caps.media_types.front() = audio_format_to_nmos_media_type(parameters->audio_format);
+        if (nmos_node_ != nullptr) {
+            if (!nmos_node_->add_or_update_receiver({nmos_receiver_})) {
+                RAV_ERROR("Failed to update NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));
+            }
+        }
         for (auto* subscriber : subscribers_) {
             subscriber->ravenna_receiver_parameters_updated(*parameters);
         }
@@ -398,7 +437,7 @@ tl::expected<void, std::string> rav::RavennaReceiver::set_configuration(const Co
     }
 
     for (auto* subscriber : subscribers_) {
-        subscriber->ravenna_receiver_configuration_updated(get_id(), configuration_);
+        subscriber->ravenna_receiver_configuration_updated(*this, configuration_);
     }
 
     return {};
@@ -410,7 +449,7 @@ const rav::RavennaReceiver::Configuration& rav::RavennaReceiver::get_configurati
 
 bool rav::RavennaReceiver::subscribe(Subscriber* subscriber) {
     if (subscribers_.add(subscriber)) {
-        subscriber->ravenna_receiver_configuration_updated(get_id(), configuration_);
+        subscriber->ravenna_receiver_configuration_updated(*this, configuration_);
         const auto parameters = rtp_audio_receiver_.get_parameters();
         subscriber->ravenna_receiver_parameters_updated(parameters);
         for (auto& stream : parameters.streams) {
@@ -428,6 +467,24 @@ bool rav::RavennaReceiver::subscribe(Subscriber* subscriber) {
 
 bool rav::RavennaReceiver::unsubscribe(const Subscriber* subscriber) {
     return subscribers_.remove(subscriber);
+}
+
+void rav::RavennaReceiver::set_nmos_node(nmos::Node* nmos_node) {
+    if (nmos_node_ == nmos_node) {
+        return;
+    }
+    nmos_node_ = nmos_node;
+    if (nmos_node_ != nullptr) {
+        RAV_ASSERT(!nmos_node_->get_devices().empty(), "NMOS node must have at least one device");
+        RAV_ASSERT(nmos_receiver_.is_valid(), "NMOS receiver must be valid at this point");
+        if (!nmos_node_->add_or_update_receiver({nmos_receiver_})) {
+            RAV_ERROR("Failed to add NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));
+        }
+    }
+}
+
+void rav::RavennaReceiver::set_nmos_device_id(const boost::uuids::uuid& device_id) {
+    nmos_receiver_.device_id = device_id;
 }
 
 std::optional<rav::sdp::SessionDescription> rav::RavennaReceiver::get_sdp() const {

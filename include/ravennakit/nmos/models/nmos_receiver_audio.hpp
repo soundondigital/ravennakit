@@ -25,11 +25,32 @@ struct ReceiverAudio: ReceiverCore {
         /// defined in the NMOS Parameter Registers.
         /// Example: "audio/L24", audio/L20, "audio/L16", "audio/L8", "audio/PCM"
         std::vector<std::string> media_types;
-
     };
 
     /// Capabilities of the Receiver.
     Capabilities caps;
+
+    /**
+     *
+     * @return True if the receiver is valid, loosely following the NMOS JSON schema.
+     */
+    [[nodiscard]] bool is_valid() const {
+        if (id.is_nil()) {
+            return false;
+        }
+        if (device_id.is_nil()) {
+            return false;
+        }
+        if (caps.media_types.empty()) {
+            return false;
+        }
+        for (const auto& media_type : caps.media_types) {
+            if (!string_starts_with(media_type, "audio/")) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 
 inline void tag_invoke(

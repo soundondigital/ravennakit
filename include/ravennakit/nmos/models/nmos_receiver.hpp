@@ -58,6 +58,24 @@ struct Receiver {
             any_of
         );
     }
+
+    void set_label(const std::string& label) {
+        std::visit(
+            [&label](auto& receiver_variant) {
+                receiver_variant.label = label;
+            },
+            any_of
+        );
+    }
+
+    [[nodiscard]] std::string get_label() const {
+        return std::visit(
+            [](const auto& receiver_variant) {
+                return receiver_variant.label;
+            },
+            any_of
+        );
+    }
 };
 
 inline void tag_invoke(const boost::json::value_from_tag& tag, boost::json::value& jv, const Receiver& receiver) {

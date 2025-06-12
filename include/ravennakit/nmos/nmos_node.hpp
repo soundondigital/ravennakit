@@ -181,6 +181,13 @@ class Node: public ptp::Instance::Subscriber {
     [[nodiscard]] const Receiver* find_receiver(const boost::uuids::uuid& uuid) const;
 
     /**
+     * Removes a receiver from the node by its uuid.
+     * @param uuid The uuid of the receiver to remove.
+     * @return True if the device was removed successfully, false otherwise.
+     */
+    [[nodiscard]] bool remove_receiver(boost::uuids::uuid uuid);
+
+    /**
      * Adds the given sender to the node or updates an existing sender if it already exists (based on the uuid).
      * @param sender The sender to set.
      * @return True if the sender was set successfully, false otherwise.
@@ -317,7 +324,7 @@ class Node: public ptp::Instance::Subscriber {
     bool select_registry(const dnssd::ServiceDescription& desc);
     void handle_registry_discovered(const dnssd::ServiceDescription& desc);
 
-    void update_status(Status new_status);
+    void set_status(Status new_status);
     void update_all_resources_to_now();
     void send_updated_resources_async();
 };
