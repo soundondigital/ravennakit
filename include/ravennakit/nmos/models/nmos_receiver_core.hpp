@@ -27,7 +27,7 @@ struct ReceiverCore: ResourceCore {
         std::optional<boost::uuids::uuid> sender_id;
 
         /// Whether the Receiver is enabled and configured to receive data.
-        bool active {true};
+        bool active {false};
     };
 
     /// Device ID which this Receiver forms part of. This attribute is used to ensure referential integrity by registry

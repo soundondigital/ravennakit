@@ -1130,19 +1130,26 @@ bool rav::nmos::Node::add_or_update_receiver(Receiver receiver) {
         return false;
     }
 
-    for (auto& existing_receiver : receivers_) {
-        if (existing_receiver.get_id() == receiver.get_id()) {
-            existing_receiver = std::move(receiver);
-            return true;
+    receiver.set_version(Version(get_local_clock().now()));
+
+    const auto it = std::find_if(receivers_.begin(), receivers_.end(), [&receiver](const Receiver& existing_receiver) {
+        return existing_receiver.get_id() == receiver.get_id();
+    });
+
+    if (it != receivers_.end()) {
+        *it = std::move(receiver);
+    } else {
+        if (!add_receiver_to_device(receiver)) {
+            RAV_ERROR("Device not found");
+            return false;
         }
+        receivers_.push_back(std::move(receiver));
     }
 
-    if (!add_receiver_to_device(receiver)) {
-        RAV_ERROR("Device not found");
-        return false;
+    if (status_ == Status::registered) {
+        send_updated_resources_async();
     }
 
-    receivers_.push_back(std::move(receiver));
     return true;
 }
 
@@ -1232,11 +1239,7 @@ const rav::nmos::Node::RegistryInfo& rav::nmos::Node::get_registry_info() const 
 }
 
 boost::json::value rav::nmos::Node::to_json() const {
-    return {
-        {"configuration", configuration_.to_json()},        {"devices", boost::json::value_from(devices_)},
-        {"flows", boost::json::value_from(flows_)},         {"senders", boost::json::value_from(senders_)},
-        {"receivers", boost::json::value_from(receivers_)}, {"sources", boost::json::value_from(sources_)},
-    };
+    return {{"configuration", configuration_.to_json()}};
 }
 
 boost::system::result<void, std::string> rav::nmos::Node::restore_from_json(const boost::json::value& json) {
@@ -1250,14 +1253,7 @@ boost::system::result<void, std::string> rav::nmos::Node::restore_from_json(cons
         return update.error();
     }
 
-    const auto devices_json = json.try_at("devices");
-    std::vector<Device> devices;
-    if (devices_json && devices_json->is_array()) {
-        devices = boost::json::value_to<std::vector<Device>>(*devices_json);
-    }
-
     update_configuration(*update);
-    devices_ = std::move(devices);
 
     return {};
 }
