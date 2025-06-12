@@ -25,7 +25,7 @@ int main() {
 
     rav::ptp::Instance ptp_instance(io_context);
     rav::nmos::Node node(io_context, ptp_instance);
-    node.update_configuration(config, true);
+    node.set_configuration(config, true);
 
     static constexpr uint32_t k_num_devices = 2;
     static constexpr uint32_t k_num_sources_per_device = 2;

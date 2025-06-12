@@ -191,37 +191,10 @@ boost::json::value rav::nmos::Node::Configuration::to_json() const {
     };
 }
 
-void rav::nmos::Node::ConfigurationUpdate::apply_to_config(Configuration& config) const {
-    if (id.has_value()) {
-        config.id = *id;
-    }
-    if (operation_mode.has_value()) {
-        config.operation_mode = *operation_mode;
-    }
-    if (api_version.has_value()) {
-        config.api_version = *api_version;
-    }
-    if (registry_address.has_value()) {
-        config.registry_address = *registry_address;
-    }
-    if (enabled.has_value()) {
-        config.enabled = *enabled;
-    }
-    if (node_api_port.has_value()) {
-        config.node_api_port = *node_api_port;
-    }
-    if (label.has_value()) {
-        config.label = *label;
-    }
-    if (description.has_value()) {
-        config.description = *description;
-    }
-}
-
-boost::system::result<rav::nmos::Node::ConfigurationUpdate, std::string>
-rav::nmos::Node::ConfigurationUpdate::from_json(const boost::json::value& json) {
+boost::system::result<rav::nmos::Node::Configuration, std::string>
+rav::nmos::Node::Configuration::from_json(const boost::json::value& json) {
     try {
-        ConfigurationUpdate update {};
+        Configuration config {};
 
         // UUID
         const auto& uuid_str = json.at("id").as_string();
@@ -229,7 +202,7 @@ rav::nmos::Node::ConfigurationUpdate::from_json(const boost::json::value& json) 
         if (uuid.is_nil()) {
             return {"Invalid UUID"};
         }
-        update.id = uuid;
+        config.id = uuid;
 
         // Operation mode
         const auto& operation_mode_str = json.at("operation_mode").as_string();
@@ -237,7 +210,7 @@ rav::nmos::Node::ConfigurationUpdate::from_json(const boost::json::value& json) 
         if (!operation_mode.has_value()) {
             return fmt::format("Invalid operation mode: {}", std::string_view(operation_mode_str.c_str()));
         }
-        update.operation_mode = *operation_mode;
+        config.operation_mode = *operation_mode;
 
         // Api version
         const auto& api_version_str = json.at("api_version").as_string();
@@ -245,14 +218,14 @@ rav::nmos::Node::ConfigurationUpdate::from_json(const boost::json::value& json) 
         if (!api_version) {
             return fmt::format("Invalid API version: {}", std::string_view(api_version_str));
         }
-        update.api_version = *api_version;
+        config.api_version = *api_version;
 
-        update.registry_address = json.at("registry_address").as_string();
-        update.enabled = json.at("enabled").as_bool();
-        update.node_api_port = json.at("node_api_port").to_number<uint16_t>();
-        update.label = json.at("label").as_string();
-        update.description = json.at("description").as_string();
-        return update;
+        config.registry_address = json.at("registry_address").as_string();
+        config.enabled = json.at("enabled").as_bool();
+        config.node_api_port = json.at("node_api_port").to_number<uint16_t>();
+        config.label = json.at("label").as_string();
+        config.description = json.at("description").as_string();
+        return config;
     } catch (const std::exception& e) {
         return e.what();
     }
@@ -593,26 +566,23 @@ void rav::nmos::Node::stop() {
     status_ = Status::disabled;
 }
 
-void rav::nmos::Node::update_configuration(const ConfigurationUpdate& update, const bool force_update) {
-    auto new_config = configuration_;
-    update.apply_to_config(new_config);
-
-    if (new_config == configuration_ && !force_update) {
+void rav::nmos::Node::set_configuration(Configuration new_configuration, const bool force_update) {
+    if (new_configuration == configuration_ && !force_update) {
         return;  // Nothing changed, so we should be in the correct state.
     }
 
     bool unregister = false;
 
     if (status_ == Status::registered) {
-        if (configuration_.api_version != new_config.api_version) {
+        if (configuration_.api_version != new_configuration.api_version) {
             unregister = true;
         }
 
-        if (configuration_.id != new_config.id) {
+        if (configuration_.id != new_configuration.id) {
             unregister = true;
         }
 
-        if (!new_config.enabled) {
+        if (!new_configuration.enabled) {
             unregister = true;
         }
     }
@@ -621,10 +591,10 @@ void rav::nmos::Node::update_configuration(const ConfigurationUpdate& update, co
         unregister_async();  // Before configuration_ is overwritten
     }
 
-    const bool enablement_changed = configuration_.enabled != new_config.enabled;
-    const bool operation_mode_changed = configuration_.operation_mode != new_config.operation_mode;
+    const bool enablement_changed = configuration_.enabled != new_configuration.enabled;
+    const bool operation_mode_changed = configuration_.operation_mode != new_configuration.operation_mode;
 
-    configuration_ = std::move(new_config);
+    configuration_ = std::move(new_configuration);
     update_self();
     if (status_ == Status::registered) {
         send_updated_resources_async();
@@ -1287,26 +1257,6 @@ const rav::nmos::Node::Status& rav::nmos::Node::get_status() const {
 
 const rav::nmos::Node::RegistryInfo& rav::nmos::Node::get_registry_info() const {
     return registry_info_;
-}
-
-boost::json::value rav::nmos::Node::to_json() const {
-    return {{"configuration", configuration_.to_json()}};
-}
-
-boost::system::result<void, std::string> rav::nmos::Node::restore_from_json(const boost::json::value& json) {
-    const auto config = json.try_at("configuration");
-    if (!config || !config->is_object()) {
-        return "invalid configuration JSON";
-    }
-
-    auto update = ConfigurationUpdate::from_json(*config);
-    if (update.has_error()) {
-        return update.error();
-    }
-
-    update_configuration(*update);
-
-    return {};
 }
 
 void rav::nmos::Node::set_network_interface_config(const NetworkInterfaceConfig& interface_config) {

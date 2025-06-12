@@ -184,9 +184,9 @@ rav::RavennaNode::update_sender_configuration(Id sender_id, RavennaSender::Confi
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
 }
 
-std::future<void> rav::RavennaNode::update_nmos_configuration(nmos::Node::ConfigurationUpdate update) {
+std::future<void> rav::RavennaNode::set_nmos_configuration(nmos::Node::Configuration update) {
     auto work = [this, u = std::move(update)] {
-        nmos_node_.update_configuration(u);
+        nmos_node_.set_configuration(u);
         nmos_device_synchronizer_.update_nmos_device();
     };
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
@@ -482,7 +482,7 @@ std::future<nlohmann::json> rav::RavennaNode::to_json() {
         root["config"] = config_.to_json();
         root["senders"] = senders;
         root["receivers"] = receivers;
-        root["nmos_node"] = boost_to_nlohmann_json(nmos_node_.to_json());
+        root["nmos_node"]["configuration"] = boost_to_nlohmann_json(nmos_node_.get_configuration().to_json());
         root["nmos_device_id"] = boost::uuids::to_string(nmos_device_synchronizer_.device_id_);
         return root;
     };
@@ -542,11 +542,18 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
 
             auto nmos_node = json.find("nmos_node");
             if (nmos_node != json.end()) {
-                nmos_node_.stop();
-                auto result = nmos_node_.restore_from_json(nlohmann_to_boost_json(*nmos_node));
-                if (result.has_error()) {
-                    return tl::unexpected(fmt::format("Failed to restore NMOS node: {}", result.error()));
+                const auto& config = nlohmann_to_boost_json(nmos_node->at("configuration"));
+                if (!config.is_object()) {
+                    return tl::unexpected("invalid configuration JSON");
                 }
+
+                auto update = nmos::Node::Configuration::from_json(config);
+                if (update.has_error()) {
+                    return tl::unexpected(update.error());
+                }
+
+                nmos_node_.stop();
+                nmos_node_.set_configuration(*update);
             } else {
                 return tl::unexpected("No NMOS node state found in JSON");
             }

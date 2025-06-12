@@ -60,6 +60,18 @@ class Node: public ptp::Instance::Subscriber {
          */
         [[nodiscard]] boost::system::result<void, Error> validate() const;
 
+        /**
+         * @return The configuration as a JSON object.
+         */
+        [[nodiscard]] boost::json::value to_json() const;
+
+        /**
+         * Creates a configuration object from a JSON object.
+         * @param json The JSON object to convert.
+         * @return A configuration object if the JSON is valid, otherwise an error message.
+         */
+        static boost::system::result<Configuration, std::string> from_json(const boost::json::value& json);
+
         [[nodiscard]] auto constexpr tie() const {
             return std::tie(id, operation_mode, api_version, registry_address, enabled, label, description);
         }
@@ -71,35 +83,6 @@ class Node: public ptp::Instance::Subscriber {
         friend bool operator!=(const Configuration& lhs, const Configuration& rhs) {
             return lhs.tie() != rhs.tie();
         }
-
-        /**
-         * @return The configuration as a JSON object.
-         */
-        [[nodiscard]] boost::json::value to_json() const;
-    };
-
-    /**
-     * Struct for updating the configuration of the NMOS node. Only the fields that are set are taken into account,
-     * which allows for partial updates.
-     */
-    struct ConfigurationUpdate {
-        std::optional<boost::uuids::uuid> id;
-        std::optional<OperationMode> operation_mode;
-        std::optional<ApiVersion> api_version;
-        std::optional<std::string> registry_address;
-        std::optional<bool> enabled;
-        std::optional<uint16_t> node_api_port;
-        std::optional<std::string> label;
-        std::optional<std::string> description;
-
-        void apply_to_config(Configuration& config) const;
-
-        /**
-         * Creates a configuration update from a JSON object.
-         * @param json The JSON object to convert.
-         * @return A configuration update object if the JSON is valid, otherwise an error message.
-         */
-        static boost::system::result<ConfigurationUpdate, std::string> from_json(const boost::json::value& json);
     };
 
     struct RegistryInfo {
@@ -132,12 +115,11 @@ class Node: public ptp::Instance::Subscriber {
     void stop();
 
     /**
-     * Updates the configuration of the NMOS node. Only takes into account the fields in the configuration that are set.
-     * This allows updating only a subset of the configuration.
-     * @param update The configuration to update.
+     * Sets the configuration of the NMOS node.
+     * @param new_configuration The configuration to update.
      * @param force_update Whether to force the update even if the configuration didn't change.
      */
-    void update_configuration(const ConfigurationUpdate& update, bool force_update = false);
+    void set_configuration(Configuration new_configuration, bool force_update = false);
 
     /**
      * @return The current configuration of the NMOS node.
@@ -265,18 +247,6 @@ class Node: public ptp::Instance::Subscriber {
      * @return The current registry information.
      */
     [[nodiscard]] const RegistryInfo& get_registry_info() const;
-
-    /**
-     * @return A JSON representation of the Node.
-     */
-    [[nodiscard]] boost::json::value to_json() const;
-
-    /**
-     * Restores the node from a JSON representation.
-     * @param json The JSON representation of the node.
-     * @return A result indicating whether the restoration was successful or not.
-     */
-    boost::system::result<void, std::string> restore_from_json(const boost::json::value& json);
 
     /**
      * Updates the node based on given network interface configuration.

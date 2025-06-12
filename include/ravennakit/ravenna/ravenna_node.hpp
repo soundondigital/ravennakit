@@ -163,11 +163,11 @@ class RavennaNode {
     update_sender_configuration(Id sender_id, RavennaSender::ConfigurationUpdate update);
 
     /**
-     * Updates the configuration of the NMOS node.
-     * @param update The configuration changes to apply.
+     * Sets the configuration of the NMOS node.
+     * @param update The configuration to set.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<void> update_nmos_configuration(nmos::Node::ConfigurationUpdate update);
+    std::future<void> set_nmos_configuration(nmos::Node::Configuration update);
 
     /**
      * Adds a subscriber to the node.
