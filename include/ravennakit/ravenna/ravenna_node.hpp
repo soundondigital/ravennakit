@@ -15,6 +15,7 @@
 #include "ravenna_rtsp_client.hpp"
 #include "ravenna_receiver.hpp"
 #include "ravenna_sender.hpp"
+#include "ravenna_sender.hpp"
 #include "ravennakit/core/audio/audio_buffer_view.hpp"
 #include "ravennakit/core/sync/realtime_shared_object.hpp"
 #include "ravennakit/core/util/id.hpp"
@@ -356,9 +357,16 @@ class RavennaNode {
     }
 
   private:
-    struct realtime_shared_context {
+    struct RealtimeSharedContext {
         std::vector<RavennaReceiver*> receivers;
         std::vector<RavennaSender*> senders;
+    };
+
+    struct NmosDeviceSynchronizer: RavennaReceiver::Subscriber, RavennaSender::Subscriber {
+        explicit NmosDeviceSynchronizer(nmos::Node& nmos_node) : nmos_node_(nmos_node) {}
+        void update_nmos_device() const;
+        nmos::Node& nmos_node_;
+        boost::uuids::uuid device_id_ = boost::uuids::random_generator()();
     };
 
     boost::asio::io_context io_context_;
@@ -379,14 +387,14 @@ class RavennaNode {
     std::vector<std::unique_ptr<RavennaSender>> senders_;
 
     nmos::Node nmos_node_ {io_context_, ptp_instance_};
+    NmosDeviceSynchronizer nmos_device_synchronizer_ {nmos_node_};
 
     SubscriberList<Subscriber> subscribers_;
-    RealtimeSharedObject<realtime_shared_context> realtime_shared_context_;
+    RealtimeSharedObject<RealtimeSharedContext> realtime_shared_context_;
     RavennaConfig config_;
 
     [[nodiscard]] bool update_realtime_shared_context();
     uint32_t generate_unique_session_id() const;
-    void ensure_nmos_device_exists();
 };
 
 }  // namespace rav

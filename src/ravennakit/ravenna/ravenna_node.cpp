@@ -32,7 +32,7 @@ rav::RavennaNode::RavennaNode() :
             }
         };
 
-    ensure_nmos_device_exists();
+    nmos_device_synchronizer_.update_nmos_device();
 
     std::promise<std::thread::id> promise;
     auto f = promise.get_future();
@@ -70,6 +70,11 @@ std::future<rav::Id> rav::RavennaNode::create_receiver(const RavennaReceiver::Co
         );
         new_receiver->set_interfaces(config_.network_interfaces.get_interface_ipv4_addresses());
         const auto& it = receivers_.emplace_back(std::move(new_receiver));
+
+        RAV_ASSERT(!nmos_node_.get_devices().empty(), "NMOS node must have at least one device");
+        if (!it->subscribe(&nmos_device_synchronizer_)) {
+            RAV_ERROR("Failed to subscribe NMOS device synchronizer to receiver");
+        }
         for (const auto& s : subscribers_) {
             s->ravenna_receiver_added(*it);
         }
@@ -89,6 +94,9 @@ std::future<void> rav::RavennaNode::remove_receiver(Id receiver_id) {
                 const std::unique_ptr<RavennaReceiver> tmp = std::move(*it);
                 RAV_ASSERT(tmp != nullptr, "Receiver expected to be valid");
                 receivers_.erase(it);
+                if (!tmp->unsubscribe(&nmos_device_synchronizer_)) {
+                    RAV_ERROR("Failed to unsubscribe NMOS device synchronizer from receiver");
+                }
                 for (const auto& s : subscribers_) {
                     s->ravenna_receiver_removed(receiver_id);
                 }
@@ -124,6 +132,9 @@ std::future<rav::Id> rav::RavennaNode::create_sender(const RavennaSender::Config
         );
         new_sender->set_interfaces(config_.network_interfaces.get_interface_ipv4_addresses());
         const auto& it = senders_.emplace_back(std::move(new_sender));
+        if (!it->subscribe(&nmos_device_synchronizer_)) {
+            RAV_ERROR("Failed to subscribe NMOS device synchronizer to sender");
+        }
         for (const auto& s : subscribers_) {
             s->ravenna_sender_added(*it);
         }
@@ -143,6 +154,9 @@ std::future<void> rav::RavennaNode::remove_sender(Id sender_id) {
                 const std::unique_ptr<RavennaSender> tmp = std::move(*it);
                 RAV_ASSERT(tmp != nullptr, "Receiver expected to be valid");
                 senders_.erase(it);  // It is empty by now
+                if (!tmp->unsubscribe(&nmos_device_synchronizer_)) {
+                    RAV_ERROR("Failed to unsubscribe NMOS device synchronizer from sender");
+                }
                 for (const auto& s : subscribers_) {
                     s->ravenna_sender_removed(sender_id);
                 }
@@ -173,27 +187,7 @@ rav::RavennaNode::update_sender_configuration(Id sender_id, RavennaSender::Confi
 std::future<void> rav::RavennaNode::update_nmos_configuration(nmos::Node::ConfigurationUpdate update) {
     auto work = [this, u = std::move(update)] {
         nmos_node_.update_configuration(u);
-
-        const auto devices = nmos_node_.get_devices();
-        if (devices.empty()) {
-            RAV_ERROR("No devices found in NMOS node configuration");
-            return;
-        }
-
-        auto device = devices.front();
-
-        if (u.label.has_value()) {
-            device.label = *u.label;
-        }
-
-        if (u.description.has_value()) {
-            device.description = *u.description;
-        }
-
-        if (!nmos_node_.add_or_update_device(device)) {
-            RAV_ERROR("Failed to update NMOS device configuration");
-            return;
-        }
+        nmos_device_synchronizer_.update_nmos_device();
     };
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
 }
@@ -489,6 +483,7 @@ std::future<nlohmann::json> rav::RavennaNode::to_json() {
         root["senders"] = senders;
         root["receivers"] = receivers;
         root["nmos_node"] = boost_to_nlohmann_json(nmos_node_.to_json());
+        root["nmos_device_id"] = boost::uuids::to_string(nmos_device_synchronizer_.device_id_);
         return root;
     };
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
@@ -503,6 +498,8 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
             if (!ravenna_config) {
                 return tl::unexpected(ravenna_config.error());
             }
+
+            auto nmos_device_id = boost::uuids::string_generator()(json.at("nmos_device_id").get<std::string>());
 
             auto interface_addresses = ravenna_config->network_interfaces.get_interface_ipv4_addresses();
 
@@ -539,23 +536,30 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
                 new_receivers.push_back(std::move(new_receiver));
             }
 
+            set_network_interface_config(ravenna_config->network_interfaces).wait();
+
             // NMOS Node
 
             auto nmos_node = json.find("nmos_node");
             if (nmos_node != json.end()) {
+                nmos_node_.stop();
                 auto result = nmos_node_.restore_from_json(nlohmann_to_boost_json(*nmos_node));
                 if (result.has_error()) {
                     return tl::unexpected(fmt::format("Failed to restore NMOS node: {}", result.error()));
                 }
             } else {
-                RAV_TRACE("No NMOS node state found in JSON");
+                return tl::unexpected("No NMOS node state found in JSON");
             }
 
-            set_network_interface_config(ravenna_config->network_interfaces).wait();
+            nmos_device_synchronizer_.device_id_ = nmos_device_id;
+            nmos_device_synchronizer_.update_nmos_device();
 
             // Swap senders
 
             for (const auto& sender : senders_) {
+                if (!sender->unsubscribe(&nmos_device_synchronizer_)) {
+                    RAV_ERROR("Failed to unsubscribe NMOS device synchronizer from sender");
+                }
                 for (auto* s : subscribers_) {
                     RAV_ASSERT(s != nullptr, "Subscriber must be valid");
                     s->ravenna_sender_removed(sender->get_id());
@@ -565,6 +569,9 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
             std::swap(senders_, new_senders);
 
             for (const auto& sender : senders_) {
+                if (!sender->subscribe(&nmos_device_synchronizer_)) {
+                    RAV_ERROR("Failed to subscribe NMOS device synchronizer to sender");
+                }
                 for (auto* s : subscribers_) {
                     RAV_ASSERT(s != nullptr, "Subscriber must be valid");
                     s->ravenna_sender_added(*sender);
@@ -574,6 +581,9 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
             // Swap receivers
 
             for (const auto& receiver : receivers_) {
+                if (!receiver->unsubscribe(&nmos_device_synchronizer_)) {
+                    RAV_ERROR("Failed to unsubscribe NMOS device synchronizer from receiver");
+                }
                 for (auto* s : subscribers_) {
                     RAV_ASSERT(s != nullptr, "Subscriber must be valid");
                     s->ravenna_receiver_removed(receiver->get_id());
@@ -583,6 +593,9 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
             std::swap(receivers_, new_receivers);
 
             for (const auto& receiver : receivers_) {
+                if (!receiver->subscribe(&nmos_device_synchronizer_)) {
+                    RAV_ERROR("Failed to subscribe NMOS device synchronizer to receiver");
+                }
                 for (auto* s : subscribers_) {
                     RAV_ASSERT(s != nullptr, "Subscriber must be valid");
                     s->ravenna_receiver_added(*receiver);
@@ -602,8 +615,27 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
 }
 
+void rav::RavennaNode::NmosDeviceSynchronizer::update_nmos_device() const {
+    auto& devices = nmos_node_.get_devices();
+    if (!devices.empty()) {
+        if (devices.front().id != device_id_) {
+            if (!nmos_node_.remove_device(devices.front().id)) {
+                RAV_ERROR("Failed to remove NMOS device with ID: {}", boost::uuids::to_string(device_id_));
+            }
+        }
+    }
+    const auto& nmos_config = nmos_node_.get_configuration();
+    nmos::Device nmos_device;
+    nmos_device.id = device_id_;
+    nmos_device.label = nmos_config.label;
+    nmos_device.description = nmos_config.description;
+    if (!nmos_node_.add_or_update_device(std::move(nmos_device))) {
+        RAV_ERROR("Failed to add NMOS device to node");
+    }
+}
+
 bool rav::RavennaNode::update_realtime_shared_context() {
-    auto new_context = std::make_unique<realtime_shared_context>();
+    auto new_context = std::make_unique<RealtimeSharedContext>();
     for (auto& receiver : receivers_) {
         new_context->receivers.emplace_back(receiver.get());
     }
@@ -619,14 +651,4 @@ uint32_t rav::RavennaNode::generate_unique_session_id() const {
         highest_session_id = std::max(highest_session_id, sender->get_session_id());
     }
     return highest_session_id + 1;
-}
-
-void rav::RavennaNode::ensure_nmos_device_exists() {
-    if (nmos_node_.get_devices().empty()) {
-        nmos::Device nmos_device;
-        nmos_device.id = boost::uuids::random_generator()();
-        if (!nmos_node_.add_or_update_device(std::move(nmos_device))) {
-            RAV_ERROR("Failed to add NMOS device to node");
-        }
-    }
 }

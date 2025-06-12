@@ -12,6 +12,7 @@
 
 #include "ravennakit/core/json.hpp"
 #include "ravennakit/core/rollback.hpp"
+#include "ravennakit/core/util/stl_helpers.hpp"
 #include "ravennakit/core/util/todo.hpp"
 #include "ravennakit/nmos/models/nmos_api_error.hpp"
 #include "ravennakit/nmos/models/nmos_self.hpp"
@@ -19,6 +20,9 @@
 #include <boost/json/serialize.hpp>
 #include <boost/json/value_from.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/range.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
+
 #include <utility>
 
 namespace {
@@ -583,7 +587,10 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::start() {
 void rav::nmos::Node::stop() {
     configuration_.enabled = false;
     stop_internal();
-    unregister_async();
+    if (status_ == Status::registered) {
+        unregister_async();
+    }
+    status_ = Status::disabled;
 }
 
 void rav::nmos::Node::update_configuration(const ConfigurationUpdate& update, const bool force_update) {
@@ -618,8 +625,8 @@ void rav::nmos::Node::update_configuration(const ConfigurationUpdate& update, co
     const bool operation_mode_changed = configuration_.operation_mode != new_config.operation_mode;
 
     configuration_ = std::move(new_config);
+    update_self();
     if (status_ == Status::registered) {
-        update_self();
         send_updated_resources_async();
     }
     on_configuration_changed(configuration_);
@@ -1087,7 +1094,7 @@ bool rav::nmos::Node::add_or_update_device(Device device) {
     return true;
 }
 
-const rav::nmos::Device* rav::nmos::Node::find_device(boost::uuids::uuid uuid) const {
+const rav::nmos::Device* rav::nmos::Node::find_device(const boost::uuids::uuid& uuid) const {
     const auto it = std::find_if(devices_.begin(), devices_.end(), [uuid](const Device& device) {
         return device.id == uuid;
     });
@@ -1114,7 +1121,35 @@ bool rav::nmos::Node::add_or_update_flow(Flow flow) {
     return true;
 }
 
-const rav::nmos::Flow* rav::nmos::Node::find_flow(boost::uuids::uuid uuid) const {
+bool rav::nmos::Node::remove_device(boost::uuids::uuid uuid) {
+    stl_remove_if(senders_, [&uuid](const Sender& s) {
+        return s.device_id == uuid;
+    });
+
+    stl_remove_if(flows_, [&uuid](const Flow& f) {
+        return f.get_device_id() == uuid;
+    });
+
+    stl_remove_if(sources_, [&uuid](const Source& s) {
+        return s.get_device_id() == uuid;
+    });
+
+    stl_remove_if(receivers_, [&uuid](const Receiver& r) {
+        return r.get_device_id() == uuid;
+    });
+
+    const auto count = stl_remove_if(devices_, [&uuid](const Device& d) {
+        return d.id == uuid;
+    });
+
+    if (status_ == Status::registered && count > 0) {
+        delete_resource_async("devices", uuid);
+    }
+
+    return count > 0;
+}
+
+const rav::nmos::Flow* rav::nmos::Node::find_flow(const boost::uuids::uuid& uuid) const {
     const auto it = std::find_if(flows_.begin(), flows_.end(), [uuid](const Flow& flow) {
         return flow.id() == uuid;
     });
@@ -1153,7 +1188,7 @@ bool rav::nmos::Node::add_or_update_receiver(Receiver receiver) {
     return true;
 }
 
-const rav::nmos::Receiver* rav::nmos::Node::find_receiver(boost::uuids::uuid uuid) const {
+const rav::nmos::Receiver* rav::nmos::Node::find_receiver(const boost::uuids::uuid& uuid) const {
     const auto it = std::find_if(receivers_.begin(), receivers_.end(), [uuid](const Receiver& receiver) {
         return receiver.get_id() == uuid;
     });
@@ -1185,7 +1220,7 @@ bool rav::nmos::Node::add_or_update_sender(Sender sender) {
     return true;
 }
 
-const rav::nmos::Sender* rav::nmos::Node::find_sender(boost::uuids::uuid uuid) const {
+const rav::nmos::Sender* rav::nmos::Node::find_sender(const boost::uuids::uuid& uuid) const {
     const auto it = std::find_if(senders_.begin(), senders_.end(), [uuid](const Sender& sender) {
         return sender.id == uuid;
     });
@@ -1212,7 +1247,7 @@ bool rav::nmos::Node::add_or_update_source(Source source) {
     return true;
 }
 
-const rav::nmos::Source* rav::nmos::Node::find_source(boost::uuids::uuid uuid) const {
+const rav::nmos::Source* rav::nmos::Node::find_source(const boost::uuids::uuid& uuid) const {
     const auto it = std::find_if(sources_.begin(), sources_.end(), [uuid](const Source& source) {
         return source.get_id() == uuid;
     });
@@ -1228,6 +1263,22 @@ const boost::uuids::uuid& rav::nmos::Node::get_uuid() const {
 
 const std::vector<rav::nmos::Device>& rav::nmos::Node::get_devices() const {
     return devices_;
+}
+
+const std::vector<rav::nmos::Flow>& rav::nmos::Node::get_flows() const {
+    return flows_;
+}
+
+const std::vector<rav::nmos::Receiver>& rav::nmos::Node::get_receivers() const {
+    return receivers_;
+}
+
+const std::vector<rav::nmos::Sender>& rav::nmos::Node::get_senders() const {
+    return senders_;
+}
+
+const std::vector<rav::nmos::Source>& rav::nmos::Node::get_sources() const {
+    return sources_;
 }
 
 const rav::nmos::Node::Status& rav::nmos::Node::get_status() const {

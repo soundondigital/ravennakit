@@ -45,6 +45,15 @@ struct Flow {
             any_of
         );
     }
+
+    [[nodiscard]] boost::uuids::uuid get_device_id() const {
+        return std::visit(
+            [](const auto& flow_variant) {
+                return flow_variant.device_id;
+            },
+            any_of
+        );
+    }
 };
 
 inline void tag_invoke(const boost::json::value_from_tag& tag, boost::json::value& jv, const Flow& flow) {

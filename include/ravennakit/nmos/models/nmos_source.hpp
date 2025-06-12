@@ -49,6 +49,15 @@ struct Source {
             any_of
         );
     }
+
+    [[nodiscard]] boost::uuids::uuid get_device_id() const {
+        return std::visit(
+            [](const auto& source) {
+                return source.device_id;
+            },
+            any_of
+        );
+    }
 };
 
 inline void tag_invoke(const boost::json::value_from_tag& tag, boost::json::value& jv, const Source& source) {

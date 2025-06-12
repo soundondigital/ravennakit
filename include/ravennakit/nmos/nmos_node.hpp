@@ -161,7 +161,7 @@ class Node: public ptp::Instance::Subscriber {
      * @param uuid The uuid of the device to find.
      * @return A pointer to the device if found, or nullptr if not found.
      */
-    [[nodiscard]] const Device* find_device(boost::uuids::uuid uuid) const;
+    [[nodiscard]] const Device* find_device(const boost::uuids::uuid& uuid) const;
 
     /**
      * Adds the given flow to the node or updates an existing flow if it already exists (based on the uuid).
@@ -171,11 +171,18 @@ class Node: public ptp::Instance::Subscriber {
     [[nodiscard]] bool add_or_update_flow(Flow flow);
 
     /**
+     * Removes a device from the node by its uuid. Resources associated with the device will be removed as well.
+     * @param uuid The uuid of the device to remove.
+     * @return True if the device was removed successfully, false otherwise.
+     */
+    [[nodiscard]] bool remove_device(boost::uuids::uuid uuid);
+
+    /**
      * Finds a flow by its uuid.
      * @param uuid The uuid of the flow to find.
      * @return A pointer to the flow if found, or nullptr if not found.
      */
-    [[nodiscard]] const Flow* find_flow(boost::uuids::uuid uuid) const;
+    [[nodiscard]] const Flow* find_flow(const boost::uuids::uuid& uuid) const;
 
     /**
      * Adds the given receiver to the node or updates an existing receiver if it already exists (based on the uuid).
@@ -189,7 +196,7 @@ class Node: public ptp::Instance::Subscriber {
      * @param uuid The uuid of the receiver to find.
      * @return A pointer to the receiver if found, or nullptr if not found.
      */
-    [[nodiscard]] const Receiver* find_receiver(boost::uuids::uuid uuid) const;
+    [[nodiscard]] const Receiver* find_receiver(const boost::uuids::uuid& uuid) const;
 
     /**
      * Adds the given sender to the node or updates an existing sender if it already exists (based on the uuid).
@@ -203,7 +210,7 @@ class Node: public ptp::Instance::Subscriber {
      * @param uuid The uuid of the sender to find.
      * @return A pointer to the sender if found, or nullptr if not found.
      */
-    [[nodiscard]] const Sender* find_sender(boost::uuids::uuid uuid) const;
+    [[nodiscard]] const Sender* find_sender(const boost::uuids::uuid& uuid) const;
 
     /**
      * Adds the given source to the node or updates an existing source if it already exists (based on the uuid).
@@ -217,7 +224,7 @@ class Node: public ptp::Instance::Subscriber {
      * @param uuid The uuid of the source to find.
      * @return A pointer to the source if found, or nullptr if not found.
      */
-    [[nodiscard]] const Source* find_source(boost::uuids::uuid uuid) const;
+    [[nodiscard]] const Source* find_source(const boost::uuids::uuid& uuid) const;
 
     /**
      * @return The uuid of the node.
@@ -228,6 +235,26 @@ class Node: public ptp::Instance::Subscriber {
      * @return The list of devices in the node.
      */
     [[nodiscard]] const std::vector<Device>& get_devices() const;
+
+    /**
+     * @return The list of flows in the node.
+     */
+    [[nodiscard]] const std::vector<Flow>& get_flows() const;
+
+    /**
+     * @return The list of receivers in the node.
+     */
+    [[nodiscard]] const std::vector<Receiver>& get_receivers() const;
+
+    /**
+     * @return The list of senders in the node.
+     */
+    [[nodiscard]] const std::vector<Sender>& get_senders() const;
+
+    /**
+     * @return  The list of sources in the node.
+     */
+    [[nodiscard]] const std::vector<Source>& get_sources() const;
 
     /**
      * @return The current state.

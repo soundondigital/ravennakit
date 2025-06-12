@@ -182,4 +182,136 @@ TEST_CASE("nmos::Node") {
         io_context.run();
         REQUIRE(browser->calls_to_find_most_suitable_registry == 1);
     }
+
+    SECTION("Add and remove a device") {
+        boost::asio::io_context io_context;
+        rav::ptp::Instance ptp_instance(io_context);
+        rav::nmos::Node node(io_context, ptp_instance);
+
+        rav::nmos::Device device;
+        device.id = boost::uuids::random_generator()();
+        device.label = "Test Device";
+        device.description = "A test device";
+
+        REQUIRE(node.add_or_update_device(device));
+
+        auto devices = node.get_devices();
+        REQUIRE(devices.size() == 1);
+        REQUIRE(devices[0].id == device.id);
+        REQUIRE(node.remove_device(device.id));
+        REQUIRE(node.get_devices().empty());
+    }
+
+    SECTION("Removing a device also remove dependent resources") {
+        static constexpr uint32_t k_num_devices = 2;
+        static constexpr uint32_t k_num_sources_per_device = 2;
+        static constexpr uint32_t k_num_senders_per_source = 2;
+        static constexpr uint32_t k_num_receivers_per_device = 2;
+
+        uint32_t device_count = 0;
+        uint32_t source_count = 0;
+        uint32_t sender_count = 0;
+        uint32_t receiver_count = 0;
+        uint32_t flow_count = 0;
+
+        boost::asio::io_context io_context;
+        rav::ptp::Instance ptp_instance(io_context);
+        rav::nmos::Node node(io_context, ptp_instance);
+
+        // Devices
+        for (uint32_t i_device = 0; i_device < k_num_devices; ++i_device) {
+            rav::nmos::Device device;
+            device.id = boost::uuids::random_generator()();
+            device.label = fmt::format("ravennakit/device/{}", device_count);
+            device.description = fmt::format("RAVENNAKIT Device {}", device_count + 1);
+            REQUIRE(node.add_or_update_device(device));
+
+            // Sources
+            for (uint32_t i_source = 0; i_source < k_num_sources_per_device; ++i_source) {
+                rav::nmos::SourceAudio source;
+                source.id = boost::uuids::random_generator()();
+                source.label = fmt::format("ravennakit/device/{}/source/{}", device_count, source_count);
+                source.description = fmt::format("RAVENNAKIT Device {} source {}", device_count + 1, source_count + 1);
+                source.device_id = device.id;
+                source.channels.push_back({"Channel 1"});
+                REQUIRE(node.add_or_update_source({source}));
+
+                // Flow
+                for (uint32_t i_sender = 0; i_sender < k_num_senders_per_source; ++i_sender) {
+                    rav::nmos::FlowAudioRaw flow;
+                    flow.id = boost::uuids::random_generator()();
+                    flow.label = fmt::format("ravennakit/device/{}/flow/{}", device_count, flow_count);
+                    flow.description = fmt::format("RAVENNAKIT Device {} flow {}", device_count + 1, flow_count + 1);
+                    flow.version = rav::nmos::Version {i_sender + 1, (i_sender + 1) * 1000};
+                    flow.bit_depth = 24;
+                    flow.sample_rate = {48000, 1};
+                    flow.media_type = "audio/L24";
+                    flow.source_id = source.id;
+                    flow.device_id = device.id;
+                    REQUIRE(node.add_or_update_flow({flow}));
+
+                    // Sender
+                    rav::nmos::Sender sender;
+                    sender.id = boost::uuids::random_generator()();
+                    sender.label = fmt::format("ravennakit/device/{}/sender/{}", device_count, sender_count);
+                    sender.description =
+                        fmt::format("RAVENNAKIT Device {} sender {}", device_count + 1, sender_count + 1);
+                    sender.version = rav::nmos::Version {i_sender + 1, (i_sender + 1) * 1000};
+                    sender.device_id = device.id;
+                    sender.transport = "urn:x-nmos:transport:rtp";
+                    sender.flow_id = flow.id;
+                    REQUIRE(node.add_or_update_sender(sender));
+
+                    flow_count++;
+                    sender_count++;
+                }
+
+                source_count++;
+            }
+
+            // Receivers
+            for (uint32_t i_receiver = 0; i_receiver < k_num_receivers_per_device; ++i_receiver) {
+                rav::nmos::ReceiverAudio receiver;
+                receiver.id = boost::uuids::random_generator()();
+                receiver.label = fmt::format("ravennakit/device/{}/receiver/{}", device_count, receiver_count);
+                receiver.description =
+                    fmt::format("RAVENNAKIT Device {} sender {}", device_count + 1, receiver_count + 1);
+                receiver.version = rav::nmos::Version {i_receiver + 1, (i_receiver + 1) * 1000};
+                receiver.device_id = device.id;
+                receiver.transport = "urn:x-nmos:transport:rtp";
+                receiver.caps.media_types = {"audio/L24", "audio/L20", "audio/L16", "audio/L8", "audio/PCM"};
+                REQUIRE(node.add_or_update_receiver({receiver}));
+
+                receiver_count++;
+            }
+        }
+
+        auto device_1_id = node.get_devices().front().id;
+        REQUIRE(node.remove_device(device_1_id));
+        REQUIRE(node.get_devices().size() == k_num_devices - 1);
+        REQUIRE(node.get_sources().size() == k_num_sources_per_device * (k_num_devices - 1));
+        REQUIRE(node.get_flows().size() == k_num_senders_per_source * k_num_sources_per_device * (k_num_devices - 1));
+        REQUIRE(node.get_senders().size() == k_num_senders_per_source * k_num_sources_per_device * (k_num_devices - 1));
+        REQUIRE(node.get_receivers().size() == k_num_receivers_per_device * (k_num_devices - 1));
+
+        for (auto& device : node.get_devices()) {
+            REQUIRE(device.id != device_1_id);
+        }
+
+        for (auto& source : node.get_sources()) {
+            REQUIRE(source.get_device_id() != device_1_id);
+        }
+
+        for (auto& flow : node.get_flows()) {
+            REQUIRE(flow.get_device_id() != device_1_id);
+        }
+
+        for (auto& sender : node.get_senders()) {
+            REQUIRE(sender.device_id != device_1_id);
+        }
+
+        for (auto& receiver : node.get_receivers()) {
+            REQUIRE(receiver.get_device_id() != device_1_id);
+        }
+    }
 }
