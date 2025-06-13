@@ -128,8 +128,9 @@ rav::RavennaNode::update_receiver_configuration(Id receiver_id, RavennaReceiver:
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
 }
 
-std::future<rav::Id> rav::RavennaNode::create_sender(RavennaSender::Configuration initial_config) {
-    auto work = [this, initial_config]() mutable {
+std::future<tl::expected<rav::Id, std::string>>
+rav::RavennaNode::create_sender(RavennaSender::Configuration initial_config) {
+    auto work = [this, initial_config]() mutable -> tl::expected<rav::Id, std::string> {
         auto new_sender = std::make_unique<RavennaSender>(
             io_context_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), generate_unique_session_id()
         );
@@ -140,7 +141,7 @@ std::future<rav::Id> rav::RavennaNode::create_sender(RavennaSender::Configuratio
         auto result = new_sender->set_configuration(initial_config);
         if (!result) {
             RAV_ERROR("Failed to set sender configuration: {}", result.error());
-            return Id {};
+            return tl::unexpected(result.error());
         }
         const auto& it = senders_.emplace_back(std::move(new_sender));
         it->set_nmos_device_id(nmos_device_.id);

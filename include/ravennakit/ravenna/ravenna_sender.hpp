@@ -101,11 +101,6 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
             std::ignore = sender_id;
             std::ignore = configuration;
         }
-
-        virtual void ravenna_sender_status_message_updated(const Id sender_id, const std::string& message) {
-            std::ignore = sender_id;
-            std::ignore = message;
-        }
     };
 
     RavennaSender(
@@ -288,9 +283,6 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     void update_shared_context();
     void generate_auto_addresses_if_needed();
     void update_rtp_senders();
-    void update_status_message(std::string message);
-    tl::expected<void, std::string> validate_state() const;
-    tl::expected<void, std::string> validate_destinations() const;
 };
 
 }  // namespace rav

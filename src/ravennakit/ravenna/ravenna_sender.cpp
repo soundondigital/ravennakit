@@ -193,14 +193,42 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
         return tl::unexpected("Session name cannot be empty");
     }
 
-    for (auto& dst : config.destinations) {
+    if (config.destinations.empty()) {
+        return tl::unexpected("no destinations set");
+    }
+
+    int num_enabled_destinations = 0;
+
+    for (const auto& dst : configuration_.destinations) {
+        if (!dst.enabled) {
+            continue;
+        }
         if (!dst.endpoint.address().is_unspecified() && !dst.endpoint.address().is_multicast()) {
-            return tl::unexpected("Destination address must be multicast");  // At least for now
+            return tl::unexpected(
+                fmt::format("{} address must be multicast", dst.interface_by_rank.to_ordinal_latin())
+            );
+        }
+        num_enabled_destinations++;
+        auto it = interface_addresses_.find(dst.interface_by_rank);
+        if (it == interface_addresses_.end() || it->second.is_unspecified()) {
+            return tl::unexpected(fmt::format("{} interface not set", dst.interface_by_rank.to_ordinal_latin()));
+        }
+        if (dst.endpoint.address().is_unspecified()) {
+            return tl::unexpected(
+                fmt::format("{} destination address is unspecified", dst.interface_by_rank.to_ordinal_latin())
+            );
+        }
+        if (dst.endpoint.port() == 0) {
+            return tl::unexpected(fmt::format("{} destination port is 0", dst.interface_by_rank.to_ordinal_latin()));
         }
     }
 
-    if (config.ttl == 0) {
-        return tl::unexpected("TTL cannot be 0");
+    if (num_enabled_destinations == 0) {
+        return tl::unexpected("no enabled destinations");
+    }
+
+    if (config.ttl <= 0) {
+        return tl::unexpected("Invalid TTL");
     }
 
     const auto& audio_format = config.audio_format;
@@ -213,7 +241,6 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
     if (audio_format.byte_order != AudioFormat::ByteOrder::be) {
         return tl::unexpected("Only big endian audio formats are supported");
     }
-
     if (!config.packet_time.is_valid()) {
         return tl::unexpected("Invalid packet time");
     }
@@ -259,16 +286,7 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
     generate_auto_addresses_if_needed();
     update_rtp_senders();
 
-    auto state_valid = validate_state();
-    if (!state_valid) {
-        update_status_message(std::move(state_valid.error()));
-    } else {
-        update_status_message({});
-    }
-
-    const bool should_be_running = configuration_.enabled && state_valid;
-
-    if (update_advertisement || !should_be_running) {
+    if (update_advertisement || !configuration_.enabled) {
         RAV_ASSERT(
             rtsp_path_by_id_.empty() == rtsp_path_by_name_.empty(), "Paths should be either both empty or both set"
         );
@@ -319,7 +337,7 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(const Conf
         subscriber->ravenna_sender_configuration_updated(id_, configuration_);
     }
 
-    if (!should_be_running) {
+    if (!configuration_.enabled) {
         stop_timer();
         shared_context_.clear();
         return {};  // Done here
@@ -370,7 +388,6 @@ float rav::RavennaSender::get_signaled_ptime() const {
 bool rav::RavennaSender::subscribe(Subscriber* subscriber) {
     if (subscribers_.add(subscriber)) {
         subscriber->ravenna_sender_configuration_updated(id_, configuration_);
-        subscriber->ravenna_sender_status_message_updated(id_, status_message_);
         return true;
     }
     return false;
@@ -935,72 +952,4 @@ void rav::RavennaSender::update_rtp_senders() {
             ++it;
         }
     }
-}
-
-tl::expected<void, std::string> rav::RavennaSender::validate_destinations() const {
-    if (configuration_.destinations.empty()) {
-        return tl::unexpected("no destinations set");
-    }
-
-    int num_enabled_destinations = 0;
-
-    for (const auto& dst : configuration_.destinations) {
-        if (!dst.enabled) {
-            continue;
-        }
-        num_enabled_destinations++;
-        auto it = interface_addresses_.find(dst.interface_by_rank);
-        if (it == interface_addresses_.end() || it->second.is_unspecified()) {
-            return tl::unexpected(fmt::format("{} interface not set", dst.interface_by_rank.to_ordinal_latin()));
-        }
-        if (dst.endpoint.address().is_unspecified()) {
-            return tl::unexpected(
-                fmt::format("{} destination address is unspecified", dst.interface_by_rank.to_ordinal_latin())
-            );
-        }
-        if (dst.endpoint.port() == 0) {
-            return tl::unexpected(fmt::format("{} destination port is 0", dst.interface_by_rank.to_ordinal_latin()));
-        }
-    }
-
-    if (num_enabled_destinations == 0) {
-        return tl::unexpected("no destinations");
-    }
-
-    return {};
-}
-
-void rav::RavennaSender::update_status_message(std::string message) {
-    if (status_message_ == message) {
-        return;  // No change
-    }
-    status_message_ = std::move(message);
-    for (const auto& subscriber : subscribers_) {
-        subscriber->ravenna_sender_status_message_updated(id_, status_message_);
-    }
-}
-
-tl::expected<void, std::string> rav::RavennaSender::validate_state() const {
-    if (configuration_.session_name.empty()) {
-        return tl::unexpected("empty session name");
-    }
-
-    if (!configuration_.audio_format.is_valid()) {
-        return tl::unexpected("invalid audio format");
-    }
-
-    auto valid = validate_destinations();
-    if (!valid) {
-        return valid;
-    }
-
-    if (!configuration_.packet_time.is_valid()) {
-        return tl::unexpected("invalid packet time");
-    }
-
-    if (configuration_.ttl <= 0) {
-        return tl::unexpected("invalid TTL");
-    }
-
-    return {};
 }
