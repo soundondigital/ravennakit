@@ -255,6 +255,15 @@ rav::nmos::Node::Node(
         self_.api.versions.push_back(v.to_string());
     }
 
+    ClockInternal clock_int;
+    clock_int.name = "clk0";
+    self_.clocks.emplace_back(clock_int);
+
+    ClockPtp clock_ptp;
+    clock_ptp.name = "clk1";
+    clock_ptp.gmid = "00-00-00-00-00-00-00-00";
+    self_.clocks.emplace_back(clock_ptp);  // Must be at k_clock_ptp_index
+
     http_server_.get("/", [](const HttpServer::Request&, HttpServer::Response& res, PathMatcher::Parameters&) {
         ok_response(res, boost::json::serialize(boost::json::array({"x-nmos/"})));
     });
@@ -1363,11 +1372,18 @@ std::optional<size_t> rav::nmos::Node::index_of_supported_api_version(const ApiV
 }
 
 void rav::nmos::Node::ptp_parent_changed(const ptp::ParentDs& parent) {
-    ClockPtp clock;
-    clock.gmid = parent.grandmaster_identity.to_string();
-    clock.name = "clk0";
-    clock.traceable = ptp_instance_.get_time_properties_ds().time_traceable;
-    self_.clocks = {clock};
+    if (self_.clocks.size() <= k_clock_ptp_index) {
+        RAV_ERROR("PTP clock index out of bounds: {}", k_clock_ptp_index);
+        return;
+    }
+
+    auto* clock_ptp = std::get_if<ClockPtp>(&self_.clocks[k_clock_ptp_index]);
+    if (clock_ptp == nullptr) {
+        RAV_ERROR("PTP clock is not of type ClockPtp");
+        return;
+    }
+    clock_ptp->gmid = parent.grandmaster_identity.to_string();
+    clock_ptp->traceable = ptp_instance_.get_time_properties_ds().time_traceable;
     self_.version.update(get_local_clock().now());
 
     if (status_ == Status::registered) {
@@ -1376,34 +1392,27 @@ void rav::nmos::Node::ptp_parent_changed(const ptp::ParentDs& parent) {
 }
 
 void rav::nmos::Node::ptp_port_changed_state(const ptp::Port&) {
-    if (self_.clocks.empty()) {
-        RAV_ERROR("No clocks available to update PTP state");
+    if (self_.clocks.size() <= k_clock_ptp_index) {
+        RAV_ERROR("PTP clock index out of bounds: {}", k_clock_ptp_index);
         return;
     }
 
-    auto locked = get_local_clock().is_locked();
+    const auto locked = get_local_clock().is_locked();
 
-    const auto changed = std::visit(
-        [locked](auto& clock) {
-            if constexpr (std::is_same_v<ClockPtp, std::decay_t<decltype(clock)>>) {
-                if (clock.locked == locked) {
-                    return false;
-                }
-                clock.locked = locked;
-                return true;
-            } else {
-                RAV_ERROR("Unsupported clock type for PTP port state change");
-            }
+    auto* clock_ptp = std::get_if<ClockPtp>(&self_.clocks[k_clock_ptp_index]);
 
-            return false;
-        },
-        self_.clocks.front()
-    );
+    if (clock_ptp == nullptr) {
+        RAV_ERROR("PTP clock is not of type ClockPtp");
+        return;
+    }
 
-    if (changed) {
-        self_.version.update(get_local_clock().now());
-        if (status_ == Status::registered) {
-            send_updated_resources_async();
-        }
+    if (clock_ptp->locked == locked) {
+        return;
+    }
+
+    clock_ptp->locked = locked;
+    self_.version.update(get_local_clock().now());
+    if (status_ == Status::registered) {
+        send_updated_resources_async();
     }
 }

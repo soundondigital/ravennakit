@@ -294,6 +294,7 @@ class Node: public ptp::Instance::Subscriber {
   private:
     static constexpr uint8_t k_max_failed_heartbeats = 5;
     static constexpr auto k_heartbeat_interval = std::chrono::seconds(5);
+    static constexpr size_t k_clock_ptp_index = 1;
 
     ptp::Instance& ptp_instance_;
     Self self_;
@@ -319,15 +320,7 @@ class Node: public ptp::Instance::Subscriber {
     AsioTimer heartbeat_timer_;  // Keep below connector_ to avoid dangling reference
     Version current_version_;
 
-    /**
-     * Starts the services of this node (HTTP server, advertisements, etc.).
-     * @return An error code if the node fails to start, or an empty result if it succeeds.
-     */
     [[nodiscard]] boost::system::result<void, Error> start_internal();
-
-    /**
-     * Stops all the operations of this node (HTTP server, advertisements, etc.).
-     */
     void stop_internal();
 
     void register_async();
