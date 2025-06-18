@@ -108,25 +108,13 @@ rav::RavennaSender::RavennaSender(
     RAV_ASSERT(session_id != 0, "Session ID must be valid");
 
     nmos_source_.id = boost::uuids::random_generator()();
+    nmos_source_.clock_name = nmos::Node::k_ptp_clock_name;
 
     nmos_flow_.id = boost::uuids::random_generator()();
     nmos_flow_.source_id = nmos_source_.id;
 
     nmos_sender_.id = boost::uuids::random_generator()();
     nmos_sender_.flow_id = nmos_flow_.id;
-
-    // configuration_.session_name = "Sender " + std::to_string(session_id_);
-    // configuration_.ttl = 15;
-    // configuration_.packet_time = aes67::PacketTime::ms_1();
-    // configuration_.payload_type = 98;
-
-    // AudioFormat audio_format;
-    // audio_format.byte_order = AudioFormat::ByteOrder::be;
-    // audio_format.ordering = AudioFormat::ChannelOrdering::interleaved;
-    // audio_format.sample_rate = 48'000;
-    // audio_format.num_channels = 2;
-    // audio_format.encoding = AudioEncoding::pcm_s16;
-    // configuration_.audio_format = audio_format;
 
     std::vector<Destination> destinations;
     destinations.emplace_back(Destination {Rank::primary(), {boost::asio::ip::address_v4::any(), 5004}, true});

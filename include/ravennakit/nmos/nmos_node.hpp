@@ -40,6 +40,8 @@ class Node: public ptp::Instance::Subscriber {
   public:
     static std::array<ApiVersion, 2> k_supported_api_versions;
     static constexpr auto k_default_timeout = std::chrono::milliseconds(2000);
+    static constexpr auto k_internal_clock_name = "clk0";
+    static constexpr auto k_ptp_clock_name = "clk1";
 
     /**
      * The configuration of the NMOS node.

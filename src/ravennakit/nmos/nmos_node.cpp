@@ -256,11 +256,11 @@ rav::nmos::Node::Node(
     }
 
     ClockInternal clock_int;
-    clock_int.name = "clk0";
+    clock_int.name = k_internal_clock_name;
     self_.clocks.emplace_back(clock_int);
 
     ClockPtp clock_ptp;
-    clock_ptp.name = "clk1";
+    clock_ptp.name = k_ptp_clock_name;
     clock_ptp.gmid = "00-00-00-00-00-00-00-00";
     self_.clocks.emplace_back(clock_ptp);  // Must be at k_clock_ptp_index
 
