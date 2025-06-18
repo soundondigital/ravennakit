@@ -118,6 +118,9 @@ TEST_CASE("nmos::Node") {
 
     SECTION("Test config semantic (validation) rules") {
         rav::nmos::Node::Configuration config;
+        REQUIRE(config.validate() == rav::nmos::Error::invalid_id);
+
+        config.id = boost::uuids::random_generator()();
 
         REQUIRE(config.validate());
 
@@ -137,6 +140,7 @@ TEST_CASE("nmos::Node") {
         boost::asio::io_context io_context;
 
         rav::nmos::Node::Configuration config;
+        config.id = boost::uuids::random_generator()();
         config.operation_mode = rav::nmos::OperationMode::mdns_p2p;
         config.api_version = rav::nmos::ApiVersion {1, 3};
         config.enabled = true;
@@ -152,13 +156,14 @@ TEST_CASE("nmos::Node") {
         rav::ptp::Instance ptp_instance(io_context);
 
         rav::nmos::Node node(io_context, ptp_instance, std::move(test_browser), std::move(test_http_client));
-        REQUIRE(node.set_configuration(config, true));
+        auto result = node.set_configuration(config, true);
+        REQUIRE(result);
         REQUIRE(browser->calls_to_start.size() == 1);
         REQUIRE(
             browser->calls_to_start[0]
             == std::make_tuple(rav::nmos::OperationMode::mdns_p2p, rav::nmos::ApiVersion {1, 3})
         );
-        REQUIRE(browser->calls_to_stop == 0);
+        REQUIRE(browser->calls_to_stop == 1);
         REQUIRE(browser->calls_to_find_most_suitable_registry == 0);
 
         rav::dnssd::ServiceDescription desc;
