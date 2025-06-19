@@ -38,9 +38,9 @@ TEST_CASE("RavennaReceiver | Create audio receiver parameters") {
             "a=midi-pre2:50040 0,0;0,1\r\n";
 
         auto result = rav::sdp::SessionDescription::parse_new(k_anubis_sdp);
-        REQUIRE(result.is_ok());
+        REQUIRE(result);
 
-        auto parameters = rav::RavennaReceiver::create_audio_receiver_parameters(result.get_ok());
+        auto parameters = rav::RavennaReceiver::create_audio_receiver_parameters(*result);
         REQUIRE(parameters);
 
         REQUIRE(parameters->audio_format.is_valid());
@@ -95,9 +95,9 @@ TEST_CASE("RavennaReceiver | Create audio receiver parameters") {
         "a=mediaclk:direct=0\r\n";
 
         auto result = rav::sdp::SessionDescription::parse_new(k_mic8_sdp);
-        REQUIRE(result.is_ok());
+        REQUIRE(result);
 
-        auto parameters = rav::RavennaReceiver::create_audio_receiver_parameters(result.get_ok());
+        auto parameters = rav::RavennaReceiver::create_audio_receiver_parameters(*result);
         REQUIRE(parameters);
 
         REQUIRE(parameters->audio_format.is_valid());

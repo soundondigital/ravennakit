@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include "ravennakit/core/result.hpp"
 #include "ravennakit/core/audio/audio_format.hpp"
 
 #include <string>
@@ -25,10 +24,6 @@ struct Format {
     std::string encoding_name;
     uint32_t clock_rate {};
     uint32_t num_channels {};
-
-    /// A type alias for a parse result.
-    template<class T>
-    using parse_result = Result<T, std::string>;
 
     [[nodiscard]] std::string to_string() const;
 
@@ -48,7 +43,7 @@ struct Format {
      * @return A result indicating success or failure. When parsing fails, the error message will contain a
      * description of what went wrong.
      */
-    static parse_result<Format> parse_new(std::string_view line);
+    static tl::expected<Format, std::string> parse_new(std::string_view line);
 };
 
 bool operator==(const Format& lhs, const Format& rhs);

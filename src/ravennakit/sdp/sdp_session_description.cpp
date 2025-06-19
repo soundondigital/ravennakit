@@ -19,7 +19,7 @@
 #include "ravennakit/sdp/detail/sdp_constants.hpp"
 #include "ravennakit/sdp/detail/sdp_reference_clock.hpp"
 
-rav::sdp::SessionDescription::ParseResult<rav::sdp::SessionDescription>
+tl::expected<rav::sdp::SessionDescription, std::string>
 rav::sdp::SessionDescription::parse_new(const std::string& sdp_text) {
     SessionDescription sd;
     StringParser parser(sdp_text);
@@ -32,18 +32,18 @@ rav::sdp::SessionDescription::parse_new(const std::string& sdp_text) {
         switch (line->front()) {
             case 'v': {
                 auto result = parse_version(*line);
-                if (result.is_err()) {
-                    return ParseResult<SessionDescription>::err(result.get_err());
+                if (!result) {
+                    return tl::unexpected(result.error());
                 }
-                sd.version_ = result.move_ok();
+                sd.version_ = *result;
                 break;
             }
             case 'o': {
                 auto result = sdp::OriginField::parse_new(*line);
-                if (result.is_err()) {
-                    return ParseResult<SessionDescription>::err(result.get_err());
+                if (!result) {
+                    return tl::unexpected(result.error());
                 }
-                sd.origin_ = result.move_ok();
+                sd.origin_ = std::move(*result);
                 break;
             }
             case 's': {
@@ -51,43 +51,43 @@ rav::sdp::SessionDescription::parse_new(const std::string& sdp_text) {
                 break;
             }
             case 'c': {
-                auto result = sdp::ConnectionInfoField::parse_new(*line);
-                if (result.is_err()) {
-                    return ParseResult<SessionDescription>::err(result.get_err());
+                auto result = ConnectionInfoField::parse_new(*line);
+                if (!result) {
+                    return tl::unexpected(result.error());
                 }
                 if (!sd.media_descriptions_.empty()) {
-                    sd.media_descriptions_.back().add_connection_info(result.move_ok());
+                    sd.media_descriptions_.back().add_connection_info(std::move(*result));
                 } else {
-                    sd.connection_info_ = result.move_ok();
+                    sd.connection_info_ = std::move(*result);
                 }
                 break;
             }
             case 't': {
-                auto result = sdp::TimeActiveField::parse_new(*line);
-                if (result.is_err()) {
-                    return ParseResult<SessionDescription>::err(result.get_err());
+                auto time_active = sdp::TimeActiveField::parse_new(*line);
+                if (!time_active) {
+                    return tl::unexpected(time_active.error());
                 }
-                sd.time_active_ = result.move_ok();
+                sd.time_active_ = *time_active;
                 break;
             }
             case 'm': {
-                auto result = sdp::MediaDescription::parse_new(*line);
-                if (result.is_err()) {
-                    return ParseResult<SessionDescription>::err(result.get_err());
+                auto desc = sdp::MediaDescription::parse_new(*line);
+                if (!desc) {
+                    return tl::unexpected(desc.error());
                 }
-                sd.media_descriptions_.push_back(result.move_ok());
+                sd.media_descriptions_.push_back(*desc);
                 break;
             }
             case 'a': {
                 if (!sd.media_descriptions_.empty()) {
                     auto result = sd.media_descriptions_.back().parse_attribute(*line);
-                    if (result.is_err()) {
-                        return ParseResult<SessionDescription>::err(result.get_err());
+                    if (!result) {
+                        return tl::unexpected(result.error());
                     }
                 } else {
                     auto result = sd.parse_attribute(*line);
-                    if (result.is_err()) {
-                        return ParseResult<SessionDescription>::err(result.get_err());
+                    if (!result) {
+                        return tl::unexpected(result.error());
                     }
                 }
                 break;
@@ -101,11 +101,11 @@ rav::sdp::SessionDescription::parse_new(const std::string& sdp_text) {
                 break;
             }
             default:
-                return ParseResult<SessionDescription>::err(fmt::format("Unknown line: {}", *line));
+                return tl::unexpected(fmt::format("Unknown line: {}", *line));
         }
     }
 
-    return ParseResult<SessionDescription>::ok(std::move(sd));
+    return sd;
 }
 
 int rav::sdp::SessionDescription::version() const {
@@ -264,7 +264,7 @@ tl::expected<std::string, std::string> rav::sdp::SessionDescription::to_string(c
     if (connection_info_.has_value()) {
         auto connection = connection_info_->to_string();
         if (!connection) {
-            return connection;
+            return connection.error();
         }
         fmt::format_to(std::back_inserter(sdp), "{}{}", connection.value(), newline);
     }
@@ -322,34 +322,32 @@ tl::expected<std::string, std::string> rav::sdp::SessionDescription::to_string(c
     return sdp;
 }
 
-rav::sdp::SessionDescription::ParseResult<int>
-rav::sdp::SessionDescription::parse_version(const std::string_view line) {
+tl::expected<int, std::string> rav::sdp::SessionDescription::parse_version(const std::string_view line) {
     if (!string_starts_with(line, "v=")) {
-        return ParseResult<int>::err("expecting line to start with 'v='");
+        return tl::unexpected("expecting line to start with 'v='");
     }
 
     if (const auto v = rav::string_to_int<int>(line.substr(2)); v.has_value()) {
         if (*v != 0) {
-            return ParseResult<int>::err("invalid version");
+            return tl::unexpected("invalid version");
         }
-        return ParseResult<int>::ok(*v);
+        return *v;
     }
 
-    return ParseResult<int>::err("failed to parse integer from string");
+    return tl::unexpected("failed to parse integer from string");
 }
 
-rav::sdp::SessionDescription::ParseResult<void>
-rav::sdp::SessionDescription::parse_attribute(const std::string_view line) {
+tl::expected<void, std::string> rav::sdp::SessionDescription::parse_attribute(const std::string_view line) {
     StringParser parser(line);
 
     if (!parser.skip("a=")) {
-        return ParseResult<void>::err("attribute: expecting 'a='");
+        return tl::unexpected("attribute: expecting 'a='");
     }
 
     const auto key = parser.split(':');
 
     if (!key) {
-        return ParseResult<void>::err("attribute: expecting key");
+        return tl::unexpected("attribute: expecting key");
     }
 
     if (key == sdp::k_sdp_sendrecv) {
@@ -363,48 +361,48 @@ rav::sdp::SessionDescription::parse_attribute(const std::string_view line) {
     } else if (key == sdp::k_sdp_ts_refclk) {
         if (const auto value = parser.read_until_end()) {
             auto ref_clock = sdp::ReferenceClock::parse_new(*value);
-            if (ref_clock.is_err()) {
-                return ParseResult<void>::err(ref_clock.get_err());
+            if (!ref_clock) {
+                return tl::unexpected(ref_clock.error());
             }
-            reference_clock_ = ref_clock.move_ok();
+            reference_clock_ = std::move(*ref_clock);
         }
     } else if (key == sdp::MediaClockSource::k_attribute_name) {
         if (const auto value = parser.read_until_end()) {
             auto clock = sdp::MediaClockSource::parse_new(*value);
-            if (clock.is_err()) {
-                return ParseResult<void>::err(clock.get_err());
+            if (!clock) {
+                return tl::unexpected(clock.error());
             }
-            media_clock_ = clock.move_ok();
+            media_clock_ = *clock;
         }
     } else if (key == RavennaClockDomain::k_attribute_name) {
         if (const auto value = parser.read_until_end()) {
             auto clock_domain = RavennaClockDomain::parse_new(*value);
-            if (clock_domain.is_err()) {
-                return ParseResult<void>::err(clock_domain.get_err());
+            if (!clock_domain) {
+                return tl::unexpected(clock_domain.error());
             }
-            clock_domain_ = clock_domain.move_ok();
+            clock_domain_ = *clock_domain;
         }
     } else if (key == SourceFilter::k_attribute_name) {
         if (const auto value = parser.read_until_end()) {
             auto filter = SourceFilter::parse_new(*value);
-            if (filter.is_err()) {
-                return ParseResult<void>::err(filter.get_err());
+            if (!filter) {
+                return tl::unexpected(filter.error());
             }
-            source_filters_.push_back(filter.move_ok());
+            source_filters_.push_back(std::move(*filter));
         } else {
-            return ParseResult<void>::err("media: failed to parse source-filter value");
+            return tl::unexpected("media: failed to parse source-filter value");
         }
     } else if (key == k_sdp_sync_time) {
         if (const auto rtp_ts = parser.read_int<uint32_t>()) {
             sync_time_ = *rtp_ts;
         } else {
-            return ParseResult<void>::err("media: failed to parse sync-time value");
+            return tl::unexpected("media: failed to parse sync-time value");
         }
     } else if (key == k_sdp_group) {
         if (const auto value = parser.read_until_end()) {
             auto group = Group::parse_new(*value);
             if (!group.has_value()) {
-                return ParseResult<void>::err(group.error());
+                return tl::unexpected(group.error());
             }
             group_ = *group;
         }
@@ -413,9 +411,9 @@ rav::sdp::SessionDescription::parse_attribute(const std::string_view line) {
         if (auto value = parser.read_until_end()) {
             attributes_.emplace(*key, *value);
         } else {
-            return ParseResult<void>::err("media: failed to parse attribute value");
+            return tl::unexpected("media: failed to parse attribute value");
         }
     }
 
-    return ParseResult<void>::ok();
+    return {};
 }

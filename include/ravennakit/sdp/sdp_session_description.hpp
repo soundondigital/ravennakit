@@ -10,16 +10,14 @@
 
 #pragma once
 
-#include <sstream>
-#include <vector>
-
 #include "detail/sdp_constants.hpp"
 #include "detail/sdp_group.hpp"
 #include "detail/sdp_origin.hpp"
 #include "detail/sdp_reference_clock.hpp"
 #include "detail/sdp_time_active.hpp"
-#include "ravennakit/core/result.hpp"
 #include "sdp_media_description.hpp"
+
+#include <vector>
 
 namespace rav::sdp {
 
@@ -29,18 +27,13 @@ namespace rav::sdp {
  */
 class SessionDescription {
   public:
-    /// A type alias for a parse result.
-    /// TODO: Replace with tl::expected
-    template<class T>
-    using ParseResult = Result<T, std::string>;
-
     /**
      * Parses an SDP session description from a string.
      * @param sdp_text The SDP text to parse.
      * @return A result indicating whether the parsing was successful or not. The error will be a message explaining
      * what went wrong.
      */
-    static ParseResult<SessionDescription> parse_new(const std::string& sdp_text);
+    static tl::expected<SessionDescription, std::string> parse_new(const std::string& sdp_text);
 
     /**
      * @returns The version of the SDP session description.
@@ -218,8 +211,8 @@ class SessionDescription {
     std::map<std::string, std::string> attributes_;  // Remaining, unknown attributes
     std::vector<MediaDescription> media_descriptions_;
 
-    static ParseResult<int> parse_version(std::string_view line);
-    ParseResult<void> parse_attribute(std::string_view line);
+    static tl::expected<int, std::string> parse_version(std::string_view line);
+    tl::expected<void, std::string> parse_attribute(std::string_view line);
 };
 
 }  // namespace rav::sdp

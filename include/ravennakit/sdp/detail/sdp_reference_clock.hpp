@@ -12,8 +12,6 @@
 
 #include <string>
 
-#include "ravennakit/core/result.hpp"
-
 #include "ravennakit/core/expected.hpp"
 
 namespace rav::sdp {
@@ -26,10 +24,6 @@ class ReferenceClock {
   public:
     enum class ClockSource { undefined, atomic_clock, gps, terrestrial_radio, ptp, ntp, ntp_server, ntp_pool };
     enum class PtpVersion { undefined, IEEE_1588_2002, IEEE_1588_2008, IEEE_802_1AS_2011, traceable };
-
-    /// A type alias for a parse result.
-    template<class T>
-    using ParseResult = Result<T, std::string>;
 
     ReferenceClock() = default;
     ReferenceClock(ClockSource source, PtpVersion version, std::string gmid, int32_t domain);
@@ -71,7 +65,7 @@ class ReferenceClock {
      * @param line The string to parse.
      * @return A parse result.
      */
-    static ParseResult<ReferenceClock> parse_new(std::string_view line);
+    static tl::expected<ReferenceClock, std::string> parse_new(std::string_view line);
 
     /**
      * @param source The clock source to convert.

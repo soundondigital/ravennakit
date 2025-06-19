@@ -13,7 +13,6 @@
 #include <string_view>
 
 #include "ravennakit/core/math/fraction.hpp"
-#include "ravennakit/core/result.hpp"
 
 #include "ravennakit/core/expected.hpp"
 
@@ -33,11 +32,7 @@ class MediaClockSource {
     MediaClockSource() = default;
     MediaClockSource(ClockMode mode, std::optional<int64_t> offset, std::optional<Fraction<int32_t>> rate);
 
-    /// A type alias for a parse result.
-    template<class T>
-    using ParseResult = Result<T, std::string>;
-
-    static ParseResult<MediaClockSource> parse_new(std::string_view line);
+    static tl::expected<MediaClockSource, std::string> parse_new(std::string_view line);
 
     /**
      * @returns The clock mode

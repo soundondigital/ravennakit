@@ -220,21 +220,19 @@ void rav::RavennaRtspClient::do_maintenance() {
 }
 
 void rav::RavennaRtspClient::handle_incoming_sdp(const std::string& sdp_text) {
-    auto result = sdp::SessionDescription::parse_new(sdp_text);
-    if (result.is_err()) {
-        RAV_ERROR("Failed to parse SDP: {}", result.get_err());
+    auto sdp = sdp::SessionDescription::parse_new(sdp_text);
+    if (!sdp) {
+        RAV_ERROR("Failed to parse SDP: {}", sdp.error());
         return;
     }
 
-    auto sdp = result.move_ok();
-
     for (auto& session : sessions_) {
-        if (session.session_name == sdp.session_name()) {
-            session.sdp_ = sdp;
+        if (session.session_name == sdp->session_name()) {
+            session.sdp_ = *sdp;
             session.sdp_text_ = sdp_text;
 
             session.subscribers.foreach ([&](auto s) {
-                s->on_announced(AnnouncedEvent {session.session_name, sdp});
+                s->on_announced(AnnouncedEvent {session.session_name, *sdp});
             });
         }
     }

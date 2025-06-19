@@ -15,43 +15,39 @@
 TEST_CASE("media_clock", "[media_clock]") {
     SECTION("Parse direct only") {
         constexpr auto line = "direct";
-        const auto result = rav::sdp::MediaClockSource::parse_new(line);
-        REQUIRE(result.is_ok());
-        const auto& clock = result.get_ok();
-        REQUIRE(clock.mode() == rav::sdp::MediaClockSource::ClockMode::direct);
-        REQUIRE_FALSE(clock.offset().has_value());
-        REQUIRE_FALSE(clock.rate().has_value());
+        const auto clock = rav::sdp::MediaClockSource::parse_new(line);
+        REQUIRE(clock);
+        REQUIRE(clock->mode() == rav::sdp::MediaClockSource::ClockMode::direct);
+        REQUIRE_FALSE(clock->offset().has_value());
+        REQUIRE_FALSE(clock->rate().has_value());
     }
 
     SECTION("Parse direct with offset") {
         constexpr auto line = "direct=555";
-        const auto result = rav::sdp::MediaClockSource::parse_new(line);
-        REQUIRE(result.is_ok());
-        const auto& clock = result.get_ok();
-        REQUIRE(clock.mode() == rav::sdp::MediaClockSource::ClockMode::direct);
-        REQUIRE(clock.offset().value() == 555);
-        REQUIRE_FALSE(clock.rate().has_value());
+        const auto clock = rav::sdp::MediaClockSource::parse_new(line);
+        REQUIRE(clock);
+        REQUIRE(clock->mode() == rav::sdp::MediaClockSource::ClockMode::direct);
+        REQUIRE(clock->offset().value() == 555);
+        REQUIRE_FALSE(clock->rate().has_value());
     }
 
     SECTION("Parse direct with offset and rate") {
         constexpr auto line = "direct=555 rate=48000/1";
-        const auto result = rav::sdp::MediaClockSource::parse_new(line);
-        REQUIRE(result.is_ok());
-        const auto& clock = result.get_ok();
-        REQUIRE(clock.mode() == rav::sdp::MediaClockSource::ClockMode::direct);
-        REQUIRE(clock.offset().value() == 555);
-        REQUIRE(clock.rate().value().numerator == 48000);
-        REQUIRE(clock.rate().value().denominator == 1);
+        const auto clock = rav::sdp::MediaClockSource::parse_new(line);
+        REQUIRE(clock);
+        REQUIRE(clock->mode() == rav::sdp::MediaClockSource::ClockMode::direct);
+        REQUIRE(clock->offset().value() == 555);
+        REQUIRE(clock->rate().value().numerator == 48000);
+        REQUIRE(clock->rate().value().denominator == 1);
     }
 
     SECTION("Parse direct without offset and rate") {
         constexpr auto line = "direct rate=48000/1";
-        const auto result = rav::sdp::MediaClockSource::parse_new(line);
-        REQUIRE(result.is_ok());
-        const auto& clock = result.get_ok();
-        REQUIRE(clock.mode() == rav::sdp::MediaClockSource::ClockMode::direct);
-        REQUIRE_FALSE(clock.offset().has_value());
-        REQUIRE(clock.rate().value().numerator == 48000);
-        REQUIRE(clock.rate().value().denominator == 1);
+        const auto clock = rav::sdp::MediaClockSource::parse_new(line);
+        REQUIRE(clock);
+        REQUIRE(clock->mode() == rav::sdp::MediaClockSource::ClockMode::direct);
+        REQUIRE_FALSE(clock->offset().has_value());
+        REQUIRE(clock->rate().value().numerator == 48000);
+        REQUIRE(clock->rate().value().denominator == 1);
     }
 }

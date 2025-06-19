@@ -30,12 +30,11 @@ tl::expected<std::string, std::string> rav::sdp::TimeActiveField::to_string() co
     return fmt::format("t={} {}", start_time, stop_time);
 }
 
-rav::sdp::TimeActiveField::ParseResult<rav::sdp::TimeActiveField>
-rav::sdp::TimeActiveField::parse_new(const std::string_view line) {
+tl::expected<rav::sdp::TimeActiveField, std::string> rav::sdp::TimeActiveField::parse_new(const std::string_view line) {
     StringParser parser(line);
 
     if (!parser.skip("t=")) {
-        return ParseResult<TimeActiveField>::err("time: expecting 't='");
+        return tl::unexpected("time: expecting 't='");
     }
 
     TimeActiveField time;
@@ -43,18 +42,18 @@ rav::sdp::TimeActiveField::parse_new(const std::string_view line) {
     if (const auto start_time = parser.read_int<int64_t>()) {
         time.start_time = *start_time;
     } else {
-        return ParseResult<TimeActiveField>::err("time: failed to parse start time as integer");
+        return tl::unexpected("time: failed to parse start time as integer");
     }
 
     if (!parser.skip(' ')) {
-        return ParseResult<TimeActiveField>::err("time: expecting space after start time");
+        return tl::unexpected("time: expecting space after start time");
     }
 
     if (const auto stop_time = parser.read_int<int64_t>()) {
         time.stop_time = *stop_time;
     } else {
-        return ParseResult<TimeActiveField>::err("time: failed to parse stop time as integer");
+        return tl::unexpected("time: failed to parse stop time as integer");
     }
 
-    return ParseResult<TimeActiveField>::ok(time);
+    return time;
 }

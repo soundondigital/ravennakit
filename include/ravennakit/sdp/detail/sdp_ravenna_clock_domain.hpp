@@ -10,11 +10,9 @@
 
 #pragma once
 
-#include "ravennakit/core/result.hpp"
-
-#include <cstdint>
-#include <string_view>
 #include "ravennakit/core/expected.hpp"
+
+#include <string_view>
 
 namespace rav::sdp {
 
@@ -24,10 +22,6 @@ namespace rav::sdp {
 struct RavennaClockDomain {
     static constexpr auto k_attribute_name = "clock-domain";
     enum class SyncSource { undefined, ptp_v2 };
-
-    /// A type alias for a parse result.
-    template<class T>
-    using ParseResult = Result<T, std::string>;
 
     SyncSource source {SyncSource::undefined};
     int32_t domain {};
@@ -54,7 +48,7 @@ struct RavennaClockDomain {
      * @param line The string to parse.
      * @return A parse result.
      */
-    static ParseResult<RavennaClockDomain> parse_new(std::string_view line);
+    static tl::expected<RavennaClockDomain, std::string> parse_new(std::string_view line);
 };
 
 }  // namespace rav::sdp

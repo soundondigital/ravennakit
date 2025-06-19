@@ -47,12 +47,12 @@ tl::expected<std::string, std::string> rav::sdp::ConnectionInfoField::to_string(
     );
 }
 
-rav::sdp::ConnectionInfoField::parse_result<rav::sdp::ConnectionInfoField>
+tl::expected<rav::sdp::ConnectionInfoField, std::string>
 rav::sdp::ConnectionInfoField::parse_new(const std::string_view line) {
     StringParser parser(line);
 
     if (!parser.skip("c=")) {
-        return parse_result<ConnectionInfoField>::err("connection: expecting 'c='");
+        return tl::unexpected("connection: expecting 'c='");
     }
 
     ConnectionInfoField info;
@@ -62,10 +62,10 @@ rav::sdp::ConnectionInfoField::parse_new(const std::string_view line) {
         if (*network_type == sdp::k_sdp_inet) {
             info.network_type = sdp::NetwType::internet;
         } else {
-            return parse_result<ConnectionInfoField>::err("connection: invalid network type");
+            return tl::unexpected("connection: invalid network type");
         }
     } else {
-        return parse_result<ConnectionInfoField>::err("connection: failed to parse network type");
+        return tl::unexpected("connection: failed to parse network type");
     }
 
     // Address type
@@ -75,10 +75,10 @@ rav::sdp::ConnectionInfoField::parse_new(const std::string_view line) {
         } else if (*address_type == sdp::k_sdp_ipv6) {
             info.address_type = sdp::AddrType::ipv6;
         } else {
-            return parse_result<ConnectionInfoField>::err("connection: invalid address type");
+            return tl::unexpected("connection: invalid address type");
         }
     } else {
-        return parse_result<ConnectionInfoField>::err("connection: failed to parse address type");
+        return tl::unexpected("connection: failed to parse address type");
     }
 
     // Address
@@ -87,7 +87,7 @@ rav::sdp::ConnectionInfoField::parse_new(const std::string_view line) {
     }
 
     if (parser.exhausted()) {
-        return parse_result<ConnectionInfoField>::ok(std::move(info));
+        return info;
     }
 
     // Parse optional ttl and number of addresses
@@ -95,30 +95,26 @@ rav::sdp::ConnectionInfoField::parse_new(const std::string_view line) {
         if (auto ttl = parser.read_int<int32_t>()) {
             info.ttl = *ttl;
         } else {
-            return parse_result<ConnectionInfoField>::err("connection: failed to parse ttl for ipv4 address");
+            return tl::unexpected("connection: failed to parse ttl for ipv4 address");
         }
         if (parser.skip('/')) {
             if (auto num_addresses = parser.read_int<int32_t>()) {
                 info.number_of_addresses = *num_addresses;
             } else {
-                return parse_result<ConnectionInfoField>::err(
-                    "connection: failed to parse number of addresses for ipv4 address"
-                );
+                return tl::unexpected("connection: failed to parse number of addresses for ipv4 address");
             }
         }
     } else if (info.address_type == sdp::AddrType::ipv6) {
         if (auto num_addresses = parser.read_int<int32_t>()) {
             info.number_of_addresses = *num_addresses;
         } else {
-            return parse_result<ConnectionInfoField>::err(
-                "connection: failed to parse number of addresses for ipv4 address"
-            );
+            return tl::unexpected("connection: failed to parse number of addresses for ipv4 address");
         }
     }
 
     if (!parser.exhausted()) {
-        return parse_result<ConnectionInfoField>::err("connection: unexpected characters at end of line");
+        return tl::unexpected("connection: unexpected characters at end of line");
     }
 
-    return parse_result<ConnectionInfoField>::ok(std::move(info));
+    return info;
 }

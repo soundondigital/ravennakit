@@ -67,7 +67,7 @@ std::optional<rav::sdp::Format> rav::sdp::Format::from_audio_format(const AudioF
     return output_format;
 }
 
-rav::sdp::Format::parse_result<rav::sdp::Format> rav::sdp::Format::parse_new(const std::string_view line) {
+tl::expected<rav::sdp::Format, std::string> rav::sdp::Format::parse_new(const std::string_view line) {
     StringParser parser(line);
 
     Format map;
@@ -75,22 +75,22 @@ rav::sdp::Format::parse_result<rav::sdp::Format> rav::sdp::Format::parse_new(con
     if (const auto payload_type = parser.read_int<uint8_t>()) {
         map.payload_type = *payload_type;
         if (!parser.skip(' ')) {
-            return parse_result<Format>::err("rtpmap: expecting space after payload type");
+            return tl::unexpected("rtpmap: expecting space after payload type");
         }
     } else {
-        return parse_result<Format>::err("rtpmap: invalid payload type");
+        return tl::unexpected("rtpmap: invalid payload type");
     }
 
     if (const auto encoding_name = parser.split('/')) {
         map.encoding_name = *encoding_name;
     } else {
-        return parse_result<Format>::err("rtpmap: failed to parse encoding name");
+        return tl::unexpected("rtpmap: failed to parse encoding name");
     }
 
     if (const auto clock_rate = parser.read_int<uint32_t>()) {
         map.clock_rate = *clock_rate;
     } else {
-        return parse_result<Format>::err("rtpmap: invalid clock rate");
+        return tl::unexpected("rtpmap: invalid clock rate");
     }
 
     if (parser.skip('/')) {
@@ -99,11 +99,11 @@ rav::sdp::Format::parse_result<rav::sdp::Format> rav::sdp::Format::parse_new(con
             // channels.
             map.num_channels = *num_channels;
         } else {
-            return parse_result<Format>::err("rtpmap: failed to parse number of channels");
+            return tl::unexpected("rtpmap: failed to parse number of channels");
         }
     } else {
         map.num_channels = 1;
     }
 
-    return parse_result<Format>::ok(map);
+    return map;
 }

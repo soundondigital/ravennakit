@@ -13,17 +13,14 @@
 #include "detail/sdp_connection_info.hpp"
 #include "detail/sdp_constants.hpp"
 #include "detail/sdp_format.hpp"
+#include "detail/sdp_media_clock_source.hpp"
+#include "detail/sdp_ravenna_clock_domain.hpp"
+#include "detail/sdp_reference_clock.hpp"
+#include "detail/sdp_source_filter.hpp"
+#include "ravennakit/core/string_parser.hpp"
 
 #include <cstdint>
 #include <string>
-
-#include "detail/sdp_media_clock_source.hpp"
-#include "detail/sdp_ravenna_clock_domain.hpp"
-#include "ravennakit/core/result.hpp"
-#include "ravennakit/core/string_parser.hpp"
-#include "detail/sdp_reference_clock.hpp"
-#include "detail/sdp_source_filter.hpp"
-
 #include <map>
 
 namespace rav::sdp {
@@ -33,11 +30,6 @@ namespace rav::sdp {
  */
 class MediaDescription {
   public:
-    /// A type alias for a parse result.
-    /// TODO: Replace with tl::expected
-    template<class T>
-    using ParseResult = Result<T, std::string>;
-
     /**
      * @returns The media type of the media description (i.e. audio, video, text, application, message).
      */
@@ -272,7 +264,7 @@ class MediaDescription {
      * @returns A result indicating success or failure. When parsing fails, the error message will contain a
      * description of the error.
      */
-    static ParseResult<MediaDescription> parse_new(std::string_view line);
+    static tl::expected<MediaDescription, std::string> parse_new(std::string_view line);
 
     /**
      * Parse an attribute from a string.
@@ -280,7 +272,7 @@ class MediaDescription {
      * @return A result indicating success or failure. When parsing fails, the error message will contain a
      * description of the error.
      */
-    ParseResult<void> parse_attribute(std::string_view line);
+    tl::expected<void, std::string> parse_attribute(std::string_view line);
 
   private:
     std::string media_type_;

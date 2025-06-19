@@ -11,8 +11,6 @@
 #pragma once
 
 #include "sdp_types.hpp"
-#include "ravennakit/core/result.hpp"
-
 #include "ravennakit/core/expected.hpp"
 
 namespace rav::sdp {
@@ -44,17 +42,12 @@ struct ConnectionInfoField {
      */
     [[nodiscard]] tl::expected<std::string, std::string> to_string() const;
 
-    /// A type alias for a parse result.
-    template<class T>
-    using parse_result = Result<T, std::string>;
-
     /**
      * Parses a connection info field from a string.
      * @param line The string to parse.
-     * @return A pair containing the parse result and the connection info. When parsing fails, the connection info
-     * will be a default-constructed object.
+     * @return A result object containing either the newly parsed value, or an error string.
      */
-    static parse_result<ConnectionInfoField> parse_new(std::string_view line);
+    static tl::expected<ConnectionInfoField, std::string> parse_new(std::string_view line);
 };
 
 }

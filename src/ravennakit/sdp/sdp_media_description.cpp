@@ -17,12 +17,12 @@
 #include "ravennakit/sdp/detail/sdp_constants.hpp"
 #include "ravennakit/sdp/detail/sdp_source_filter.hpp"
 
-rav::sdp::MediaDescription::ParseResult<rav::sdp::MediaDescription>
+tl::expected<rav::sdp::MediaDescription, std::string>
 rav::sdp::MediaDescription::parse_new(const std::string_view line) {
     StringParser parser(line);
 
     if (!parser.skip("m=")) {
-        return ParseResult<MediaDescription>::err("media: expecting 'm='");
+        return tl::unexpected("media: expecting 'm='");
     }
 
     MediaDescription media;
@@ -31,7 +31,7 @@ rav::sdp::MediaDescription::parse_new(const std::string_view line) {
     if (const auto media_type = parser.split(' ')) {
         media.media_type_ = *media_type;
     } else {
-        return ParseResult<MediaDescription>::err("media: failed to parse media type");
+        return tl::unexpected("media: failed to parse media type");
     }
 
     // Port
@@ -41,21 +41,21 @@ rav::sdp::MediaDescription::parse_new(const std::string_view line) {
             if (const auto num_ports = parser.read_int<uint16_t>()) {
                 media.number_of_ports_ = *num_ports;
             } else {
-                return ParseResult<MediaDescription>::err("media: failed to parse number of ports as integer");
+                return tl::unexpected("media: failed to parse number of ports as integer");
             }
         } else {
             media.number_of_ports_ = 1;
         }
         parser.skip(' ');
     } else {
-        return ParseResult<MediaDescription>::err("media: failed to parse port as integer");
+        return tl::unexpected("media: failed to parse port as integer");
     }
 
     // Protocol
     if (const auto protocol = parser.split(' ')) {
         media.protocol_ = *protocol;
     } else {
-        return ParseResult<MediaDescription>::err("media: failed to parse protocol");
+        return tl::unexpected("media: failed to parse protocol");
     }
 
     // Formats
@@ -63,74 +63,72 @@ rav::sdp::MediaDescription::parse_new(const std::string_view line) {
         if (const auto value = rav::string_to_int<uint8_t>(*format_str)) {
             media.formats_.push_back({*value, {}, {}, {}});
         } else {
-            return ParseResult<MediaDescription>::err("media: format integer parsing failed");
+            return tl::unexpected("media: format integer parsing failed");
         }
     }
 
-    return ParseResult<MediaDescription>::ok(std::move(media));
+    return media;
 }
 
-rav::sdp::MediaDescription::ParseResult<void> rav::sdp::MediaDescription::parse_attribute(const std::string_view line) {
+tl::expected<void, std::string> rav::sdp::MediaDescription::parse_attribute(const std::string_view line) {
     StringParser parser(line);
 
     if (!parser.skip("a=")) {
-        return ParseResult<void>::err("attribute: expecting 'a='");
+        return tl::unexpected("attribute: expecting 'a='");
     }
 
     auto key = parser.split(':');
 
     if (!key) {
-        return ParseResult<void>::err("attribute: expecting key");
+        return tl::unexpected("attribute: expecting key");
     }
 
     if (key == k_sdp_rtp_map) {
         if (const auto value = parser.read_until_end()) {
-            auto format_result = Format::parse_new(*value);
-            if (format_result.is_err()) {
-                return ParseResult<void>::err(format_result.get_err());
+            auto format = Format::parse_new(*value);
+            if (!format) {
+                return tl::unexpected(format.error());
             }
-
-            auto format = format_result.move_ok();
 
             bool found = false;
             for (auto& fmt : formats_) {
-                if (fmt.payload_type == format.payload_type) {
-                    fmt = format;
+                if (fmt.payload_type == format->payload_type) {
+                    fmt = std::move(*format);
                     found = true;
                     break;
                 }
             }
             if (!found) {
-                return ParseResult<void>::err("media: rtpmap attribute for unknown payload type");
+                return tl::unexpected("media: rtpmap attribute for unknown payload type");
             }
         } else {
-            return ParseResult<void>::err("media: failed to parse rtpmap value");
+            return tl::unexpected("media: failed to parse rtpmap value");
         }
     } else if (key == k_sdp_ptime) {
         if (const auto value = parser.read_until_end()) {
             if (const auto ptime = string_to_float(value->data())) {
                 if (*ptime < 0) {
-                    return ParseResult<void>::err("media: ptime must be a positive number");
+                    return tl::unexpected("media: ptime must be a positive number");
                 }
                 ptime_ = *ptime;
             } else {
-                return ParseResult<void>::err("media: failed to parse ptime as double");
+                return tl::unexpected("media: failed to parse ptime as double");
             }
         } else {
-            return ParseResult<void>::err("media: failed to parse ptime value");
+            return tl::unexpected("media: failed to parse ptime value");
         }
     } else if (key == k_sdp_max_ptime) {
         if (const auto value = parser.read_until_end()) {
             if (const auto maxptime = string_to_float(value->data())) {
                 if (*maxptime < 0) {
-                    return ParseResult<void>::err("media: maxptime must be a positive number");
+                    return tl::unexpected("media: maxptime must be a positive number");
                 }
                 max_ptime_ = *maxptime;
             } else {
-                return ParseResult<void>::err("media: failed to parse ptime as double");
+                return tl::unexpected("media: failed to parse ptime as double");
             }
         } else {
-            return ParseResult<void>::err("media: failed to parse maxptime value");
+            return tl::unexpected("media: failed to parse maxptime value");
         }
     } else if (key == k_sdp_sendrecv) {
         media_direction_ = MediaDirection::sendrecv;
@@ -142,76 +140,76 @@ rav::sdp::MediaDescription::ParseResult<void> rav::sdp::MediaDescription::parse_
         media_direction_ = MediaDirection::inactive;
     } else if (key == k_sdp_ts_refclk) {
         if (const auto value = parser.read_until_end()) {
-            auto ref_clock = sdp::ReferenceClock::parse_new(*value);
-            if (ref_clock.is_err()) {
-                return ParseResult<void>::err(ref_clock.get_err());
+            auto ref_clock = ReferenceClock::parse_new(*value);
+            if (!ref_clock) {
+                return tl::unexpected(ref_clock.error());
             }
-            reference_clock_ = ref_clock.move_ok();
+            reference_clock_ = std::move(*ref_clock);
         } else {
-            return ParseResult<void>::err("media: failed to parse ts-refclk value");
+            return tl::unexpected("media: failed to parse ts-refclk value");
         }
-    } else if (key == sdp::MediaClockSource::k_attribute_name) {
+    } else if (key == MediaClockSource::k_attribute_name) {
         if (const auto value = parser.read_until_end()) {
             auto clock = sdp::MediaClockSource::parse_new(*value);
-            if (clock.is_err()) {
-                return ParseResult<void>::err(clock.get_err());
+            if (!clock) {
+                return tl::unexpected(clock.error());
             }
-            media_clock_ = clock.move_ok();
+            media_clock_ = *clock;
         } else {
-            return ParseResult<void>::err("media: failed to parse media clock value");
+            return tl::unexpected("media: failed to parse media clock value");
         }
     } else if (key == RavennaClockDomain::k_attribute_name) {
         if (const auto value = parser.read_until_end()) {
             auto clock_domain = RavennaClockDomain::parse_new(*value);
-            if (clock_domain.is_err()) {
-                return ParseResult<void>::err(clock_domain.get_err());
+            if (!clock_domain) {
+                return tl::unexpected(clock_domain.error());
             }
-            clock_domain_ = clock_domain.move_ok();
+            clock_domain_ = *clock_domain;
         } else {
-            return ParseResult<void>::err("media: failed to parse clock domain value");
+            return tl::unexpected("media: failed to parse clock domain value");
         }
     } else if (key == k_sdp_sync_time) {
         if (const auto rtp_ts = parser.read_int<uint32_t>()) {
             sync_time_ = *rtp_ts;
         } else {
-            return ParseResult<void>::err("media: failed to parse sync-time value");
+            return tl::unexpected("media: failed to parse sync-time value");
         }
     } else if (key == k_sdp_clock_deviation) {
         const auto num = parser.read_int<uint32_t>();
         if (!num) {
-            return ParseResult<void>::err("media: failed to parse clock-deviation value");
+            return tl::unexpected("media: failed to parse clock-deviation value");
         }
         if (!parser.skip('/')) {
-            return ParseResult<void>::err("media: expecting '/' after clock-deviation numerator value");
+            return tl::unexpected("media: expecting '/' after clock-deviation numerator value");
         }
         const auto denom = parser.read_int<uint32_t>();
         if (!denom) {
-            return ParseResult<void>::err("media: failed to parse clock-deviation denominator value");
+            return tl::unexpected("media: failed to parse clock-deviation denominator value");
         }
         clock_deviation_ = Fraction<uint32_t> {*num, *denom};
     } else if (key == SourceFilter::k_attribute_name) {
         if (const auto value = parser.read_until_end()) {
             auto filter = SourceFilter::parse_new(*value);
-            if (filter.is_err()) {
-                return ParseResult<void>::err(filter.get_err());
+            if (!filter) {
+                return tl::unexpected(filter.error());
             }
-            source_filters_.push_back(filter.move_ok());
+            source_filters_.push_back(std::move(*filter));
         } else {
-            return ParseResult<void>::err("media: failed to parse source-filter value");
+            return tl::unexpected("media: failed to parse source-filter value");
         }
     } else if (key == "framecount") {
         if (auto value = parser.read_int<uint16_t>()) {
             framecount_ = *value;
         } else {
-            return ParseResult<void>::err("media: failed to parse framecount value");
+            return tl::unexpected("media: failed to parse framecount value");
         }
     } else if (key == k_sdp_mid) {
         auto mid = parser.read_until_end();
         if (!mid) {
-            return ParseResult<void>::err("media: failed to parse mid value");
+            return tl::unexpected("media: failed to parse mid value");
         }
         if (mid->empty()) {
-            return ParseResult<void>::err("media: mid value cannot be empty");
+            return tl::unexpected("media: mid value cannot be empty");
         }
         mid_ = *mid;
     } else {
@@ -219,11 +217,11 @@ rav::sdp::MediaDescription::ParseResult<void> rav::sdp::MediaDescription::parse_
         if (auto value = parser.read_until_end()) {
             attributes_.emplace(*key, *value);
         } else {
-            return ParseResult<void>::err("media: failed to parse attribute value");
+            return tl::unexpected("media: failed to parse attribute value");
         }
     }
 
-    return ParseResult<void>::ok();
+    return {};
 }
 
 const std::string& rav::sdp::MediaDescription::media_type() const {
@@ -326,7 +324,7 @@ const std::optional<rav::sdp::MediaClockSource>& rav::sdp::MediaDescription::med
 }
 
 void rav::sdp::MediaDescription::set_media_clock(MediaClockSource media_clock) {
-    media_clock_ = std::move(media_clock);
+    media_clock_ = media_clock;
 }
 
 const std::optional<std::string>& rav::sdp::MediaDescription::session_information() const {

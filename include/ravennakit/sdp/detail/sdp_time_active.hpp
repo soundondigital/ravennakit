@@ -9,11 +9,10 @@
  */
 
 #pragma once
-#include "ravennakit/core/result.hpp"
 
-#include <cstdint>
-#include <string_view>
 #include "ravennakit/core/expected.hpp"
+
+#include <string_view>
 
 namespace rav::sdp {
 
@@ -40,16 +39,12 @@ struct TimeActiveField {
      */
     [[nodiscard]] tl::expected<std::string, std::string> to_string() const;
 
-    /// A type alias for a parse result.
-    template<class T>
-    using ParseResult = Result<T, std::string>;
-
     /**
      * Parses a time field from a string.
      * @param line The string to parse.
      * @return A pair containing the parse result and the time field.
      */
-    static ParseResult<TimeActiveField> parse_new(std::string_view line);
+    static tl::expected<TimeActiveField, std::string> parse_new(std::string_view line);
 };
 
 }  // namespace rav::sdp

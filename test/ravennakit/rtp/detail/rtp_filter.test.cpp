@@ -54,8 +54,8 @@ TEST_CASE("rtp_filter") {
 
     SECTION("add_filter with single include address") {
         auto src_filter = rav::sdp::SourceFilter::parse_new(" incl IN IP4 239.3.8.1 192.168.16.52");
-        REQUIRE(src_filter.is_ok());
-        REQUIRE(filter.add_filter(src_filter.get_ok()) == 1);
+        REQUIRE(src_filter);
+        REQUIRE(filter.add_filter(*src_filter) == 1);
         REQUIRE_FALSE(filter.empty());
         REQUIRE(filter.connection_address() == boost::asio::ip::make_address("239.3.8.1"));
         REQUIRE(filter.is_valid_source(boost::asio::ip::make_address("239.3.8.1"), boost::asio::ip::make_address("192.168.16.52")));
@@ -66,8 +66,8 @@ TEST_CASE("rtp_filter") {
 
     SECTION("add_filter with single exclude address") {
         auto src_filter = rav::sdp::SourceFilter::parse_new(" excl IN IP4 239.3.8.1 192.168.16.52");
-        REQUIRE(src_filter.is_ok());
-        REQUIRE(filter.add_filter(src_filter.get_ok()) == 1);
+        REQUIRE(src_filter);
+        REQUIRE(filter.add_filter(*src_filter) == 1);
         REQUIRE_FALSE(filter.empty());
         REQUIRE(filter.connection_address() == boost::asio::ip::make_address("239.3.8.1"));
         REQUIRE_FALSE(

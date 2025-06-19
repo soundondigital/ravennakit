@@ -14,15 +14,14 @@
 
 TEST_CASE("media_description | origin_field") {
     SECTION("Parse origin line") {
-        auto result = rav::sdp::OriginField::parse_new("o=- 13 0 IN IP4 192.168.15.52");
-        REQUIRE(result.is_ok());
-        auto origin = result.move_ok();
-        REQUIRE(origin.username == "-");
-        REQUIRE(origin.session_id == "13");
-        REQUIRE(origin.session_version == 0);
-        REQUIRE(origin.network_type == rav::sdp::NetwType::internet);
-        REQUIRE(origin.address_type == rav::sdp::AddrType::ipv4);
-        REQUIRE(origin.unicast_address == "192.168.15.52");
+        auto origin = rav::sdp::OriginField::parse_new("o=- 13 0 IN IP4 192.168.15.52");
+        REQUIRE(origin);
+        REQUIRE(origin->username == "-");
+        REQUIRE(origin->session_id == "13");
+        REQUIRE(origin->session_version == 0);
+        REQUIRE(origin->network_type == rav::sdp::NetwType::internet);
+        REQUIRE(origin->address_type == rav::sdp::AddrType::ipv4);
+        REQUIRE(origin->unicast_address == "192.168.15.52");
     }
 
     SECTION("To string") {

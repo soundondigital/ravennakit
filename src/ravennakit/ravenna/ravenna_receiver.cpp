@@ -110,10 +110,10 @@ rav::RavennaReceiver::Configuration::from_json(const nlohmann::json& json) {
         const auto sdp_text = json.at("sdp").get<std::string>();
         if (!sdp_text.empty()) {
             auto sdp = sdp::SessionDescription::parse_new(sdp_text);
-            if (sdp.is_err()) {
-                return tl::unexpected(fmt::format("Failed to parse SDP: {}", sdp.get_err()));
+            if (!sdp) {
+                return tl::unexpected(fmt::format("Failed to parse SDP: {}", sdp.error()));
             }
-            config.sdp = sdp.move_ok();
+            config.sdp = std::move(*sdp);
         }
 
         return config;

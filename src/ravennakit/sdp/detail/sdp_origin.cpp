@@ -44,11 +44,11 @@ tl::expected<std::string, std::string> rav::sdp::OriginField::to_string() const 
     );
 }
 
-rav::sdp::OriginField::ParseResult<rav::sdp::OriginField> rav::sdp::OriginField::parse_new(std::string_view line) {
+tl::expected<rav::sdp::OriginField, std::string> rav::sdp::OriginField::parse_new(std::string_view line) {
     StringParser parser(line);
 
     if (!parser.skip("o=")) {
-        return ParseResult<OriginField>::err("origin: expecting 'o='");
+        return tl::unexpected("origin: expecting 'o='");
     }
 
     OriginField o;
@@ -57,14 +57,14 @@ rav::sdp::OriginField::ParseResult<rav::sdp::OriginField> rav::sdp::OriginField:
     if (const auto username = parser.split(' ')) {
         o.username = *username;
     } else {
-        return ParseResult<OriginField>::err("origin: failed to parse username");
+        return tl::unexpected("origin: failed to parse username");
     }
 
     // Session id
     if (const auto session_id = parser.split(' ')) {
         o.session_id = *session_id;
     } else {
-        return ParseResult<OriginField>::err("origin: failed to parse session id");
+        return tl::unexpected("origin: failed to parse session id");
     }
 
     // Session version
@@ -72,17 +72,17 @@ rav::sdp::OriginField::ParseResult<rav::sdp::OriginField> rav::sdp::OriginField:
         o.session_version = *version;
         parser.skip(' ');
     } else {
-        return ParseResult<OriginField>::err("origin: failed to parse session version");
+        return tl::unexpected("origin: failed to parse session version");
     }
 
     // Network type
     if (const auto network_type = parser.split(' ')) {
         if (*network_type != k_sdp_inet) {
-            return ParseResult<OriginField>::err("origin: invalid network type");
+            return tl::unexpected("origin: invalid network type");
         }
         o.network_type = NetwType::internet;
     } else {
-        return ParseResult<OriginField>::err("origin: failed to parse network type");
+        return tl::unexpected("origin: failed to parse network type");
     }
 
     // Address type
@@ -92,18 +92,18 @@ rav::sdp::OriginField::ParseResult<rav::sdp::OriginField> rav::sdp::OriginField:
         } else if (*address_type == k_sdp_ipv6) {
             o.address_type = AddrType::ipv6;
         } else {
-            return ParseResult<OriginField>::err("origin: invalid address type");
+            return tl::unexpected("origin: invalid address type");
         }
     } else {
-        return ParseResult<OriginField>::err("origin: failed to parse address type");
+        return tl::unexpected("origin: failed to parse address type");
     }
 
     // Address
     if (const auto address = parser.split(' ')) {
         o.unicast_address = *address;
     } else {
-        return ParseResult<OriginField>::err("origin: failed to parse address");
+        return tl::unexpected("origin: failed to parse address");
     }
 
-    return ParseResult<OriginField>::ok(std::move(o));
+    return o;
 }

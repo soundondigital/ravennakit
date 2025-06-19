@@ -71,13 +71,12 @@ tl::expected<std::string, std::string> rav::sdp::ReferenceClock::to_string() con
     return fmt::format("a={}:{}", k_sdp_ts_refclk, to_string(source_));
 }
 
-rav::sdp::ReferenceClock::ParseResult<rav::sdp::ReferenceClock>
-rav::sdp::ReferenceClock::parse_new(const std::string_view line) {
+tl::expected<rav::sdp::ReferenceClock, std::string> rav::sdp::ReferenceClock::parse_new(const std::string_view line) {
     StringParser parser(line);
 
     const auto source = parser.split("=");
     if (!source) {
-        return ParseResult<ReferenceClock>::err("reference_clock: invalid source");
+        return tl::unexpected("reference_clock: invalid source");
     }
 
     if (source == "ptp") {
@@ -95,7 +94,7 @@ rav::sdp::ReferenceClock::parse_new(const std::string_view line) {
             } else if (ptp_version == "traceable") {
                 ref_clock.ptp_version_ = PtpVersion::traceable;
             } else {
-                return ParseResult<ReferenceClock>::err("reference_clock: unknown ptp version");
+                return tl::unexpected("reference_clock: unknown ptp version");
             }
         }
 
@@ -104,21 +103,21 @@ rav::sdp::ReferenceClock::parse_new(const std::string_view line) {
         }
 
         if (parser.exhausted()) {
-            return ParseResult<ReferenceClock>::ok(std::move(ref_clock));
+            return ref_clock;
         }
 
         if (const auto domain = parser.read_int<int32_t>()) {
             ref_clock.domain_ = *domain;
         } else {
-            return ParseResult<ReferenceClock>::err("reference_clock: invalid domain");
+            return tl::unexpected("reference_clock: invalid domain");
         }
 
-        return ParseResult<ReferenceClock>::ok(std::move(ref_clock));
+        return ref_clock;
     }
 
     RAV_WARNING("reference_clock: ignoring clock source: {}", *source);
 
-    return ParseResult<ReferenceClock>::err("reference_clock: unsupported source");
+    return tl::unexpected("reference_clock: unsupported source");
 }
 
 std::string rav::sdp::ReferenceClock::to_string(const ClockSource source) {

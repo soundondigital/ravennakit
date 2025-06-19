@@ -17,7 +17,7 @@ rav::sdp::MediaClockSource::MediaClockSource(
 ) :
     mode_(mode), offset_(offset), rate_(rate) {}
 
-rav::sdp::MediaClockSource::ParseResult<rav::sdp::MediaClockSource>
+tl::expected<rav::sdp::MediaClockSource, std::string>
 rav::sdp::MediaClockSource::parse_new(const std::string_view line) {
     StringParser parser(line);
 
@@ -31,47 +31,47 @@ rav::sdp::MediaClockSource::parse_new(const std::string_view line) {
                 clock.mode_ = ClockMode::direct;
             } else {
                 RAV_WARNING("Unsupported media clock mode: {}", *mode);
-                return ParseResult<MediaClockSource>::err("media_clock: unsupported media clock mode");
+                return tl::unexpected("media_clock: unsupported media clock mode");
             }
         } else {
-            return ParseResult<MediaClockSource>::err("media_clock: invalid media clock mode");
+            return tl::unexpected("media_clock: invalid media clock mode");
         }
 
         if (!mode_parser.exhausted()) {
             if (const auto offset = mode_parser.read_int<int64_t>()) {
                 clock.offset_ = *offset;
             } else {
-                return ParseResult<MediaClockSource>::err("media_clock: invalid offset");
+                return tl::unexpected("media_clock: invalid offset");
             }
         }
     }
 
     if (parser.exhausted()) {
-        return ParseResult<MediaClockSource>::ok(clock);
+        return clock;
     }
 
     if (const auto rate = parser.split('=')) {
         if (rate == "rate") {
             const auto numerator = parser.read_int<int32_t>();
             if (!numerator) {
-                return ParseResult<MediaClockSource>::err("media_clock: invalid rate numerator");
+                return tl::unexpected("media_clock: invalid rate numerator");
             }
             if (!parser.skip('/')) {
-                return ParseResult<MediaClockSource>::err("media_clock: invalid rate denominator");
+                return tl::unexpected("media_clock: invalid rate denominator");
             }
             const auto denominator = parser.read_int<int32_t>();
             if (!denominator) {
-                return ParseResult<MediaClockSource>::err("media_clock: invalid rate denominator");
+                return tl::unexpected("media_clock: invalid rate denominator");
             }
             clock.rate_ = Fraction<int32_t> {*numerator, *denominator};
         } else {
-            return ParseResult<MediaClockSource>::err("media_clock: unexpected token");
+            return tl::unexpected("media_clock: unexpected token");
         }
     } else {
-        return ParseResult<MediaClockSource>::err("media_clock: expecting rate");
+        return tl::unexpected("media_clock: expecting rate");
     }
 
-    return ParseResult<MediaClockSource>::ok(clock);
+    return clock;
 }
 
 rav::sdp::MediaClockSource::ClockMode rav::sdp::MediaClockSource::mode() const {

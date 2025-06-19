@@ -11,21 +11,16 @@
 #pragma once
 
 #include "sdp_types.hpp"
-#include "ravennakit/core/result.hpp"
+#include "ravennakit/core/expected.hpp"
 
 #include <string>
 #include <vector>
-#include "ravennakit/core/expected.hpp"
 
 namespace rav::sdp {
 
 class SourceFilter {
   public:
     static constexpr auto k_attribute_name = "source-filter";
-
-    /// A type alias for a parse result.
-    template<class T>
-    using ParseResult = Result<T, std::string>;
 
     SourceFilter() = default;
     SourceFilter(
@@ -86,7 +81,7 @@ class SourceFilter {
      * @return A pair containing the parse result and the connection info. When parsing fails, the connection info
      * will be a default-constructed object.
      */
-    static ParseResult<SourceFilter> parse_new(std::string_view line);
+    static tl::expected<SourceFilter, std::string> parse_new(std::string_view line);
 
   private:
     FilterMode mode_ {FilterMode::undefined};

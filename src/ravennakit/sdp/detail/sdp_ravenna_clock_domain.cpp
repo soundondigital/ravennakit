@@ -40,7 +40,7 @@ std::string rav::sdp::RavennaClockDomain::to_string(const SyncSource source) {
     }
 }
 
-rav::sdp::RavennaClockDomain::ParseResult<rav::sdp::RavennaClockDomain>
+tl::expected<rav::sdp::RavennaClockDomain, std::string>
 rav::sdp::RavennaClockDomain::parse_new(const std::string_view line) {
     StringParser parser(line);
 
@@ -51,14 +51,14 @@ rav::sdp::RavennaClockDomain::parse_new(const std::string_view line) {
             if (const auto domain = parser.read_int<int32_t>()) {
                 clock_domain = RavennaClockDomain {SyncSource::ptp_v2, *domain};
             } else {
-                return ParseResult<RavennaClockDomain>::err("clock_domain: invalid domain");
+                return tl::unexpected("clock_domain: invalid domain");
             }
         } else {
-            return ParseResult<RavennaClockDomain>::err("clock_domain: unsupported sync source");
+            return tl::unexpected("clock_domain: unsupported sync source");
         }
     } else {
-        return ParseResult<RavennaClockDomain>::err("clock_domain: failed to parse sync source");
+        return tl::unexpected("clock_domain: failed to parse sync source");
     }
 
-    return ParseResult<RavennaClockDomain>::ok(clock_domain);
+    return clock_domain;
 }
