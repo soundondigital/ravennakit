@@ -8,6 +8,8 @@
  * Copyright (c) 2025 Owllab. All rights reserved.
  */
 
+#pragma comment(lib, "winmm.lib")
+
 #include "ravennakit/ravenna/ravenna_sender.hpp"
 #include "ravennakit/ravenna/ravenna_sender.hpp"
 
