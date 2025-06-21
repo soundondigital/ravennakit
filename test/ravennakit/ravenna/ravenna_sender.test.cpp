@@ -57,7 +57,7 @@ TEST_CASE("RavennaSender") {
     rav::rtsp::Server rtsp_server(io_context, "127.0.0.1", 0);
     rav::ptp::Instance ptp_instance(io_context);
     rav::RavennaSender sender(
-        io_context, *advertiser, rtsp_server, ptp_instance, rav::Id::get_next_process_wide_unique_id(), 1
+        io_context, *advertiser, rtsp_server, ptp_instance, rav::Id{1}, 1
     );
     REQUIRE(sender.set_configuration(config).has_value());
 
