@@ -8,8 +8,6 @@
  * Copyright (c) 2025 Owllab. All rights reserved.
  */
 
-#pragma comment(lib, "winmm.lib")
-
 #include "ravennakit/ravenna/ravenna_sender.hpp"
 #include "ravennakit/ravenna/ravenna_sender.hpp"
 
@@ -23,6 +21,10 @@
 
 #if RAV_WINDOWS
     #include <timeapi.h>
+#endif
+
+#if RAV_WINDOWS
+    #pragma comment(lib, "winmm.lib")
 #endif
 
 nlohmann::json rav::RavennaSender::Destination::to_json() const {
