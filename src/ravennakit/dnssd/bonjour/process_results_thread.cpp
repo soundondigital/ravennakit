@@ -14,6 +14,8 @@
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/core/platform/windows/socket_event.hpp"
 
+#include <chrono>
+
 #if RAV_HAS_APPLE_DNSSD
 
 rav::dnssd::ProcessResultsThread::~ProcessResultsThread() {
