@@ -163,7 +163,7 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::Configuration::va
     return {};
 }
 
-boost::json::value rav::nmos::Node::Configuration::to_json() const {
+boost::json::object rav::nmos::Node::Configuration::to_json() const {
     return {
         {"id", to_string(id)},
         {"operation_mode", to_string(operation_mode)},
@@ -1875,8 +1875,8 @@ std::optional<size_t> rav::nmos::Node::index_of_supported_api_version(const ApiV
 }
 
 boost::json::object rav::nmos::Node::to_json() const {
-    return boost::json::object {
-        {"configuration", boost::json::value_from(configuration_.to_json())},
+    return {
+        {"configuration", configuration_.to_json()},
     };
 }
 

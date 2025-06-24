@@ -199,7 +199,7 @@ rav::RavennaNode::update_sender_configuration(Id sender_id, RavennaSender::Confi
 
 std::future<tl::expected<void, std::string>>
 rav::RavennaNode::set_nmos_configuration(nmos::Node::Configuration update) {
-    auto work = [this, u = std::move(update)] ()-> tl::expected<void, std::string> {
+    auto work = [this, u = std::move(update)]() -> tl::expected<void, std::string> {
         auto result = nmos_node_.set_configuration(u);
         if (!result) {
             return tl::unexpected(fmt::format("Failed to set nmos configuration: {}", result.error()));
@@ -210,6 +210,13 @@ rav::RavennaNode::set_nmos_configuration(nmos::Node::Configuration update) {
             return tl::unexpected("Failed to update NMOS device configuration");
         }
         return {};
+    };
+    return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
+}
+
+std::future<boost::uuids::uuid> rav::RavennaNode::get_nmos_device_id() {
+    auto work = [this]() -> boost::uuids::uuid {
+        return nmos_device_.id;
     };
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
 }

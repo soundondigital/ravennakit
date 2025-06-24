@@ -66,7 +66,7 @@ class Node: public ptp::Instance::Subscriber {
         /**
          * @return The configuration as a JSON object.
          */
-        [[nodiscard]] boost::json::value to_json() const;
+        [[nodiscard]] boost::json::object to_json() const;
 
         /**
          * Creates a configuration object from a JSON object.
