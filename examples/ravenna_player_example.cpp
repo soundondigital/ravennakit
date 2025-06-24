@@ -41,8 +41,9 @@ class wav_file_player: public rav::ptp::Instance::Subscriber {
         }
 
         auto id = id_generator.next();
-        auto sender =
-            std::make_unique<rav::RavennaSender>(io_context, advertiser, rtsp_server, ptp_instance, id, id.value());
+        auto sender = std::make_unique<rav::RavennaSender>(
+            io_context, advertiser, rtsp_server, ptp_instance, id, static_cast<uint32_t>(id.value())
+        );
 
         auto* iface = rav::NetworkInterfaceList::get_system_interfaces().find_by_string(interface_search_string);
         if (iface == nullptr) {
