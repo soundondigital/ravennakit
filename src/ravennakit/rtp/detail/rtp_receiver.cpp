@@ -15,7 +15,6 @@
 #include "ravennakit/core/events/subscriber_list.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
 #include "ravennakit/core/tracy.hpp"
-#include "ravennakit/core/subscription.hpp"
 
 #include <fmt/core.h>
 #include "ravennakit/core/expected.hpp"

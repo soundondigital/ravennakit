@@ -23,24 +23,9 @@ TEST_CASE("rollback::rollback()", "[rollback]") {
         REQUIRE(count == 1);
     }
 
-    SECTION("Rollback with initial and added function") {
-        {
-            rav::ScopedRollback rollback([&count] {
-                count++;
-            });
-            rollback.add([&count] {
-                count++;
-            });
-        }
-        REQUIRE(count == 2);
-    }
-
     SECTION("Rollback won't happen when cancelled") {
         {
             rav::ScopedRollback rollback([&count] {
-                count++;
-            });
-            rollback.add([&count] {
                 count++;
             });
             rollback.commit();
