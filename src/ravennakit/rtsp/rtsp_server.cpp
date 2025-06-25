@@ -15,7 +15,7 @@
 #include "ravennakit/rtsp/detail/rtsp_request.hpp"
 #include "ravennakit/core/util/exclusive_access_guard.hpp"
 #include "ravennakit/core/util/tracy.hpp"
-#include "ravennakit/core/uri.hpp"
+#include "ravennakit/core/util/uri.hpp"
 
 rav::rtsp::Server::~Server() {
     for (const auto& [path, ctx] : paths_) {

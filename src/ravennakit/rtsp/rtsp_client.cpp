@@ -12,7 +12,7 @@
 
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/rtsp/detail/rtsp_request.hpp"
-#include "ravennakit/core/uri.hpp"
+#include "ravennakit/core/util/uri.hpp"
 
 rav::rtsp::Client::Client(boost::asio::io_context& io_context) :
     resolver_(io_context), connection_(Connection::create(boost::asio::ip::tcp::socket(io_context))) {}

@@ -12,7 +12,7 @@
 
 #include "ravennakit/aes67/aes67_constants.hpp"
 #include "ravennakit/aes67/aes67_packet_time.hpp"
-#include "ravennakit/core/uri.hpp"
+#include "ravennakit/core/util/uri.hpp"
 #include "ravennakit/core/json.hpp"
 #include "ravennakit/core/audio/audio_buffer_view.hpp"
 #include "ravennakit/core/containers/fifo_buffer.hpp"
