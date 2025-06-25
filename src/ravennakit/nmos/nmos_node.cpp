@@ -11,7 +11,7 @@
 #include "ravennakit/nmos/nmos_node.hpp"
 
 #include "ravennakit/core/json.hpp"
-#include "ravennakit/core/rollback.hpp"
+#include "ravennakit/core/scoped_rollback.hpp"
 #include "ravennakit/core/util/stl_helpers.hpp"
 #include "ravennakit/core/util/todo.hpp"
 #include "ravennakit/nmos/models/nmos_activation_response.hpp"

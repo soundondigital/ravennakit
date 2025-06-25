@@ -1,4 +1,4 @@
-#include "ravennakit/core/rollback.hpp"
+#include "ravennakit/core/scoped_rollback.hpp"
 #include "ravennakit/dnssd/bonjour/bonjour.hpp"
 
 #include <boost/asio.hpp>

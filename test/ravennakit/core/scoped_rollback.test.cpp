@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/core/rollback.hpp"
+#include "ravennakit/core/scoped_rollback.hpp"
 
 #include "catch2/catch_all.hpp"
 
@@ -16,7 +16,7 @@ TEST_CASE("rollback::rollback()", "[rollback]") {
     int count = 0;
     SECTION("Rollback with initial function") {
         {
-            rav::Rollback rollback([&count] {
+            rav::ScopedRollback rollback([&count] {
                 count++;
             });
         }
@@ -25,7 +25,7 @@ TEST_CASE("rollback::rollback()", "[rollback]") {
 
     SECTION("Rollback with initial and added function") {
         {
-            rav::Rollback rollback([&count] {
+            rav::ScopedRollback rollback([&count] {
                 count++;
             });
             rollback.add([&count] {
@@ -37,7 +37,7 @@ TEST_CASE("rollback::rollback()", "[rollback]") {
 
     SECTION("Rollback won't happen when cancelled") {
         {
-            rav::Rollback rollback([&count] {
+            rav::ScopedRollback rollback([&count] {
                 count++;
             });
             rollback.add([&count] {
