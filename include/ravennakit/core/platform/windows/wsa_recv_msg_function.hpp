@@ -14,6 +14,8 @@
 
 #if RAV_WINDOWS
 
+    #include "ravennakit/core/scoped_rollback.hpp"
+
     #include <winsock2.h>
     #include <mswsock.h>
 
@@ -34,7 +36,7 @@ class wsa_recv_msg_function {
      */
     wsa_recv_msg_function() {
         SOCKET temp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        rav::Defer defer_closing_socket([&temp_sock] {
+        ScopedRollback defer_closing_socket([&temp_sock] {
             closesocket(temp_sock);
         });
         DWORD bytes_returned = 0;
@@ -71,6 +73,6 @@ class wsa_recv_msg_function {
     LPFN_WSARECVMSG wsa_recv_msg_func_ {};
 };
 
-}  // namespace rav
+}  // namespace rav::windows
 
 #endif
