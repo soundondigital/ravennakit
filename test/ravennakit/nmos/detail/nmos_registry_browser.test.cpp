@@ -36,7 +36,7 @@ class CustomMockBrowser final: public rav::dnssd::MockBrowser {
 
 }  // namespace
 
-TEST_CASE("NMOS Registry Browser") {
+TEST_CASE("rav::nmos::RegistryBrowser") {
     CustomMockBrowser* multicast_browser {};
 
     auto multicast_browser_factory = [&multicast_browser](boost::asio::io_context& io_context) {

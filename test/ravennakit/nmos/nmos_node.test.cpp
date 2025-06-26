@@ -9,6 +9,7 @@
  */
 
 #include "ravennakit/nmos/nmos_node.hpp"
+#include "nmos_node.test.hpp"
 
 #include <catch2/catch_all.hpp>
 
@@ -97,7 +98,7 @@ class NodeTestHttpClient final: public rav::HttpClientBase {
 
 }  // namespace
 
-TEST_CASE("nmos::Node") {
+TEST_CASE("rav::nmos::Node") {
     SECTION("Supported api versions") {
         auto versions = rav::nmos::Node::k_node_api_versions;
         REQUIRE(versions.size() == 2);
@@ -319,4 +320,36 @@ TEST_CASE("nmos::Node") {
             REQUIRE(receiver.device_id != device_1_id);
         }
     }
+
+    SECTION("JSON") {
+        rav::nmos::Node::Configuration config;
+        config.id = boost::uuids::random_generator()();
+        config.operation_mode = rav::nmos::OperationMode::mdns_p2p;
+        config.api_version = rav::nmos::ApiVersion {1, 2};
+        config.registry_address = "http://127.0.0.1:8080";
+        config.enabled = false;
+        config.api_port = 1234;
+        config.label = "label";
+        config.description = "description";
+
+        rav::nmos::test_nmos_node_configuration_json(config, config.to_json());
+        rav::nmos::test_nmos_node_configuration_json(config, boost::json::value_from(config));
+
+        boost::asio::io_context io_context;
+        rav::ptp::Instance ptp_instance(io_context);
+        rav::nmos::Node node(io_context, ptp_instance);
+        REQUIRE(node.set_configuration(config));
+    }
+}
+
+void rav::nmos::test_nmos_node_configuration_json(const Node::Configuration& config, const boost::json::value& json) {
+    REQUIRE(json.is_object());
+    REQUIRE(json.at("id").as_string() == boost::uuids::to_string(config.id));
+    REQUIRE(json.at("operation_mode").as_string() == rav::nmos::to_string(config.operation_mode));
+    REQUIRE(json.at("api_version").as_string() == config.api_version.to_string());
+    REQUIRE(json.at("registry_address").as_string() == config.registry_address);
+    REQUIRE(json.at("enabled") == config.enabled);
+    REQUIRE(json.at("api_port") == config.api_port);
+    REQUIRE(json.at("label").as_string() == config.label);
+    REQUIRE(json.at("description").as_string() == config.description);
 }

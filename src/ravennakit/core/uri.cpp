@@ -8,8 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/core/uri.hpp"
-
+#include "ravennakit/core/util/uri.hpp"
 #include "ravennakit/core/string_parser.hpp"
 
 rav::Uri rav::Uri::parse(const std::string& encoded_uri) {

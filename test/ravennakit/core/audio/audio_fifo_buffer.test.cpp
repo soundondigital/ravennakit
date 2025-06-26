@@ -116,7 +116,7 @@ void test_circular_buffer_read_write() {
 
 }  // namespace
 
-TEST_CASE("circular_audio_buffer", "[circular_audio_buffer]") {
+TEST_CASE("rav::CircularAudioBuffer") {
     SECTION("Buffers holding different types should be able to be created") {
         instantiate_buffer<int, rav::Fifo::Single>();
         instantiate_buffer<int, rav::Fifo::Spsc>();
@@ -347,68 +347,69 @@ TEST_CASE("circular_audio_buffer", "[circular_audio_buffer]") {
 
         REQUIRE(total == expected_total);
     }
-}
 
-TEST_CASE("circular_audio_buffer | read from data", "[circular_audio_buffer]") {
-    rav::VectorBuffer<int16_t> src({1, 2, 3, 4, 5, 6});
-    rav::AudioFifoBuffer<int16_t> ring(2, 5);
+    SECTION("Read from data") {
+        rav::VectorBuffer<int16_t> src({1, 2, 3, 4, 5, 6});
+        rav::AudioFifoBuffer<int16_t> ring(2, 5);
 
-    auto result =
-        ring.write_from_data<int16_t, rav::AudioData::ByteOrder::Ne, rav::AudioData::Interleaving::Interleaved>(
-            src.data(), 3
+        auto result =
+            ring.write_from_data<int16_t, rav::AudioData::ByteOrder::Ne, rav::AudioData::Interleaving::Interleaved>(
+                src.data(), 3
+            );
+
+        REQUIRE(result);
+
+        rav::AudioBuffer<int16_t> dst(2, 3);
+        auto read_result = ring.read(dst);
+        REQUIRE(read_result);
+        REQUIRE(dst[0][0] == 1);
+        REQUIRE(dst[0][1] == 3);
+        REQUIRE(dst[0][2] == 5);
+        REQUIRE(dst[1][0] == 2);
+        REQUIRE(dst[1][1] == 4);
+        REQUIRE(dst[1][2] == 6);
+
+        result =
+            ring.write_from_data<int16_t, rav::AudioData::ByteOrder::Ne, rav::AudioData::Interleaving::Interleaved>(
+                src.data(), 3
+            );
+
+        REQUIRE(result);
+
+        dst.clear();
+        read_result = ring.read(dst);
+        REQUIRE(read_result);
+        REQUIRE(dst[0][0] == 1);
+        REQUIRE(dst[0][1] == 3);
+        REQUIRE(dst[0][2] == 5);
+        REQUIRE(dst[1][0] == 2);
+        REQUIRE(dst[1][1] == 4);
+        REQUIRE(dst[1][2] == 6);
+    }
+
+    SECTION("Write to data") {
+        rav::VectorBuffer<int16_t> src({1, 2, 3, 4, 5, 6});
+        rav::AudioFifoBuffer<int16_t> ring(2, 5);
+
+        auto result =
+            ring.write_from_data<int16_t, rav::AudioData::ByteOrder::Ne, rav::AudioData::Interleaving::Interleaved>(
+                src.data(), 3
+            );
+
+        REQUIRE(result);
+
+        std::vector<int16_t> dst(6);
+        result = ring.read_to_data<int16_t, rav::AudioData::ByteOrder::Ne, rav::AudioData::Interleaving::Interleaved>(
+            dst.data(), 3
         );
 
-    REQUIRE(result);
+        REQUIRE(result);
 
-    rav::AudioBuffer<int16_t> dst(2, 3);
-    auto read_result = ring.read(dst);
-    REQUIRE(read_result);
-    REQUIRE(dst[0][0] == 1);
-    REQUIRE(dst[0][1] == 3);
-    REQUIRE(dst[0][2] == 5);
-    REQUIRE(dst[1][0] == 2);
-    REQUIRE(dst[1][1] == 4);
-    REQUIRE(dst[1][2] == 6);
-
-    result = ring.write_from_data<int16_t, rav::AudioData::ByteOrder::Ne, rav::AudioData::Interleaving::Interleaved>(
-        src.data(), 3
-    );
-
-    REQUIRE(result);
-
-    dst.clear();
-    read_result = ring.read(dst);
-    REQUIRE(read_result);
-    REQUIRE(dst[0][0] == 1);
-    REQUIRE(dst[0][1] == 3);
-    REQUIRE(dst[0][2] == 5);
-    REQUIRE(dst[1][0] == 2);
-    REQUIRE(dst[1][1] == 4);
-    REQUIRE(dst[1][2] == 6);
-}
-
-TEST_CASE("circular_audio_buffer | write to data", "[circular_audio_buffer]") {
-    rav::VectorBuffer<int16_t> src({1, 2, 3, 4, 5, 6});
-    rav::AudioFifoBuffer<int16_t> ring(2, 5);
-
-    auto result =
-        ring.write_from_data<int16_t, rav::AudioData::ByteOrder::Ne, rav::AudioData::Interleaving::Interleaved>(
-            src.data(), 3
-        );
-
-    REQUIRE(result);
-
-    std::vector<int16_t> dst(6);
-    result = ring.read_to_data<int16_t, rav::AudioData::ByteOrder::Ne, rav::AudioData::Interleaving::Interleaved>(
-        dst.data(), 3
-    );
-
-    REQUIRE(result);
-
-    REQUIRE(dst[0] == 1);
-    REQUIRE(dst[1] == 2);
-    REQUIRE(dst[2] == 3);
-    REQUIRE(dst[3] == 4);
-    REQUIRE(dst[4] == 5);
-    REQUIRE(dst[5] == 6);
+        REQUIRE(dst[0] == 1);
+        REQUIRE(dst[1] == 2);
+        REQUIRE(dst[2] == 3);
+        REQUIRE(dst[3] == 4);
+        REQUIRE(dst[4] == 5);
+        REQUIRE(dst[5] == 6);
+    }
 }

@@ -20,7 +20,6 @@ enum class SafeIntError { overflow, underflow, div_by_zero };
 
 /**
  * A safe integer type that checks for overflow and underflow when performing arithmetic operations.
- * TODO: Remove and replace with boost::safe_numerics.
  * @tparam T The type of the integer.
  */
 template<class T>

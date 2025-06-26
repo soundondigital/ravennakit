@@ -13,15 +13,18 @@
 #include "rtsp_request.hpp"
 #include "rtsp_response.hpp"
 #include "ravennakit/core/containers/string_buffer.hpp"
-#include "../../core/events/event_emitter.hpp"
+#include "ravennakit/core/util/safe_function.hpp"
 
 namespace rav::rtsp {
 
 /**
  * Parses RTSP messages.
  */
-class Parser final: public EventEmitter<Request, Response> {
+class Parser final {
   public:
+    SafeFunction<void(const Request& request)> on_request;
+    SafeFunction<void(const Response& response)> on_response;
+
     /**
      * The status of parsing.
      */
@@ -52,7 +55,7 @@ class Parser final: public EventEmitter<Request, Response> {
     /**
      * Resets the state to initial state. This also removes event subscribers.
      */
-    void reset() noexcept override;
+    void reset() noexcept;
 
   private:
     enum class state {

@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("ptp_clock_identity") {
+TEST_CASE("rav::ptp::ClockIdentity") {
     SECTION("Construct from MAC address") {
         const rav::MacAddress mac_address("a1:b2:c3:d4:e5:f6");
         const rav::ptp::ClockIdentity clock_identity = rav::ptp::ClockIdentity::from_mac_address(mac_address);

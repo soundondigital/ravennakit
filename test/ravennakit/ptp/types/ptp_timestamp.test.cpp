@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("ptp_timestamp") {
+TEST_CASE("rav::ptp::Timestamp") {
     SECTION("Construct from nanos") {
         rav::ptp::Timestamp ts(1'000'000'000);
         REQUIRE(ts.raw_seconds() == 1);

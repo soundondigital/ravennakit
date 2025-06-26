@@ -50,7 +50,6 @@ find_package(Catch2 CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(portaudio CONFIG REQUIRED)
 find_package(nanobench CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
 find_package(boost_asio CONFIG REQUIRED)
 find_package(boost_container CONFIG REQUIRED)
 find_package(boost_beast CONFIG REQUIRED)
@@ -102,7 +101,6 @@ target_link_libraries(ravennakit
         rav_recommended_lto_flags
         PUBLIC
         fmt::fmt
-        nlohmann_json::nlohmann_json
         $<$<BOOL:${RAV_ENABLE_SPDLOG}>:spdlog::spdlog>
         Boost::asio
         Boost::beast
@@ -196,9 +194,10 @@ endif ()
 ##############
 
 if (${RAV_TESTS})
+    file(GLOB_RECURSE TEST_HEADER_FILES test/*.test.hpp)
     file(GLOB_RECURSE TEST_SOURCE_FILES test/*.test.cpp)
 
-    add_executable(ravennakit_tests ${TEST_SOURCE_FILES})
+    add_executable(ravennakit_tests ${TEST_HEADER_FILES} ${TEST_SOURCE_FILES})
 
     target_link_libraries(ravennakit_tests
             PUBLIC

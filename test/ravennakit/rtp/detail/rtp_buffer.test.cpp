@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("rtp_buffer") {
+TEST_CASE("rav::rtp::Buffer") {
     SECTION("Read with wraparound") {
         rav::rtp::Buffer buffer;
         buffer.resize(10, 2);

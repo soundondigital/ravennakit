@@ -105,8 +105,14 @@ class OutputStream {
      * @return An expected indicating success or failure.
      */
     [[nodiscard]] tl::expected<void, Error> write_string(const std::string& str) {
-        OK_OR_RETURN(write_le<uint64_t>(str.size()));
-        OK_OR_RETURN(write(reinterpret_cast<const uint8_t*>(str.data()), str.size()));
+        auto result = write_le<uint64_t>(str.size());
+        if (!result) {
+            return result;
+        }
+        result = write(reinterpret_cast<const uint8_t*>(str.data()), str.size());
+        if (!result) {
+            return result;
+        }
         return {};
     }
 

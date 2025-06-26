@@ -20,12 +20,14 @@ namespace rav {
 
 class NetworkInterfaceConfig {
   public:
+    std::map<Rank, NetworkInterface::Identifier> interfaces;
+
     friend bool operator==(const NetworkInterfaceConfig& lhs, const NetworkInterfaceConfig& rhs) {
-        return lhs.interfaces_ == rhs.interfaces_;
+        return lhs.interfaces == rhs.interfaces;
     }
 
     friend bool operator!=(const NetworkInterfaceConfig& lhs, const NetworkInterfaceConfig& rhs) {
-        return lhs.interfaces_ != rhs.interfaces_;
+        return lhs.interfaces != rhs.interfaces;
     }
 
     /**
@@ -34,7 +36,7 @@ class NetworkInterfaceConfig {
      * @param identifier The identifier of the network interface.
      */
     void set_interface(const Rank rank, const NetworkInterface::Identifier& identifier) {
-        interfaces_[rank] = identifier;
+        interfaces[rank] = identifier;
     }
 
     /**
@@ -42,19 +44,12 @@ class NetworkInterfaceConfig {
      * @param rank The rank of the network interface.
      * @return A pointer to the network interface identifier if found, or nullptr if not found.
      */
-    [[nodiscard]] const NetworkInterface::Identifier* get_interface(const Rank rank) const {
-        const auto it = interfaces_.find(rank);
-        if (it == interfaces_.end()) {
+    [[nodiscard]] const NetworkInterface::Identifier* get_interface_for_rank(const Rank rank) const {
+        const auto it = interfaces.find(rank);
+        if (it == interfaces.end()) {
             return nullptr;
         }
         return &it->second;
-    }
-
-    /**
-     * @return  A map of all network interfaces and their identifiers. The key is the rank of the interface.
-     */
-    [[nodiscard]] const std::map<Rank, NetworkInterface::Identifier>& get_interfaces() const {
-        return interfaces_;
     }
 
     /**
@@ -62,8 +57,8 @@ class NetworkInterfaceConfig {
      * interface is not found or if it has no IPv4 address.
      */
     [[nodiscard]] boost::asio::ip::address_v4 get_interface_ipv4_address(const Rank rank) const {
-        const auto it = interfaces_.find(rank);
-        if (it == interfaces_.end()) {
+        const auto it = interfaces.find(rank);
+        if (it == interfaces.end()) {
             return boost::asio::ip::address_v4 {};
         }
         if (auto* interface = NetworkInterfaceList::get_system_interfaces().get_interface(it->second)) {
@@ -78,7 +73,7 @@ class NetworkInterfaceConfig {
      */
     [[nodiscard]] std::map<Rank, boost::asio::ip::address_v4> get_interface_ipv4_addresses() const {
         std::map<Rank, boost::asio::ip::address_v4> addresses;
-        for (const auto& iface : interfaces_) {
+        for (const auto& iface : interfaces) {
             addresses[iface.first] = get_interface_ipv4_address(iface.first);
         }
         return addresses;
@@ -89,7 +84,7 @@ class NetworkInterfaceConfig {
      * @return True if there are no interfaces configured, false otherwise.
      */
     [[nodiscard]] bool empty() const {
-        return interfaces_.empty();
+        return interfaces.empty();
     }
 
     /**
@@ -97,11 +92,11 @@ class NetworkInterfaceConfig {
      */
     [[nodiscard]] std::string to_string() const {
         std::string output = "Network interface configuration: ";
-        if (interfaces_.empty()) {
+        if (interfaces.empty()) {
             return output + "none";
         }
         bool first = true;
-        for (auto& iface : interfaces_) {
+        for (auto& iface : interfaces) {
             if (!first) {
                 output += ", ";
             }
@@ -111,19 +106,15 @@ class NetworkInterfaceConfig {
         return output;
     }
 
-#if RAV_HAS_NLOHMANN_JSON
-
+#if RAV_HAS_BOOST_JSON
     /**
      * @returns A JSON representation of the network interface configuration.
      */
-    [[nodiscard]] nlohmann::json to_json() const {
-        auto a = nlohmann::json::array();
+    [[nodiscard]] boost::json::array to_boost_json() const {
+        auto a = boost::json::array();
 
-        for (auto& iface : interfaces_) {
-            nlohmann::json o;
-            o["rank"] = iface.first.value();
-            o["identifier"] = iface.second;
-            a.push_back(o);
+        for (auto& iface : interfaces) {
+            a.push_back(boost::json::object {{"rank", iface.first.value()}, {"identifier", iface.second}});
         }
 
         return a;
@@ -131,27 +122,27 @@ class NetworkInterfaceConfig {
 
     /**
      * Creates a NetworkInterfaceConfig from a JSON object.
-     * @param json
+     * @param json The json to restore from.
      * @return A newly constructed NetworkInterfaceConfig object.
      */
-    [[nodiscard]] static tl::expected<NetworkInterfaceConfig, std::string> from_json(const nlohmann::json& json) {
+    [[nodiscard]] static tl::expected<NetworkInterfaceConfig, std::string> from_boost_json(const boost::json::value& json) {
+        const auto json_array = json.try_as_array();
+        if (json_array.has_error()) {
+            return tl::unexpected("Value is not an array");
+        }
         NetworkInterfaceConfig config;
         try {
-            for (auto& object : json) {
-                const auto rank = Rank(object.at("rank").get<uint8_t>());
-                const auto identifier = object.at("identifier").get<NetworkInterface::Identifier>();
-                config.interfaces_[rank] = identifier;
+            for (auto& object : *json_array) {
+                const auto rank = Rank(object.at("rank").to_number<uint8_t>());
+                const auto identifier = object.at("identifier").as_string();
+                config.interfaces[rank] = identifier;
             }
         } catch (const std::exception& e) {
             return tl::unexpected(fmt::format("Failed to parse NetworkInterfaceConfig: {}", e.what()));
         }
         return config;
     }
-
 #endif
-
-  private:
-    std::map<Rank, NetworkInterface::Identifier> interfaces_;
 };
 
 }  // namespace rav

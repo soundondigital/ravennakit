@@ -12,6 +12,7 @@
 
 #include "detail/rtsp_connection.hpp"
 #include "detail/rtsp_parser.hpp"
+#include "ravennakit/core/util/safe_function.hpp"
 
 #include <boost/asio.hpp>
 
@@ -23,7 +24,9 @@ namespace rav::rtsp {
  */
 class Client final: Connection::Subscriber {
   public:
-    using EventsType = EventEmitter<Connection::ConnectEvent, Connection::ResponseEvent, Connection::RequestEvent>;
+    SafeFunction<void(const Connection::ConnectEvent& event)> on_connect_event;
+    SafeFunction<void(const Connection::ResponseEvent& event)> on_response_event;
+    SafeFunction<void(const Connection::RequestEvent& event)> on_request_event;
 
     explicit Client(boost::asio::io_context& io_context);
     ~Client() override;
@@ -85,16 +88,6 @@ class Client final: Connection::Subscriber {
      */
     void async_send_request(const Request& request) const;
 
-    /**
-     * Registers a handler for a specific event.
-     * @tparam T The event type.
-     * @param handler The handler to register.
-     */
-    template<class T>
-    void on(EventsType::handler<T> handler) {
-        events_.on(handler);
-    }
-
     // rtsp_connection::subscriber overrides
     void on_connect(Connection& connection) override;
     void on_request(Connection& connection, const Request& request) override;
@@ -104,7 +97,6 @@ class Client final: Connection::Subscriber {
     boost::asio::ip::tcp::resolver resolver_;
     std::string host_;
     std::shared_ptr<Connection> connection_;
-    EventsType events_;
     uint32_t seq_ {0};
 
     void

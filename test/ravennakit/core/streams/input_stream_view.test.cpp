@@ -13,7 +13,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("input_stream_view") {
+TEST_CASE("rav::InputStreamView") {
     SECTION("raw data") {
         constexpr uint8_t data[] = {0x11, 0x22, 0x33, 0x44};
         rav::InputStreamView stream(data, rav::num_elements_in_array(data));

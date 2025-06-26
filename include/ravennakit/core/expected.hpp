@@ -19,15 +19,3 @@
 #endif
 
 #include <tl/expected.hpp>
-
-/**
- * Utility macro to return early if an expression evaluates to false.
- * @param expr The expression to check and return if false.
- */
-#define OK_OR_RETURN(expr)                 \
-    do {                                   \
-        const auto result = expr;          \
-        if (!result) {                     \
-            return result;                 \
-        }                                  \
-    } while (false)

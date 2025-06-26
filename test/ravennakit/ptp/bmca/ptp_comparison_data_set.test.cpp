@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("ptp_comparison_data_set") {
+TEST_CASE("rav::ptp::ComparisonDataSet") {
     rav::ptp::ComparisonDataSet a;
     a.grandmaster_priority1 = 128;
     a.grandmaster_identity.data = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};

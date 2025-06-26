@@ -9,12 +9,9 @@
  */
 
 #include "ravennakit/ravenna/ravenna_sender.hpp"
-#include "ravennakit/ravenna/ravenna_sender.hpp"
-
 #include "ravennakit/aes67/aes67_constants.hpp"
 #include "ravennakit/core/audio/audio_data.hpp"
 #include "ravennakit/nmos/detail/nmos_media_types.hpp"
-#include "ravennakit/rtp/rtp_packet_view.hpp"
 
 #include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -23,75 +20,9 @@
     #include <timeapi.h>
 #endif
 
-nlohmann::json rav::RavennaSender::Destination::to_json() const {
-    return nlohmann::json {
-        {"interface_by_rank", interface_by_rank.value()},
-        {"address", endpoint.address().to_string()},
-        {"port", endpoint.port()},
-        {"enabled", enabled},
-    };
-}
-
-tl::expected<rav::RavennaSender::Destination, std::string>
-rav::RavennaSender::Destination::from_json(const nlohmann::json& json) {
-    try {
-        Destination destination {};
-        destination.interface_by_rank = Rank(json.at("interface_by_rank").get<uint8_t>());
-        destination.endpoint = boost::asio::ip::udp::endpoint(
-            boost::asio::ip::make_address_v4(json.at("address").get<std::string>()), json.at("port").get<uint16_t>()
-        );
-        destination.enabled = json.at("enabled").get<bool>();
-        return destination;
-    } catch (const std::exception& e) {
-        return tl::unexpected(e.what());
-    }
-}
-
-nlohmann::json rav::RavennaSender::Configuration::to_json() const {
-    nlohmann::json::array_t destinations_array;
-    for (const auto& dst : destinations) {
-        destinations_array.push_back(dst.to_json());
-    }
-    return nlohmann::json {
-        {"session_name", session_name},
-        {"destinations", destinations_array},
-        {"ttl", ttl},
-        {"payload_type", payload_type},
-        {"audio_format", audio_format.to_json()},
-        {"packet_time", packet_time.to_json()},
-        {"enabled", enabled}
-    };
-}
-
-tl::expected<rav::RavennaSender::Configuration, std::string>
-rav::RavennaSender::Configuration::from_json(const nlohmann::json& json) {
-    try {
-        Configuration config {};
-        config.session_name = json.at("session_name").get<std::string>();
-
-        std::vector<Destination> destinations;
-        for (auto& dst : json.at("destinations")) {
-            destinations.push_back(Destination::from_json(dst).value());
-        }
-        config.destinations = std::move(destinations);
-        config.ttl = json.at("ttl").get<int32_t>();
-        config.payload_type = json.at("payload_type").get<uint8_t>();
-        auto audio_format = AudioFormat::from_json(json.at("audio_format"));
-        if (!audio_format) {
-            return tl::unexpected(audio_format.error());
-        }
-        config.audio_format = *audio_format;
-        const auto packet_time = aes67::PacketTime::from_json(json.at("packet_time"));
-        if (!packet_time) {
-            return tl::unexpected("Invalid packet time");
-        }
-        config.packet_time = *packet_time;
-        config.enabled = json.at("enabled").get<bool>();
-        return config;
-    } catch (const std::exception& e) {
-        return tl::unexpected(e.what());
-    }
-}
+#if RAV_WINDOWS
+    #pragma comment(lib, "winmm.lib")
+#endif
 
 rav::RavennaSender::RavennaSender(
     boost::asio::io_context& io_context, dnssd::Advertiser& advertiser, rtsp::Server& rtsp_server,
@@ -197,7 +128,7 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(Configurat
                 );
             }
             num_enabled_destinations++;
-            auto* iface = network_interface_config_.get_interface(dst.interface_by_rank);
+            auto* iface = network_interface_config_.get_interface_for_rank(dst.interface_by_rank);
             if (iface == nullptr) {
                 return tl::unexpected(fmt::format("{} interface not set", dst.interface_by_rank.to_ordinal_latin()));
             }
@@ -465,31 +396,43 @@ void rav::RavennaSender::set_network_interface_config(NetworkInterfaceConfig net
     update_state(false, false, true);
 }
 
-nlohmann::json rav::RavennaSender::to_json() const {
-    nlohmann::json root;
-    root["session_id"] = session_id_;
-    root["configuration"] = configuration_.to_json();
-    root["nmos_sender_uuid"] = boost::uuids::to_string(nmos_sender_.id);
-    root["nmos_source_uuid"] = boost::uuids::to_string(nmos_source_.id);
-    root["nmos_flow_uuid"] = boost::uuids::to_string(nmos_flow_.id);
-    return root;
+const rav::nmos::SourceAudio& rav::RavennaSender::get_nmos_source() const {
+    return nmos_source_;
 }
 
-tl::expected<void, std::string> rav::RavennaSender::restore_from_json(const nlohmann::json& json) {
+const rav::nmos::FlowAudioRaw& rav::RavennaSender::get_nmos_flow() const {
+    return nmos_flow_;
+}
+
+const rav::nmos::Sender& rav::RavennaSender::get_nmos_sender() const {
+    return nmos_sender_;
+}
+
+boost::json::object rav::RavennaSender::to_boost_json() const {
+    return {
+        {"session_id", session_id_},
+        {"configuration", boost::json::value_from(configuration_)},
+        {"nmos_sender_uuid", boost::uuids::to_string(nmos_sender_.id)},
+        {"nmos_source_uuid", boost::uuids::to_string(nmos_source_.id)},
+        {"nmos_flow_uuid", boost::uuids::to_string(nmos_flow_.id)},
+    };
+}
+
+tl::expected<void, std::string> rav::RavennaSender::restore_from_json(const boost::json::value& json) {
     try {
-        auto config = Configuration::from_json(json.at("configuration"));
+        auto config = boost::json::try_value_to<Configuration>(json.at("configuration"));
         if (!config) {
-            return tl::unexpected(config.error());
+            return tl::unexpected(config.error().message());
         }
 
-        const auto session_id = json.at("session_id").get<uint32_t>();
+        const auto session_id = json.at("session_id").to_number<uint32_t>();
         if (session_id == 0) {
             return tl::unexpected("Session ID must be valid");
         }
 
-        const auto nmos_source_uuid = boost::uuids::string_generator()(json.at("nmos_source_uuid").get<std::string>());
-        const auto nmos_flow_uuid = boost::uuids::string_generator()(json.at("nmos_flow_uuid").get<std::string>());
-        const auto nmos_sender_uuid = boost::uuids::string_generator()(json.at("nmos_sender_uuid").get<std::string>());
+        const auto nmos_source_uuid = boost::uuids::string_generator()(json.at("nmos_source_uuid").as_string().c_str());
+        const auto nmos_flow_uuid = boost::uuids::string_generator()(json.at("nmos_flow_uuid").as_string().c_str());
+        const auto nmos_sender_uuid = boost::uuids::string_generator()(json.at("nmos_sender_uuid").as_string().c_str());
 
         auto result = set_configuration(*config);
         if (!result) {
@@ -524,23 +467,9 @@ void rav::RavennaSender::on_request(const rtsp::Connection::RequestEvent event) 
         return;
     }
 
-    const auto sdp_debug_string = sdp->to_string("\n");
-    if (!sdp_debug_string) {
-        RAV_ERROR("Failed to build SDP debug string: {}", sdp_debug_string.error());
-        event.rtsp_connection.async_send_response(error_response);
-        return;
-    }
+    RAV_TRACE("SDP:\n{}", rav::sdp::to_string(*sdp, "\n"));
 
-    RAV_TRACE("SDP:\n{}", sdp_debug_string.value());
-
-    const auto sdp_string = sdp->to_string("\r\n");
-    if (!sdp_string) {
-        RAV_ERROR("Failed to encode SDP");
-        event.rtsp_connection.async_send_response(error_response);
-        return;
-    }
-
-    auto response = rtsp::Response(200, "OK", *sdp_string);
+    auto response = rtsp::Response(200, "OK", rav::sdp::to_string(*sdp));
     if (const auto* cseq = event.rtsp_request.rtsp_headers.get("cseq")) {
         response.rtsp_headers.set(*cseq);
     }
@@ -570,19 +499,13 @@ void rav::RavennaSender::send_announce() const {
         return;
     }
 
-    auto sdp_string = sdp->to_string("\r\n");
-    if (!sdp_string) {
-        RAV_ERROR("Failed to encode SDP");
-        return;
-    }
-
     const auto interface_address_string =
         network_interface_config_.get_interface_ipv4_address(Rank::primary()).to_string();
 
     rtsp::Request request;
     request.method = "ANNOUNCE";
     request.rtsp_headers.set("content-type", "application/sdp");
-    request.data = std::move(*sdp_string);
+    request.data = sdp::to_string(*sdp);
     request.uri =
         Uri::encode("rtsp", interface_address_string + ":" + std::to_string(rtsp_server_.port()), rtsp_path_by_name_);
     std::ignore = rtsp_server_.send_request(rtsp_path_by_name_, request);
@@ -601,7 +524,7 @@ tl::expected<rav::sdp::SessionDescription, std::string> rav::RavennaSender::buil
         return tl::unexpected("No destinations set");
     }
 
-    const auto sdp_format = sdp::Format::from_audio_format(configuration_.audio_format);
+    const auto sdp_format = sdp::make_audio_format(configuration_.audio_format);
     if (!sdp_format) {
         return tl::unexpected("Invalid audio format");
     }
@@ -633,11 +556,11 @@ tl::expected<rav::sdp::SessionDescription, std::string> rav::RavennaSender::buil
     };
 
     sdp::SessionDescription sdp;
-    sdp.set_origin(origin);
-    sdp.set_session_name(configuration_.session_name);
-    sdp.set_clock_domain(clock_domain);
-    sdp.set_ref_clock(ref_clock);
-    sdp.set_media_clock(media_clk);
+    sdp.origin = origin;
+    sdp.session_name = configuration_.session_name;
+    sdp.ravenna_clock_domain = clock_domain;
+    sdp.reference_clock = ref_clock;
+    sdp.media_clock = media_clk;
 
     auto num_active_destinations = 0;
     for (auto& dst : configuration_.destinations) {
@@ -672,34 +595,34 @@ tl::expected<rav::sdp::SessionDescription, std::string> rav::RavennaSender::buil
         RAV_ASSERT(!addr.is_multicast(), "Interface address must not be multicast");
 
         // Source filter
-        sdp::SourceFilter filter(
+        sdp::SourceFilter filter {
             sdp::FilterMode::include, sdp::NetwType::internet, sdp::AddrType::ipv4, dst_address_str, {addr.to_string()}
-        );
+        };
 
         sdp::MediaDescription media;
-        media.add_connection_info(connection_info);
-        media.set_media_type("audio");
-        media.set_port(5004);
-        media.set_protocol("RTP/AVP");
-        media.add_format(sdp_format.value());
-        media.add_source_filter(filter);
-        media.set_clock_domain(clock_domain);
-        media.set_sync_time(0);
-        media.set_ref_clock(ref_clock);
-        media.set_direction(sdp::MediaDirection::recvonly);
-        media.set_ptime(get_signaled_ptime());
-        media.set_framecount(get_framecount());
+        media.connection_infos.push_back(connection_info);
+        media.media_type = "audio";
+        media.port = 5004;
+        media.protocol = "RTP/AVP";
+        media.add_or_update_format(sdp_format.value());
+        media.add_or_update_source_filter(filter);
+        media.ravenna_clock_domain = clock_domain;
+        media.ravenna_sync_time = 0;
+        media.reference_clock = ref_clock;
+        media.media_direction = sdp::MediaDirection::recvonly;
+        media.ptime = get_signaled_ptime();
+        media.ravenna_framecount = get_framecount();
 
         if (num_active_destinations > 1) {
-            media.set_mid(dst.interface_by_rank.to_ordinal_latin());
-            group.add_tag(dst.interface_by_rank.to_ordinal_latin());
+            media.mid = dst.interface_by_rank.to_ordinal_latin();
+            group.tags.push_back(dst.interface_by_rank.to_ordinal_latin());
         }
 
-        sdp.add_media_description(std::move(media));
+        sdp.media_descriptions.push_back(std::move(media));
     }
 
-    if (!group.empty()) {
-        sdp.set_group(group);
+    if (!group.tags.empty()) {
+        sdp.group = group;
     }
 
     return sdp;
@@ -794,7 +717,7 @@ void rav::RavennaSender::generate_auto_addresses_if_needed() {
     bool changed = false;
     for (auto& dst : configuration_.destinations) {
         if (dst.endpoint.address().is_unspecified()) {
-            const auto iface = network_interface_config_.get_interface(dst.interface_by_rank);
+            const auto iface = network_interface_config_.get_interface_for_rank(dst.interface_by_rank);
             if (iface != nullptr) {
                 auto addr = network_interface_config_.get_interface_ipv4_address(dst.interface_by_rank);
                 if (addr.is_unspecified()) {
@@ -893,7 +816,7 @@ void rav::RavennaSender::update_state(const bool update_advertisement, const boo
         nmos_sender_.interface_bindings.clear();
         for (const auto& dst : configuration_.destinations) {
             if (dst.enabled) {
-                const auto iface = network_interface_config_.get_interface(dst.interface_by_rank);
+                const auto iface = network_interface_config_.get_interface_for_rank(dst.interface_by_rank);
                 if (iface != nullptr) {
                     nmos_sender_.interface_bindings.push_back(*iface);
                 } else {
@@ -964,4 +887,55 @@ void rav::RavennaSender::update_state(const bool update_advertisement, const boo
     }
 
     update_shared_context();
+}
+
+void rav::tag_invoke(
+    const boost::json::value_from_tag&, boost::json::value& jv, const RavennaSender::Destination& destination
+) {
+    jv = {
+        {"interface_by_rank", destination.interface_by_rank.value()},
+        {"address", destination.endpoint.address().to_string()},
+        {"port", destination.endpoint.port()},
+        {"enabled", destination.enabled},
+    };
+}
+
+void rav::tag_invoke(
+    const boost::json::value_from_tag&, boost::json::value& jv, const RavennaSender::Configuration& config
+) {
+    jv = {
+        {"session_name", config.session_name},
+        {"destinations", boost::json::value_from(config.destinations)},
+        {"ttl", config.ttl},
+        {"payload_type", config.payload_type},
+        {"packet_time", boost::json::value_from(config.packet_time)},
+        {"audio_format", boost::json::value_from(config.audio_format)},
+        {"enabled", config.enabled},
+    };
+}
+
+rav::RavennaSender::Destination
+rav::tag_invoke(const boost::json::value_to_tag<RavennaSender::Destination>&, const boost::json::value& jv) {
+    RavennaSender::Destination dst;
+    dst.enabled = jv.at("enabled").as_bool();
+    dst.interface_by_rank = Rank(jv.at("interface_by_rank").to_number<uint8_t>());
+    const boost::asio::ip::udp::endpoint endpoint(
+        boost::asio::ip::make_address(jv.at("address").as_string()), jv.at("port").to_number<uint16_t>()
+    );
+    dst.endpoint = endpoint;
+    return dst;
+}
+
+rav::RavennaSender::Configuration
+rav::tag_invoke(const boost::json::value_to_tag<RavennaSender::Configuration>&, const boost::json::value& jv) {
+    RavennaSender::Configuration config;
+    config.session_name = jv.at("session_name").as_string();
+    config.destinations = boost::json::value_to<std::vector<RavennaSender::Destination>>(jv.at("destinations"));
+    config.ttl = jv.at("ttl").to_number<int32_t>();
+    config.payload_type = jv.at("payload_type").to_number<uint8_t>();
+    config.packet_time = boost::json::value_to<aes67::PacketTime>(jv.at("packet_time"));
+    config.audio_format = boost::json::value_to<AudioFormat>(jv.at("audio_format"));
+    config.enabled = jv.at("enabled").as_bool();
+
+    return config;
 }

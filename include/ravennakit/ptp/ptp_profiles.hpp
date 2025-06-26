@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "../core/range.hpp"
+#include "../core/math/range.hpp"
 
 #include <cstdint>
 #include <optional>

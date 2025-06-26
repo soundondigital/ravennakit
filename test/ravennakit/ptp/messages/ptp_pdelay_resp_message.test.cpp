@@ -13,7 +13,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("ptp_pdelay_resp_message") {
+TEST_CASE("rav::ptp::PdelayRespMessage") {
     SECTION("Unpack") {
         std::array<const uint8_t, 30> data {
             0x12, 0x34, 0x56, 0x78, 0x90, 0x12,              // ts seconds

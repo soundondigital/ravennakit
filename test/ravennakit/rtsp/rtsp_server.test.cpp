@@ -14,7 +14,7 @@
 #include <catch2/catch_all.hpp>
 #include <thread>
 
-TEST_CASE("rtsp_server", "[rtsp_server]") {
+TEST_CASE("rav::rtsp::Server") {
     SECTION("Port") {
         boost::asio::io_context io_context;
 

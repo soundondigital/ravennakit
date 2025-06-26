@@ -14,7 +14,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("ptp_sync_message") {
+TEST_CASE("rav::ptp::SyncMessage") {
     SECTION("Unpack") {
         rav::ByteStream stream;
         constexpr std::array<const uint8_t, 30> data {

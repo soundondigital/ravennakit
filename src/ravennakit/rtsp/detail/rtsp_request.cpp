@@ -10,7 +10,7 @@
 
 #include "ravennakit/rtsp/detail/rtsp_request.hpp"
 
-#include "ravennakit/core/uri.hpp"
+#include "ravennakit/core/util/uri.hpp"
 
 #include <catch2/catch_all.hpp>
 

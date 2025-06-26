@@ -9,7 +9,6 @@
     "cli11",
     "tl-expected",
     "nanobench",
-    "nlohmann-json",
     "boost-asio",
     "boost-beast",
     "boost-url",

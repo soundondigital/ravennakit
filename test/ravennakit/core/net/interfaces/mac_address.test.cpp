@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("mac_address") {
+TEST_CASE("rav::MacAddress") {
     SECTION("Construct from string 1") {
         rav::MacAddress mac("00:01:02:03:04:05");
         auto bytes = mac.bytes();

@@ -88,7 +88,7 @@ void test_audio_buffer_clear_for_type(T expected_cleared_value) {
 
 }  // namespace
 
-TEST_CASE("audio_buffer") {
+TEST_CASE("rav::AudioBuffer") {
     SECTION("audio_buffer::audio_buffer()") {
         SECTION(
             "Instantiate different buffer types to get an error when the buffer cannot be used for a particular type."

@@ -11,10 +11,8 @@
 #pragma once
 
 #include "ravenna_browser.hpp"
-#include "ravenna_config.hpp"
 #include "ravenna_rtsp_client.hpp"
 #include "ravenna_receiver.hpp"
-#include "ravenna_sender.hpp"
 #include "ravenna_sender.hpp"
 #include "ravennakit/core/audio/audio_buffer_view.hpp"
 #include "ravennakit/core/sync/realtime_shared_object.hpp"
@@ -24,8 +22,6 @@
 #include "ravennakit/ptp/ptp_instance.hpp"
 #include "ravennakit/rtp/detail/rtp_sender.hpp"
 #include "ravennakit/rtsp/rtsp_server.hpp"
-
-#include <nlohmann/json.hpp>
 
 #include <string>
 
@@ -138,21 +134,21 @@ class RavennaNode {
      * @param config The configuration changes to apply.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<tl::expected<void, std::string>>
+    [[nodiscard]] std::future<tl::expected<void, std::string>>
     update_receiver_configuration(Id receiver_id, RavennaReceiver::Configuration config);
 
     /**
      * Creates a sender for the given session.
      * @return The ID of the created sender, which might be invalid if the sender couldn't be created.
      */
-    std::future<tl::expected<Id, std::string>> create_sender(RavennaSender::Configuration initial_config);
+    [[nodiscard]] std::future<tl::expected<Id, std::string>> create_sender(RavennaSender::Configuration initial_config);
 
     /**
      * Removes the sender with the given id.
      * @param sender_id The id of the sender to remove.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<void> remove_sender(Id sender_id);
+    [[nodiscard]] std::future<void> remove_sender(Id sender_id);
 
     /**
      * Updates the configuration of the sender with the given id.
@@ -160,7 +156,7 @@ class RavennaNode {
      * @param config The configuration changes to apply.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<tl::expected<void, std::string>>
+    [[nodiscard]] std::future<tl::expected<void, std::string>>
     update_sender_configuration(Id sender_id, RavennaSender::Configuration config);
 
     /**
@@ -168,7 +164,12 @@ class RavennaNode {
      * @param update The configuration to set.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<tl::expected<void, std::string>> set_nmos_configuration(nmos::Node::Configuration update);
+    [[nodiscard]] std::future<tl::expected<void, std::string>> set_nmos_configuration(nmos::Node::Configuration update);
+
+    /**
+     * @return The UUID of the nmos device.
+     */
+    std::future<boost::uuids::uuid> get_nmos_device_id();
 
     /**
      * Adds a subscriber to the node.
@@ -206,7 +207,7 @@ class RavennaNode {
      * @param subscriber The subscriber to add.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<void> subscribe_to_sender(Id sender_id, RavennaSender::Subscriber* subscriber);
+    [[nodiscard]] std::future<void> subscribe_to_sender(Id sender_id, RavennaSender::Subscriber* subscriber);
 
     /**
      * Removes a subscriber from the sender with the given id.
@@ -214,21 +215,21 @@ class RavennaNode {
      * @param subscriber The subscriber to remove.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<void> unsubscribe_from_sender(Id sender_id, RavennaSender::Subscriber* subscriber);
+    [[nodiscard]] std::future<void> unsubscribe_from_sender(Id sender_id, RavennaSender::Subscriber* subscriber);
 
     /**
      * Adds a subscriber to the PTP instance.
      * @param subscriber The subscriber to add.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<void> subscribe_to_ptp_instance(ptp::Instance::Subscriber* subscriber);
+    [[nodiscard]] std::future<void> subscribe_to_ptp_instance(ptp::Instance::Subscriber* subscriber);
 
     /**
      * Removes a subscriber from the PTP instance.
      * @param subscriber The subscriber to remove.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<void> unsubscribe_from_ptp_instance(ptp::Instance::Subscriber* subscriber);
+    [[nodiscard]] std::future<void> unsubscribe_from_ptp_instance(ptp::Instance::Subscriber* subscriber);
 
     /**
      * Get the packet statistics for the given stream, if the stream for the given ID exists.
@@ -300,7 +301,7 @@ class RavennaNode {
      * @param interface_config The interfaces to use. If empty, operations will be stopped.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<void> set_network_interface_config(NetworkInterfaceConfig interface_config);
+    [[nodiscard]] std::future<void> set_network_interface_config(NetworkInterfaceConfig interface_config);
 
     /**
      * @return True if this method is called on the maintenance thread, false otherwise.
@@ -310,14 +311,14 @@ class RavennaNode {
     /**
      * @returns A JSON representation of the node.
      */
-    std::future<nlohmann::json> to_json();
+    [[nodiscard]] std::future<boost::json::object> to_boost_json();
 
     /**
      * Restores the node from a JSON representation.
      * @param json The JSON representation of the node.
      * @return A future that will be set when the operation is complete.
      */
-    std::future<tl::expected<void, std::string>> restore_from_json(const nlohmann::json& json);
+    [[nodiscard]] std::future<tl::expected<void, std::string>> restore_from_boost_json(const boost::json::value& json);
 
     /**
      * Schedules some work on the maintenance thread using boost::asio::dispatch. This is useful for synchronizing with
@@ -334,7 +335,7 @@ class RavennaNode {
      * @return The result of the dispatch operation, depending on the completion token.
      */
     template<typename CompletionToken>
-    auto dispatch(CompletionToken&& token) {
+    [[nodiscard]] auto dispatch(CompletionToken&& token) {
         return boost::asio::dispatch(io_context_, token);
     }
 
@@ -353,11 +354,11 @@ class RavennaNode {
      * @return The result of the dispatch operation, depending on the completion token.
      */
     template<typename CompletionToken>
-    auto post(CompletionToken&& token) {
+    [[nodiscard]] auto post(CompletionToken&& token) {
         return boost::asio::post(io_context_, token);
     }
 
-  private:
+private:
     struct RealtimeSharedContext {
         std::vector<RavennaReceiver*> receivers;
         std::vector<RavennaSender*> senders;
@@ -385,7 +386,7 @@ class RavennaNode {
 
     SubscriberList<Subscriber> subscribers_;
     RealtimeSharedObject<RealtimeSharedContext> realtime_shared_context_;
-    RavennaConfig config_;
+    NetworkInterfaceConfig network_interface_config_;
 
     [[nodiscard]] bool update_realtime_shared_context();
     uint32_t generate_unique_session_id() const;

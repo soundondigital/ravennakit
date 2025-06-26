@@ -13,7 +13,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("HttpServer") {
+TEST_CASE("rav::HttpServer") {
     SECTION("Simple GET request") {
         boost::asio::io_context io_context;
         rav::HttpServer server(io_context);
@@ -37,11 +37,12 @@ TEST_CASE("HttpServer") {
             REQUIRE(response->result() == boost::beast::http::status::ok);
         });
 
-        client.get_async("/non-existent", [&server](auto response) {
+        client.get_async("/non-existent", [&io_context](auto response) {
             fmt::println("Response: {}", response.value());
             REQUIRE(response.has_value());
             REQUIRE(response->result() == boost::beast::http::status::not_found);
-            server.stop();
+            // server.stop(); FIXME: We should do this, but there is a 5-second timeout somehow.
+            io_context.stop();
         });
 
         io_context.run();
@@ -93,11 +94,12 @@ TEST_CASE("HttpServer") {
             REQUIRE(response->body() == "**");
         });
 
-        client.get_async("/non-existent", [&server](auto response) {
+        client.get_async("/non-existent", [&io_context](auto response) {
             REQUIRE(response.has_value());
             REQUIRE(response->result() == boost::beast::http::status::ok);
             REQUIRE(response->body() == "**");
-            server.stop();
+            // server.stop(); FIXME: We should do this, but there is a 5-second timeout somehow.
+            io_context.stop();
         });
 
         io_context.run();

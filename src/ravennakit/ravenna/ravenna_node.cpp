@@ -77,7 +77,7 @@ rav::RavennaNode::create_receiver(RavennaReceiver::Configuration initial_config)
     auto work = [this, initial_config]() mutable -> tl::expected<Id, std::string> {
         auto new_receiver =
             std::make_unique<RavennaReceiver>(io_context_, rtsp_client_, *rtp_receiver_, id_generator_.next());
-        new_receiver->set_network_interface_config(config_.network_interfaces);
+        new_receiver->set_network_interface_config(network_interface_config_);
         auto result = new_receiver->set_configuration(initial_config);
         if (!result) {
             RAV_ERROR("Failed to set receiver configuration: {}", result.error());
@@ -142,7 +142,7 @@ rav::RavennaNode::create_sender(RavennaSender::Configuration initial_config) {
         if (initial_config.session_name.empty()) {
             initial_config.session_name = fmt::format("Sender {}", new_sender->get_session_id());
         }
-        new_sender->set_network_interface_config(config_.network_interfaces);
+        new_sender->set_network_interface_config(network_interface_config_);
         auto result = new_sender->set_configuration(initial_config);
         if (!result) {
             RAV_ERROR("Failed to set sender configuration: {}", result.error());
@@ -199,7 +199,7 @@ rav::RavennaNode::update_sender_configuration(Id sender_id, RavennaSender::Confi
 
 std::future<tl::expected<void, std::string>>
 rav::RavennaNode::set_nmos_configuration(nmos::Node::Configuration update) {
-    auto work = [this, u = std::move(update)] ()-> tl::expected<void, std::string> {
+    auto work = [this, u = std::move(update)]() -> tl::expected<void, std::string> {
         auto result = nmos_node_.set_configuration(u);
         if (!result) {
             return tl::unexpected(fmt::format("Failed to set nmos configuration: {}", result.error()));
@@ -210,6 +210,13 @@ rav::RavennaNode::set_nmos_configuration(nmos::Node::Configuration update) {
             return tl::unexpected("Failed to update NMOS device configuration");
         }
         return {};
+    };
+    return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
+}
+
+std::future<boost::uuids::uuid> rav::RavennaNode::get_nmos_device_id() {
+    auto work = [this]() -> boost::uuids::uuid {
+        return nmos_device_.id;
     };
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
 }
@@ -234,7 +241,7 @@ std::future<void> rav::RavennaNode::subscribe(Subscriber* subscriber) {
         for (const auto& sender : senders_) {
             subscriber->ravenna_sender_added(*sender);
         }
-        subscriber->network_interface_config_updated(config_.network_interfaces);
+        subscriber->network_interface_config_updated(network_interface_config_);
         subscriber->nmos_node_config_updated(nmos_node_.get_configuration());
         subscriber->nmos_node_status_changed(nmos_node_.get_status(), nmos_node_.get_registry_info());
     };
@@ -431,24 +438,24 @@ bool rav::RavennaNode::send_audio_data_realtime(
 
 std::future<void> rav::RavennaNode::set_network_interface_config(NetworkInterfaceConfig interface_config) {
     auto work = [this, config = std::move(interface_config)] {
-        if (config_.network_interfaces == config) {
+        if (network_interface_config_ == config) {
             return;  // Nothing changed
         }
 
-        config_.network_interfaces = config;
+        network_interface_config_ = config;
 
         for (const auto& receiver : receivers_) {
-            receiver->set_network_interface_config(config_.network_interfaces);
+            receiver->set_network_interface_config(network_interface_config_);
         }
 
         for (const auto& sender : senders_) {
-            sender->set_network_interface_config(config_.network_interfaces);
+            sender->set_network_interface_config(network_interface_config_);
         }
 
         nmos_node_.set_network_interface_config(config);
 
         // Add or update PTP ports based on the new configuration
-        const auto addresses = config_.network_interfaces.get_interface_ipv4_addresses();
+        const auto addresses = network_interface_config_.get_interface_ipv4_addresses();
         for (auto& [rank, address] : addresses) {
             auto it = ptp_ports_.find(rank);
             if (it == ptp_ports_.end()) {
@@ -490,49 +497,57 @@ bool rav::RavennaNode::is_maintenance_thread() const {
     return maintenance_thread_id_ == std::this_thread::get_id();
 }
 
-std::future<nlohmann::json> rav::RavennaNode::to_json() {
+std::future<boost::json::object> rav::RavennaNode::to_boost_json() {
     auto work = [this] {
-        auto senders = nlohmann::json::array();
+        auto senders = boost::json::array();
         for (const auto& sender : senders_) {
-            senders.push_back(sender->to_json());
+            senders.push_back(sender->to_boost_json());
         }
-        auto receivers = nlohmann::json::array();
+        auto receivers = boost::json::array();
         for (const auto& receiver : receivers_) {
-            receivers.push_back(receiver->to_json());
+            receivers.push_back(receiver->to_boost_json());
         }
-        nlohmann::json root;
-        root["config"] = config_.to_json();
-        root["senders"] = senders;
-        root["receivers"] = receivers;
-        root["nmos_node"]["configuration"] = boost_to_nlohmann_json(nmos_node_.get_configuration().to_json());
-        root["nmos_device_id"] = boost::uuids::to_string(nmos_device_.id);
-        return root;
+
+        boost::json::object config {{
+            "network_config",
+            network_interface_config_.to_boost_json(),
+        }};
+
+        return boost::json::object {
+            {"config", config},
+            {"senders", senders},
+            {"receivers", receivers},
+            {"nmos_node", boost::json::object {{"configuration", nmos_node_.get_configuration().to_json()}}},
+            {"nmos_device_id", boost::uuids::to_string(nmos_device_.id)},
+        };
     };
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
 }
 
-std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json(const nlohmann::json& json) {
+std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boost_json(const boost::json::value& json) {
     auto work = [this, json]() -> tl::expected<void, std::string> {
         try {
             // Configuration
 
-            auto ravenna_config = RavennaConfig::from_json(json.at("config"));
-            if (!ravenna_config) {
-                return tl::unexpected(ravenna_config.error());
+            auto network_interface_config =
+                NetworkInterfaceConfig::from_boost_json(json.at("config").at("network_config"));
+
+            if (!network_interface_config) {
+                return tl::unexpected(network_interface_config.error());
             }
 
-            auto nmos_device_id = boost::uuids::string_generator()(json.at("nmos_device_id").get<std::string>());
+            auto nmos_device_id = boost::uuids::string_generator()(json.at("nmos_device_id").as_string().c_str());
 
             // Senders
 
-            auto senders = json.at("senders");
+            auto senders = json.at("senders").as_array();
             std::vector<std::unique_ptr<RavennaSender>> new_senders;
 
             for (auto& sender : senders) {
                 auto new_sender = std::make_unique<RavennaSender>(
                     io_context_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), 1
                 );
-                new_sender->set_network_interface_config(ravenna_config->network_interfaces);
+                new_sender->set_network_interface_config(*network_interface_config);
                 if (auto result = new_sender->restore_from_json(sender); !result) {
                     return tl::unexpected(result.error());
                 }
@@ -542,13 +557,13 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
 
             // Receivers
 
-            auto receivers = json.at("receivers");
+            auto receivers = json.at("receivers").as_array();
             std::vector<std::unique_ptr<RavennaReceiver>> new_receivers;
 
             for (auto& receiver : receivers) {
                 auto new_receiver =
                     std::make_unique<RavennaReceiver>(io_context_, rtsp_client_, *rtp_receiver_, id_generator_.next());
-                new_receiver->set_network_interface_config(ravenna_config->network_interfaces);
+                new_receiver->set_network_interface_config(*network_interface_config);
                 if (auto result = new_receiver->restore_from_json(receiver); !result) {
                     return tl::unexpected(result.error());
                 }
@@ -556,18 +571,15 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_json
                 new_receivers.push_back(std::move(new_receiver));
             }
 
-            set_network_interface_config(ravenna_config->network_interfaces).wait();
+            // TODO: Restoring the NMOS node can still fail, should this go below that?
+            set_network_interface_config(*network_interface_config).wait();
 
             // NMOS Node
 
-            auto nmos_node = json.find("nmos_node");
-            if (nmos_node != json.end()) {
-                const auto& config_json = nlohmann_to_boost_json(nmos_node->at("configuration"));
-                if (!config_json.is_object()) {
-                    return tl::unexpected("invalid configuration JSON");
-                }
-
-                auto config = nmos::Node::Configuration::from_json(config_json);
+            auto nmos_node = json.try_at("nmos_node");
+            if (nmos_node.has_value()) {
+                auto nmos_node_object = nmos_node->as_object();
+                auto config = nmos::Node::Configuration::from_json(nmos_node_object.at("configuration"));
                 if (config.has_error()) {
                     return tl::unexpected(config.error());
                 }

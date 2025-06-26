@@ -13,7 +13,7 @@
 #include <iostream>
 
 /**
- * This macro is used to mark a piece of code as a TODO item.
+ * This macro is used to mark a piece of code as a to do item.
  * It will print a message to the console and abort the program.
  * @param msg The message to print.
  */

@@ -24,7 +24,7 @@ constexpr double f64_tolerance = 0.00004;
 
 // MARK: - Interleaving conversions
 
-TEST_CASE("audio_data") {
+TEST_CASE("rav::AudioData") {
     SECTION("interleaving") {
         SECTION("Interleaved to interleaved int16") {
             constexpr std::array<int16_t, 4> src {1, 2, 3, 4};

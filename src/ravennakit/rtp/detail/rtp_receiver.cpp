@@ -12,10 +12,9 @@
 #include "ravennakit/rtp/rtcp_packet_view.hpp"
 #include "ravennakit/rtp/detail/rtp_receiver.hpp"
 
-#include "ravennakit/core/events/subscriber_list.hpp"
+#include "ravennakit/core/util/subscriber_list.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
-#include "ravennakit/core/tracy.hpp"
-#include "ravennakit/core/subscription.hpp"
+#include "ravennakit/core/util/tracy.hpp"
 
 #include <fmt/core.h>
 #include "ravennakit/core/expected.hpp"
@@ -124,16 +123,16 @@ void rav::rtp::Receiver::SessionContext::handle_incoming_rtp_data(const Extended
 
     bool did_find_stream = false;
 
-    for (auto& state : synchronization_sources_) {
-        if (state.get_ssrc() == packet.ssrc()) {
+    for (const auto& ssrc : synchronization_sources_) {
+        if (ssrc == packet.ssrc()) {
             did_find_stream = true;
         }
     }
 
     if (!did_find_stream) {
-        const auto& it = synchronization_sources_.emplace_back(packet.ssrc());
+        auto ssrc = synchronization_sources_.emplace_back(packet.ssrc());
         RAV_TRACE(
-            "Added new stream with SSRC {} from {}:{}", it.get_ssrc(), event.src_endpoint.address().to_string(),
+            "Added new stream with SSRC {} from {}:{}", ssrc, event.src_endpoint.address().to_string(),
             event.src_endpoint.port()
         );
     }

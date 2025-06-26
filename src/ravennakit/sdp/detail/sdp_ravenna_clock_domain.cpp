@@ -12,36 +12,8 @@
 
 #include "ravennakit/core/string_parser.hpp"
 
-tl::expected<void, std::string> rav::sdp::RavennaClockDomain::validate() const {
-    if (source == SyncSource::undefined) {
-        return tl::unexpected("clock_domain: sync source is undefined");
-    }
-    if (domain < 0) {
-        return tl::unexpected("clock_domain: domain is negative");
-    }
-    return {};
-}
-
-tl::expected<std::string, std::string> rav::sdp::RavennaClockDomain::to_string() const {
-    auto validated = validate();
-    if (!validated) {
-        return tl::unexpected(validated.error());
-    }
-    return fmt::format("a={}:{} {}", k_attribute_name, to_string(source), domain);
-}
-
-std::string rav::sdp::RavennaClockDomain::to_string(const SyncSource source) {
-    switch (source) {
-        case SyncSource::ptp_v2:
-            return "PTPv2";
-        case SyncSource::undefined:
-        default:
-            return "undefined";
-    }
-}
-
-rav::sdp::RavennaClockDomain::ParseResult<rav::sdp::RavennaClockDomain>
-rav::sdp::RavennaClockDomain::parse_new(const std::string_view line) {
+tl::expected<rav::sdp::RavennaClockDomain, std::string>
+rav::sdp::parse_ravenna_clock_domain(const std::string_view line) {
     StringParser parser(line);
 
     RavennaClockDomain clock_domain;
@@ -49,16 +21,43 @@ rav::sdp::RavennaClockDomain::parse_new(const std::string_view line) {
     if (const auto sync_source = parser.split(' ')) {
         if (sync_source == "PTPv2") {
             if (const auto domain = parser.read_int<int32_t>()) {
-                clock_domain = RavennaClockDomain {SyncSource::ptp_v2, *domain};
+                clock_domain = RavennaClockDomain {RavennaClockDomain::SyncSource::ptp_v2, *domain};
             } else {
-                return ParseResult<RavennaClockDomain>::err("clock_domain: invalid domain");
+                return tl::unexpected("clock_domain: invalid domain");
             }
         } else {
-            return ParseResult<RavennaClockDomain>::err("clock_domain: unsupported sync source");
+            return tl::unexpected("clock_domain: unsupported sync source");
         }
     } else {
-        return ParseResult<RavennaClockDomain>::err("clock_domain: failed to parse sync source");
+        return tl::unexpected("clock_domain: failed to parse sync source");
     }
 
-    return ParseResult<RavennaClockDomain>::ok(clock_domain);
+    return clock_domain;
+}
+
+const char* rav::sdp::to_string(const RavennaClockDomain::SyncSource source) {
+    switch (source) {
+        case RavennaClockDomain::SyncSource::ptp_v2:
+            return "PTPv2";
+        case RavennaClockDomain::SyncSource::undefined:
+        default:
+            return "undefined";
+    }
+}
+
+std::string rav::sdp::to_string(const RavennaClockDomain& ravenna_clock_domain) {
+    return fmt::format(
+        "a={}:{} {}", RavennaClockDomain::k_attribute_name, to_string(ravenna_clock_domain.source),
+        ravenna_clock_domain.domain
+    );
+}
+
+tl::expected<void, std::string> rav::sdp::validate(const RavennaClockDomain& ravenna_clock_domain) {
+    if (ravenna_clock_domain.source == RavennaClockDomain::SyncSource::undefined) {
+        return tl::unexpected("clock_domain: sync source is undefined");
+    }
+    if (ravenna_clock_domain.domain < 0) {
+        return tl::unexpected("clock_domain: domain is negative");
+    }
+    return {};
 }

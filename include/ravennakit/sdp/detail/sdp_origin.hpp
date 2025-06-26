@@ -11,10 +11,10 @@
 #pragma once
 
 #include "sdp_types.hpp"
-#include "ravennakit/core/result.hpp"
+
+#include "ravennakit/core/expected.hpp"
 
 #include <string>
-#include "ravennakit/core/expected.hpp"
 
 namespace rav::sdp {
 
@@ -43,28 +43,26 @@ struct OriginField {
 
     /// The address of the machine from which the session was created.
     std::string unicast_address;
-
-    /**
-     * Validates the members of this struct.
-     * @return A result indicating success or failure. When validation fails, the error message will contain a
-     * description of the error.
-     */
-    [[nodiscard]] tl::expected<void, std::string> validate() const;
-
-    /// Converts the origin field to a string.
-    [[nodiscard]] tl::expected<std::string, std::string> to_string() const;
-
-    /// A type alias for a parse result.
-    template<class T>
-    using ParseResult = Result<T, std::string>;
-
-    /**
-     * Parses an origin field from a string.
-     * @param line The string to parse.
-     * @return A result indicating success or failure. When parsing fails, the error message will contain a
-     * description of the error.
-     */
-    static ParseResult<OriginField> parse_new(std::string_view line);
 };
 
-}
+/**
+ * Parses an origin field from a string.
+ * @param line The string to parse.
+ * @return A result indicating success or failure. When parsing fails, the error message will contain a
+ * description of the error.
+ */
+[[nodiscard]] tl::expected<OriginField, std::string> parse_origin(std::string_view line);
+
+/**
+ * Converts the origin field to a string.
+ */
+[[nodiscard]] std::string to_string(const OriginField& field);
+
+/**
+ * Validates the members of this struct.
+ * @return A result indicating success or failure. When validation fails, the error message will contain a
+ * description of the error.
+ */
+[[nodiscard]] tl::expected<void, std::string> validate(const OriginField& field);
+
+}  // namespace rav::sdp

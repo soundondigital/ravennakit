@@ -14,7 +14,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("ptp_message_header") {
+TEST_CASE("rav::ptp::MessageHeader") {
     SECTION("Unpack from data") {
         constexpr std::array<const uint8_t, 300> data {
             0xfd,                                            // majorSdoId & messageType
@@ -115,7 +115,7 @@ TEST_CASE("ptp_message_header") {
     }
 }
 
-TEST_CASE("ptp_message_header::flag_field") {
+TEST_CASE("rav::ptp::MessageHeader::FlagField") {
     SECTION("Unpack to octets") {
         uint8_t octet1 = 0;
         uint8_t octet2 = 0;

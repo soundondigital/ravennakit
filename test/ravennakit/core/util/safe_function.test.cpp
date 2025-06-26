@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("SafeFunction") {
+TEST_CASE("rav::SafeFunction") {
     rav::SafeFunction<void(const std::string& a, const std::string& b)> callback_function;
     callback_function("a", "b");
     int times_called = 0;

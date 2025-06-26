@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("PathMatcher") {
+TEST_CASE("rav::PathMatcher") {
     REQUIRE(rav::PathMatcher::match("/", "/").value());
     REQUIRE(rav::PathMatcher::match("/test", "/test").value());
     REQUIRE_FALSE(rav::PathMatcher::match("/test", "/tes").value());

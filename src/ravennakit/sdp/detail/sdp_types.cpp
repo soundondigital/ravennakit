@@ -12,7 +12,7 @@
 
 #include "ravennakit/sdp/detail/sdp_constants.hpp"
 
-std::string rav::sdp::to_string(const NetwType& type) {
+const char* rav::sdp::to_string(const NetwType& type) {
     switch (type) {
         case NetwType::internet:
             return k_sdp_inet;
@@ -22,7 +22,7 @@ std::string rav::sdp::to_string(const NetwType& type) {
     }
 }
 
-std::string rav::sdp::to_string(const AddrType& type) {
+const char* rav::sdp::to_string(const AddrType& type) {
     switch (type) {
         case AddrType::ipv4:
             return k_sdp_ipv4;
@@ -36,7 +36,7 @@ std::string rav::sdp::to_string(const AddrType& type) {
     }
 }
 
-std::string rav::sdp::to_string(const MediaDirection& direction) {
+const char* rav::sdp::to_string(const MediaDirection& direction) {
     switch (direction) {
         case MediaDirection::sendrecv:
             return k_sdp_sendrecv;
@@ -51,7 +51,7 @@ std::string rav::sdp::to_string(const MediaDirection& direction) {
     }
 }
 
-std::string rav::sdp::to_string(const FilterMode& filter_mode) {
+const char* rav::sdp::to_string(const FilterMode& filter_mode) {
     switch (filter_mode) {
         case FilterMode::exclude:
             return "excl";

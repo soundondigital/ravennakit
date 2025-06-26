@@ -13,7 +13,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("rtp_packet_stats") {
+TEST_CASE("rav::rtp::PacketStats") {
     SECTION("Basic sequence") {
         rav::rtp::PacketStats stats;
         stats.update(10);

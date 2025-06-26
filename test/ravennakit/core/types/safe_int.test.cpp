@@ -48,7 +48,7 @@ tl::expected<T, rav::SafeIntError> test_div(T a, U b) {
 
 }  // namespace
 
-TEST_CASE("safe_int") {
+TEST_CASE("rav::SafeInt") {
     SECTION("add") {
         SECTION("Addition without overflow or underflow") {
             REQUIRE(test_add<int8_t, int8_t>(10, 20) == 30);

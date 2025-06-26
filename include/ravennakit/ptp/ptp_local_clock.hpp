@@ -10,9 +10,8 @@
 
 #pragma once
 
-#include "ravennakit/core/tracy.hpp"
+#include "ravennakit/core/util/tracy.hpp"
 #include "ravennakit/core/chrono/high_resolution_clock.hpp"
-#include "ravennakit/core/sync/triple_buffer.hpp"
 #include "types/ptp_timestamp.hpp"
 
 namespace rav::ptp {

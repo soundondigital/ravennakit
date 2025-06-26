@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("uint48_t") {
+TEST_CASE("rav::uint48_t") {
     SECTION("uint64 to uint48") {
         const rav::uint48_t min(0);
         REQUIRE(static_cast<uint64_t>(min) == 0);

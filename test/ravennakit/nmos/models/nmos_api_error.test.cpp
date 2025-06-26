@@ -16,7 +16,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("nmos::ApiError") {
+TEST_CASE("rav::nmos::ApiError") {
     SECTION("To json") {
         rav::nmos::ApiError error;
         error.code = 404;

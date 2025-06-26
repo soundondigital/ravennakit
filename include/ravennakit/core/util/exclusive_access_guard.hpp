@@ -11,7 +11,7 @@
 #pragma once
 
 #include "ravennakit/core/assert.hpp"
-#include "ravennakit/core/rollback.hpp"
+#include "ravennakit/core/scoped_rollback.hpp"
 
 #define CONCAT(a, b) CONCAT_INNER(a, b)
 #define CONCAT_INNER(a, b) a##b

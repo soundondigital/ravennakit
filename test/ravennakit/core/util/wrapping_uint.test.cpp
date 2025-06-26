@@ -266,7 +266,7 @@ void test_wrapping_uint() {
     }
 }
 
-TEST_CASE("wrapping_uint") {
+TEST_CASE("rav::WrappingUint") {
     test_wrapping_uint<uint8_t>();
     test_wrapping_uint<uint16_t>();
     test_wrapping_uint<uint32_t>();

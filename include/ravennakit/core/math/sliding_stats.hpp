@@ -10,8 +10,10 @@
 
 #pragma once
 
-#include "ravennakit/core/containers/ring_buffer.hpp"
 #include "ravennakit/core/util.hpp"
+
+#include <fmt/format.h>
+#include <boost/circular_buffer.hpp>
 
 #include <vector>
 #include <algorithm>
@@ -115,7 +117,7 @@ class SlidingStats {
     /**
      * @return The statistics of the values in the window as a struct. Convenient when data needs to be copied.
      */
-    Stats get_stats() const {
+    [[nodiscard]] Stats get_stats() const {
         const auto var = variance();
         return {average_, median_, min_, max_, var, standard_deviation(var), window_.size()};
     }
@@ -170,7 +172,7 @@ class SlidingStats {
     }
 
   private:
-    RingBuffer<double> window_;
+    boost::circular_buffer<double> window_;
     std::vector<double> sorted_data_;
     double average_ {};  // Last calculated average value
     double median_ {};   // Last calculated median value

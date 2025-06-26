@@ -12,7 +12,7 @@
 
 #include "ravennakit/rtsp/detail/rtsp_request.hpp"
 
-TEST_CASE("rtsp_request", "[rtsp_request]") {
+TEST_CASE("rav::rtsp::Request") {
     SECTION("Get header") {
         rav::rtsp::Request request;
         request.rtsp_headers.push_back(rav::rtsp::Headers::Header {"Content-Length", "123"});
@@ -65,20 +65,20 @@ TEST_CASE("rtsp_request", "[rtsp_request]") {
         REQUIRE(request.rtsp_headers.empty());
         REQUIRE(request.data.empty());
     }
-}
+    SECTION("encode") {
+        rav::rtsp::Request req;
+        req.rtsp_version_major = 1;
+        req.rtsp_version_minor = 0;
+        req.method = "OPTIONS";
+        req.uri = "*";
+        req.rtsp_headers.push_back({"CSeq", "1"});
+        req.rtsp_headers.push_back({"Accept", "application/sdp"});
+        req.data = "Hello, World!";
 
-TEST_CASE("rtsp_request | encode", "[rtsp_request]") {
-    rav::rtsp::Request req;
-    req.rtsp_version_major = 1;
-    req.rtsp_version_minor = 0;
-    req.method = "OPTIONS";
-    req.uri = "*";
-    req.rtsp_headers.push_back({"CSeq", "1"});
-    req.rtsp_headers.push_back({"Accept", "application/sdp"});
-    req.data = "Hello, World!";
-
-    auto encoded = req.encode();
-    REQUIRE(
-        encoded == "OPTIONS * RTSP/1.0\r\nCSeq: 1\r\nAccept: application/sdp\r\ncontent-length: 13\r\n\r\nHello, World!"
-    );
+        auto encoded = req.encode();
+        REQUIRE(
+            encoded
+            == "OPTIONS * RTSP/1.0\r\nCSeq: 1\r\nAccept: application/sdp\r\ncontent-length: 13\r\n\r\nHello, World!"
+        );
+    }
 }

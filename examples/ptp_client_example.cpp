@@ -30,7 +30,6 @@ int main(int const argc, char* argv[]) {
 
     CLI11_PARSE(app, argc, argv);
 
-    std::vector<rav::Subscription> subscriptions;
     boost::asio::io_context io_context;
 
     rav::ptp::Instance ptp_instance(io_context);

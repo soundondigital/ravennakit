@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("byte_stream", "[byte_stream]") {
+TEST_CASE("rav::ByteStream") {
     SECTION("Read") {
         rav::ByteStream stream;
 

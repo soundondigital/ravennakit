@@ -15,7 +15,7 @@
 #include "ravennakit/ptp/messages/ptp_follow_up_message.hpp"
 #include "ravennakit/ptp/messages/ptp_sync_message.hpp"
 #include "ravennakit/core/random.hpp"
-#include "ravennakit/core/tracy.hpp"
+#include "ravennakit/core/util/tracy.hpp"
 #include "ravennakit/core/math/sliding_stats.hpp"
 #include "ravennakit/ptp/messages/ptp_delay_resp_message.hpp"
 

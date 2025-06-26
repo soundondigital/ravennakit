@@ -9,7 +9,6 @@
  */
 
 #pragma once
-#include <string>
 
 namespace rav::sdp {
 
@@ -18,9 +17,9 @@ enum class AddrType { undefined, ipv4, ipv6, both };
 enum class MediaDirection { sendrecv, sendonly, recvonly, inactive };
 enum class FilterMode { undefined, exclude, include };
 
-std::string to_string(const NetwType& type);
-std::string to_string(const AddrType& type);
-std::string to_string(const MediaDirection& direction);
-std::string to_string(const FilterMode& filter_mode);
+const char* to_string(const NetwType& type);
+const char* to_string(const AddrType& type);
+const char* to_string(const MediaDirection& direction);
+const char* to_string(const FilterMode& filter_mode);
 
 }

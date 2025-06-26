@@ -19,8 +19,115 @@
 #include "ravennakit/sdp/detail/sdp_constants.hpp"
 #include "ravennakit/sdp/detail/sdp_reference_clock.hpp"
 
-rav::sdp::SessionDescription::ParseResult<rav::sdp::SessionDescription>
-rav::sdp::SessionDescription::parse_new(const std::string& sdp_text) {
+void rav::sdp::SessionDescription::add_or_update_source_filter(const SourceFilter& filter) {
+    for (auto& f : source_filters) {
+        if (f.net_type == filter.net_type && f.addr_type == filter.addr_type && f.dest_address == filter.dest_address) {
+            f = filter;
+            return;
+        }
+    }
+
+    source_filters.push_back(filter);
+}
+
+tl::expected<void, std::string> rav::sdp::SessionDescription::parse_attribute(const std::string_view line) {
+    StringParser parser(line);
+
+    if (!parser.skip("a=")) {
+        return tl::unexpected("attribute: expecting 'a='");
+    }
+
+    const auto key = parser.split(':');
+
+    if (!key) {
+        return tl::unexpected("attribute: expecting key");
+    }
+
+    if (key == k_sdp_sendrecv) {
+        media_direction = MediaDirection::sendrecv;
+    } else if (key == k_sdp_sendonly) {
+        media_direction = MediaDirection::sendonly;
+    } else if (key == k_sdp_recvonly) {
+        media_direction = MediaDirection::recvonly;
+    } else if (key == k_sdp_inactive) {
+        media_direction = MediaDirection::inactive;
+    } else if (key == k_sdp_ts_refclk) {
+        if (const auto value = parser.read_until_end()) {
+            auto ref_clock = parse_reference_clock(*value);
+            if (!ref_clock) {
+                return tl::unexpected(ref_clock.error());
+            }
+            reference_clock = std::move(*ref_clock);
+        }
+    } else if (key == MediaClockSource::k_attribute_name) {
+        if (const auto value = parser.read_until_end()) {
+            auto clock = parse_media_clock_source(*value);
+            if (!clock) {
+                return tl::unexpected(clock.error());
+            }
+            media_clock = *clock;
+        }
+    } else if (key == RavennaClockDomain::k_attribute_name) {
+        if (const auto value = parser.read_until_end()) {
+            auto clock_domain = parse_ravenna_clock_domain(*value);
+            if (!clock_domain) {
+                return tl::unexpected(clock_domain.error());
+            }
+            ravenna_clock_domain = *clock_domain;
+        }
+    } else if (key == SourceFilter::k_attribute_name) {
+        if (const auto value = parser.read_until_end()) {
+            auto filter = parse_source_filter(*value);
+            if (!filter) {
+                return tl::unexpected(filter.error());
+            }
+            source_filters.push_back(std::move(*filter));
+        } else {
+            return tl::unexpected("media: failed to parse source-filter value");
+        }
+    } else if (key == k_sdp_sync_time) {
+        if (const auto rtp_ts = parser.read_int<uint32_t>()) {
+            ravenna_sync_time = *rtp_ts;
+        } else {
+            return tl::unexpected("media: failed to parse sync-time value");
+        }
+    } else if (key == k_sdp_group) {
+        if (const auto value = parser.read_until_end()) {
+            auto new_group= parse_group(*value);
+            if (!new_group.has_value()) {
+                return tl::unexpected(new_group.error());
+            }
+            group = *new_group;
+        }
+    } else {
+        // Store the attribute in the map of unknown attributes
+        if (auto value = parser.read_until_end()) {
+            attributes.emplace(*key, *value);
+        } else {
+            return tl::unexpected("media: failed to parse attribute value");
+        }
+    }
+
+    return {};
+}
+
+tl::expected<int, std::string> rav::sdp::parse_version(const std::string_view line) {
+    if (!string_starts_with(line, "v=")) {
+        return tl::unexpected("expecting line to start with 'v='");
+    }
+
+    if (const auto v = rav::string_to_int<int>(line.substr(2)); v.has_value()) {
+        if (*v != 0) {
+            return tl::unexpected("invalid version");
+        }
+        return *v;
+    }
+
+    return tl::unexpected("failed to parse integer from string");
+}
+
+tl::expected<rav::sdp::SessionDescription, std::string>
+rav::sdp::parse_session_description(const std::string& sdp_text) {
     SessionDescription sd;
     StringParser parser(sdp_text);
 
@@ -32,390 +139,140 @@ rav::sdp::SessionDescription::parse_new(const std::string& sdp_text) {
         switch (line->front()) {
             case 'v': {
                 auto result = parse_version(*line);
-                if (result.is_err()) {
-                    return ParseResult<SessionDescription>::err(result.get_err());
+                if (!result) {
+                    return tl::unexpected(result.error());
                 }
-                sd.version_ = result.move_ok();
+                sd.version = *result;
                 break;
             }
             case 'o': {
-                auto result = sdp::OriginField::parse_new(*line);
-                if (result.is_err()) {
-                    return ParseResult<SessionDescription>::err(result.get_err());
+                auto result = parse_origin(*line);
+                if (!result) {
+                    return tl::unexpected(result.error());
                 }
-                sd.origin_ = result.move_ok();
+                sd.origin = std::move(*result);
                 break;
             }
             case 's': {
-                sd.session_name_ = line->substr(2);
+                sd.session_name = line->substr(2);
                 break;
             }
             case 'c': {
-                auto result = sdp::ConnectionInfoField::parse_new(*line);
-                if (result.is_err()) {
-                    return ParseResult<SessionDescription>::err(result.get_err());
+                auto result = parse_connection_info(*line);
+                if (!result) {
+                    return tl::unexpected(result.error());
                 }
-                if (!sd.media_descriptions_.empty()) {
-                    sd.media_descriptions_.back().add_connection_info(result.move_ok());
+                if (!sd.media_descriptions.empty()) {
+                    sd.media_descriptions.back().connection_infos.push_back(std::move(*result));
                 } else {
-                    sd.connection_info_ = result.move_ok();
+                    sd.connection_info = std::move(*result);
                 }
                 break;
             }
             case 't': {
-                auto result = sdp::TimeActiveField::parse_new(*line);
-                if (result.is_err()) {
-                    return ParseResult<SessionDescription>::err(result.get_err());
+                auto time_active = parse_time_active(*line);
+                if (!time_active) {
+                    return tl::unexpected(time_active.error());
                 }
-                sd.time_active_ = result.move_ok();
+                sd.time_active = *time_active;
                 break;
             }
             case 'm': {
-                auto result = sdp::MediaDescription::parse_new(*line);
-                if (result.is_err()) {
-                    return ParseResult<SessionDescription>::err(result.get_err());
+                auto desc = parse_media_description(*line);
+                if (!desc) {
+                    return tl::unexpected(desc.error());
                 }
-                sd.media_descriptions_.push_back(result.move_ok());
+                sd.media_descriptions.push_back(*desc);
                 break;
             }
             case 'a': {
-                if (!sd.media_descriptions_.empty()) {
-                    auto result = sd.media_descriptions_.back().parse_attribute(*line);
-                    if (result.is_err()) {
-                        return ParseResult<SessionDescription>::err(result.get_err());
+                if (!sd.media_descriptions.empty()) {
+                    auto result = sd.media_descriptions.back().parse_attribute(*line);
+                    if (!result) {
+                        return tl::unexpected(result.error());
                     }
                 } else {
                     auto result = sd.parse_attribute(*line);
-                    if (result.is_err()) {
-                        return ParseResult<SessionDescription>::err(result.get_err());
+                    if (!result) {
+                        return tl::unexpected(result.error());
                     }
                 }
                 break;
             }
             case 'i': {
-                if (!sd.media_descriptions_.empty()) {
-                    sd.media_descriptions_.back().set_session_information(std::string(line->substr(2)));
+                if (!sd.media_descriptions.empty()) {
+                    sd.media_descriptions.back().session_information = std::string(line->substr(2));
                 } else {
-                    sd.session_information_ = line->substr(2);
+                    sd.session_information = line->substr(2);
                 }
                 break;
             }
             default:
-                return ParseResult<SessionDescription>::err(fmt::format("Unknown line: {}", *line));
+                return tl::unexpected(fmt::format("Unknown line: {}", *line));
         }
     }
 
-    return ParseResult<SessionDescription>::ok(std::move(sd));
+    return sd;
 }
 
-int rav::sdp::SessionDescription::version() const {
-    return version_;
-}
-
-const rav::sdp::OriginField& rav::sdp::SessionDescription::origin() const {
-    return origin_;
-}
-
-void rav::sdp::SessionDescription::set_origin(OriginField origin) {
-    origin_ = std::move(origin);
-}
-
-const std::optional<rav::sdp::ConnectionInfoField>& rav::sdp::SessionDescription::connection_info() const {
-    return connection_info_;
-}
-
-void rav::sdp::SessionDescription::set_connection_info(ConnectionInfoField connection_info) {
-    connection_info_ = std::move(connection_info);
-}
-
-const std::string& rav::sdp::SessionDescription::session_name() const {
-    return session_name_;
-}
-
-void rav::sdp::SessionDescription::set_session_name(std::string session_name) {
-    session_name_ = std::move(session_name);
-}
-
-rav::sdp::TimeActiveField rav::sdp::SessionDescription::time_active() const {
-    return time_active_;
-}
-
-void rav::sdp::SessionDescription::set_time_active(const TimeActiveField time_active) {
-    time_active_ = time_active;
-}
-
-const std::vector<rav::sdp::MediaDescription>& rav::sdp::SessionDescription::media_descriptions() const {
-    return media_descriptions_;
-}
-
-void rav::sdp::SessionDescription::add_media_description(MediaDescription media_description) {
-    media_descriptions_.push_back(std::move(media_description));
-}
-
-rav::sdp::MediaDirection rav::sdp::SessionDescription::direction() const {
-    if (media_direction_.has_value()) {
-        return *media_direction_;
-    }
-    return sdp::MediaDirection::sendrecv;
-}
-
-std::optional<rav::sdp::ReferenceClock> rav::sdp::SessionDescription::ref_clock() const {
-    return reference_clock_;
-}
-
-void rav::sdp::SessionDescription::set_ref_clock(ReferenceClock ref_clock) {
-    reference_clock_ = std::move(ref_clock);
-}
-
-const std::optional<rav::sdp::MediaClockSource>& rav::sdp::SessionDescription::media_clock() const {
-    return media_clock_;
-}
-
-void rav::sdp::SessionDescription::set_media_clock(MediaClockSource media_clock) {
-    media_clock_ = std::move(media_clock);
-}
-
-const std::optional<rav::sdp::RavennaClockDomain>& rav::sdp::SessionDescription::clock_domain() const {
-    return clock_domain_;
-}
-
-void rav::sdp::SessionDescription::set_clock_domain(RavennaClockDomain clock_domain) {
-    clock_domain_ = clock_domain;
-}
-
-const std::vector<rav::sdp::SourceFilter>& rav::sdp::SessionDescription::source_filters() const {
-    return source_filters_;
-}
-
-void rav::sdp::SessionDescription::add_source_filter(const SourceFilter& filter) {
-    for (auto& f : source_filters_) {
-        if (f.network_type() == filter.network_type() && f.address_type() == filter.address_type()
-            && f.dest_address() == filter.dest_address()) {
-            f = filter;
-            return;
-        }
-    }
-
-    source_filters_.push_back(filter);
-}
-
-std::optional<rav::sdp::MediaDirection> rav::sdp::SessionDescription::get_media_direction() const {
-    return media_direction_;
-}
-
-void rav::sdp::SessionDescription::set_media_direction(MediaDirection direction) {
-    media_direction_ = direction;
-}
-
-std::optional<uint32_t> rav::sdp::SessionDescription::sync_time() const {
-    return sync_time_;
-}
-
-void rav::sdp::SessionDescription::set_sync_time(const std::optional<uint32_t> sync_time) {
-    sync_time_ = sync_time;
-}
-
-std::optional<rav::sdp::Group> rav::sdp::SessionDescription::get_group() const {
-    return group_;
-}
-
-void rav::sdp::SessionDescription::set_group(Group group) {
-    group_ = std::move(group);
-}
-
-const std::map<std::string, std::string>& rav::sdp::SessionDescription::attributes() const {
-    return attributes_;
-}
-
-tl::expected<std::string, std::string> rav::sdp::SessionDescription::to_string(const char* newline) const {
+std::string rav::sdp::to_string(const SessionDescription& session_description, const char* newline) {
     RAV_ASSERT(newline != nullptr, "newline must not be nullptr");
     std::string sdp;
 
     // Version
-    fmt::format_to(std::back_inserter(sdp), "v={}{}", version_, newline);
+    fmt::format_to(std::back_inserter(sdp), "v={}{}", session_description.version, newline);
 
     // Origin
-    auto origin = origin_.to_string();
-    if (!origin) {
-        return origin;
-    }
-    fmt::format_to(std::back_inserter(sdp), "{}{}", origin.value(), newline);
+    fmt::format_to(std::back_inserter(sdp), "{}{}", to_string(session_description.origin), newline);
 
     // Session name
-    fmt::format_to(std::back_inserter(sdp), "s={}{}", session_name_.empty() ? "-" : session_name(), newline);
+    fmt::format_to(
+        std::back_inserter(sdp), "s={}{}",
+        session_description.session_name.empty() ? "-" : session_description.session_name, newline
+    );
 
     // Time active
-    auto time = time_active_.to_string();
-    if (!time) {
-        return time;
-    }
-    fmt::format_to(std::back_inserter(sdp), "{}{}", time.value(), newline);
+    fmt::format_to(std::back_inserter(sdp), "{}{}", to_string(session_description.time_active), newline);
 
     // Group duplication
-    if (group_.has_value()) {
-        auto group = group_->to_string();
-        if (!group) {
-            return group;
-        }
-        fmt::format_to(std::back_inserter(sdp), "{}{}", group.value(), newline);
+    if (session_description.group.has_value()) {
+        fmt::format_to(std::back_inserter(sdp), "{}{}", to_string(*session_description.group), newline);
     }
 
     // Connection info
-    if (connection_info_.has_value()) {
-        auto connection = connection_info_->to_string();
-        if (!connection) {
-            return connection;
-        }
-        fmt::format_to(std::back_inserter(sdp), "{}{}", connection.value(), newline);
+    if (session_description.connection_info.has_value()) {
+        fmt::format_to(std::back_inserter(sdp), "{}{}", to_string(*session_description.connection_info), newline);
     }
 
     // Clock domain
-    if (clock_domain().has_value()) {
-        auto clock = clock_domain_->to_string();
-        if (!clock) {
-            return clock;
-        }
-        fmt::format_to(std::back_inserter(sdp), "{}{}", clock.value(), newline);
+    if (session_description.ravenna_clock_domain.has_value()) {
+        fmt::format_to(std::back_inserter(sdp), "{}{}", to_string(*session_description.ravenna_clock_domain), newline);
     }
 
     // Ref clock
-    if (reference_clock_.has_value()) {
-        auto ref_clock = reference_clock_->to_string();
-        if (!ref_clock) {
-            return ref_clock;
-        }
-        fmt::format_to(std::back_inserter(sdp), "{}{}", ref_clock.value(), newline);
+    if (session_description.reference_clock.has_value()) {
+        fmt::format_to(std::back_inserter(sdp), "{}{}", to_string(*session_description.reference_clock), newline);
     }
 
     // Media direction
-    if (media_direction_.has_value()) {
-        fmt::format_to(std::back_inserter(sdp), "a={}{}", sdp::to_string(*media_direction_), newline);
+    if (session_description.media_direction.has_value()) {
+        fmt::format_to(std::back_inserter(sdp), "a={}{}", to_string(*session_description.media_direction), newline);
     }
 
     // Media clock source
-    if (media_clock_.has_value()) {
-        auto clock = media_clock_->to_string();
-        if (!clock) {
-            return clock;
-        }
-        fmt::format_to(std::back_inserter(sdp), "{}{}", clock.value(), newline);
+    if (session_description.media_clock.has_value()) {
+        fmt::format_to(std::back_inserter(sdp), "{}{}", to_string(*session_description.media_clock), newline);
     }
 
     // Source filters
-    for (auto& filter : source_filters_) {
-        auto source_filter = filter.to_string();
-        if (!source_filter) {
-            return source_filter;
-        }
-        fmt::format_to(std::back_inserter(sdp), "{}{}", source_filter.value(), newline);
+    for (auto& filter : session_description.source_filters) {
+        fmt::format_to(std::back_inserter(sdp), "{}{}", to_string(filter), newline);
     }
 
     // Media descriptions
-    for (const auto& media : media_descriptions_) {
-        auto media_str = media.to_string(newline);
-        if (!media_str) {
-            return media_str;
-        }
-        fmt::format_to(std::back_inserter(sdp), "{}", media_str.value());
+    for (const auto& media : session_description.media_descriptions) {
+        fmt::format_to(std::back_inserter(sdp), "{}", to_string(media));
     }
 
     return sdp;
-}
-
-rav::sdp::SessionDescription::ParseResult<int>
-rav::sdp::SessionDescription::parse_version(const std::string_view line) {
-    if (!string_starts_with(line, "v=")) {
-        return ParseResult<int>::err("expecting line to start with 'v='");
-    }
-
-    if (const auto v = rav::string_to_int<int>(line.substr(2)); v.has_value()) {
-        if (*v != 0) {
-            return ParseResult<int>::err("invalid version");
-        }
-        return ParseResult<int>::ok(*v);
-    }
-
-    return ParseResult<int>::err("failed to parse integer from string");
-}
-
-rav::sdp::SessionDescription::ParseResult<void>
-rav::sdp::SessionDescription::parse_attribute(const std::string_view line) {
-    StringParser parser(line);
-
-    if (!parser.skip("a=")) {
-        return ParseResult<void>::err("attribute: expecting 'a='");
-    }
-
-    const auto key = parser.split(':');
-
-    if (!key) {
-        return ParseResult<void>::err("attribute: expecting key");
-    }
-
-    if (key == sdp::k_sdp_sendrecv) {
-        media_direction_ = sdp::MediaDirection::sendrecv;
-    } else if (key == sdp::k_sdp_sendonly) {
-        media_direction_ = sdp::MediaDirection::sendonly;
-    } else if (key == sdp::k_sdp_recvonly) {
-        media_direction_ = sdp::MediaDirection::recvonly;
-    } else if (key == sdp::k_sdp_inactive) {
-        media_direction_ = sdp::MediaDirection::inactive;
-    } else if (key == sdp::k_sdp_ts_refclk) {
-        if (const auto value = parser.read_until_end()) {
-            auto ref_clock = sdp::ReferenceClock::parse_new(*value);
-            if (ref_clock.is_err()) {
-                return ParseResult<void>::err(ref_clock.get_err());
-            }
-            reference_clock_ = ref_clock.move_ok();
-        }
-    } else if (key == sdp::MediaClockSource::k_attribute_name) {
-        if (const auto value = parser.read_until_end()) {
-            auto clock = sdp::MediaClockSource::parse_new(*value);
-            if (clock.is_err()) {
-                return ParseResult<void>::err(clock.get_err());
-            }
-            media_clock_ = clock.move_ok();
-        }
-    } else if (key == RavennaClockDomain::k_attribute_name) {
-        if (const auto value = parser.read_until_end()) {
-            auto clock_domain = RavennaClockDomain::parse_new(*value);
-            if (clock_domain.is_err()) {
-                return ParseResult<void>::err(clock_domain.get_err());
-            }
-            clock_domain_ = clock_domain.move_ok();
-        }
-    } else if (key == SourceFilter::k_attribute_name) {
-        if (const auto value = parser.read_until_end()) {
-            auto filter = SourceFilter::parse_new(*value);
-            if (filter.is_err()) {
-                return ParseResult<void>::err(filter.get_err());
-            }
-            source_filters_.push_back(filter.move_ok());
-        } else {
-            return ParseResult<void>::err("media: failed to parse source-filter value");
-        }
-    } else if (key == k_sdp_sync_time) {
-        if (const auto rtp_ts = parser.read_int<uint32_t>()) {
-            sync_time_ = *rtp_ts;
-        } else {
-            return ParseResult<void>::err("media: failed to parse sync-time value");
-        }
-    } else if (key == k_sdp_group) {
-        if (const auto value = parser.read_until_end()) {
-            auto group = Group::parse_new(*value);
-            if (!group.has_value()) {
-                return ParseResult<void>::err(group.error());
-            }
-            group_ = *group;
-        }
-    } else {
-        // Store the attribute in the map of unknown attributes
-        if (auto value = parser.read_until_end()) {
-            attributes_.emplace(*key, *value);
-        } else {
-            return ParseResult<void>::err("media: failed to parse attribute value");
-        }
-    }
-
-    return ParseResult<void>::ok();
 }

@@ -40,20 +40,24 @@ int main(int const argc, char* argv[]) {
 
     rav::rtsp::Client client(io_context);
 
-    client.on<rav::rtsp::Connection::ConnectEvent>([path, &client](const rav::rtsp::Connection::ConnectEvent&) {
+    client.on_connect_event = [path, &client](const rav::rtsp::Connection::ConnectEvent&) {
         RAV_INFO("Connected, send DESCRIBE request");
         client.async_describe(path);
-    });
+    };
 
-    client.on<rav::rtsp::Connection::RequestEvent>([](const rav::rtsp::Connection::RequestEvent& event) {
-        RAV_INFO("{}\n{}", event.rtsp_request.to_debug_string(true), rav::string_replace(event.rtsp_request.data, "\r\n", "\n"));
-    });
-
-    client.on<rav::rtsp::Connection::ResponseEvent>([](const rav::rtsp::Connection::ResponseEvent& event) {
+    client.on_request_event = [](const rav::rtsp::Connection::RequestEvent& event) {
         RAV_INFO(
-            "{}\n{}", event.rtsp_response.to_debug_string(true), rav::string_replace(event.rtsp_response.data, "\r\n", "\n")
+            "{}\n{}", event.rtsp_request.to_debug_string(true),
+            rav::string_replace(event.rtsp_request.data, "\r\n", "\n")
         );
-    });
+    };
+
+    client.on_response_event = [](const rav::rtsp::Connection::ResponseEvent& event) {
+        RAV_INFO(
+            "{}\n{}", event.rtsp_response.to_debug_string(true),
+            rav::string_replace(event.rtsp_response.data, "\r\n", "\n")
+        );
+    };
 
     client.async_connect(host, port);
 

@@ -13,33 +13,48 @@
 
 #include "ravennakit/core/format.hpp"
 
-std::string rav::sdp::Format::to_string() const {
-    return fmt::format("{} {}/{}/{}", payload_type, encoding_name, clock_rate, num_channels);
+tl::expected<rav::sdp::Format, std::string> rav::sdp::parse_format(const std::string_view line) {
+    StringParser parser(line);
+
+    Format map;
+
+    if (const auto payload_type = parser.read_int<uint8_t>()) {
+        map.payload_type = *payload_type;
+        if (!parser.skip(' ')) {
+            return tl::unexpected("rtpmap: expecting space after payload type");
+        }
+    } else {
+        return tl::unexpected("rtpmap: invalid payload type");
+    }
+
+    if (const auto encoding_name = parser.split('/')) {
+        map.encoding_name = *encoding_name;
+    } else {
+        return tl::unexpected("rtpmap: failed to parse encoding name");
+    }
+
+    if (const auto clock_rate = parser.read_int<uint32_t>()) {
+        map.clock_rate = *clock_rate;
+    } else {
+        return tl::unexpected("rtpmap: invalid clock rate");
+    }
+
+    if (parser.skip('/')) {
+        if (const auto num_channels = parser.read_int<uint32_t>()) {
+            // Note: strictly speaking the encoding parameters can be anything, but as of now it's only used for
+            // channels.
+            map.num_channels = *num_channels;
+        } else {
+            return tl::unexpected("rtpmap: failed to parse number of channels");
+        }
+    } else {
+        map.num_channels = 1;
+    }
+
+    return map;
 }
 
-std::optional<rav::AudioFormat> rav::sdp::Format::to_audio_format() const {
-    if (encoding_name == "L16") {
-        return AudioFormat {
-            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s16, AudioFormat::ChannelOrdering::interleaved,
-            clock_rate, num_channels
-        };
-    }
-    if (encoding_name == "L24") {
-        return AudioFormat {
-            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s24, AudioFormat::ChannelOrdering::interleaved,
-            clock_rate, num_channels
-        };
-    }
-    if (encoding_name == "L32") {
-        return AudioFormat {
-            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s32, AudioFormat::ChannelOrdering::interleaved,
-            clock_rate, num_channels
-        };
-    }
-    return std::nullopt;
-}
-
-std::optional<rav::sdp::Format> rav::sdp::Format::from_audio_format(const AudioFormat& input_format) {
+std::optional<rav::sdp::Format> rav::sdp::make_audio_format(const AudioFormat& input_format) {
     Format output_format;
 
     switch (input_format.encoding) {
@@ -67,43 +82,31 @@ std::optional<rav::sdp::Format> rav::sdp::Format::from_audio_format(const AudioF
     return output_format;
 }
 
-rav::sdp::Format::parse_result<rav::sdp::Format> rav::sdp::Format::parse_new(const std::string_view line) {
-    StringParser parser(line);
-
-    Format map;
-
-    if (const auto payload_type = parser.read_int<uint8_t>()) {
-        map.payload_type = *payload_type;
-        if (!parser.skip(' ')) {
-            return parse_result<Format>::err("rtpmap: expecting space after payload type");
-        }
-    } else {
-        return parse_result<Format>::err("rtpmap: invalid payload type");
+std::optional<rav::AudioFormat> rav::sdp::make_audio_format(const Format& input_format) {
+    if (input_format.encoding_name == "L16") {
+        return AudioFormat {
+            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s16, AudioFormat::ChannelOrdering::interleaved,
+            input_format.clock_rate, input_format.num_channels
+        };
     }
-
-    if (const auto encoding_name = parser.split('/')) {
-        map.encoding_name = *encoding_name;
-    } else {
-        return parse_result<Format>::err("rtpmap: failed to parse encoding name");
+    if (input_format.encoding_name == "L24") {
+        return AudioFormat {
+            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s24, AudioFormat::ChannelOrdering::interleaved,
+            input_format.clock_rate, input_format.num_channels
+        };
     }
-
-    if (const auto clock_rate = parser.read_int<uint32_t>()) {
-        map.clock_rate = *clock_rate;
-    } else {
-        return parse_result<Format>::err("rtpmap: invalid clock rate");
+    if (input_format.encoding_name == "L32") {
+        return AudioFormat {
+            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s32, AudioFormat::ChannelOrdering::interleaved,
+            input_format.clock_rate, input_format.num_channels
+        };
     }
+    return std::nullopt;
+}
 
-    if (parser.skip('/')) {
-        if (const auto num_channels = parser.read_int<uint32_t>()) {
-            // Note: strictly speaking the encoding parameters can be anything, but as of now it's only used for
-            // channels.
-            map.num_channels = *num_channels;
-        } else {
-            return parse_result<Format>::err("rtpmap: failed to parse number of channels");
-        }
-    } else {
-        map.num_channels = 1;
-    }
-
-    return parse_result<Format>::ok(map);
+std::string rav::sdp::to_string(const Format& input_format) {
+    return fmt::format(
+        "{} {}/{}/{}", input_format.payload_type, input_format.encoding_name, input_format.clock_rate,
+        input_format.num_channels
+    );
 }

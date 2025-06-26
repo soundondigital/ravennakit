@@ -22,19 +22,19 @@ namespace rav::posix {
 /**
  * Wrapper around the POSIX pipe() function.
  */
-class pipe {
+class Pipe {
   public:
     /**
      * Constructs a pipe.
      * @throws rav::Exception if pipe() fails.
      */
-    pipe() {
+    Pipe() {
         if (::pipe(fds_) == -1) {
             RAV_THROW_EXCEPTION("pipe() failed");
         }
     }
 
-    ~pipe() {
+    ~Pipe() {
         if (fds_[0] != 0) {
             ::close(fds_[0]);
         }

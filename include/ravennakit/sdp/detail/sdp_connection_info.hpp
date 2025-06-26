@@ -11,8 +11,6 @@
 #pragma once
 
 #include "sdp_types.hpp"
-#include "ravennakit/core/result.hpp"
-
 #include "ravennakit/core/expected.hpp"
 
 namespace rav::sdp {
@@ -31,30 +29,25 @@ struct ConnectionInfoField {
     std::optional<int32_t> ttl;
     /// Optional number of addresses
     std::optional<int32_t> number_of_addresses;
-
-    /**
-     * Validates the connection info.
-     * @return An error message if the connection info is invalid.
-     */
-    [[nodiscard]] tl::expected<void, std::string> validate() const;
-
-    /**
-     * Converts the connection info to a string.
-     * @return The connection info as a string.
-     */
-    [[nodiscard]] tl::expected<std::string, std::string> to_string() const;
-
-    /// A type alias for a parse result.
-    template<class T>
-    using parse_result = Result<T, std::string>;
-
-    /**
-     * Parses a connection info field from a string.
-     * @param line The string to parse.
-     * @return A pair containing the parse result and the connection info. When parsing fails, the connection info
-     * will be a default-constructed object.
-     */
-    static parse_result<ConnectionInfoField> parse_new(std::string_view line);
 };
 
-}
+/**
+ * Parses a connection info field from a string.
+ * @param line The string to parse.
+ * @return A result object containing either the newly parsed value, or an error string.
+ */
+tl::expected<ConnectionInfoField, std::string> parse_connection_info(std::string_view line);
+
+/**
+ * Converts the connection info to a string.
+ * @return The connection info as a string.
+ */
+std::string to_string(const ConnectionInfoField& field);
+
+/**
+ * Validates the connection info.
+ * @return An error message if the connection info is invalid.
+ */
+[[nodiscard]] tl::expected<void, std::string> validate(const ConnectionInfoField& field);
+
+}  // namespace rav::sdp

@@ -12,7 +12,7 @@
 
 #include "ravennakit/aes67/aes67_constants.hpp"
 #include "ravennakit/aes67/aes67_packet_time.hpp"
-#include "ravennakit/core/uri.hpp"
+#include "ravennakit/core/util/uri.hpp"
 #include "ravennakit/core/json.hpp"
 #include "ravennakit/core/audio/audio_buffer_view.hpp"
 #include "ravennakit/core/containers/fifo_buffer.hpp"
@@ -62,13 +62,6 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
         friend bool operator!=(const Destination& lhs, const Destination& rhs) {
             return !(lhs == rhs);
         }
-
-        /**
-         * @return The destination as a JSON object.
-         */
-        [[nodiscard]] nlohmann::json to_json() const;
-
-        static tl::expected<Destination, std::string> from_json(const nlohmann::json& json);
     };
 
     /*
@@ -82,18 +75,6 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
         AudioFormat audio_format;
         aes67::PacketTime packet_time;
         bool enabled {};
-
-        /**
-         * @return The configuration as a JSON object.
-         */
-        [[nodiscard]] nlohmann::json to_json() const;
-
-        /**
-         * Creates a configuration object from a JSON object.
-         * @param json The JSON object to convert.
-         * @return A configuration object if the JSON is valid, otherwise an error message.
-         */
-        static tl::expected<Configuration, std::string> from_json(const nlohmann::json& json);
     };
 
     class Subscriber {
@@ -210,14 +191,29 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     /**
      * @return A JSON representation of the sender.
      */
-    nlohmann::json to_json() const;
+    boost::json::object to_boost_json() const;
 
     /**
      * Restores the sender from a JSON representation.
      * @param json The JSON representation of the sender.
      * @return A result indicating whether the restoration was successful or not.
      */
-    [[nodiscard]] tl::expected<void, std::string> restore_from_json(const nlohmann::json& json);
+    [[nodiscard]] tl::expected<void, std::string> restore_from_json(const boost::json::value& json);
+
+    /**
+     * @return The NMOS source of this sender.
+     */
+    [[nodiscard]] const nmos::SourceAudio& get_nmos_source() const;
+
+    /**
+     * @return The NMOS flow of this sender.
+     */
+    [[nodiscard]] const nmos::FlowAudioRaw& get_nmos_flow() const;
+
+    /**
+     * @return The NMOS sender of this sender.
+     */
+    [[nodiscard]] const nmos::Sender& get_nmos_sender() const;
 
     // rtsp_server::handler overrides
     void on_request(rtsp::Connection::RequestEvent event) const override;
@@ -288,5 +284,17 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     void update_rtp_senders();
     void update_state(bool update_advertisement, bool announce, bool update_nmos);
 };
+
+void tag_invoke(
+    const boost::json::value_from_tag&, boost::json::value& jv, const RavennaSender::Destination& destination
+);
+
+RavennaSender::Destination
+tag_invoke(const boost::json::value_to_tag<RavennaSender::Destination>&, const boost::json::value& jv);
+
+void tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const RavennaSender::Configuration& config);
+
+RavennaSender::Configuration
+tag_invoke(const boost::json::value_to_tag<RavennaSender::Configuration>&, const boost::json::value& jv);
 
 }  // namespace rav

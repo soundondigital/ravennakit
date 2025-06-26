@@ -5,7 +5,7 @@ This project requires the following dependencies:
 - [spdlog](https://github.com/gabime/spdlog) (MIT License)
 - [fmt](https://github.com/fmtlib/fmt) (MIT License)
 - [boost](https://www.boost.org/) (Boost Software License)
-- [tl-expected](https://github.com/TartanLlama/expected) (CC0 1.0 Universal) (will be replaced with boost::system::result)
+- [tl-expected](https://github.com/TartanLlama/expected) (CC0 1.0 Universal) (until std::expected can be used)
 - [nanobench](https://github.com/martinus/nanobench) (MIT License)
 - [Bonjour SDK for Windows](https://developer.apple.com/bonjour/) (Apache 2.0 License)
 - [nlohmann-json](https://github.com/nlohmann/json) (MIT License) (will be replaced with boost::json)

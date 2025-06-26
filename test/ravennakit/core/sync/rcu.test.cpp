@@ -34,7 +34,7 @@ namespace {
 constexpr auto k_timeout_seconds = 60;
 }
 
-TEST_CASE("rcu") {
+TEST_CASE("rav::Rcu") {
     SECTION("Default state") {
         rav::Rcu<int> rcu;
         rav::Rcu<int>::Reader reader(rcu);

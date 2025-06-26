@@ -10,10 +10,11 @@
 
 #include "ravennakit/aes67/aes67_packet_time.hpp"
 #include "ravennakit/core/util.hpp"
+#include "aes67_packet_time.test.hpp"
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("aes67_packet_time") {
+TEST_CASE("rav::aes67::PacketTime") {
     constexpr float eps = 0.005f;
     SECTION("125 microseconds") {
         const auto pt = rav::aes67::PacketTime::us_125();
@@ -99,4 +100,21 @@ TEST_CASE("aes67_packet_time") {
         REQUIRE(pt.framecount(192'000) == 768);
         REQUIRE(pt.framecount(384'000) == 1536);
     }
+
+    SECTION("To JSON") {
+        auto test_packet_time = [](const rav::aes67::PacketTime& packet_time) {
+            rav::aes67::test_packet_time_json(packet_time, boost::json::value_from(packet_time));
+        };
+
+        test_packet_time(rav::aes67::PacketTime::us_125());
+        test_packet_time(rav::aes67::PacketTime::us_250());
+        test_packet_time(rav::aes67::PacketTime::us_333());
+        test_packet_time(rav::aes67::PacketTime::ms_1());
+        test_packet_time(rav::aes67::PacketTime::ms_4());
+    }
+}
+
+void rav::aes67::test_packet_time_json(const PacketTime& packet_time, const boost::json::value& json) {
+    REQUIRE(json.at(0) == packet_time.fraction.numerator);
+    REQUIRE(json.at(1) == packet_time.fraction.denominator);
 }

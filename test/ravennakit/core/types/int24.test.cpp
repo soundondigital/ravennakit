@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("int24_t") {
+TEST_CASE("rav::int24_t") {
     SECTION("int32 to int24") {
         const rav::int24_t min(-8388608);
         REQUIRE(static_cast<int32_t>(min) == -8388608);

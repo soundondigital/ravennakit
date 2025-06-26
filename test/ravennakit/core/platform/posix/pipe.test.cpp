@@ -13,9 +13,9 @@
 
 #if RAV_POSIX
 
-TEST_CASE("pipe", "[pipe]") {
+TEST_CASE("rav::posix::Pipe") {
     SECTION("Test default state") {
-        rav::posix::pipe pipe;
+        rav::posix::Pipe pipe;
         REQUIRE(pipe.read_fd() >= 3);
         REQUIRE(pipe.read_fd() >= 3);
     }
@@ -23,7 +23,7 @@ TEST_CASE("pipe", "[pipe]") {
     SECTION("Read and write something") {
         uint64_t in = 0x1234567890abcdef;
         uint64_t out = 0;
-        rav::posix::pipe pipe;
+        rav::posix::Pipe pipe;
         REQUIRE(pipe.write(&in, sizeof(in)) == sizeof(in));
         REQUIRE(pipe.read(&out, sizeof(out)) == sizeof(out));
         REQUIRE(in == out);
@@ -31,7 +31,7 @@ TEST_CASE("pipe", "[pipe]") {
 
     SECTION("Read a bunch of something") {
         constexpr uint64_t num_elements = 1000; // If this is too large, the test will hang
-        rav::posix::pipe pipe;
+        rav::posix::Pipe pipe;
 
         // Write a bunch of data
         for (uint64_t i = 0; i < num_elements; ++i) {

@@ -39,7 +39,8 @@ class RegistryBrowserBase {
             return std::nullopt;
         }
         if (api_proto->second != "http") {
-            return std::nullopt;  // TODO: Only http supported
+            RAV_WARNING("Only http is supported");
+            return std::nullopt;
         }
 
         // api_ver
@@ -57,7 +58,8 @@ class RegistryBrowserBase {
             return std::nullopt;
         }
         if (api_auth->second != "false") {
-            return std::nullopt;  // TODO: Only no auth supported
+            RAV_WARNING("Auth is not supported");
+            return std::nullopt;
         }
 
         // pri

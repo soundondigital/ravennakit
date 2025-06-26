@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("rtsp_headers", "[rtsp_headers]") {
+TEST_CASE("rav::rtsp::Headers") {
     SECTION("Find header") {
         rav::rtsp::Headers headers;
         REQUIRE(headers.get("CSeq") == nullptr);

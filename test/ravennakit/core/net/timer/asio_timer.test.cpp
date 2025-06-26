@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("AsioTimer") {
+TEST_CASE("rav::AsioTimer") {
     SECTION("Once") {
         boost::asio::io_context io_context;
         rav::AsioTimer timer(io_context);

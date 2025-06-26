@@ -10,12 +10,10 @@
 
 #pragma once
 
-#include <string_view>
-
 #include "ravennakit/core/math/fraction.hpp"
-#include "ravennakit/core/result.hpp"
-
 #include "ravennakit/core/expected.hpp"
+
+#include <string_view>
 
 namespace rav::sdp {
 
@@ -30,53 +28,35 @@ class MediaClockSource {
 
     enum class ClockMode { undefined, direct };
 
-    MediaClockSource() = default;
-    MediaClockSource(ClockMode mode, std::optional<int64_t> offset, std::optional<Fraction<int32_t>> rate);
-
-    /// A type alias for a parse result.
-    template<class T>
-    using ParseResult = Result<T, std::string>;
-
-    static ParseResult<MediaClockSource> parse_new(std::string_view line);
-
-    /**
-     * @returns The clock mode
-     */
-    [[nodiscard]] ClockMode mode() const;
-
-    /**
-     * @return The offset of the media clock.
-     */
-    [[nodiscard]] std::optional<int64_t> offset() const;
-
-    /**
-     * @return The rate numerator of the media clock.
-     */
-    [[nodiscard]] const std::optional<Fraction<int32_t>>& rate() const;
-
-    /**
-     * Validates the media clock source.
-     * @throws rav::Exception if the media clock source is invalid.
-     */
-    [[nodiscard]] tl::expected<void, std::string> validate() const;
-
-    /**
-     * Converts the media clock source to a string.
-     * @return The media clock source as a string.
-     */
-    [[nodiscard]] tl::expected<std::string, std::string> to_string() const;
-
-    /**
-     * Converts the clock mode to a string.
-     * @param mode The clock mode to convert.
-     * @return The clock mode as a string.
-     */
-    static std::string to_string(ClockMode mode);
-
-  private:
-    ClockMode mode_ {ClockMode::undefined};
-    std::optional<int64_t> offset_;
-    std::optional<Fraction<int32_t>> rate_;
+    ClockMode mode {ClockMode::undefined};
+    std::optional<int64_t> offset;
+    std::optional<Fraction<int32_t>> rate;
 };
+
+/**
+ * Converts the media clock source to a string.
+ * @return The media clock source as a string.
+ */
+[[nodiscard]] std::string to_string(const MediaClockSource& mode);
+
+/**
+ * Converts the clock mode to a string.
+ * @param mode The clock mode to convert.
+ * @return The clock mode as a string.
+ */
+[[nodiscard]] const char* to_string(MediaClockSource::ClockMode mode);
+
+/**
+ * Validates the media clock source.
+ * @throws rav::Exception if the media clock source is invalid.
+ */
+[[nodiscard]] tl::expected<void, std::string> validate(const MediaClockSource& clock_source);
+
+/**
+ * Create a MediaClockSource from a string from an SDP.
+ * @param line The input text.
+ * @return The MediaClockSource, or an error.
+ */
+[[nodiscard]] tl::expected<MediaClockSource, std::string> parse_media_clock_source(std::string_view line);
 
 }  // namespace rav::sdp

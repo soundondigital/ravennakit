@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include "ravennakit/core/subscription.hpp"
 #include "ravennakit/core/expected.hpp"
 
 #include <boost/asio.hpp>

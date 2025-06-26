@@ -13,7 +13,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("running_average") {
+TEST_CASE("rav::RunningAverage") {
     SECTION("Initialization") {
         constexpr rav::RunningAverage avg;
         REQUIRE(rav::is_within(avg.average() , 0.0, 0.0));

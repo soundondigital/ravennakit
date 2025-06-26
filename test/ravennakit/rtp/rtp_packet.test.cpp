@@ -14,7 +14,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("rtp_packet") {
+TEST_CASE("rav::rtp::Packet") {
     SECTION("Encode an RTP packet 2 times") {
         rav::rtp::Packet packet;
         packet.payload_type(0xff);

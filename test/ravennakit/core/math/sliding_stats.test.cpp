@@ -13,7 +13,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("sliding_stats") {
+TEST_CASE("rav::SlidingStats") {
     SECTION("average") {
         rav::SlidingStats avg(5);
         REQUIRE(avg.count() == 0);

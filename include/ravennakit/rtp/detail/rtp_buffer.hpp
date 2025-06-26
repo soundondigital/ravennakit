@@ -179,29 +179,6 @@ class Buffer {
         ground_value_ = ground_value;
     }
 
-    /**
-     * Returns the AES67 suggested buffer length in milliseconds according to AES67-2023 7.5:
-     * "Receivers should have a buffer capacity at least 20 times the packet time or 20 ms, whichever is smaller."
-     * @param packet_time_ms The time per packet in milliseconds.
-     * @return The suggested buffer length in milliseconds.
-     * TODO: Move to aes67_packet_time.hpp
-     */
-    static double get_aes67_suggested_buffer_length_ms(const double packet_time_ms) {
-        return std::min(20.0, packet_time_ms * 20.0);
-    }
-
-    /**
-     * Returns the AES67 suggested buffer length in frames according to AES67-2023 7.5:
-     * "Receivers should have a buffer capacity at least 20 times the packet time or 20 ms, whichever is smaller."
-     * @param packet_time_ms The time per packet in frames.
-     * @param clock_rate The clock rate in Hz.
-     * @return The suggested buffer length in frames.
-     * TODO: Move to aes67_packet_time.hpp
-     */
-    static double get_aes67_suggested_buffer_length_frames(const double packet_time_ms, const double clock_rate) {
-        return std::round(get_aes67_suggested_buffer_length_ms(packet_time_ms) * clock_rate / 1000.0);
-    }
-
   private:
     uint32_t bytes_per_frame_ = 0;  // Number of bytes (octets) per frame
     WrappingUint32 next_ts_;        // Producer ts

@@ -17,7 +17,7 @@
 #include "datasets/ptp_default_ds.hpp"
 #include "datasets/ptp_parent_ds.hpp"
 #include "datasets/ptp_time_properties_ds.hpp"
-#include "ravennakit/core/events/subscriber_list.hpp"
+#include "ravennakit/core/util/subscriber_list.hpp"
 #include "ravennakit/core/expected.hpp"
 
 #include <boost/lockfree/spsc_value.hpp>

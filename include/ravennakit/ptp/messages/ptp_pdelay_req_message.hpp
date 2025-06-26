@@ -18,7 +18,6 @@
 namespace rav::ptp {
 
 struct PdelayReqMessage {
-    // TODO: Add the header
     Timestamp origin_timestamp;
     const uint8_t reserved[10] = {}; // To match the messages length of the pdelay_resp message.
 

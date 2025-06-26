@@ -11,7 +11,7 @@
 #include "ravennakit/nmos/nmos_node.hpp"
 
 #include "ravennakit/core/json.hpp"
-#include "ravennakit/core/rollback.hpp"
+#include "ravennakit/core/scoped_rollback.hpp"
 #include "ravennakit/core/util/stl_helpers.hpp"
 #include "ravennakit/core/util/todo.hpp"
 #include "ravennakit/nmos/models/nmos_activation_response.hpp"
@@ -163,7 +163,7 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::Configuration::va
     return {};
 }
 
-boost::json::value rav::nmos::Node::Configuration::to_json() const {
+boost::json::object rav::nmos::Node::Configuration::to_json() const {
     return {
         {"id", to_string(id)},
         {"operation_mode", to_string(operation_mode)},
@@ -1823,7 +1823,7 @@ void rav::nmos::Node::set_network_interface_config(NetworkInterfaceConfig config
     self_.interfaces.clear();
     const auto& system_interfaces = NetworkInterfaceList::get_system_interfaces();
 
-    for (const auto& [_, id] : config.get_interfaces()) {
+    for (const auto& [_, id] : config.interfaces) {
         auto* iface = system_interfaces.get_interface(id);
         if (iface == nullptr) {
             RAV_ERROR("Network interface with ID {} not found", id);
@@ -1918,4 +1918,19 @@ void rav::nmos::Node::ptp_port_changed_state(const ptp::Port&) {
     if (status_ == Status::registered) {
         send_updated_resources_async();
     }
+}
+
+void rav::nmos::tag_invoke(
+    const boost::json::value_from_tag&, boost::json::value& jv, const Node::Configuration& config
+) {
+    jv = {
+        {"id", to_string(config.id)},
+        {"operation_mode", to_string(config.operation_mode)},
+        {"api_version", config.api_version.to_string()},
+        {"registry_address", config.registry_address},
+        {"enabled", config.enabled},
+        {"api_port", config.api_port},
+        {"label", config.label},
+        {"description", config.description},
+    };
 }

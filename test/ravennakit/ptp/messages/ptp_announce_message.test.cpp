@@ -13,7 +13,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("ptp_announce_message") {
+TEST_CASE("rav::ptp::AnnounceMessage") {
     SECTION("Unpack from data") {
         constexpr std::array<const uint8_t, 30> data = {
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06,              // origin_timestamp.seconds

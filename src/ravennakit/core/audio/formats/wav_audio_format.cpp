@@ -50,20 +50,56 @@ tl::expected<size_t, rav::OutputStream::Error> rav::WavAudioFormat::FmtChunk::wr
         return 0;
     };
 
-    OK_OR_RETURN(ostream.write("fmt ", 4).map(map_value));  // Note the trailing space
-    OK_OR_RETURN(ostream.write_le<uint32_t>(extension.has_value() ? 40 : 16).map(map_value));
-    OK_OR_RETURN(ostream.write_le(format).map(map_value));
-    OK_OR_RETURN(ostream.write_le(num_channels).map(map_value));
-    OK_OR_RETURN(ostream.write_le(sample_rate).map(map_value));
-    OK_OR_RETURN(ostream.write_le(avg_bytes_per_sec).map(map_value));
-    OK_OR_RETURN(ostream.write_le(block_align).map(map_value));
-    OK_OR_RETURN(ostream.write_le(bits_per_sample).map(map_value));
+    auto result = ostream.write("fmt ", 4).map(map_value);  // Note the trailing spae
+    if (!result) {
+        return result;
+    }
+    result = ostream.write_le<uint32_t>(extension.has_value() ? 40 : 16).map(map_value);
+    if (!result) {
+        return result;
+    }
+    result = ostream.write_le(format).map(map_value);
+    if (!result) {
+        return result;
+    }
+    result = ostream.write_le(num_channels).map(map_value);
+    if (!result) {
+        return result;
+    }
+    result = ostream.write_le(sample_rate).map(map_value);
+    if (!result) {
+        return result;
+    }
+    result = ostream.write_le(avg_bytes_per_sec).map(map_value);
+    if (!result) {
+        return result;
+    }
+    result = ostream.write_le(block_align).map(map_value);
+    if (!result) {
+        return result;
+    }
+    result = ostream.write_le(bits_per_sample).map(map_value);
+    if (!result) {
+        return result;
+    }
 
     if (extension.has_value()) {
-        OK_OR_RETURN(ostream.write_le(extension->cb_size).map(map_value));
-        OK_OR_RETURN(ostream.write_le(extension->valid_bits_per_sample).map(map_value));
-        OK_OR_RETURN(ostream.write_le(extension->channel_mask).map(map_value));
-        OK_OR_RETURN(ostream.write_le(extension->sub_format).map(map_value));
+        result = ostream.write_le(extension->cb_size).map(map_value);
+        if (!result) {
+            return result;
+        }
+        result = ostream.write_le(extension->valid_bits_per_sample).map(map_value);
+        if (!result) {
+            return result;
+        }
+        result = ostream.write_le(extension->channel_mask).map(map_value);
+        if (!result) {
+            return result;
+        }
+        result = ostream.write_le(extension->sub_format).map(map_value);
+        if (!result) {
+            return result;
+        }
     }
 
     return ostream.get_write_position() - start_pos;
@@ -141,8 +177,15 @@ rav::WavAudioFormat::DataChunk::write(OutputStream& ostream, const size_t data_w
     };
     const auto pos = ostream.get_write_position();
     data_size = data_written;
-    OK_OR_RETURN(ostream.write("data", 4).map(map_value));
-    OK_OR_RETURN(ostream.write_le<uint32_t>(static_cast<uint32_t>(data_size)).map(map_value));
+
+    auto result = ostream.write("data", 4).map(map_value);
+    if (!result) {
+        return result;
+    }
+    result = ostream.write_le<uint32_t>(static_cast<uint32_t>(data_size)).map(map_value);
+    if (!result) {
+        return result;
+    }
     data_begin = ostream.get_write_position();
     return data_begin - pos;
 }
@@ -290,7 +333,10 @@ rav::WavAudioFormat::Writer::~Writer() {
 
 tl::expected<void, rav::OutputStream::Error>
 rav::WavAudioFormat::Writer::write_audio_data(const uint8_t* buffer, const size_t size) {
-    OK_OR_RETURN(ostream_.write(buffer, size));
+    const auto result = ostream_.write(buffer, size);
+    if (!result) {
+        return result;
+    }
     audio_data_written_ += size;
     return {};
 }
@@ -305,18 +351,33 @@ bool rav::WavAudioFormat::Writer::finalize() {
 
 tl::expected<void, rav::OutputStream::Error> rav::WavAudioFormat::Writer::write_header() {
     const auto pos = ostream_.get_write_position();
-    OK_OR_RETURN(ostream_.set_write_position(0));
-    OK_OR_RETURN(ostream_.write("RIFF", 4));
+    auto result = ostream_.set_write_position(0);
+    if (!result) {
+        return result;
+    }
+    result = ostream_.write("RIFF", 4);
+    if (!result) {
+        return result;
+    }
     // The riff size will only be correct after calling write_header() once before.
     const auto riff_size = chunks_total_size_ + audio_data_written_ + 4;  // +4 for "WAVE"
     RAV_ASSERT(riff_size < std::numeric_limits<uint32_t>::max(), "WAV file too large");
-    OK_OR_RETURN(ostream_.write_le<uint32_t>(static_cast<uint32_t>(riff_size)));
-    OK_OR_RETURN(ostream_.write("WAVE", 4));
+    result = ostream_.write_le<uint32_t>(static_cast<uint32_t>(riff_size));
+    if (!result) {
+        return result;
+    }
+    result = ostream_.write("WAVE", 4);
+    if (!result) {
+        return result;
+    }
     chunks_total_size_ = fmt_chunk_.write(ostream_).value();                         // TODO: Handle error
     chunks_total_size_ += data_chunk_.write(ostream_, audio_data_written_).value();  // TODO: Handle error
 
     if (pos > 0) {
-        OK_OR_RETURN(ostream_.set_write_position(pos));
+        result = ostream_.set_write_position(pos);
+        if (!result) {
+            return result;
+        }
     }
 
     return {};

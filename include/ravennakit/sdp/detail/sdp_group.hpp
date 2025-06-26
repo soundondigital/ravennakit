@@ -28,54 +28,20 @@ class Group {
         dup,
     };
 
-    /**
-     * @return The type of the group. Only DUP is currently supported.
-     */
-    [[nodiscard]] Type get_type() const;
-
-    /**
-     * @param type The type of the group.
-     */
-    void set_type(Type type);
-
-    /**
-     * @return The tags associated with the group.
-     */
-    [[nodiscard]] const std::vector<std::string>& get_tags() const;
-
-    /**
-     * Gets one of the tags.
-     * @param index The index of the tag to retrieve.
-     * @return The tag at the specified index, or an empty string if the index is out of bounds.
-     */
-    [[nodiscard]] const std::string& get_tag(size_t index) const;
-
-    /**
-     * Adds a tag to the group.
-     * @param tag The tag to add.
-     */
-    void add_tag(std::string tag);
-
-    /**
-     * @return The group encoded as string.
-     */
-    [[nodiscard]] tl::expected<std::string, std::string> to_string() const;
-
-    /**
-     * @return True if the group is empty (no tags), false otherwise.
-     */
-    [[nodiscard]] bool empty() const;
-
-    /**
-     * Parses a group line from an SDP message.
-     * @param line The line to parse.
-     * @return A tl::expected object containing the parsed group or an error message.
-     */
-    static tl::expected<Group, std::string> parse_new(std::string_view line);
-
-  private:
-    Type type_ = Type::undefined;
-    std::vector<std::string> tags_;
+    Type type = Type::undefined;
+    std::vector<std::string> tags;
 };
+
+/**
+ * Parses a group line from an SDP message.
+ * @param line The line to parse.
+ * @return A tl::expected object containing the parsed group or an error message.
+ */
+[[nodiscard]] tl::expected<Group, std::string> parse_group(std::string_view line);
+
+/**
+ * @return The group encoded as string.
+ */
+[[nodiscard]] std::string to_string(const Group& input);
 
 }  // namespace rav::sdp

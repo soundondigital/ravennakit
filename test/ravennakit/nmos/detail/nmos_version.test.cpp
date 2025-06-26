@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("nmos::Version") {
+TEST_CASE("rav::nmos::Version") {
     rav::nmos::Version version;
 
     SECTION("Default constructor") {

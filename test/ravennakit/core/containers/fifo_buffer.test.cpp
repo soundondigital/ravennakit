@@ -56,7 +56,7 @@ void test_fifo_buffer_read_write() {
 
 }  // namespace
 
-TEST_CASE("fifo_buffer") {
+TEST_CASE("rav::FifoBuffer") {
     SECTION("Test basic reading and writing") {
         constexpr size_t size = 10;
         test_fifo_buffer_read_write<uint8_t, rav::Fifo::Single, size>();

@@ -13,7 +13,7 @@
 #include <array>
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("vector_buffer", "[vector_buffer]") {
+TEST_CASE("rav::VectorBuffer") {
     rav::VectorBuffer<uint32_t> buffer;
 
     SECTION("write") {

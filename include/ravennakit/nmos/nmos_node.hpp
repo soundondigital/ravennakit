@@ -66,7 +66,7 @@ class Node: public ptp::Instance::Subscriber {
         /**
          * @return The configuration as a JSON object.
          */
-        [[nodiscard]] boost::json::value to_json() const;
+        [[nodiscard]] boost::json::object to_json() const;
 
         /**
          * Creates a configuration object from a JSON object.
@@ -91,7 +91,7 @@ class Node: public ptp::Instance::Subscriber {
     struct StatusInfo {
         std::string name;
         std::string address;
-        uint16_t api_port{};
+        uint16_t api_port {};
     };
 
     enum class Status { disabled, discovering, connecting, connected, registered, p2p, error };
@@ -351,5 +351,7 @@ class Node: public ptp::Instance::Subscriber {
 };
 
 const char* to_string(const Node::Status& status);
+
+void tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const Node::Configuration& config);
 
 }  // namespace rav::nmos

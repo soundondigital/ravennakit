@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("Rank") {
+TEST_CASE("rav::Rank") {
     rav::Rank rank(0);
     REQUIRE(rank.value() == 0);
     REQUIRE(rank++ == 0);

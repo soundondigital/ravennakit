@@ -10,7 +10,7 @@
 
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/core/system.hpp"
-#include "ravennakit/core/tracy.hpp"
+#include "ravennakit/core/util/tracy.hpp"
 #include "ravennakit/dnssd/bonjour/bonjour_browser.hpp"
 #include "ravennakit/ravenna/ravenna_rtsp_client.hpp"
 #include "ravennakit/ravenna/ravenna_receiver.hpp"
@@ -23,34 +23,34 @@
 namespace examples {
 constexpr int k_block_size = 256;
 
-class portaudio {
+class Portaudio {
   public:
     static void init() {
-        static portaudio instance;
+        static Portaudio instance;
         std::ignore = instance;
     }
 
   private:
-    portaudio() {
+    Portaudio() {
         if (const auto error = Pa_Initialize(); error != paNoError) {
             RAV_THROW_EXCEPTION("PortAudio failed to initialize! Error: {}", Pa_GetErrorText(error));
         }
     }
 
-    ~portaudio() {
+    ~Portaudio() {
         if (const auto error = Pa_Terminate(); error != paNoError) {
             RAV_ERROR("PortAudio failed to terminate! Error: {}", Pa_GetErrorText(error));
         }
     }
 };
 
-class portaudio_stream {
+class PortaudioStream {
   public:
-    portaudio_stream() {
-        portaudio::init();
+    PortaudioStream() {
+        Portaudio::init();
     }
 
-    ~portaudio_stream() {
+    ~PortaudioStream() {
         close();
     }
 
@@ -114,7 +114,7 @@ class portaudio_stream {
     }
 
     static void print_devices() {
-        portaudio::init();
+        Portaudio::init();
         iterate_devices([](PaDeviceIndex index, const PaDeviceInfo& info) {
             RAV_INFO("[{}]: {}", index, info.name);
             return true;
@@ -159,10 +159,11 @@ class portaudio_stream {
     }
 };
 
-class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
+class RavennaReceiver: public rav::RavennaReceiver::Subscriber {
   public:
-    explicit ravenna_receiver(
-        const std::string& stream_name, std::string audio_device_name, const std::string& interface_search_string
+    explicit RavennaReceiver(
+        const std::string& stream_name, std::string audio_device_name,
+        rav::NetworkInterfaceConfig network_interface_config
     ) :
         audio_device_name_(std::move(audio_device_name)) {
         rtsp_client_ = std::make_unique<rav::RavennaRtspClient>(io_context_, browser_);
@@ -178,15 +179,7 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
             io_context_, *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id()
         );
 
-        auto* iface = rav::NetworkInterfaceList::get_system_interfaces().find_by_string(interface_search_string);
-        if (iface == nullptr) {
-            RAV_ERROR("No network interface found with search string: {}", interface_search_string);
-            return;
-        }
-        rav::NetworkInterfaceConfig interface_config;
-        interface_config.set_interface(rav::Rank::primary(), iface->get_identifier());
-
-        ravenna_receiver_->set_network_interface_config(std::move(interface_config));
+        ravenna_receiver_->set_network_interface_config(std::move(network_interface_config));
         auto result = ravenna_receiver_->set_configuration(config);
         if (!result) {
             RAV_ERROR("Failed to update configuration: {}", result.error());
@@ -197,7 +190,7 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
         }
     }
 
-    ~ravenna_receiver() override {
+    ~RavennaReceiver() override {
         if (ravenna_receiver_) {
             if (!ravenna_receiver_->unsubscribe(this)) {
                 RAV_WARNING("Failed to remove subscriber");
@@ -232,7 +225,7 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
         }
         portaudio_stream_.open_output_stream(
             audio_device_name_, audio_format_.sample_rate, static_cast<int>(audio_format_.num_channels), *sample_format,
-            &ravenna_receiver::stream_callback, this
+            &RavennaReceiver::stream_callback, this
         );
     }
 
@@ -244,7 +237,7 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
     std::unique_ptr<rav::rtp::Receiver> rtp_receiver_;
     std::unique_ptr<rav::RavennaReceiver> ravenna_receiver_;
     std::string audio_device_name_;
-    portaudio_stream portaudio_stream_;
+    PortaudioStream portaudio_stream_;
     rav::AudioFormat audio_format_;
 
     int stream_callback(
@@ -276,7 +269,7 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
         const void* input, void* output, const unsigned long frameCount, const PaStreamCallbackTimeInfo* timeInfo,
         const PaStreamCallbackFlags statusFlags, void* userData
     ) {
-        return static_cast<ravenna_receiver*>(userData)->stream_callback(
+        return static_cast<RavennaReceiver*>(userData)->stream_callback(
             input, output, frameCount, timeInfo, statusFlags
         );
     }
@@ -306,6 +299,8 @@ class ravenna_receiver: public rav::RavennaReceiver::Subscriber {
  * device using portaudio.
  * Warning! No drift correction is done between the sender and receiver. At some point buffers will overflow or
  * underflow.
+ * Note: this examples shows custom implementation of sending streams, the easier, higher level and recommended approach
+ * is to use the RavennaNode class (see ravenna_node_example).
  */
 int main(int const argc, char* argv[]) {
     rav::set_log_level_from_env();
@@ -320,14 +315,26 @@ int main(int const argc, char* argv[]) {
     std::string audio_output_device;
     app.add_option("audio_output_device", audio_output_device, "The name of the audio output device")->required();
 
-    std::string interface_address = "0.0.0.0";
-    app.add_option("--interface-addr", interface_address, "The interface address");
+    std::string interface;
+    app.add_option(
+        "--interface", interface,
+        "The interface address to use. The value can be the identifier, display name, description, MAC or an ip address."
+    );
 
     CLI11_PARSE(app, argc, argv);
 
-    examples::portaudio_stream::print_devices();
+    auto* iface = rav::NetworkInterfaceList::get_system_interfaces().find_by_string(interface);
+    if (iface == nullptr) {
+        RAV_ERROR("No network interface found with search string: {}", interface);
+        return -1;
+    }
 
-    examples::ravenna_receiver receiver_example(stream_name, audio_output_device, interface_address);
+    examples::PortaudioStream::print_devices();
+
+    rav::NetworkInterfaceConfig network_interface_config;
+    network_interface_config.set_interface(rav::Rank::primary(), iface->get_identifier());
+
+    examples::RavennaReceiver receiver_example(stream_name, audio_output_device, std::move(network_interface_config));
 
     std::thread cin_thread([&receiver_example] {
         fmt::println("Press return key to stop...");

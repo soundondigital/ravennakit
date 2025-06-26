@@ -14,7 +14,7 @@
 
 #include <thread>
 
-TEST_CASE("high_resolution_clock") {
+TEST_CASE("rav::HighResolutionClock") {
     SECTION("now") {
         const auto now = rav::HighResolutionClock::now();
         REQUIRE(now > 0);

@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("mock_browser") {
+TEST_CASE("rav::MockBrowser") {
     boost::asio::io_context io_context;
     rav::dnssd::MockBrowser browser(io_context);
 

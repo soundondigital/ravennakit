@@ -12,7 +12,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-TEST_CASE("util::num_elements_in_array()", "[util]") {
+TEST_CASE("rav utils") {
     SECTION("Test int buffer") {
         int data[] = {1, 2, 3, 4, 5};
         REQUIRE(rav::num_elements_in_array(data) == 5);
@@ -22,12 +22,12 @@ TEST_CASE("util::num_elements_in_array()", "[util]") {
         char data[] = {1, 2, 3, 4, 5};
         REQUIRE(rav::num_elements_in_array(data) == 5);
     }
-}
 
-TEST_CASE("util::is_within()", "[util]") {
-    REQUIRE(rav::is_within(1.0, 1.0, 0.0));
-    REQUIRE_FALSE(rav::is_within(1.0, 1.000001, 0.0));
+    SECTION("is_within()") {
+        REQUIRE(rav::is_within(1.0, 1.0, 0.0));
+        REQUIRE_FALSE(rav::is_within(1.0, 1.000001, 0.0));
 
-    REQUIRE(rav::is_within(1, 1, 0));
-    REQUIRE_FALSE(rav::is_within(1, 2, 0));
+        REQUIRE(rav::is_within(1, 1, 0));
+        REQUIRE_FALSE(rav::is_within(1, 2, 0));
+    }
 }

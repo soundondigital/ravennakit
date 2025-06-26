@@ -23,9 +23,7 @@ std::string generate_random_reg_type() {
 }
 }  // namespace
 
-TEST_CASE("dnssd | Browse and advertise") {
-    const auto reg_type = generate_random_reg_type();
-
+TEST_CASE("rav::dnssd") {
     SECTION("On systems other than Apple and Windows, dnssd is not implemented") {
 #if !RAV_HAS_DNSSD
         boost::asio::io_context io_context;
@@ -40,6 +38,7 @@ TEST_CASE("dnssd | Browse and advertise") {
 #if !RAV_HAS_DNSSD
         return;
 #endif
+        const auto reg_type = generate_random_reg_type();
         boost::asio::io_context io_context;
 
         std::vector<rav::dnssd::ServiceDescription> discovered_services;
@@ -95,50 +94,48 @@ TEST_CASE("dnssd | Browse and advertise") {
         REQUIRE_FALSE(removed_services.at(0).host_target.empty());
     }
 
-    SECTION("Update a txt record") {}
-}
-
-TEST_CASE("dnssd | Update a txt record") {
+    SECTION("Update a txt record") {
 #if !RAV_HAS_DNSSD
-    return;
+        return;
 #endif
 
-    const auto reg_type = generate_random_reg_type();
+        const auto reg_type = generate_random_reg_type();
 
-    boost::asio::io_context io_context;
-    std::optional<rav::dnssd::ServiceDescription> updated_service;
+        boost::asio::io_context io_context;
+        std::optional<rav::dnssd::ServiceDescription> updated_service;
 
-    const auto advertiser = rav::dnssd::Advertiser::create(io_context);
-    RAV_ASSERT(advertiser, "Expected a dnssd advertiser");
-    const rav::dnssd::TxtRecord txt_record {{"key1", "value1"}, {"key2", "value2"}};
-    // Note: when local_only is true, the txt record update will not trigger a callback
-    const auto id = advertiser->register_service(reg_type, "test", nullptr, 1234, {}, false, false);
+        const auto advertiser = rav::dnssd::Advertiser::create(io_context);
+        RAV_ASSERT(advertiser, "Expected a dnssd advertiser");
+        const rav::dnssd::TxtRecord txt_record {{"key1", "value1"}, {"key2", "value2"}};
+        // Note: when local_only is true, the txt record update will not trigger a callback
+        const auto id = advertiser->register_service(reg_type, "test", nullptr, 1234, {}, false, false);
 
-    const auto browser = rav::dnssd::Browser::create(io_context);
-    RAV_ASSERT(browser, "Expected a dnssd browser");
-    bool updated = false;
-    browser->on_service_resolved = [&](const auto& desc) {
-        if (desc.txt.empty() && !updated) {
-            advertiser->update_txt_record(id, txt_record);
-            updated = true;
-        }
+        const auto browser = rav::dnssd::Browser::create(io_context);
+        RAV_ASSERT(browser, "Expected a dnssd browser");
+        bool updated = false;
+        browser->on_service_resolved = [&](const auto& desc) {
+            if (desc.txt.empty() && !updated) {
+                advertiser->update_txt_record(id, txt_record);
+                updated = true;
+            }
 
-        if (desc.txt == txt_record) {
-            updated_service = desc;
-            io_context.stop();
-        }
-    };
+            if (desc.txt == txt_record) {
+                updated_service = desc;
+                io_context.stop();
+            }
+        };
 
-    browser->browse_for(reg_type);
+        browser->browse_for(reg_type);
 
-    io_context.run_for(std::chrono::seconds(10));
+        io_context.run_for(std::chrono::seconds(10));
 
-    REQUIRE(updated_service.has_value());
-}
+        REQUIRE(updated_service.has_value());
+    }
 
-TEST_CASE("dnssd | Name collision") {
-    // It's tempting to test the name collision feature, but as it turns out the name collision doesn't seem to work on
-    // a single host and only between different hosts. To prove this, run this command in two separate terminals:
-    // dns-sd -R test _some_service_name._tcp. local. 1234
-    // You'll find that both will register the service without any conflict.
+    SECTION("Name collision") {
+        // It's tempting to test the name collision feature, but as it turns out the name collision doesn't seem to work
+        // on a single host and only between different hosts. To prove this, run this command in two separate terminals:
+        // dns-sd -R test _some_service_name._tcp. local. 1234
+        // You'll find that both will register the service without any conflict.
+    }
 }

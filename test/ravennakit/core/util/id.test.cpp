@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("id", "[id]") {
+TEST_CASE("rav::Id", "[id]") {
     SECTION("Invalid id") {
         constexpr rav::Id invalid_id;
         REQUIRE_FALSE(invalid_id.is_valid());
@@ -31,8 +31,9 @@ TEST_CASE("id", "[id]") {
     }
 
     SECTION("Process-wide id") {
-        REQUIRE(rav::Id::get_next_process_wide_unique_id() == 1);
-        REQUIRE(rav::Id::get_next_process_wide_unique_id() == 2);
-        REQUIRE(rav::Id::get_next_process_wide_unique_id() == 3);
+        auto id = rav::Id::get_next_process_wide_unique_id();
+        REQUIRE(rav::Id::get_next_process_wide_unique_id() == id.value() + 1);
+        REQUIRE(rav::Id::get_next_process_wide_unique_id() == id.value() + 2);
+        REQUIRE(rav::Id::get_next_process_wide_unique_id() == id.value() + 3);
     }
 }

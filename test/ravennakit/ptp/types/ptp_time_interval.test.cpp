@@ -12,7 +12,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("ptp_time_interval") {
+TEST_CASE("rav::ptp::TimeInterval") {
     SECTION("Default constructor initializes to zero") {
         constexpr rav::ptp::TimeInterval interval;
         REQUIRE(interval.seconds() == 0);

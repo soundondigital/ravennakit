@@ -47,7 +47,7 @@ rav::rtsp::Parser::result rav::rtsp::Parser::parse(StringBuffer& input) {
                         return result::bad_header;
                     }
                     headers_.back().value += header_line->substr(1);
-                    continue; // Next header line
+                    continue;  // Next header line
                 }
 
                 Headers::Header h;
@@ -108,7 +108,8 @@ rav::rtsp::Parser::result rav::rtsp::Parser::parse(StringBuffer& input) {
 }
 
 void rav::rtsp::Parser::reset() noexcept {
-    EventEmitter::reset();
+    on_request.reset();
+    on_response.reset();
     state_ = state::start;
     start_line_.clear();
     headers_.clear();
@@ -159,7 +160,7 @@ rav::rtsp::Parser::result rav::rtsp::Parser::handle_response() {
     std::swap(response_.rtsp_headers, headers_);
     std::swap(response_.data, data_);
 
-    emit(response_);
+    on_response(response_);
 
     return result::good;
 }
@@ -202,7 +203,7 @@ rav::rtsp::Parser::result rav::rtsp::Parser::handle_request() {
     std::swap(request_.rtsp_headers, headers_);
     std::swap(request_.data, data_);
 
-    emit(request_);
+    on_request(request_);
 
     return result::good;
 }

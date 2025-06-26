@@ -111,61 +111,30 @@ struct AudioFormat {
     [[nodiscard]] AudioFormat with_byte_order(const ByteOrder order) const {
         return {order, encoding, ordering, sample_rate, num_channels};
     }
+};
 
-#if RAV_HAS_NLOHMANN_JSON
+#if RAV_HAS_BOOST_JSON
 
-    /**
-     * @return A JSON object representing this AudioFormat.
-     */
-    [[nodiscard]] nlohmann::json to_json() const {
-        return nlohmann::json {
-            {"encoding", audio_encoding_to_string(encoding)},
-            {"sample_rate", sample_rate},
-            {"num_channels", num_channels},
-            {"byte_order", to_string(byte_order)},
-            {"channel_ordering", to_string(ordering)}
-        };
-    }
+inline void tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const AudioFormat& audio_format) {
+    jv = {
+        {"byte_order", AudioFormat::to_string(audio_format.byte_order)},
+        {"channel_ordering", AudioFormat::to_string(audio_format.ordering)},
+        {"encoding", audio_encoding_to_string(audio_format.encoding)},
+        {"num_channels", audio_format.num_channels},
+        {"sample_rate", audio_format.sample_rate},
+    };
+}
 
-    /**
-     * Converts a JSON object to an AudioFormat object.
-     * @param json The JSON object to convert.
-     * @return An AudioFormat object, or an error message if the conversion fails.
-     */
-    static tl::expected<AudioFormat, std::string> from_json(nlohmann::json json) {
-        try {
-            const auto encoding = audio_encoding_from_string(json.at("encoding").get<std::string>().c_str());
-            if (!encoding) {
-                return tl::unexpected(
-                    fmt::format("Invalid audio encoding: {}", json.at("encoding").get<std::string>())
-                );
-            }
-
-            const auto byte_order = byte_order_from_string(json.at("byte_order").get<std::string>());
-            if (!byte_order) {
-                return tl::unexpected(fmt::format("Invalid byte order: {}", json.at("byte_order").get<std::string>()));
-            }
-
-            const auto channel_ordering = channel_ordering_from_string(json.at("channel_ordering").get<std::string>());
-            if (!channel_ordering) {
-                return tl::unexpected(
-                    fmt::format("Invalid channel ordering: {}", json.at("channel_ordering").get<std::string>())
-                );
-            }
-
-            AudioFormat format;
-            format.encoding = *encoding;
-            format.sample_rate = json.at("sample_rate").get<uint32_t>();
-            format.num_channels = json.at("num_channels").get<uint32_t>();
-            format.byte_order = *byte_order;
-            format.ordering = *channel_ordering;
-            return format;
-        } catch (const std::exception& e) {
-            return tl::unexpected(fmt::format("Failed to parse AudioFormat JSON: {}", e.what()));
-        }
-    }
+inline AudioFormat tag_invoke(const boost::json::value_to_tag<AudioFormat>&, const boost::json::value& jv) {
+    AudioFormat format;
+    format.byte_order = AudioFormat::byte_order_from_string(jv.at("byte_order").as_string().c_str()).value();
+    format.encoding = audio_encoding_from_string(jv.at("encoding").as_string().c_str()).value();
+    format.num_channels = jv.at("num_channels").to_number<uint32_t>();
+    format.ordering = AudioFormat::channel_ordering_from_string(jv.at("channel_ordering").as_string().c_str()).value();
+    format.sample_rate = jv.at("sample_rate").to_number<uint32_t>();
+    return format;
+}
 
 #endif
-};
 
 }  // namespace rav

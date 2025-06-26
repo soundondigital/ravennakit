@@ -13,7 +13,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("ptp_request_response_delay_sequence") {
+TEST_CASE("rav::ptp::RequestResponseDelaySequence") {
     SECTION("Test two-step sequence") {
         const auto t1 = rav::ptp::Timestamp(10, 0);  // Sync send time
         const auto t2 = rav::ptp::Timestamp(11, 0);  // Sync receive time

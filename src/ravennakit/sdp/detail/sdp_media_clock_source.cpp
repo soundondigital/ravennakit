@@ -12,13 +12,35 @@
 #include "ravennakit/core/string_parser.hpp"
 #include "ravennakit/sdp/detail/sdp_media_clock_source.hpp"
 
-rav::sdp::MediaClockSource::MediaClockSource(
-    const ClockMode mode, const std::optional<int64_t> offset, const std::optional<Fraction<int32_t>> rate
-) :
-    mode_(mode), offset_(offset), rate_(rate) {}
+const char* rav::sdp::to_string(const MediaClockSource::ClockMode mode) {
+    switch (mode) {
+        case MediaClockSource::ClockMode::undefined:
+            return "undefined";
+        case MediaClockSource::ClockMode::direct:
+        default:
+            return "direct";
+    }
+}
 
-rav::sdp::MediaClockSource::ParseResult<rav::sdp::MediaClockSource>
-rav::sdp::MediaClockSource::parse_new(const std::string_view line) {
+std::string rav::sdp::to_string(const MediaClockSource& mode) {
+    auto txt = fmt::format("a={}:{}", MediaClockSource::k_attribute_name, to_string(mode.mode));
+    if (mode.offset) {
+        fmt::format_to(std::back_inserter(txt), "={}", *mode.offset);
+    }
+    if (mode.rate) {
+        fmt::format_to(std::back_inserter(txt), " rate={}/{}", mode.rate->numerator, mode.rate->denominator);
+    }
+    return txt;
+}
+
+tl::expected<void, std::string> rav::sdp::validate(const MediaClockSource& clock_source) {
+    if (clock_source.mode == MediaClockSource::ClockMode::undefined) {
+        return tl::unexpected("media_clock: mode is undefined");
+    }
+    return {};
+}
+
+tl::expected<rav::sdp::MediaClockSource, std::string> rav::sdp::parse_media_clock_source(std::string_view line) {
     StringParser parser(line);
 
     MediaClockSource clock;
@@ -28,92 +50,48 @@ rav::sdp::MediaClockSource::parse_new(const std::string_view line) {
 
         if (const auto mode = mode_parser.split('=')) {
             if (mode == "direct") {
-                clock.mode_ = ClockMode::direct;
+                clock.mode = MediaClockSource::ClockMode::direct;
             } else {
                 RAV_WARNING("Unsupported media clock mode: {}", *mode);
-                return ParseResult<MediaClockSource>::err("media_clock: unsupported media clock mode");
+                return tl::unexpected("media_clock: unsupported media clock mode");
             }
         } else {
-            return ParseResult<MediaClockSource>::err("media_clock: invalid media clock mode");
+            return tl::unexpected("media_clock: invalid media clock mode");
         }
 
         if (!mode_parser.exhausted()) {
             if (const auto offset = mode_parser.read_int<int64_t>()) {
-                clock.offset_ = *offset;
+                clock.offset = *offset;
             } else {
-                return ParseResult<MediaClockSource>::err("media_clock: invalid offset");
+                return tl::unexpected("media_clock: invalid offset");
             }
         }
     }
 
     if (parser.exhausted()) {
-        return ParseResult<MediaClockSource>::ok(clock);
+        return clock;
     }
 
     if (const auto rate = parser.split('=')) {
         if (rate == "rate") {
             const auto numerator = parser.read_int<int32_t>();
             if (!numerator) {
-                return ParseResult<MediaClockSource>::err("media_clock: invalid rate numerator");
+                return tl::unexpected("media_clock: invalid rate numerator");
             }
             if (!parser.skip('/')) {
-                return ParseResult<MediaClockSource>::err("media_clock: invalid rate denominator");
+                return tl::unexpected("media_clock: invalid rate denominator");
             }
             const auto denominator = parser.read_int<int32_t>();
             if (!denominator) {
-                return ParseResult<MediaClockSource>::err("media_clock: invalid rate denominator");
+                return tl::unexpected("media_clock: invalid rate denominator");
             }
-            clock.rate_ = Fraction<int32_t> {*numerator, *denominator};
+            clock.rate = Fraction<int32_t> {*numerator, *denominator};
         } else {
-            return ParseResult<MediaClockSource>::err("media_clock: unexpected token");
+            return tl::unexpected("media_clock: unexpected token");
         }
     } else {
-        return ParseResult<MediaClockSource>::err("media_clock: expecting rate");
+        return tl::unexpected("media_clock: expecting rate");
     }
 
-    return ParseResult<MediaClockSource>::ok(clock);
-}
-
-rav::sdp::MediaClockSource::ClockMode rav::sdp::MediaClockSource::mode() const {
-    return mode_;
-}
-
-std::optional<int64_t> rav::sdp::MediaClockSource::offset() const {
-    return offset_;
-}
-
-const std::optional<rav::Fraction<int>>& rav::sdp::MediaClockSource::rate() const {
-    return rate_;
-}
-
-tl::expected<void, std::string> rav::sdp::MediaClockSource::validate() const {
-    if (mode_ == ClockMode::undefined) {
-        return tl::unexpected("media_clock: mode is undefined");
-    }
-    return {};
-}
-
-tl::expected<std::string, std::string> rav::sdp::MediaClockSource::to_string() const {
-    auto validated = validate();
-    if (!validated) {
-        return tl::unexpected(validated.error());
-    }
-    auto txt = fmt::format("a={}:{}", k_attribute_name, to_string(mode_));
-    if (offset_) {
-        fmt::format_to(std::back_inserter(txt), "={}", *offset_);
-    }
-    if (rate_) {
-        fmt::format_to(std::back_inserter(txt), " rate={}/{}", rate_->numerator, rate_->denominator);
-    }
-    return txt;
-}
-
-std::string rav::sdp::MediaClockSource::to_string(const ClockMode mode) {
-    switch (mode) {
-        case ClockMode::undefined:
-            return "undefined";
-        case ClockMode::direct:
-        default:
-            return "direct";
-    }
+    return clock;
 }

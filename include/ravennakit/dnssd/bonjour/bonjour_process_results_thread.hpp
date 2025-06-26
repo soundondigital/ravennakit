@@ -55,7 +55,7 @@ class ProcessResultsThread {
   private:
     int service_fd_ {};
     #if RAV_POSIX
-    posix::pipe pipe_;
+    posix::Pipe pipe_;
     #elif RAV_WINDOWS
     windows::event event_;
     #endif

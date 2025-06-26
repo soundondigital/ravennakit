@@ -23,7 +23,7 @@ static_assert(!std::is_move_constructible_v<rav::RealtimeSharedObject<int>::Real
 static_assert(!std::is_copy_assignable_v<rav::RealtimeSharedObject<int>::RealtimeLock>);
 static_assert(!std::is_move_assignable_v<rav::RealtimeSharedObject<int>::RealtimeLock>);
 
-TEST_CASE("realtime_shared_object") {
+TEST_CASE("rav::RealtimeSharedObject") {
     SECTION("Default state") {
         rav::RealtimeSharedObject<std::string> obj;
         auto lock = obj.lock_realtime();

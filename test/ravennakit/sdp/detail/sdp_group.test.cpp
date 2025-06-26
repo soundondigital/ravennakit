@@ -12,24 +12,23 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("sdp group") {
+TEST_CASE("rav::sdp::Group") {
     SECTION("Parse group line") {
         const auto group_line = "DUP primary secondary";
-        auto group = rav::sdp::Group::parse_new(group_line);
+        auto group = rav::sdp::parse_group(group_line);
         REQUIRE(group);
-        REQUIRE(group->get_type() == rav::sdp::Group::Type::dup);
-        auto tags = group->get_tags();
-        REQUIRE(tags.size() == 2);
-        REQUIRE(tags[0] == "primary");
-        REQUIRE(tags[1] == "secondary");
+        REQUIRE(group->type == rav::sdp::Group::Type::dup);
+        REQUIRE(group->tags.size() == 2);
+        REQUIRE(group->tags[0] == "primary");
+        REQUIRE(group->tags[1] == "secondary");
     }
 
     SECTION("Parse group of three") {
         const auto group_line = "DUP primary secondary tertiary";
-        auto group = rav::sdp::Group::parse_new(group_line);
+        auto group = rav::sdp::parse_group(group_line);
         REQUIRE(group);
-        REQUIRE(group->get_type() == rav::sdp::Group::Type::dup);
-        auto tags = group->get_tags();
+        REQUIRE(group->type == rav::sdp::Group::Type::dup);
+        auto tags = group->tags;
         REQUIRE(tags.size() == 3);
         REQUIRE(tags[0] == "primary");
         REQUIRE(tags[1] == "secondary");
@@ -38,11 +37,9 @@ TEST_CASE("sdp group") {
 
     SECTION("To string") {
         rav::sdp::Group group;
-        group.set_type(rav::sdp::Group::Type::dup);
-        group.add_tag("primary");
-        group.add_tag("secondary");
-        auto group_str = group.to_string();
-        REQUIRE(group_str.has_value());
-        REQUIRE(group_str.value() == "a=group:DUP primary secondary");
+        group.type = rav::sdp::Group::Type::dup;
+        group.tags.push_back("primary");
+        group.tags.push_back("secondary");
+        REQUIRE(rav::sdp::to_string(group) == "a=group:DUP primary secondary");
     }
 }

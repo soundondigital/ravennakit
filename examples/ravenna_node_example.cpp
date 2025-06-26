@@ -20,15 +20,13 @@
 
 namespace examples {
 
-struct ravenna_node final: rav::RavennaNode::Subscriber, rav::RavennaReceiver::Subscriber {
-    explicit ravenna_node(const rav::NetworkInterface::Identifier& primary_interface) {
-        rav::NetworkInterfaceConfig config;
-        config.set_interface(rav::Rank::primary(), primary_interface);
-        node.set_network_interface_config(config);
+struct RavennaNode final: rav::RavennaNode::Subscriber, rav::RavennaReceiver::Subscriber {
+    explicit RavennaNode(const rav::NetworkInterfaceConfig& network_interface_config) {
+        node.set_network_interface_config(network_interface_config).wait();
         node.subscribe(this).wait();
     }
 
-    ~ravenna_node() override {
+    ~RavennaNode() override {
         node.unsubscribe(this).wait();
     }
 
@@ -81,7 +79,8 @@ struct ravenna_node final: rav::RavennaNode::Subscriber, rav::RavennaReceiver::S
 }  // namespace examples
 
 /**
- * This example demonstrates the use of the RavennaNode class to implement a virtual RAVENNA node.
+ * This example demonstrates the use of the RavennaNode class to implement a virtual RAVENNA node. This is the easiest
+ * and recommended way of sending and receiving RAVENNA streams.
  * Warning! This example is not complete and is not intended to be used as-is.
  */
 int main(int const argc, char* argv[]) {
@@ -102,7 +101,7 @@ int main(int const argc, char* argv[]) {
 
     CLI11_PARSE(app, argc, argv);
 
-    auto list = rav::NetworkInterfaceList::get_system_interfaces();
+    const auto list = rav::NetworkInterfaceList::get_system_interfaces();
     const auto* primary_interface = list.find_by_string(interface_search_string);
 
     if (!primary_interface) {
@@ -110,9 +109,12 @@ int main(int const argc, char* argv[]) {
         return 1;
     }
 
-    examples::ravenna_node node_example(primary_interface->get_identifier());
+    rav::NetworkInterfaceConfig interface_config;
+    interface_config.set_interface(rav::Rank::primary(), primary_interface->get_identifier());
 
-    for (auto& session : stream_names) {
+    examples::RavennaNode node_example(interface_config);
+
+    for (const auto& session : stream_names) {
         rav::RavennaReceiver::Configuration config;
         config.session_name = session;
         config.enabled = true;

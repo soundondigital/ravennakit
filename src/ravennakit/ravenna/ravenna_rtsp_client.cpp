@@ -115,11 +115,10 @@ rav::RavennaRtspClient::find_or_create_connection(const std::string& host_target
     );
     const auto& new_connection = connections_.back();
 
-    new_connection->client.on<rtsp::Connection::ConnectEvent>([=](const auto&) {
+    new_connection->client.on_connect_event = [=](const auto&) {
         RAV_TRACE("Connected to: rtsp://{}:{}", host_target, port);
-    });
-    new_connection->client.on<rtsp::Connection::RequestEvent>([this,
-                                                               &client = new_connection->client](const auto& event) {
+    };
+    new_connection->client.on_request_event = [this, &client = new_connection->client](const auto& event) {
         RAV_TRACE("{}", event.rtsp_request.to_debug_string(true));
 
         if (event.rtsp_request.method == "ANNOUNCE") {
@@ -148,8 +147,8 @@ rav::RavennaRtspClient::find_or_create_connection(const std::string& host_target
         }
 
         RAV_WARNING("Unhandled RTSP request: {}", event.rtsp_request.method);
-    });
-    new_connection->client.on<rtsp::Connection::ResponseEvent>([=](const auto& event) {
+    };
+    new_connection->client.on_response_event = [=](const auto& event) {
         RAV_TRACE("{}", event.rtsp_response.to_debug_string(true));
 
         if (event.rtsp_response.status_code != 200) {
@@ -172,7 +171,7 @@ rav::RavennaRtspClient::find_or_create_connection(const std::string& host_target
 
             RAV_ERROR("RTSP response missing Content-Type header");
         }
-    });
+    };
     new_connection->client.async_connect(host_target, port);
     return *new_connection;
 }
@@ -220,21 +219,19 @@ void rav::RavennaRtspClient::do_maintenance() {
 }
 
 void rav::RavennaRtspClient::handle_incoming_sdp(const std::string& sdp_text) {
-    auto result = sdp::SessionDescription::parse_new(sdp_text);
-    if (result.is_err()) {
-        RAV_ERROR("Failed to parse SDP: {}", result.get_err());
+    auto sdp = sdp::parse_session_description(sdp_text);
+    if (!sdp) {
+        RAV_ERROR("Failed to parse SDP: {}", sdp.error());
         return;
     }
 
-    auto sdp = result.move_ok();
-
     for (auto& session : sessions_) {
-        if (session.session_name == sdp.session_name()) {
-            session.sdp_ = sdp;
+        if (session.session_name == sdp->session_name) {
+            session.sdp_ = *sdp;
             session.sdp_text_ = sdp_text;
 
             session.subscribers.foreach ([&](auto s) {
-                s->on_announced(AnnouncedEvent {session.session_name, sdp});
+                s->on_announced(AnnouncedEvent {session.session_name, *sdp});
             });
         }
     }

@@ -8,7 +8,7 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/core/events/subscriber_list.hpp"
+#include "ravennakit/core/util/subscriber_list.hpp"
 
 #include <catch2/catch_all.hpp>
 
@@ -25,7 +25,7 @@ class test_subscriber final {
 
 }  // namespace
 
-TEST_CASE("subscriber_list") {
+TEST_CASE("rav::SubscriberList") {
     rav::SubscriberList<test_subscriber> list;
 
     SECTION("Add, notify and remove") {

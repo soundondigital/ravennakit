@@ -15,7 +15,7 @@
 
 #include "ravennakit/core/util.hpp"
 
-TEST_CASE("byte_order | swap_bytes()", "[byte_order]") {
+TEST_CASE("rav::ByteOrder") {
     SECTION("Types") {
         constexpr uint16_t u16 = 0x1234;
         constexpr uint32_t u32 = 0x12345678;
@@ -90,9 +90,7 @@ TEST_CASE("byte_order | swap_bytes()", "[byte_order]") {
         rav::swap_bytes(u24.data(), u24.size());
         REQUIRE(u24 == std::array<uint8_t, 4> {0x78, 0x56, 0x34, 0x12});
     }
-}
 
-TEST_CASE("byte_order | swap_bytes array", "[byte_order]") {
     SECTION("uint8_t") {
         std::array<uint8_t, 4> data = {0x12, 0x34, 0x56, 0x78};
         rav::swap_bytes(data.data(), data.size(), sizeof(uint8_t));
@@ -122,9 +120,7 @@ TEST_CASE("byte_order | swap_bytes array", "[byte_order]") {
         );
         REQUIRE(data == std::array<uint64_t, 3> {0x0100000000000000, 0x0200000000000000});
     }
-}
 
-TEST_CASE("byte_order | read()", "[byte_order]") {
     constexpr uint8_t u16be[] = {0x12, 0x34};
     constexpr uint8_t u16le[] = {0x34, 0x12};
 
@@ -152,9 +148,7 @@ TEST_CASE("byte_order | read()", "[byte_order]") {
     constexpr uint8_t f64_le[] = {0xbf, 0xf1, 0x99, 0x99, 0x99, 0x99, 0x99, 0x9a};  // -1.1 (little endian)
     REQUIRE(rav::is_within(rav::read_be<double>(f64_le), -1.1, 0.0));
     REQUIRE(rav::is_within(rav::read_le<double>(f64_be), -1.1, 0.0));
-}
 
-TEST_CASE("byte_order | write()", "[byte_order]") {
     uint8_t u16[] = {0x0, 0x0};
 
     rav::write_be<uint16_t>(u16, 0x1234);

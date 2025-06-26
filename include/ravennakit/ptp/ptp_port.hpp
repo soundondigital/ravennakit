@@ -23,7 +23,6 @@
 #include "messages/ptp_pdelay_resp_follow_up_message.hpp"
 #include "messages/ptp_pdelay_resp_message.hpp"
 #include "messages/ptp_sync_message.hpp"
-#include "ravennakit/core/containers/ring_buffer.hpp"
 #include "ravennakit/core/net/sockets/extended_udp_socket.hpp"
 #include "ravennakit/core/net/sockets/udp_receiver.hpp"
 #include "types/ptp_port_identity.hpp"
@@ -116,8 +115,8 @@ class Port {
     ByteBuffer send_buffer_ {128};
     std::function<void(const Port&)> on_state_changed_callback_;
 
-    RingBuffer<SyncMessage> sync_messages_ {8};
-    RingBuffer<RequestResponseDelaySequence> request_response_delay_sequences_ {8};
+    boost::circular_buffer<SyncMessage> sync_messages_{8};
+    boost::circular_buffer<RequestResponseDelaySequence> request_response_delay_sequences_{8};
 
     void handle_recv_event(const ExtendedUdpSocket::RecvEvent& event);
     void handle_announce_message(const AnnounceMessage& announce_message, BufferView<const uint8_t> tlvs);

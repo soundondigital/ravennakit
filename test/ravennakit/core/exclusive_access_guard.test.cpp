@@ -9,13 +9,12 @@
  */
 
 #include "ravennakit/core/util/exclusive_access_guard.hpp"
-#include "ravennakit/core/timeout.hpp"
 
 #include <future>
 #include <thread>
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("exclusive_access_guard") {
+TEST_CASE("rav::ExclusiveAccessGuard") {
     SECTION("Exclusive access violation") {
         rav::ExclusiveAccessGuard guard;
 

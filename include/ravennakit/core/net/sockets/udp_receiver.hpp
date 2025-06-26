@@ -11,7 +11,7 @@
 #pragma once
 
 #include "extended_udp_socket.hpp"
-#include "ravennakit/core/events/subscriber_list.hpp"
+#include "ravennakit/core/util/subscriber_list.hpp"
 
 namespace rav {
 
