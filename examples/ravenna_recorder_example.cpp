@@ -22,12 +22,13 @@
 #include <utility>
 
 namespace examples {
+
 /**
  * A class that is a subscriber to a rtp_stream_receiver and writes the audio data to a wav file.
  */
-class stream_recorder: public rav::RavennaReceiver::Subscriber {
+class StreamRecorder: public rav::RavennaReceiver::Subscriber {
   public:
-    explicit stream_recorder(std::unique_ptr<rav::RavennaReceiver> receiver) : receiver_(std::move(receiver)) {
+    explicit StreamRecorder(std::unique_ptr<rav::RavennaReceiver> receiver) : receiver_(std::move(receiver)) {
         if (receiver_) {
             if (!receiver_->subscribe(this)) {
                 RAV_WARNING("Failed to add subscriber");
@@ -35,7 +36,7 @@ class stream_recorder: public rav::RavennaReceiver::Subscriber {
         }
     }
 
-    ~stream_recorder() override {
+    ~StreamRecorder() override {
         if (receiver_) {
             if (!receiver_->unsubscribe(this)) {
                 RAV_WARNING("Failed to remove subscriber");
@@ -112,17 +113,16 @@ class stream_recorder: public rav::RavennaReceiver::Subscriber {
     std::optional<rav::WrappingUint32> stream_ts_;
 };
 
-class ravenna_recorder {
+class RavennaRecorder {
   public:
-    explicit ravenna_recorder(const std::string& interface_search_string) :
-        interface_search_string_(interface_search_string) {
+    explicit RavennaRecorder() {
         rtsp_client_ = std::make_unique<rav::RavennaRtspClient>(io_context_, browser_);
         rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(udp_receiver_);
     }
 
-    ~ravenna_recorder() = default;
+    ~RavennaRecorder() = default;
 
-    void add_stream(const std::string& stream_name) {
+    void add_stream(const std::string& stream_name, const rav::NetworkInterfaceConfig& network_interface_config) {
         rav::RavennaReceiver::Configuration config;
         config.delay_frames = 480;  // 10ms at 48KHz
         config.enabled = true;
@@ -131,23 +131,16 @@ class ravenna_recorder {
         auto receiver = std::make_unique<rav::RavennaReceiver>(
             io_context_, *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id()
         );
-        auto* iface = rav::NetworkInterfaceList::get_system_interfaces().find_by_string(interface_search_string_);
-        if (iface == nullptr) {
-            RAV_ERROR("No network interface found with search string: {}", interface_search_string_);
-            return;
-        }
-        rav::NetworkInterfaceConfig interface_config;
-        interface_config.set_interface(rav::Rank::primary(), iface->get_identifier());
-        receiver->set_network_interface_config(std::move(interface_config));
+        receiver->set_network_interface_config(network_interface_config);
         auto result = receiver->set_configuration(config);
         if (!result) {
             RAV_ERROR("Failed to update configuration: {}", result.error());
             return;
         }
-        recorders_.emplace_back(std::make_unique<stream_recorder>(std::move(receiver)));
+        recorders_.emplace_back(std::make_unique<StreamRecorder>(std::move(receiver)));
     }
 
-    void start() {
+    void run() {
         while (!io_context_.stopped()) {
             io_context_.poll();
         }
@@ -159,12 +152,11 @@ class ravenna_recorder {
 
   private:
     boost::asio::io_context io_context_;
-    std::string interface_search_string_;
     rav::UdpReceiver udp_receiver_ {io_context_};
     rav::RavennaBrowser browser_ {io_context_};
     std::unique_ptr<rav::RavennaRtspClient> rtsp_client_;
     std::unique_ptr<rav::rtp::Receiver> rtp_receiver_;
-    std::vector<std::unique_ptr<stream_recorder>> recorders_;
+    std::vector<std::unique_ptr<StreamRecorder>> recorders_;
 };
 
 }  // namespace examples
@@ -173,26 +165,41 @@ class ravenna_recorder {
  * This examples demonstrates how to receive audio streams from a RAVENNA device and write the audio data to wav files.
  * It sets up a RAVENNA sink that listens for announcements from a RAVENNA device and starts receiving audio data.
  * Separate files for each stream are created and existing files will be overwritten.
+ * Note: this examples shows custom implementation of sending streams, the easier, higher level and recommended approach
+ * is to use the RavennaNode class (see ravenna_node_example).
  */
 int main(int const argc, char* argv[]) {
     rav::set_log_level_from_env();
     rav::do_system_checks();
 
-    CLI::App app {"RAVENNA Receiver example"};
+    CLI::App app {"RAVENNA Recorder example"};
     argv = app.ensure_utf8(argv);
 
     std::vector<std::string> stream_names;
     app.add_option("stream_names", stream_names, "The names of the streams to receive")->required();
 
-    std::string interface_address = "0.0.0.0";
-    app.add_option("--interface-addr", interface_address, "The interface address");
+    std::string interface;
+    app.add_option(
+           "--interface", interface,
+           "The interface address to use. The value can be the identifier, display name, description, MAC or an ip address."
+    )
+        ->required();
 
     CLI11_PARSE(app, argc, argv);
 
-    examples::ravenna_recorder recorder_example(interface_address);
+    auto* iface = rav::NetworkInterfaceList::get_system_interfaces().find_by_string(interface);
+    if (iface == nullptr) {
+        RAV_ERROR("No network interface found with search string: {}", interface);
+        return -1;
+    }
+
+    rav::NetworkInterfaceConfig interface_config;
+    interface_config.set_interface(rav::Rank::primary(), iface->get_identifier());
+
+    examples::RavennaRecorder recorder_example;
 
     for (auto& stream_name : stream_names) {
-        recorder_example.add_stream(stream_name);
+        recorder_example.add_stream(stream_name, interface_config);
     }
 
     std::thread cin_thread([&recorder_example] {
@@ -201,7 +208,7 @@ int main(int const argc, char* argv[]) {
         recorder_example.stop();
     });
 
-    recorder_example.start();
+    recorder_example.run();
     cin_thread.join();
 
     return 0;

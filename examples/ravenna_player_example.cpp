@@ -28,9 +28,9 @@ static constexpr uint32_t k_frames_per_read = 1024;
 /**
  * Holds the logic for transmitting a wav file over the network.
  */
-class wav_file_player: public rav::ptp::Instance::Subscriber {
+class WavFilePlayer: public rav::ptp::Instance::Subscriber {
   public:
-    explicit wav_file_player(
+    explicit WavFilePlayer(
         boost::asio::io_context& io_context, rav::dnssd::Advertiser& advertiser, rav::rtsp::Server& rtsp_server,
         rav::ptp::Instance& ptp_instance, rav::Id::Generator& id_generator, const std::string& interface_search_string,
         const rav::File& file_to_play, const std::string& session_name
@@ -83,7 +83,7 @@ class wav_file_player: public rav::ptp::Instance::Subscriber {
         }
     }
 
-    ~wav_file_player() override {
+    ~WavFilePlayer() override {
         if (!ptp_instance_.unsubscribe(this)) {
             RAV_ERROR("Failed to unsubscribe from PTP instance");
         }
@@ -190,6 +190,8 @@ class wav_file_player: public rav::ptp::Instance::Subscriber {
 /**
  * This examples demonstrates how to create a source and send audio onto the network. It does this by reading audio from
  * a wav file on disk and sending it as multicast audio packets.
+ * Note: this examples shows custom implementation of sending streams, the easier, higher level and recommended approach
+ * is to use the RavennaNode class (see ravenna_node_example).
  */
 int main(int const argc, char* argv[]) {
     rav::set_log_level_from_env();
@@ -210,7 +212,7 @@ int main(int const argc, char* argv[]) {
 
     boost::asio::io_context io_context;
 
-    std::vector<std::unique_ptr<examples::wav_file_player>> wav_file_players;
+    std::vector<std::unique_ptr<examples::WavFilePlayer>> wav_file_players;
 
     auto advertiser = rav::dnssd::Advertiser::create(io_context);
     rav::rtsp::Server rtsp_server(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::address_v4::any(), 5005));
@@ -230,7 +232,7 @@ int main(int const argc, char* argv[]) {
         const auto file_session_name = file.path().filename().string();
 
         wav_file_players.emplace_back(
-            std::make_unique<examples::wav_file_player>(
+            std::make_unique<examples::WavFilePlayer>(
                 io_context, *advertiser, rtsp_server, ptp_instance, id_generator, interface_address_string, file,
                 file_session_name + " " + std::to_string(wav_file_players.size() + 1)
             )

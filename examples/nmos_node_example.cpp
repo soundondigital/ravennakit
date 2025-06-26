@@ -88,8 +88,7 @@ int main() {
                 rav::nmos::Sender sender;
                 sender.id = boost::uuids::random_generator()();
                 sender.label = fmt::format("ravennakit/device/{}/sender/{}", device_count, sender_count);
-                sender.description =
-                    fmt::format("RAVENNAKIT Device {} sender {}", device_count + 1, sender_count + 1);
+                sender.description = fmt::format("RAVENNAKIT Device {} sender {}", device_count + 1, sender_count + 1);
                 sender.version = rav::nmos::Version {i_sender + 1, (i_sender + 1) * 1000};
                 sender.device_id = device.id;
                 sender.flow_id = flow.id;
@@ -108,13 +107,12 @@ int main() {
             rav::nmos::ReceiverAudio receiver;
             receiver.id = boost::uuids::random_generator()();
             receiver.label = fmt::format("ravennakit/device/{}/receiver/{}", device_count, receiver_count);
-            receiver.description =
-                fmt::format("RAVENNAKIT Device {} sender {}", device_count + 1, receiver_count + 1);
+            receiver.description = fmt::format("RAVENNAKIT Device {} sender {}", device_count + 1, receiver_count + 1);
             receiver.version = rav::nmos::Version {i_receiver + 1, (i_receiver + 1) * 1000};
             receiver.device_id = device.id;
             receiver.transport = "urn:x-nmos:transport:rtp";
             receiver.caps.media_types = {"audio/L24", "audio/L20", "audio/L16", "audio/L8", "audio/PCM"};
-            std::ignore = node.add_or_update_receiver({receiver});
+            std::ignore = node.add_or_update_receiver(receiver);
 
             receiver_count++;
         }
