@@ -151,7 +151,7 @@ tl::expected<rav::rtp::AudioReceiver::Stream, std::string> create_stream_from_me
 ) {
     bool audio_format_found = false;
     for (const auto& format : media_description.formats()) {
-        if (format.to_audio_format() == audio_format) {
+        if (rav::sdp::make_audio_format(format) == audio_format) {
             audio_format_found = true;
             break;
         }
@@ -265,9 +265,9 @@ rav::RavennaReceiver::create_audio_receiver_parameters(const sdp::SessionDescrip
         std::optional<AudioFormat> selected_audio_format;
 
         for (auto& format : media_description.formats()) {
-            selected_audio_format = format.to_audio_format();
+            selected_audio_format = rav::sdp::make_audio_format(format);
             if (!selected_audio_format) {
-                RAV_WARNING("Not a supported audio format: {}", format.to_string());
+                RAV_WARNING("Not a supported audio format: {}", rav::sdp::to_string(format));
                 continue;
             }
             break;

@@ -547,7 +547,7 @@ tl::expected<rav::sdp::SessionDescription, std::string> rav::RavennaSender::buil
         return tl::unexpected("No destinations set");
     }
 
-    const auto sdp_format = sdp::Format::from_audio_format(configuration_.audio_format);
+    const auto sdp_format = sdp::make_audio_format(configuration_.audio_format);
     if (!sdp_format) {
         return tl::unexpected("Invalid audio format");
     }

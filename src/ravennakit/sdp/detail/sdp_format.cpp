@@ -13,61 +13,7 @@
 
 #include "ravennakit/core/format.hpp"
 
-std::string rav::sdp::Format::to_string() const {
-    return fmt::format("{} {}/{}/{}", payload_type, encoding_name, clock_rate, num_channels);
-}
-
-std::optional<rav::AudioFormat> rav::sdp::Format::to_audio_format() const {
-    if (encoding_name == "L16") {
-        return AudioFormat {
-            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s16, AudioFormat::ChannelOrdering::interleaved,
-            clock_rate, num_channels
-        };
-    }
-    if (encoding_name == "L24") {
-        return AudioFormat {
-            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s24, AudioFormat::ChannelOrdering::interleaved,
-            clock_rate, num_channels
-        };
-    }
-    if (encoding_name == "L32") {
-        return AudioFormat {
-            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s32, AudioFormat::ChannelOrdering::interleaved,
-            clock_rate, num_channels
-        };
-    }
-    return std::nullopt;
-}
-
-std::optional<rav::sdp::Format> rav::sdp::Format::from_audio_format(const AudioFormat& input_format) {
-    Format output_format;
-
-    switch (input_format.encoding) {
-        case AudioEncoding::undefined:
-        case AudioEncoding::pcm_s8:
-        case AudioEncoding::pcm_s32:
-        case AudioEncoding::pcm_f32:
-        case AudioEncoding::pcm_f64:
-            return std::nullopt;
-        case AudioEncoding::pcm_u8:
-            output_format.encoding_name = "L8";  // https://datatracker.ietf.org/doc/html/rfc3551#section-4.5.10
-            break;
-        case AudioEncoding::pcm_s16:
-            output_format.encoding_name = "L16";  // https://datatracker.ietf.org/doc/html/rfc3551#section-4.5.11
-            break;
-        case AudioEncoding::pcm_s24:
-            output_format.encoding_name = "L24";  // https://datatracker.ietf.org/doc/html/rfc3190#section-4
-            break;
-    }
-
-    output_format.clock_rate = input_format.sample_rate;
-    output_format.num_channels = input_format.num_channels;
-    output_format.payload_type = 98;
-
-    return output_format;
-}
-
-tl::expected<rav::sdp::Format, std::string> rav::sdp::Format::parse_new(const std::string_view line) {
+tl::expected<rav::sdp::Format, std::string> rav::sdp::parse_format(const std::string_view line) {
     StringParser parser(line);
 
     Format map;
@@ -106,4 +52,61 @@ tl::expected<rav::sdp::Format, std::string> rav::sdp::Format::parse_new(const st
     }
 
     return map;
+}
+
+std::optional<rav::sdp::Format> rav::sdp::make_audio_format(const AudioFormat& input_format) {
+    Format output_format;
+
+    switch (input_format.encoding) {
+        case AudioEncoding::undefined:
+        case AudioEncoding::pcm_s8:
+        case AudioEncoding::pcm_s32:
+        case AudioEncoding::pcm_f32:
+        case AudioEncoding::pcm_f64:
+            return std::nullopt;
+        case AudioEncoding::pcm_u8:
+            output_format.encoding_name = "L8";  // https://datatracker.ietf.org/doc/html/rfc3551#section-4.5.10
+            break;
+        case AudioEncoding::pcm_s16:
+            output_format.encoding_name = "L16";  // https://datatracker.ietf.org/doc/html/rfc3551#section-4.5.11
+            break;
+        case AudioEncoding::pcm_s24:
+            output_format.encoding_name = "L24";  // https://datatracker.ietf.org/doc/html/rfc3190#section-4
+            break;
+    }
+
+    output_format.clock_rate = input_format.sample_rate;
+    output_format.num_channels = input_format.num_channels;
+    output_format.payload_type = 98;
+
+    return output_format;
+}
+
+std::optional<rav::AudioFormat> rav::sdp::make_audio_format(const Format& input_format) {
+    if (input_format.encoding_name == "L16") {
+        return AudioFormat {
+            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s16, AudioFormat::ChannelOrdering::interleaved,
+            input_format.clock_rate, input_format.num_channels
+        };
+    }
+    if (input_format.encoding_name == "L24") {
+        return AudioFormat {
+            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s24, AudioFormat::ChannelOrdering::interleaved,
+            input_format.clock_rate, input_format.num_channels
+        };
+    }
+    if (input_format.encoding_name == "L32") {
+        return AudioFormat {
+            AudioFormat::ByteOrder::be, AudioEncoding::pcm_s32, AudioFormat::ChannelOrdering::interleaved,
+            input_format.clock_rate, input_format.num_channels
+        };
+    }
+    return std::nullopt;
+}
+
+std::string rav::sdp::to_string(const Format& input_format) {
+    return fmt::format(
+        "{} {}/{}/{}", input_format.payload_type, input_format.encoding_name, input_format.clock_rate,
+        input_format.num_channels
+    );
 }

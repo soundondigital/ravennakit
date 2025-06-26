@@ -85,7 +85,7 @@ tl::expected<void, std::string> rav::sdp::MediaDescription::parse_attribute(cons
 
     if (key == k_sdp_rtp_map) {
         if (const auto value = parser.read_until_end()) {
-            auto format = Format::parse_new(*value);
+            auto format = parse_format(*value);
             if (!format) {
                 return tl::unexpected(format.error());
             }
@@ -442,7 +442,7 @@ tl::expected<std::string, std::string> rav::sdp::MediaDescription::to_string(con
 
     // rtpmaps
     for (const auto& fmt : formats_) {
-        fmt::format_to(std::back_inserter(result), "a=rtpmap:{}{}", fmt.to_string(), newline);
+        fmt::format_to(std::back_inserter(result), "a=rtpmap:{}{}", sdp::to_string(fmt), newline);
     }
 
     // ptime
@@ -521,13 +521,4 @@ tl::expected<std::string, std::string> rav::sdp::MediaDescription::to_string(con
     }
 
     return result;
-}
-
-bool rav::sdp::operator==(const Format& lhs, const Format& rhs) {
-    return std::tie(lhs.payload_type, lhs.encoding_name, lhs.clock_rate, lhs.num_channels)
-        == std::tie(rhs.payload_type, rhs.encoding_name, rhs.clock_rate, rhs.num_channels);
-}
-
-bool rav::sdp::operator!=(const Format& lhs, const Format& rhs) {
-    return !(lhs == rhs);
 }
