@@ -93,11 +93,11 @@ tl::expected<void, std::string> rav::sdp::SessionDescription::parse_attribute(co
         }
     } else if (key == k_sdp_group) {
         if (const auto value = parser.read_until_end()) {
-            auto group = parse_group(*value);
-            if (!group.has_value()) {
-                return tl::unexpected(group.error());
+            auto new_group= parse_group(*value);
+            if (!new_group.has_value()) {
+                return tl::unexpected(new_group.error());
             }
-            group = *group;
+            group = *new_group;
         }
     } else {
         // Store the attribute in the map of unknown attributes
