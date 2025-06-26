@@ -140,7 +140,7 @@ tl::expected<void, std::string> rav::sdp::MediaDescription::parse_attribute(cons
         media_direction_ = MediaDirection::inactive;
     } else if (key == k_sdp_ts_refclk) {
         if (const auto value = parser.read_until_end()) {
-            auto ref_clock = ReferenceClock::parse_new(*value);
+            auto ref_clock = parse_reference_clock(*value);
             if (!ref_clock) {
                 return tl::unexpected(ref_clock.error());
             }
@@ -468,11 +468,7 @@ tl::expected<std::string, std::string> rav::sdp::MediaDescription::to_string(con
 
     // Reference clock
     if (reference_clock_) {
-        auto refclk = reference_clock_->to_string();
-        if (!refclk) {
-            return tl::make_unexpected(refclk.error());
-        }
-        fmt::format_to(std::back_inserter(result), "{}{}", refclk.value(), newline);
+        fmt::format_to(std::back_inserter(result), "{}{}", sdp::to_string(*reference_clock_), newline);
     }
 
     // Media clock

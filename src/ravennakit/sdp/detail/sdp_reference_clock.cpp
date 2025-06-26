@@ -17,61 +17,57 @@
 
 namespace {}  // namespace
 
-rav::sdp::ReferenceClock::ReferenceClock(
-    const ClockSource source, PtpVersion version, std::string gmid, int32_t domain
-) :
-    source_(source), ptp_version_(version), gmid_(gmid), domain_(domain) {}
-
-rav::sdp::ReferenceClock::ClockSource rav::sdp::ReferenceClock::source() const {
-    return source_;
-}
-
-std::optional<rav::sdp::ReferenceClock::PtpVersion> rav::sdp::ReferenceClock::ptp_version() const {
-    return ptp_version_;
-}
-
-const std::optional<std::string>& rav::sdp::ReferenceClock::gmid() const {
-    return gmid_;
-}
-
-const std::optional<int32_t>& rav::sdp::ReferenceClock::domain() const {
-    return domain_;
-}
-
-tl::expected<void, std::string> rav::sdp::ReferenceClock::validate() const {
-    if (source_ == ClockSource::ptp) {
-        if (!ptp_version_) {
-            return tl::unexpected("reference_clock: ptp version is undefined");
-        }
-        if (!gmid_) {
-            return tl::unexpected("reference_clock: gmid is undefined");
-        }
-        if (!domain_) {
-            return tl::unexpected("reference_clock: domain is undefined");
-        }
+const char* rav::sdp::to_string(const ReferenceClock::ClockSource source) {
+    switch (source) {
+        case ReferenceClock::ClockSource::atomic_clock:
+            return "atomic-clock";
+        case ReferenceClock::ClockSource::gps:
+            return "gps";
+        case ReferenceClock::ClockSource::terrestrial_radio:
+            return "terrestrial-radio";
+        case ReferenceClock::ClockSource::ptp:
+            return "ptp";
+        case ReferenceClock::ClockSource::ntp:
+            return "ntp";
+        case ReferenceClock::ClockSource::ntp_server:
+            return "ntp-server";
+        case ReferenceClock::ClockSource::ntp_pool:
+            return "ntp-pool";
+        case ReferenceClock::ClockSource::undefined:
+        default:
+            return "undefined";
     }
-    if (source_ == ClockSource::undefined) {
-        return tl::unexpected("reference_clock: source is undefined");
-    }
-    return {};
 }
 
-tl::expected<std::string, std::string> rav::sdp::ReferenceClock::to_string() const {
-    auto validated = validate();
-    if (!validated) {
-        return tl::unexpected(validated.error());
+const char* rav::sdp::to_string(const ReferenceClock::PtpVersion version) {
+    switch (version) {
+        case ReferenceClock::PtpVersion::IEEE_1588_2002:
+            return "IEEE1588-2002";
+        case ReferenceClock::PtpVersion::IEEE_1588_2008:
+            return "IEEE1588-2008";
+        case ReferenceClock::PtpVersion::IEEE_802_1AS_2011:
+            return "IEEE802.1AS-2011";
+        case ReferenceClock::PtpVersion::traceable:
+            return "traceable";
+        case ReferenceClock::PtpVersion::undefined:
+        default:
+            return "undefined";
     }
-    if (source_ == ClockSource::ptp) {
+}
+
+std::string rav::sdp::to_string(const ReferenceClock& reference_clock) {
+    if (reference_clock.source_ == ReferenceClock::ClockSource::ptp) {
         return fmt::format(
-            "a={}:{}={}:{}:{}", k_sdp_ts_refclk, to_string(source_), to_string(ptp_version_.value()), gmid_.value(),
-            domain_.value()
+            "a={}:{}={}:{}:{}", k_sdp_ts_refclk, to_string(reference_clock.source_),
+            to_string(reference_clock.ptp_version_.value()), reference_clock.gmid_.value(),
+            reference_clock.domain_.value()
         );
     }
     // Note: this is not properly implemented:
-    return fmt::format("a={}:{}", k_sdp_ts_refclk, to_string(source_));
+    return fmt::format("a={}:{}", k_sdp_ts_refclk, to_string(reference_clock.source_));
 }
 
-tl::expected<rav::sdp::ReferenceClock, std::string> rav::sdp::ReferenceClock::parse_new(const std::string_view line) {
+tl::expected<rav::sdp::ReferenceClock, std::string> rav::sdp::parse_reference_clock(const std::string_view line) {
     StringParser parser(line);
 
     const auto source = parser.split("=");
@@ -82,17 +78,17 @@ tl::expected<rav::sdp::ReferenceClock, std::string> rav::sdp::ReferenceClock::pa
     if (source == "ptp") {
         ReferenceClock ref_clock;
 
-        ref_clock.source_ = ClockSource::ptp;
+        ref_clock.source_ = ReferenceClock::ClockSource::ptp;
 
         if (const auto ptp_version = parser.split(":")) {
             if (ptp_version == "IEEE1588-2002") {
-                ref_clock.ptp_version_ = PtpVersion::IEEE_1588_2002;
+                ref_clock.ptp_version_ = ReferenceClock::PtpVersion::IEEE_1588_2002;
             } else if (ptp_version == "IEEE1588-2008") {
-                ref_clock.ptp_version_ = PtpVersion::IEEE_1588_2008;
+                ref_clock.ptp_version_ = ReferenceClock::PtpVersion::IEEE_1588_2008;
             } else if (ptp_version == "IEEE802.1AS-2011") {
-                ref_clock.ptp_version_ = PtpVersion::IEEE_802_1AS_2011;
+                ref_clock.ptp_version_ = ReferenceClock::PtpVersion::IEEE_802_1AS_2011;
             } else if (ptp_version == "traceable") {
-                ref_clock.ptp_version_ = PtpVersion::traceable;
+                ref_clock.ptp_version_ = ReferenceClock::PtpVersion::traceable;
             } else {
                 return tl::unexpected("reference_clock: unknown ptp version");
             }
@@ -120,40 +116,20 @@ tl::expected<rav::sdp::ReferenceClock, std::string> rav::sdp::ReferenceClock::pa
     return tl::unexpected("reference_clock: unsupported source");
 }
 
-std::string rav::sdp::ReferenceClock::to_string(const ClockSource source) {
-    switch (source) {
-        case ClockSource::atomic_clock:
-            return "atomic-clock";
-        case ClockSource::gps:
-            return "gps";
-        case ClockSource::terrestrial_radio:
-            return "terrestrial-radio";
-        case ClockSource::ptp:
-            return "ptp";
-        case ClockSource::ntp:
-            return "ntp";
-        case ClockSource::ntp_server:
-            return "ntp-server";
-        case ClockSource::ntp_pool:
-            return "ntp-pool";
-        case ClockSource::undefined:
-        default:
-            return "undefined";
+tl::expected<void, std::string> rav::sdp::validate(const ReferenceClock& reference_clock) {
+    if (reference_clock.source_ == ReferenceClock::ClockSource::ptp) {
+        if (!reference_clock.ptp_version_) {
+            return tl::unexpected("reference_clock: ptp version is undefined");
+        }
+        if (!reference_clock.gmid_) {
+            return tl::unexpected("reference_clock: gmid is undefined");
+        }
+        if (!reference_clock.domain_) {
+            return tl::unexpected("reference_clock: domain is undefined");
+        }
     }
-}
-
-std::string rav::sdp::ReferenceClock::to_string(const PtpVersion version) {
-    switch (version) {
-        case PtpVersion::IEEE_1588_2002:
-            return "IEEE1588-2002";
-        case PtpVersion::IEEE_1588_2008:
-            return "IEEE1588-2008";
-        case PtpVersion::IEEE_802_1AS_2011:
-            return "IEEE802.1AS-2011";
-        case PtpVersion::traceable:
-            return "traceable";
-        case PtpVersion::undefined:
-        default:
-            return "undefined";
+    if (reference_clock.source_ == ReferenceClock::ClockSource::undefined) {
+        return tl::unexpected("reference_clock: source is undefined");
     }
+    return {};
 }

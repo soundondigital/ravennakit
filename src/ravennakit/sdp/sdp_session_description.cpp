@@ -264,11 +264,7 @@ tl::expected<std::string, std::string> rav::sdp::SessionDescription::to_string(c
 
     // Ref clock
     if (reference_clock_.has_value()) {
-        auto ref_clock = reference_clock_->to_string();
-        if (!ref_clock) {
-            return ref_clock;
-        }
-        fmt::format_to(std::back_inserter(sdp), "{}{}", ref_clock.value(), newline);
+        fmt::format_to(std::back_inserter(sdp), "{}{}", sdp::to_string(*reference_clock_), newline);
     }
 
     // Media direction
@@ -340,7 +336,7 @@ tl::expected<void, std::string> rav::sdp::SessionDescription::parse_attribute(co
         media_direction_ = MediaDirection::inactive;
     } else if (key == k_sdp_ts_refclk) {
         if (const auto value = parser.read_until_end()) {
-            auto ref_clock = ReferenceClock::parse_new(*value);
+            auto ref_clock = parse_reference_clock(*value);
             if (!ref_clock) {
                 return tl::unexpected(ref_clock.error());
             }

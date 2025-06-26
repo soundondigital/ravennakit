@@ -137,10 +137,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
             SECTION("Test refclk on media") {
                 const auto& refclk = media.ref_clock();
                 REQUIRE(refclk.has_value());
-                REQUIRE(refclk->source() == rav::sdp::ReferenceClock::ClockSource::ptp);
-                REQUIRE(refclk->ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
-                REQUIRE(refclk->gmid() == "00-1D-C1-FF-FE-51-9E-F7");
-                REQUIRE(refclk->domain() == 0);
+                REQUIRE(refclk->source_ == rav::sdp::ReferenceClock::ClockSource::ptp);
+                REQUIRE(refclk->ptp_version_ == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
+                REQUIRE(refclk->gmid_ == "00-1D-C1-FF-FE-51-9E-F7");
+                REQUIRE(refclk->domain_ == 0);
             }
 
             SECTION("Test sync-time") {
@@ -185,10 +185,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
         SECTION("Test refclk on session") {
             const auto& refclk = result->ref_clock();
             REQUIRE(refclk.has_value());
-            REQUIRE(refclk->source() == rav::sdp::ReferenceClock::ClockSource::ptp);
-            REQUIRE(refclk->ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
-            REQUIRE(refclk->gmid() == "00-1D-C1-FF-FE-51-9E-F7");
-            REQUIRE(refclk->domain() == 0);
+            REQUIRE(refclk->source_ == rav::sdp::ReferenceClock::ClockSource::ptp);
+            REQUIRE(refclk->ptp_version_ == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
+            REQUIRE(refclk->gmid_ == "00-1D-C1-FF-FE-51-9E-F7");
+            REQUIRE(refclk->domain_ == 0);
         }
 
         SECTION("Test mediaclk attribute") {
@@ -255,10 +255,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
         REQUIRE(static_cast<int64_t>(media.ptime().value()) == 1);
         REQUIRE(media.ref_clock().has_value());
         const auto& refclk = media.ref_clock().value();
-        REQUIRE(refclk.source() == rav::sdp::ReferenceClock::ClockSource::ptp);
-        REQUIRE(refclk.ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
-        REQUIRE(refclk.gmid() == "39-A7-94-FF-FE-07-CB-D0");
-        REQUIRE(refclk.domain() == 0);
+        REQUIRE(refclk.source_ == rav::sdp::ReferenceClock::ClockSource::ptp);
+        REQUIRE(refclk.ptp_version_ == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
+        REQUIRE(refclk.gmid_ == "39-A7-94-FF-FE-07-CB-D0");
+        REQUIRE(refclk.domain_ == 0);
         REQUIRE(media.media_clock().has_value());
         const auto& media_clock = media.media_clock().value();
         REQUIRE(media_clock.mode == rav::sdp::MediaClockSource::ClockMode::direct);
@@ -318,10 +318,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
         REQUIRE(rav::is_within(media.ptime().value(), 0.250f, 0.00001f));
         REQUIRE(media.ref_clock().has_value());
         const auto& refclk = media.ref_clock().value();
-        REQUIRE(refclk.source() == rav::sdp::ReferenceClock::ClockSource::ptp);
-        REQUIRE(refclk.ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
-        REQUIRE(refclk.gmid() == "39-A7-94-FF-FE-07-CB-D0");
-        REQUIRE(refclk.domain() == 0);
+        REQUIRE(refclk.source_ == rav::sdp::ReferenceClock::ClockSource::ptp);
+        REQUIRE(refclk.ptp_version_ == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
+        REQUIRE(refclk.gmid_ == "39-A7-94-FF-FE-07-CB-D0");
+        REQUIRE(refclk.domain_ == 0);
         REQUIRE(media.media_clock().has_value());
         const auto& media_clock = media.media_clock().value();
         REQUIRE(media_clock.mode == rav::sdp::MediaClockSource::ClockMode::direct);
@@ -486,10 +486,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
         }
 
         SECTION("Reference clock attribute") {
-            rav::sdp::ReferenceClock ref_clock(
+            rav::sdp::ReferenceClock ref_clock {
                 rav::sdp::ReferenceClock::ClockSource::ptp, rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008,
                 "00-1D-C1-FF-FE-51-9E-F7", 0
-            );
+            };
             sdp.set_ref_clock(ref_clock);
             expected += "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n";
             REQUIRE(sdp.to_string().value() == expected);
@@ -611,10 +611,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
         }
 
         SECTION("Reference clock attribute") {
-            rav::sdp::ReferenceClock ref_clock(
+            rav::sdp::ReferenceClock ref_clock{
                 rav::sdp::ReferenceClock::ClockSource::ptp, rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008,
                 "00-1D-C1-FF-FE-51-9E-F7", 0
-            );
+            };
             sdp.set_ref_clock(ref_clock);
             expected += "a=ts-refclk:ptp=IEEE1588-2008:00-1D-C1-FF-FE-51-9E-F7:0\r\n";
             REQUIRE(sdp.to_string().value() == expected);
@@ -853,10 +853,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
         SECTION("Test refclk on session") {
             const auto& refclk = result->ref_clock();
             REQUIRE(refclk.has_value());
-            REQUIRE(refclk->source() == rav::sdp::ReferenceClock::ClockSource::ptp);
-            REQUIRE(refclk->ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
-            REQUIRE(refclk->gmid() == "00-0B-72-FF-FE-07-DC-FC");
-            REQUIRE(refclk->domain() == 0);
+            REQUIRE(refclk->source_ == rav::sdp::ReferenceClock::ClockSource::ptp);
+            REQUIRE(refclk->ptp_version_ == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
+            REQUIRE(refclk->gmid_ == "00-0B-72-FF-FE-07-DC-FC");
+            REQUIRE(refclk->domain_ == 0);
         }
 
         SECTION("Test mediaclk attribute") {
@@ -905,10 +905,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
                 SECTION("Test refclk on media") {
                     const auto& refclk = media.ref_clock();
                     REQUIRE(refclk.has_value());
-                    REQUIRE(refclk->source() == rav::sdp::ReferenceClock::ClockSource::ptp);
-                    REQUIRE(refclk->ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
-                    REQUIRE(refclk->gmid() == "00-0B-72-FF-FE-07-DC-FC");
-                    REQUIRE(refclk->domain() == 0);
+                    REQUIRE(refclk->source_ == rav::sdp::ReferenceClock::ClockSource::ptp);
+                    REQUIRE(refclk->ptp_version_ == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
+                    REQUIRE(refclk->gmid_ == "00-0B-72-FF-FE-07-DC-FC");
+                    REQUIRE(refclk->domain_ == 0);
                 }
 
                 SECTION("Test sync-time") {
@@ -971,10 +971,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
                 SECTION("Test refclk on media") {
                     const auto& refclk = media.ref_clock();
                     REQUIRE(refclk.has_value());
-                    REQUIRE(refclk->source() == rav::sdp::ReferenceClock::ClockSource::ptp);
-                    REQUIRE(refclk->ptp_version() == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
-                    REQUIRE(refclk->gmid() == "00-0B-72-FF-FE-07-DC-FC");
-                    REQUIRE(refclk->domain() == 0);
+                    REQUIRE(refclk->source_ == rav::sdp::ReferenceClock::ClockSource::ptp);
+                    REQUIRE(refclk->ptp_version_ == rav::sdp::ReferenceClock::PtpVersion::IEEE_1588_2008);
+                    REQUIRE(refclk->gmid_ == "00-0B-72-FF-FE-07-DC-FC");
+                    REQUIRE(refclk->domain_ == 0);
                 }
 
                 SECTION("Test sync-time") {
