@@ -189,7 +189,7 @@ tl::expected<void, std::string> rav::sdp::MediaDescription::parse_attribute(cons
         clock_deviation_ = Fraction<uint32_t> {*num, *denom};
     } else if (key == SourceFilter::k_attribute_name) {
         if (const auto value = parser.read_until_end()) {
-            auto filter = SourceFilter::parse_new(*value);
+            auto filter = parse_source_filter(*value);
             if (!filter) {
                 return tl::unexpected(filter.error());
             }
@@ -353,8 +353,7 @@ const std::vector<rav::sdp::SourceFilter>& rav::sdp::MediaDescription::source_fi
 
 void rav::sdp::MediaDescription::add_source_filter(const SourceFilter& filter) {
     for (auto& f : source_filters_) {
-        if (f.network_type() == filter.network_type() && f.address_type() == filter.address_type()
-            && f.dest_address() == filter.dest_address()) {
+        if (f.net_type == filter.net_type && f.addr_type == filter.addr_type && f.dest_address == filter.dest_address) {
             f = filter;
             return;
         }
@@ -500,11 +499,7 @@ tl::expected<std::string, std::string> rav::sdp::MediaDescription::to_string(con
 
     // Source filters
     for (auto& filter : source_filters_) {
-        auto txt = filter.to_string();
-        if (!txt) {
-            return tl::make_unexpected(txt.error());
-        }
-        fmt::format_to(std::back_inserter(result), "{}{}", txt.value(), newline);
+        fmt::format_to(std::back_inserter(result), "{}{}", sdp::to_string(filter), newline);
     }
 
     // Framecount (legacy RAVENNA)

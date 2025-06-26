@@ -615,9 +615,9 @@ tl::expected<rav::sdp::SessionDescription, std::string> rav::RavennaSender::buil
         RAV_ASSERT(!addr.is_multicast(), "Interface address must not be multicast");
 
         // Source filter
-        sdp::SourceFilter filter(
+        sdp::SourceFilter filter {
             sdp::FilterMode::include, sdp::NetwType::internet, sdp::AddrType::ipv4, dst_address_str, {addr.to_string()}
-        );
+        };
 
         sdp::MediaDescription media;
         media.add_connection_info(connection_info);

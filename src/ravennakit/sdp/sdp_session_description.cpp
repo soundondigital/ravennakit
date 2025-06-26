@@ -189,8 +189,7 @@ const std::vector<rav::sdp::SourceFilter>& rav::sdp::SessionDescription::source_
 
 void rav::sdp::SessionDescription::add_source_filter(const SourceFilter& filter) {
     for (auto& f : source_filters_) {
-        if (f.network_type() == filter.network_type() && f.address_type() == filter.address_type()
-            && f.dest_address() == filter.dest_address()) {
+        if (f.net_type == filter.net_type && f.addr_type == filter.addr_type && f.dest_address == filter.dest_address) {
             f = filter;
             return;
         }
@@ -279,11 +278,7 @@ tl::expected<std::string, std::string> rav::sdp::SessionDescription::to_string(c
 
     // Source filters
     for (auto& filter : source_filters_) {
-        auto source_filter = filter.to_string();
-        if (!source_filter) {
-            return source_filter;
-        }
-        fmt::format_to(std::back_inserter(sdp), "{}{}", source_filter.value(), newline);
+        fmt::format_to(std::back_inserter(sdp), "{}{}", sdp::to_string(filter), newline);
     }
 
     // Media descriptions
@@ -360,7 +355,7 @@ tl::expected<void, std::string> rav::sdp::SessionDescription::parse_attribute(co
         }
     } else if (key == SourceFilter::k_attribute_name) {
         if (const auto value = parser.read_until_end()) {
-            auto filter = SourceFilter::parse_new(*value);
+            auto filter = parse_source_filter(*value);
             if (!filter) {
                 return tl::unexpected(filter.error());
             }

@@ -31,8 +31,9 @@ TEST_CASE("rav::rtp::Filter") {
     }
 
     SECTION("is_valid_source with invalid connection address") {
-        auto matches =
-            filter.is_valid_source(boost::asio::ip::make_address("192.168.1.2"), boost::asio::ip::make_address("127.0.0.1"));
+        auto matches = filter.is_valid_source(
+            boost::asio::ip::make_address("192.168.1.2"), boost::asio::ip::make_address("127.0.0.1")
+        );
         REQUIRE_FALSE(matches);
     }
 
@@ -53,26 +54,30 @@ TEST_CASE("rav::rtp::Filter") {
     }
 
     SECTION("add_filter with single include address") {
-        auto src_filter = rav::sdp::SourceFilter::parse_new(" incl IN IP4 239.3.8.1 192.168.16.52");
+        auto src_filter = rav::sdp::parse_source_filter(" incl IN IP4 239.3.8.1 192.168.16.52");
         REQUIRE(src_filter);
         REQUIRE(filter.add_filter(*src_filter) == 1);
         REQUIRE_FALSE(filter.empty());
         REQUIRE(filter.connection_address() == boost::asio::ip::make_address("239.3.8.1"));
-        REQUIRE(filter.is_valid_source(boost::asio::ip::make_address("239.3.8.1"), boost::asio::ip::make_address("192.168.16.52")));
-        REQUIRE_FALSE(
-            filter.is_valid_source(boost::asio::ip::make_address("239.3.8.1"), boost::asio::ip::make_address("192.168.16.53"))
-        );
+        REQUIRE(filter.is_valid_source(
+            boost::asio::ip::make_address("239.3.8.1"), boost::asio::ip::make_address("192.168.16.52")
+        ));
+        REQUIRE_FALSE(filter.is_valid_source(
+            boost::asio::ip::make_address("239.3.8.1"), boost::asio::ip::make_address("192.168.16.53")
+        ));
     }
 
     SECTION("add_filter with single exclude address") {
-        auto src_filter = rav::sdp::SourceFilter::parse_new(" excl IN IP4 239.3.8.1 192.168.16.52");
+        auto src_filter = rav::sdp::parse_source_filter(" excl IN IP4 239.3.8.1 192.168.16.52");
         REQUIRE(src_filter);
         REQUIRE(filter.add_filter(*src_filter) == 1);
         REQUIRE_FALSE(filter.empty());
         REQUIRE(filter.connection_address() == boost::asio::ip::make_address("239.3.8.1"));
-        REQUIRE_FALSE(
-            filter.is_valid_source(boost::asio::ip::make_address("239.3.8.1"), boost::asio::ip::make_address("192.168.16.52"))
-        );
-        REQUIRE(filter.is_valid_source(boost::asio::ip::make_address("239.3.8.1"), boost::asio::ip::make_address("192.168.16.53")));
+        REQUIRE_FALSE(filter.is_valid_source(
+            boost::asio::ip::make_address("239.3.8.1"), boost::asio::ip::make_address("192.168.16.52")
+        ));
+        REQUIRE(filter.is_valid_source(
+            boost::asio::ip::make_address("239.3.8.1"), boost::asio::ip::make_address("192.168.16.53")
+        ));
     }
 }

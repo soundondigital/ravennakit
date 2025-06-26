@@ -158,12 +158,12 @@ TEST_CASE("rav::sdp::SessionDescription") {
                 const auto& filters = media.source_filters();
                 REQUIRE(filters.size() == 1);
                 const auto& filter = filters[0];
-                REQUIRE(filter.mode() == rav::sdp::FilterMode::include);
-                REQUIRE(filter.network_type() == rav::sdp::NetwType::internet);
-                REQUIRE(filter.address_type() == rav::sdp::AddrType::ipv4);
-                REQUIRE(filter.dest_address() == "239.1.15.52");
-                REQUIRE(filter.src_list().size() == 1);
-                REQUIRE(filter.src_list()[0] == "192.168.15.52");
+                REQUIRE(filter.mode == rav::sdp::FilterMode::include);
+                REQUIRE(filter.net_type == rav::sdp::NetwType::internet);
+                REQUIRE(filter.addr_type == rav::sdp::AddrType::ipv4);
+                REQUIRE(filter.dest_address == "239.1.15.52");
+                REQUIRE(filter.src_list.size() == 1);
+                REQUIRE(filter.src_list[0] == "192.168.15.52");
             }
 
             SECTION("Framecount") {
@@ -361,11 +361,11 @@ TEST_CASE("rav::sdp::SessionDescription") {
             const auto& filters = result->source_filters();
             REQUIRE(filters.size() == 1);
             const auto& filter = filters[0];
-            REQUIRE(filter.mode() == rav::sdp::FilterMode::include);
-            REQUIRE(filter.network_type() == rav::sdp::NetwType::internet);
-            REQUIRE(filter.address_type() == rav::sdp::AddrType::ipv4);
-            REQUIRE(filter.dest_address() == "239.1.15.52");
-            const auto& src_list = filter.src_list();
+            REQUIRE(filter.mode == rav::sdp::FilterMode::include);
+            REQUIRE(filter.net_type == rav::sdp::NetwType::internet);
+            REQUIRE(filter.addr_type == rav::sdp::AddrType::ipv4);
+            REQUIRE(filter.dest_address == "239.1.15.52");
+            const auto& src_list = filter.src_list;
             REQUIRE(src_list.size() == 1);
             REQUIRE(src_list[0] == "192.168.15.52");
         }
@@ -380,12 +380,12 @@ TEST_CASE("rav::sdp::SessionDescription") {
                 const auto& filters = media.source_filters();
                 REQUIRE(filters.size() == 1);
                 const auto& filter = filters[0];
-                REQUIRE(filter.mode() == rav::sdp::FilterMode::include);
-                REQUIRE(filter.network_type() == rav::sdp::NetwType::internet);
-                REQUIRE(filter.address_type() == rav::sdp::AddrType::ipv4);
-                REQUIRE(filter.dest_address() == "239.1.15.52");
-                REQUIRE(filter.src_list().size() == 1);
-                REQUIRE(filter.src_list()[0] == "192.168.15.52");
+                REQUIRE(filter.mode == rav::sdp::FilterMode::include);
+                REQUIRE(filter.net_type == rav::sdp::NetwType::internet);
+                REQUIRE(filter.addr_type == rav::sdp::AddrType::ipv4);
+                REQUIRE(filter.dest_address == "239.1.15.52");
+                REQUIRE(filter.src_list.size() == 1);
+                REQUIRE(filter.src_list[0] == "192.168.15.52");
             }
         }
     }
@@ -511,10 +511,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
         }
 
         SECTION("Source filters") {
-            rav::sdp::SourceFilter filter(
+            rav::sdp::SourceFilter filter{
                 rav::sdp::FilterMode::include, rav::sdp::NetwType::internet, rav::sdp::AddrType::ipv4, "239.1.16.51",
                 {"192.168.16.51"}
-            );
+            };
             sdp.add_source_filter(filter);
             expected += "a=source-filter: incl IN IP4 239.1.16.51 192.168.16.51\r\n";
             REQUIRE(sdp.to_string().value() == expected);
@@ -636,10 +636,10 @@ TEST_CASE("rav::sdp::SessionDescription") {
         }
 
         SECTION("Source filters") {
-            rav::sdp::SourceFilter filter(
+            rav::sdp::SourceFilter filter{
                 rav::sdp::FilterMode::include, rav::sdp::NetwType::internet, rav::sdp::AddrType::ipv4, "239.1.16.51",
                 {"192.168.16.51"}
-            );
+            };
             sdp.add_source_filter(filter);
             expected += "a=source-filter: incl IN IP4 239.1.16.51 192.168.16.51\r\n";
             REQUIRE(sdp.to_string().value() == expected);
@@ -926,12 +926,12 @@ TEST_CASE("rav::sdp::SessionDescription") {
                     const auto& filters = media.source_filters();
                     REQUIRE(filters.size() == 1);
                     const auto& filter = filters[0];
-                    REQUIRE(filter.mode() == rav::sdp::FilterMode::include);
-                    REQUIRE(filter.network_type() == rav::sdp::NetwType::internet);
-                    REQUIRE(filter.address_type() == rav::sdp::AddrType::ipv4);
-                    REQUIRE(filter.dest_address() == "239.3.8.1");
-                    REQUIRE(filter.src_list().size() == 1);
-                    REQUIRE(filter.src_list()[0] == "192.168.16.52");
+                    REQUIRE(filter.mode == rav::sdp::FilterMode::include);
+                    REQUIRE(filter.net_type == rav::sdp::NetwType::internet);
+                    REQUIRE(filter.addr_type == rav::sdp::AddrType::ipv4);
+                    REQUIRE(filter.dest_address == "239.3.8.1");
+                    REQUIRE(filter.src_list.size() == 1);
+                    REQUIRE(filter.src_list[0] == "192.168.16.52");
                 }
 
                 SECTION("Framecount") {
@@ -992,12 +992,12 @@ TEST_CASE("rav::sdp::SessionDescription") {
                     const auto& filters = media.source_filters();
                     REQUIRE(filters.size() == 1);
                     const auto& filter = filters[0];
-                    REQUIRE(filter.mode() == rav::sdp::FilterMode::include);
-                    REQUIRE(filter.network_type() == rav::sdp::NetwType::internet);
-                    REQUIRE(filter.address_type() == rav::sdp::AddrType::ipv4);
-                    REQUIRE(filter.dest_address() == "239.4.8.2");
-                    REQUIRE(filter.src_list().size() == 1);
-                    REQUIRE(filter.src_list()[0] == "192.168.4.8");
+                    REQUIRE(filter.mode == rav::sdp::FilterMode::include);
+                    REQUIRE(filter.net_type == rav::sdp::NetwType::internet);
+                    REQUIRE(filter.addr_type == rav::sdp::AddrType::ipv4);
+                    REQUIRE(filter.dest_address == "239.4.8.2");
+                    REQUIRE(filter.src_list.size() == 1);
+                    REQUIRE(filter.src_list[0] == "192.168.4.8");
                 }
 
                 SECTION("Framecount") {

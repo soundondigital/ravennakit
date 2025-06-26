@@ -57,12 +57,12 @@ class Filter {
      */
     size_t add_filter(const sdp::SourceFilter& source_filter) {
         size_t total = 0;
-        const auto dest_address = boost::asio::ip::make_address(source_filter.dest_address());
+        const auto dest_address = boost::asio::ip::make_address(source_filter.dest_address);
         if (dest_address != connection_address_) {
             return 0;
         }
-        for (auto& src : source_filter.src_list()) {
-            add_filter(boost::asio::ip::make_address(src), source_filter.mode());
+        for (auto& src : source_filter.src_list) {
+            add_filter(boost::asio::ip::make_address(src), source_filter.mode);
             total++;
         }
         return total;
@@ -96,8 +96,9 @@ class Filter {
      * @param src_address The source address.
      * @return True if the connection address and source address matches the filter, or false if not.
      */
-    [[nodiscard]] bool
-    is_valid_source(const boost::asio::ip::address& connection_address, const boost::asio::ip::address& src_address) const {
+    [[nodiscard]] bool is_valid_source(
+        const boost::asio::ip::address& connection_address, const boost::asio::ip::address& src_address
+    ) const {
         if (connection_address_ != connection_address) {
             return false;
         }
@@ -157,4 +158,4 @@ class Filter {
     std::vector<filter> filters_;
 };
 
-}  // namespace rav
+}  // namespace rav::rtp
