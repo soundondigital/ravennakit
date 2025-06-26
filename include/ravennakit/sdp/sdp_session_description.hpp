@@ -204,8 +204,8 @@ class SessionDescription {
     std::optional<MediaDirection> media_direction_;
     std::optional<ReferenceClock> reference_clock_;
     std::optional<MediaClockSource> media_clock_;
-    std::optional<RavennaClockDomain> clock_domain_;  // RAVENNA-specific attribute
-    std::optional<uint32_t> sync_time_;               // RAVENNA-specific attribute
+    std::optional<RavennaClockDomain> ravenna_clock_domain_;  // RAVENNA-specific attribute
+    std::optional<uint32_t> sync_time_;                       // RAVENNA-specific attribute
     std::vector<SourceFilter> source_filters_;
     std::optional<Group> group_;
     std::map<std::string, std::string> attributes_;  // Remaining, unknown attributes

@@ -160,11 +160,11 @@ tl::expected<void, std::string> rav::sdp::MediaDescription::parse_attribute(cons
         }
     } else if (key == RavennaClockDomain::k_attribute_name) {
         if (const auto value = parser.read_until_end()) {
-            auto clock_domain = RavennaClockDomain::parse_new(*value);
+            auto clock_domain = parse_ravenna_clock_domain(*value);
             if (!clock_domain) {
                 return tl::unexpected(clock_domain.error());
             }
-            clock_domain_ = *clock_domain;
+            ravenna_clock_domain_ = *clock_domain;
         } else {
             return tl::unexpected("media: failed to parse clock domain value");
         }
@@ -372,11 +372,11 @@ void rav::sdp::MediaDescription::set_framecount(const std::optional<uint32_t> fr
 }
 
 std::optional<rav::sdp::RavennaClockDomain> rav::sdp::MediaDescription::clock_domain() const {
-    return clock_domain_;
+    return ravenna_clock_domain_;
 }
 
 void rav::sdp::MediaDescription::set_clock_domain(RavennaClockDomain clock_domain) {
-    clock_domain_ = clock_domain;
+    ravenna_clock_domain_ = clock_domain;
 }
 
 const std::optional<std::string>& rav::sdp::MediaDescription::get_mid() const {
@@ -481,8 +481,8 @@ tl::expected<std::string, std::string> rav::sdp::MediaDescription::to_string(con
     }
 
     // Clock domain (RAVENNA Specific)
-    if (clock_domain_) {
-        auto txt = clock_domain_->to_string();
+    if (ravenna_clock_domain_) {
+        auto txt = sdp::to_string(*ravenna_clock_domain_);
         if (!txt) {
             return tl::make_unexpected(txt.error());
         }

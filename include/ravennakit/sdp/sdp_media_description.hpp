@@ -287,7 +287,7 @@ class MediaDescription {
     std::optional<ReferenceClock> reference_clock_;
     std::optional<MediaClockSource> media_clock_;
     std::optional<std::string> session_information_;
-    std::optional<RavennaClockDomain> clock_domain_;     // RAVENNA-specific attribute
+    std::optional<RavennaClockDomain> ravenna_clock_domain_;     // RAVENNA-specific attribute
     std::optional<uint32_t> sync_time_;                  // RAVENNA-specific attribute
     std::optional<Fraction<uint32_t>> clock_deviation_;  // RAVENNA-specific attribute
     std::vector<SourceFilter> source_filters_;
