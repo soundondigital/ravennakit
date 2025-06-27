@@ -20,6 +20,17 @@
 
 using boost::asio::ip::udp;
 
+void* operator new(const size_t count) {
+    const auto ptr = malloc(count);
+    TracyAlloc(ptr, count);
+    return ptr;
+}
+
+void operator delete(void* ptr) {
+    TracyFree(ptr);
+    free(ptr);
+}
+
 namespace {
 constexpr auto k_num_packets = 20000;
 
@@ -28,14 +39,19 @@ struct State {
     udp::socket socket {io_context};
     std::array<char, 1500> buffer {};
     udp::endpoint sender_endpoint;
-    rav::SlidingStats stats {k_num_packets};
+    // rav::SlidingStats stats {k_num_packets};
     rav::WrappingUint64 previous_packet_time;
+    uint64_t count {};
+    uint64_t max {};
+    uint64_t min {std::numeric_limits<uint64_t>::max()};
 };
 
 void restart(State& state) {
-    state.stats.reset();
     state.previous_packet_time = {};
     state.io_context.restart();
+    state.max = 0;
+    state.min = std::numeric_limits<uint64_t>::max();
+    state.count = 0;
 }
 
 void handle_received_packet(State& state) {
@@ -47,9 +63,19 @@ void handle_received_packet(State& state) {
         if (const auto diff = state.previous_packet_time.update(rav::clock::now_monotonic_high_resolution_ns())) {
             const auto interval = static_cast<double>(*diff) / 1'000'000;
             TRACY_PLOT("Packet interval", interval);
-            state.stats.add(interval);
+            state.max = std::max(state.max, *diff);
+            state.min = std::min(state.min, *diff);
         }
     }
+
+    state.count++;
+}
+
+std::string to_string(State& state) {
+    return fmt::format(
+        "min={}ms, max={}ms, count={}", static_cast<double>(state.min) / 1'000'000,
+        static_cast<double>(state.max) / 1'000'000, state.count
+    );
 }
 
 void async_receive_from(State& state) {
@@ -62,19 +88,37 @@ void async_receive_from(State& state) {
                 throw std::system_error(ec);
             }
 
-            if (state.stats.full()) {
+            handle_received_packet(state);
+
+            if (state.count > k_num_packets) {
                 return;
             }
 
-            handle_received_packet(state);
             async_receive_from(state);
         }
     );
 }
 
+void receive_from(State& state) {
+    for (int i = 0; i < 2; i++) {
+        if (state.socket.available() == 0) {
+            return;
+        }
+        boost::system::error_code ec;
+        const auto size = state.socket.receive_from(boost::asio::buffer(state.buffer), state.sender_endpoint, 0, ec);
+        if (ec) {
+            throw std::system_error(ec);
+        }
+        if (size > 0) {
+            handle_received_packet(state);
+        }
+    }
+}
+
 }  // namespace
 
 int main() {
+    fmt::println("Packet_receive_benchmark");
     const auto multicast_address = boost::asio::ip::make_address_v4("239.1.11.54");
     const auto interface_address = boost::asio::ip::make_address_v4("192.168.11.51");
     constexpr unsigned short multicast_port = 5004;
@@ -87,13 +131,6 @@ int main() {
     state.socket.set_option(boost::asio::ip::multicast::join_group(multicast_address, interface_address));
     state.socket.non_blocking(true);
 
-    // Run
-    TRACY_MESSAGE("io_context::run");
-    restart(state);
-    async_receive_from(state);
-    state.io_context.run();
-    fmt::println("Stats for io_context.run() : {}", state.stats.to_string());
-
     // Poll
     TRACY_MESSAGE("io_context::poll");
     restart(state);
@@ -101,21 +138,16 @@ int main() {
     while (!state.io_context.stopped()) {
         state.io_context.poll();
     }
-    fmt::println("Stats for io_context.poll(): {}", state.stats.to_string());
+    fmt::println("Stats for io_context.poll(): {}", to_string(state));
 
     // Hammer
     TRACY_MESSAGE("hammer");
     restart(state);
-    while (!state.stats.full()) {
-        udp::endpoint sender_endpoint;
-        boost::system::error_code ec;
-        const auto size = state.socket.receive_from(boost::asio::buffer(state.buffer), sender_endpoint, 0, ec);
-        if (!ec && size > 0) {
-            handle_received_packet(state);
-        }
+    while (state.count <= k_num_packets) {
+        receive_from(state);
         std::this_thread::yield();
     }
-    fmt::println("Stats for hammering: {}", state.stats.to_string());
+    fmt::println("Stats for hammering: {}", to_string(state));
 
 #if RAV_APPLE
     constexpr auto min_packet_time = 125 * 1000;       // 125us
@@ -125,13 +157,6 @@ int main() {
     }
 #endif
 
-    // Run
-    TRACY_MESSAGE("io_context::run high prio");
-    restart(state);
-    async_receive_from(state);
-    state.io_context.run();
-    fmt::println("Stats for io_context.run() (high prio) : {}", state.stats.to_string());
-
     // Poll
     TRACY_MESSAGE("io_context::poll high prio");
     restart(state);
@@ -139,21 +164,16 @@ int main() {
     while (!state.io_context.stopped()) {
         state.io_context.poll();
     }
-    fmt::println("Stats for io_context.poll() (high prio): {}", state.stats.to_string());
+    fmt::println("Stats for io_context.poll() (high prio): {}", to_string(state));
 
     // Hammer
     TRACY_MESSAGE("hammer high prio");
     restart(state);
-    while (!state.stats.full()) {
-        udp::endpoint sender_endpoint;
-        boost::system::error_code ec;
-        const auto size = state.socket.receive_from(boost::asio::buffer(state.buffer), sender_endpoint, 0, ec);
-        if (!ec && size > 0) {
-            handle_received_packet(state);
-        }
+    while (state.count <= k_num_packets) {
+        receive_from(state);
         std::this_thread::yield();
     }
-    fmt::println("Stats for hammering (high prio): {}", state.stats.to_string());
+    fmt::println("Stats for hammering (high prio): {}", to_string(state));
 
     return 0;
 }
