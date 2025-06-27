@@ -11,6 +11,7 @@
 #include "ravennakit/core/net/sockets/extended_udp_socket.hpp"
 #include "ravennakit/core/clock.hpp"
 #include "ravennakit/core/util/tracy.hpp"
+#include "ravennakit/core/platform/windows/wsa_recv_msg_function.hpp"
 #include "ravennakit/core/platform/windows/qos_flow.hpp"
 
 #if RAV_APPLE
