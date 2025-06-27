@@ -12,13 +12,12 @@
 
 #include "ravennakit/core/platform.hpp"
 #include "ravennakit/core/math/fraction.hpp"
+#include "ravennakit/core/platform/apple/mach.hpp"
 
 #include <cstdint>
 #include <ctime>
 
-#if RAV_APPLE
-    #include <mach/mach_time.h>
-#elif RAV_WINDOWS
+#if RAV_WINDOWS
     #include <windows.h>
 #endif
 
@@ -43,7 +42,7 @@ class HighResolutionClock {
         QueryPerformanceCounter(&counter);
         return static_cast<uint64_t>((counter.QuadPart * 1'000'000'000) / clock.frequency_.QuadPart);
 #elif RAV_POSIX
-        timespec ts{};
+        timespec ts {};
         clock_gettime(CLOCK_MONOTONIC, &ts);
         return static_cast<uint64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<uint64_t>(ts.tv_nsec);
 #else
@@ -56,7 +55,7 @@ class HighResolutionClock {
 #if RAV_APPLE
     Fraction<uint32_t> timebase_ {};
 #elif RAV_WINDOWS
-    LARGE_INTEGER frequency_{};
+    LARGE_INTEGER frequency_ {};
 #endif
 
     HighResolutionClock() {
