@@ -21,10 +21,9 @@ namespace rav {
 
 [[nodiscard]] inline bool
 set_thread_realtime(const uint64_t period_ns, const uint64_t computation_ns, const uint64_t constraint_ns) {
-    RAV_ASSERT(
-        constraint_ns >= computation_ns,
-        "Because the constraint sets a maximum bound for computation, it must be larger than the value for computation."
-    );
+    if (constraint_ns < computation_ns) {
+        return false;
+    }
 
     thread_time_constraint_policy time_constraint_policy {};
     const thread_port_t thread_port = pthread_mach_thread_np(pthread_self());

@@ -18,6 +18,7 @@ option(RAV_WITH_THREAD_SANITIZER "Enable Thread Sanitizer" OFF)
 option(RAV_EXAMPLES "Build the examples" ON)
 option(RAV_TESTS "Build the tests" ON)
 option(RAV_BENCHMARKS "Build the benchmarks" OFF)
+option(RAV_TOOLS "Build the tools" OFF)
 
 set(RAV_TRACY_PATH "C:/tracy-0.11.1" CACHE STRING "Path to Tracy")
 set(RAV_WINDOWS_VERSION "0x0A00" CACHE STRING "The minimum supported version of Windows")
@@ -170,6 +171,32 @@ if (${RAV_EXAMPLES})
 
     # Build example targets based on the .cpp files in the examples subfolder
     foreach (FILE ${RAVENNAKIT_EXAMPLES})
+        get_filename_component(FILE_NAME ${FILE} NAME_WE)
+        add_executable(${FILE_NAME} ${FILE})
+        target_link_libraries(${FILE_NAME}
+                PUBLIC
+                rav_recommended_warning_flags
+                rav_recommended_lto_flags
+                PRIVATE
+                ravennakit
+                portaudio_static
+                CLI11::CLI11
+        )
+        if (RAV_TRACY_ENABLE)
+            target_link_libraries(${FILE_NAME} PUBLIC tracy)
+        endif ()
+    endforeach ()
+endif ()
+
+#########
+# Tools #
+#########
+
+if (${RAV_TOOLS})
+    file(GLOB_RECURSE RAVENNAKIT_TOOLS "tools/*.cpp")
+
+    # Build tool targets based on the .cpp files in the tools subfolder
+    foreach (FILE ${RAVENNAKIT_TOOLS})
         get_filename_component(FILE_NAME ${FILE} NAME_WE)
         add_executable(${FILE_NAME} ${FILE})
         target_link_libraries(${FILE_NAME}
