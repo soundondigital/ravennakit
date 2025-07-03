@@ -83,6 +83,6 @@ bool rav::RavennaBrowser::subscribe(Subscriber* subscriber_to_add) {
     return false;
 }
 
-bool rav::RavennaBrowser::unsubscribe(Subscriber* subscriber_to_remove) {
+bool rav::RavennaBrowser::unsubscribe(const Subscriber* subscriber_to_remove) {
     return subscribers_.remove(subscriber_to_remove);
 }

@@ -25,13 +25,6 @@
 
 #include <string>
 
-/**
- * Little helper macro to assert that the current thread is the maintenance thread of given node.
- * Done as macro to keep the location information.
- * @param node The node to check the maintenance thread for.
- */
-#define RAV_ASSERT_NODE_MAINTENANCE_THREAD(node) RAV_ASSERT(node.is_maintenance_thread(), "Not on maintenance thread")
-
 namespace rav {
 
 /**
@@ -393,3 +386,10 @@ private:
 };
 
 }  // namespace rav
+
+/**
+ * Little helper macro to assert that the current thread is the maintenance thread of given node.
+ * Done as macro to keep the location information.
+ * @param node The node to check the maintenance thread for.
+ */
+#define RAV_ASSERT_NODE_MAINTENANCE_THREAD(node) RAV_ASSERT(node.is_maintenance_thread(), "Not on maintenance thread")

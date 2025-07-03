@@ -10,8 +10,6 @@
 
 #pragma once
 
-#include <utility>
-
 #include "detail/rtp_buffer.hpp"
 #include "detail/rtp_filter.hpp"
 #include "detail/rtp_packet_stats.hpp"
@@ -22,7 +20,10 @@
 #include "ravennakit/core/math/sliding_stats.hpp"
 #include "ravennakit/core/sync/rcu.hpp"
 #include "ravennakit/core/util/rank.hpp"
+#include "ravennakit/core/util/safe_function.hpp"
 #include "ravennakit/core/util/throttle.hpp"
+
+#include <utility>
 
 namespace rav::rtp {
 
@@ -96,6 +97,29 @@ class AudioReceiver: public Receiver::Subscriber {
         /// The packet statistics.
         PacketStats::Counters packet_stats;
     };
+
+    /**
+     * Sets a callback for when data is received.
+     * The timestamp will monotonically increase, but might have gaps because out-of-order and dropped packets.
+     * @param callback The callback to call when data is received.
+     */
+    SafeFunction<void(WrappingUint32 packet_timestamp)> on_data_received_callback;
+
+    /**
+     * Sets a callback for when data is ready to be consumed.
+     * The timestamp will be the timestamp of the packet which triggered this event, minus the delay. This makes it
+     * convenient for consumers to read data from the buffer when the delay has passed. There will be no gaps in
+     * timestamp as newer packets will trigger this event for lost packets, and out of order packet (which are
+     * basically lost, not lost but late packets) will be ignored.
+     * @param callback The callback to call when data is ready to be consumed.
+     */
+    SafeFunction<void(WrappingUint32 packet_timestamp)> on_data_ready_callback;
+
+    /**
+     * Sets a callback for when the state of the receiver changes.
+     * @param callback The callback to call when the state changes.
+     */
+    SafeFunction<void(const Stream& stream, State state)> on_state_changed_callback;
 
     AudioReceiver(boost::asio::io_context& io_context, Receiver& rtp_receiver);
     ~AudioReceiver() override;
@@ -175,29 +199,6 @@ class AudioReceiver: public Receiver::Subscriber {
      */
     void set_interfaces(const std::map<Rank, boost::asio::ip::address_v4>& interface_addresses);
 
-    /**
-     * Sets a callback for when data is received.
-     * The timestamp will monotonically increase, but might have gaps because out-of-order and dropped packets.
-     * @param callback The callback to call when data is received.
-     */
-    void on_data_received(std::function<void(WrappingUint32 packet_timestamp)> callback);
-
-    /**
-     * Sets a callback for when data is ready to be consumed.
-     * The timestamp will be the timestamp of the packet which triggered this event, minus the delay. This makes it
-     * convenient for consumers to read data from the buffer when the delay has passed. There will be no gaps in
-     * timestamp as newer packets will trigger this event for lost packets, and out of order packet (which are
-     * basically lost, not lost but late packets) will be ignored.
-     * @param callback The callback to call when data is ready to be consumed.
-     */
-    void on_data_ready(std::function<void(WrappingUint32 packet_timestamp)> callback);
-
-    /**
-     * Sets a callback for when the state of the receiver changes.
-     * @param callback The callback to call when the state changes.
-     */
-    void on_state_changed(std::function<void(const Stream& stream, State state)> callback);
-
     // Receiver::Subscriber overrides
     void on_rtp_packet(const Receiver::RtpPacketEvent& rtp_event) override;
     void on_rtcp_packet(const Receiver::RtcpPacketEvent& rtcp_event) override;
@@ -269,10 +270,6 @@ class AudioReceiver: public Receiver::Subscriber {
     Rcu<SharedContext> shared_context_;
     Rcu<SharedContext>::Reader audio_thread_reader_ {shared_context_.create_reader()};
     Rcu<SharedContext>::Reader network_thread_reader_ {shared_context_.create_reader()};
-
-    std::function<void(WrappingUint32 packet_timestamp)> on_data_received_callback_;
-    std::function<void(WrappingUint32 packet_timestamp)> on_data_ready_callback_;
-    std::function<void(const Stream& stream, State state)> on_state_changed_callback_;
 
     void update_shared_context();
     void do_maintenance();

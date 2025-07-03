@@ -80,7 +80,7 @@ class RavennaBrowser {
      * @param subscriber_to_remove The subscriber to remove.
      * @return true if the subscriber was removed, or false if it wasn't found.
      */
-    [[nodiscard]] bool unsubscribe(Subscriber* subscriber_to_remove);
+    [[nodiscard]] bool unsubscribe(const Subscriber* subscriber_to_remove);
 
   private:
     std::unique_ptr<dnssd::Browser> node_browser_;
