@@ -8,13 +8,13 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/rtp/detail/rtp_buffer.hpp"
+#include "ravennakit/rtp/detail/rtp_ringbuffer.hpp"
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("rav::rtp::Buffer") {
+TEST_CASE("rav::rtp::Ringbuffer") {
     SECTION("Read with wraparound") {
-        rav::rtp::Buffer buffer;
+        rav::rtp::Ringbuffer buffer;
         buffer.resize(10, 2);
 
         std::array<const uint8_t, 4> input = {0x0, 0x1, 0x2, 0x3};
@@ -52,7 +52,7 @@ TEST_CASE("rav::rtp::Buffer") {
     }
 
     SECTION("Fill buffer in one go") {
-        rav::rtp::Buffer buffer;
+        rav::rtp::Ringbuffer buffer;
         buffer.resize(4, 2);
 
         std::array<const uint8_t, 8> input = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8};
@@ -69,7 +69,7 @@ TEST_CASE("rav::rtp::Buffer") {
     }
 
     SECTION("Clear until") {
-        rav::rtp::Buffer buffer;
+        rav::rtp::Ringbuffer buffer;
         buffer.resize(4, 2);
 
         std::array<const uint8_t, 8> input = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8};
@@ -98,19 +98,19 @@ TEST_CASE("rav::rtp::Buffer") {
     }
 
     SECTION("Clear until some high timestamp") {
-        rav::rtp::Buffer buffer;
+        rav::rtp::Ringbuffer buffer;
         buffer.resize(480, 2);
         buffer.clear_until(1000);
     }
 
     SECTION("Clear until some crazy high timestamp") {
-        rav::rtp::Buffer buffer;
+        rav::rtp::Ringbuffer buffer;
         buffer.resize(480, 2);
         buffer.clear_until(253366016);
     }
 
     SECTION("Clear after reading") {
-        rav::rtp::Buffer buffer;
+        rav::rtp::Ringbuffer buffer;
         buffer.resize(4, 2);
 
         std::array<const uint8_t, 8> input = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8};

@@ -22,7 +22,7 @@
 #include "ravennakit/nmos/nmos_node.hpp"
 #include "ravennakit/ptp/ptp_instance.hpp"
 #include "ravennakit/rtp/rtp_packet.hpp"
-#include "ravennakit/rtp/detail/rtp_buffer.hpp"
+#include "ravennakit/rtp/detail/rtp_ringbuffer.hpp"
 #include "ravennakit/rtp/detail/rtp_sender.hpp"
 #include "ravennakit/rtsp/rtsp_server.hpp"
 #include "ravennakit/sdp/sdp_session_description.hpp"
@@ -261,7 +261,7 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
         uint32_t packet_time_frames;
         rtp::Packet rtp_packet;
         AudioFormat audio_format;
-        rtp::Buffer rtp_buffer;
+        rtp::Ringbuffer rtp_buffer;
 
         // Audio thread writes and network thread reads:
         FifoBuffer<Packet, Fifo::Spsc> outgoing_data;

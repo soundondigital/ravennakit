@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "detail/rtp_buffer.hpp"
+#include "detail/rtp_ringbuffer.hpp"
 #include "detail/rtp_filter.hpp"
 #include "detail/rtp_packet_stats.hpp"
 #include "detail/rtp_receiver.hpp"
@@ -237,7 +237,7 @@ class AudioReceiver: public Receiver::Subscriber {
 
     struct SharedContext {
         // Audio thread:
-        Buffer receiver_buffer;
+        Ringbuffer receiver_buffer;
         std::vector<uint8_t> read_buffer;
         std::optional<WrappingUint32> first_packet_timestamp;
         WrappingUint32 next_ts;
