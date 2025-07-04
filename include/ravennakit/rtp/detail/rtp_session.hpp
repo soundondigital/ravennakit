@@ -16,7 +16,7 @@
 namespace rav::rtp {
 
 struct Session {
-    boost::asio::ip::address connection_address;
+    boost::asio::ip::address connection_address; // TODO: Make v4
     uint16_t rtp_port {};
     uint16_t rtcp_port {};
 

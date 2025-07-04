@@ -45,7 +45,7 @@ class FifoBuffer {
      * @param value The value to push.
      * @return True if the value was pushed, false if the buffer is full.
      */
-    bool push(T value) {
+    [[nodiscard]] bool push(T value) {
         if (auto lock = fifo_.prepare_for_write(1)) {
             lock.position.size1 > 0 ? buffer_[lock.position.index1] = std::move(value) : buffer_[0] = std::move(value);
             lock.commit();
@@ -58,7 +58,7 @@ class FifoBuffer {
      * Pops a value from the buffer.
      * @return The value that was popped, or std::nullopt if the buffer is empty.
      */
-    std::optional<T> pop() {
+    [[nodiscard]] std::optional<T> pop() {
         if (auto lock = fifo_.prepare_for_read(1)) {
             T value;
             lock.position.size1 > 0 ? value = std::move(buffer_[lock.position.index1]) : value = std::move(buffer_[0]);
@@ -84,7 +84,7 @@ class FifoBuffer {
      * @return True if writing was successful, false if there was not enough space to write all data.
      */
     template<typename U = T, std::enable_if_t<std::is_trivially_copyable_v<U>, int> = 0>
-    bool write(const T* src, const size_t number_of_elements) {
+    [[nodiscard]] bool write(const T* src, const size_t number_of_elements) {
         if (auto lock = fifo_.prepare_for_write(number_of_elements)) {
             std::memcpy(buffer_.data() + lock.position.index1, src, lock.position.size1 * sizeof(T));
 
@@ -107,7 +107,7 @@ class FifoBuffer {
      * @return True if reading was successful, false if there was not enough data to read.
      */
     template<typename U = T, std::enable_if_t<std::is_trivially_copyable_v<U>, int> = 0>
-    bool read(T* dst, const size_t number_of_elements) {
+    [[nodiscard]] bool read(T* dst, const size_t number_of_elements) {
         if (auto lock = fifo_.prepare_for_read(number_of_elements)) {
             std::memcpy(dst, buffer_.data() + lock.position.index1, lock.position.size1 * sizeof(T));
 
@@ -143,7 +143,7 @@ class FifoBuffer {
     /**
      * @returns The number of elements in the buffer.
      */
-    size_t size() {
+    [[nodiscard]] size_t size() {
         return fifo_.size();
     }
 

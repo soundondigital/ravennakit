@@ -20,10 +20,8 @@
     #define IP_RECVDSTADDR_PKTINFO IP_PKTINFO
 #endif
 
-namespace {
-
 #if RAV_WINDOWS
-size_t receive_from_socket(
+size_t rav::receive_from_socket(
     boost::asio::ip::udp::socket& socket, std::array<uint8_t, 1500>& data_buf, boost::asio::ip::udp::endpoint& src_endpoint,
     boost::asio::ip::udp::endpoint& dst_endpoint, uint64_t& recv_time, boost::system::error_code& ec
 ) {
@@ -82,7 +80,7 @@ size_t receive_from_socket(
     return bytes_received;
 }
 #else
-size_t receive_from_socket(
+size_t rav::receive_from_socket(
     boost::asio::ip::udp::socket& socket, std::array<uint8_t, 1500>& data_buf, boost::asio::ip::udp::endpoint& src_endpoint,
     boost::asio::ip::udp::endpoint& dst_endpoint, uint64_t& recv_time, boost::system::error_code& ec
 ) {
@@ -125,8 +123,6 @@ size_t receive_from_socket(
     return static_cast<size_t>(received_bytes);
 }
 #endif
-
-}  // namespace
 
 class rav::ExtendedUdpSocket::Impl: public std::enable_shared_from_this<Impl> {
   public:

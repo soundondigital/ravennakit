@@ -117,4 +117,7 @@ class Id {
     uint64_t id_ {};
 };
 
+static_assert(std::atomic<Id>::is_always_lock_free);
+static_assert(std::is_trivially_copyable_v<Id>);
+
 }  // namespace rav

@@ -48,7 +48,9 @@ class ExtendedUdpSocket {
      * @param interface_address The address to bind to.
      * @param port The port to bind to.
      */
-    ExtendedUdpSocket(boost::asio::io_context& io_context, const boost::asio::ip::address& interface_address, uint16_t port);
+    ExtendedUdpSocket(
+        boost::asio::io_context& io_context, const boost::asio::ip::address& interface_address, uint16_t port
+    );
 
     ExtendedUdpSocket(const ExtendedUdpSocket&) = delete;
     ExtendedUdpSocket& operator=(const ExtendedUdpSocket&) = delete;
@@ -117,5 +119,11 @@ class ExtendedUdpSocket {
     class Impl;
     std::shared_ptr<Impl> impl_;
 };
+
+[[nodiscard]] size_t receive_from_socket(
+    boost::asio::ip::udp::socket& socket, std::array<uint8_t, 1500>& data_buf,
+    boost::asio::ip::udp::endpoint& src_endpoint, boost::asio::ip::udp::endpoint& dst_endpoint, uint64_t& recv_time,
+    boost::system::error_code& ec
+);
 
 }  // namespace rav

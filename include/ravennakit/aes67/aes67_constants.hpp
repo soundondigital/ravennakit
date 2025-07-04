@@ -13,10 +13,15 @@
 namespace rav::aes67::constants {
 
 /**
- * The maximum MTU for AES67 packets. From AES67-2023 6.3
+ * The maximum MTU for AES67 packets. From AES67-2023 6.3.
  * Note: on connections offering lower MTU than Ethernet’s 1500 bytes, senders can use a smaller maximum payload than
  * specified here.
  */
 static constexpr auto k_max_payload = 1440;
+
+/**
+ * The standard 1500-byte Ethernet MTU is assumed. From AES67-2023 6.3.
+ */
+static constexpr auto k_max_mtu = 1400;
 
 }  // namespace rav::aes67::constants
