@@ -156,6 +156,13 @@ class Ringbuffer {
     }
 
     /**
+     * Clears all data by filling with the ground value.
+     */
+    void clear() {
+        std::fill_n(buffer_.data(), buffer_.size(), ground_value_);
+    }
+
+    /**
      * @returns the timestamp following the most recent data (packet start ts + packet size).
      */
     [[nodiscard]] WrappingUint32 get_next_ts() const {

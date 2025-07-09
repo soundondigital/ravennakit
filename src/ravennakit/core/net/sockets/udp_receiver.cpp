@@ -60,9 +60,9 @@ void rav::UdpReceiver::unsubscribe(const Subscriber* subscriber) {
 
 rav::UdpReceiver::SocketContext::SocketContext(boost::asio::io_context& io_context, boost::asio::ip::udp::endpoint local_endpoint) :
     local_endpoint_(std::move(local_endpoint)), socket_(io_context, local_endpoint_) {
-    RAV_ASSERT(!local_endpoint.address().is_multicast(), "Interface address should not be a multicast address");
-    RAV_ASSERT(local_endpoint.port() != 0, "Port should not be 0");
-    RAV_ASSERT(local_endpoint.address().is_v4(), "Only IPv4 is supported");
+    RAV_ASSERT(!local_endpoint_.address().is_multicast(), "Interface address should not be a multicast address");
+    RAV_ASSERT(local_endpoint_.port() != 0, "Port should not be 0");
+    RAV_ASSERT(local_endpoint_.address().is_v4(), "Only IPv4 is supported");
     socket_.start([this](const ExtendedUdpSocket::RecvEvent& event) {
         handle_recv_event(event);
     });

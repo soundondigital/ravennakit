@@ -31,6 +31,20 @@ class Filter {
      */
     explicit Filter(boost::asio::ip::address connection_address) : connection_address_(std::move(connection_address)) {}
 
+    /**
+     * Convenience constructor to create a filter with a source address already added to it.
+     * @param connection_address The connectin address.
+     * @param src_address The source address.
+     * @param mode Whether to include or exclude the source.
+     */
+    explicit Filter(
+        boost::asio::ip::address connection_address, const boost::asio::ip::address& src_address,
+        const sdp::FilterMode mode
+    ) :
+        connection_address_(std::move(connection_address)) {
+        add_filter(src_address, mode);
+    }
+
     Filter(const Filter&) = default;
     Filter& operator=(const Filter&) = default;
 
@@ -43,10 +57,6 @@ class Filter {
      * @param mode The filter mode.
      */
     void add_filter(boost::asio::ip::address src_address, const sdp::FilterMode mode) {
-        RAV_TRACE(
-            "Added source filter: {} {} {}", rav::sdp::to_string(mode), connection_address_.to_string(),
-            src_address.to_string()
-        );
         filters_.push_back({mode, std::move(src_address)});
     }
 

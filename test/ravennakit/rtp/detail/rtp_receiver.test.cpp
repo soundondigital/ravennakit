@@ -13,6 +13,8 @@
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("rav::rtp::Receiver") {
+    boost::asio::io_context io_context;
+
     SECTION("Test bounds") {
         REQUIRE(rav::rtp::Receiver3::k_max_num_redundant_streams >= 1);
         REQUIRE(rav::rtp::Receiver3::k_max_num_rtp_sessions_per_stream >= 1);
@@ -26,44 +28,15 @@ TEST_CASE("rav::rtp::Receiver") {
         rav::rtp::Receiver3 receiver;
 
         // Sockets
-        REQUIRE(receiver.sockets.capacity() == rav::rtp::Receiver3::k_max_num_sessions);
+        REQUIRE(decltype(receiver.sockets)::capacity() == rav::rtp::Receiver3::k_max_num_sessions);
         REQUIRE(receiver.sockets.empty());
 
         // Streams
-        REQUIRE(receiver.streams.size() == rav::rtp::Receiver3::k_max_num_redundant_streams);
-    }
-
-    SECTION("Add receiver") {
-        rav::rtp::Receiver3::Sessions sessions {
-            {{boost::asio::ip::make_address("239.0.0.1"), 5004, 5005},
-             {boost::asio::ip::make_address("239.0.0.2"), 5004, 5005}}
-        };
-
-        rav::rtp::Receiver3::Filters filters {
-            rav::rtp::Filter {boost::asio::ip::make_address("239.0.0.1")},
-            rav::rtp::Filter {boost::asio::ip::make_address("239.0.0.2")},
-        };
-
-        rav::rtp::Receiver3 receiver;
-        receiver.add_stream(rav::Id(1), sessions, filters);
-
-        REQUIRE(receiver.streams.size() >= 2);  // For this test we need at least 2
-
-        REQUIRE(receiver.streams[0].associated_id == rav::Id(1));
-        REQUIRE(receiver.streams[0].sessions == sessions);
-        REQUIRE(receiver.streams[0].filters == filters);
-        REQUIRE(receiver.streams[0].status == rav::rtp::Receiver3::Status::added);
-
-        REQUIRE_FALSE(receiver.streams[1].associated_id.is_valid());
-        REQUIRE(receiver.streams[1].sessions == rav::rtp::Receiver3::Sessions {});
-        REQUIRE(receiver.streams[1].filters == rav::rtp::Receiver3::Filters {});
-        REQUIRE(receiver.streams[1].status == rav::rtp::Receiver3::Status::free);
-
-        REQUIRE(receiver.sockets.empty());
+        REQUIRE(decltype(receiver.streams)::capacity() == rav::rtp::Receiver3::k_max_num_redundant_streams);
+        REQUIRE(receiver.streams.empty());
     }
 
     SECTION("Binding a UDP socket to the any address") {
-        boost::asio::io_context io_context;
         boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address_v4::any(), 0);
         boost::asio::ip::udp::socket socket(io_context, endpoint);
         REQUIRE(socket.is_open());
@@ -72,7 +45,6 @@ TEST_CASE("rav::rtp::Receiver") {
     }
 
     SECTION("Binding and joining a multicast address") {
-        boost::asio::io_context io_context;
         auto multicast_addr = boost::asio::ip::make_address_v4("239.1.2.3");
         boost::asio::ip::udp::endpoint endpoint(multicast_addr, 0);
         boost::asio::ip::udp::socket socket(io_context, endpoint);
@@ -83,7 +55,6 @@ TEST_CASE("rav::rtp::Receiver") {
     }
 
     SECTION("Send and receive UDP packets") {
-        boost::asio::io_context io_context;
         boost::asio::ip::udp::socket rx(io_context, {boost::asio::ip::address_v4::loopback(), 0});
         REQUIRE(rx.is_open());
 
@@ -103,12 +74,74 @@ TEST_CASE("rav::rtp::Receiver") {
     }
 
     SECTION("Add a multicast stream") {
-        boost::asio::io_context io_context;
         rav::rtp::Receiver3 receiver;
 
-        rav::rtp::Session session {boost::asio::ip::make_address("239.0.0.1"), 5004, 5005};
-        rav::rtp::Filter filter {boost::asio::ip::make_address("239.0.0.1")};
+        const auto multicast_addr = boost::asio::ip::make_address_v4("239.1.2.3");
+        const auto src_addr = boost::asio::ip::make_address_v4("192.168.1.1");
 
-        receiver.add_stream(rav::Id(1), {{session}}, {filter});
+        rav::rtp::Receiver3::ArrayOfSessions sessions {
+            rav::rtp::Session {multicast_addr, 5004, 5005},
+        };
+
+        rav::rtp::Receiver3::ArrayOfFilters filters {
+            rav::rtp::Filter {multicast_addr, src_addr, rav::sdp::FilterMode::include},
+        };
+
+        rav::rtp::Receiver3::ArrayOfAddresses interface_addresses {boost::asio::ip::make_address_v4("127.0.0.1")};
+        auto result = receiver.add_stream(rav::Id(1), sessions, filters, interface_addresses, io_context);
+        REQUIRE(result);
+
+        REQUIRE(receiver.streams.size() == 1);
+        REQUIRE(receiver.streams.at(0).associated_id == rav::Id(1));
+        REQUIRE(receiver.streams.at(0).sessions == sessions);
+        REQUIRE(receiver.streams.at(0).filters == filters);
+
+        REQUIRE(receiver.sockets.size() == 1);
+        REQUIRE(receiver.sockets.at(0).interface_address == interface_addresses.at(0));
+        REQUIRE(receiver.sockets.at(0).state == rav::rtp::Receiver3::State::ready);
+        REQUIRE(receiver.sockets.at(0).connection_endpoint == boost::asio::ip::udp::endpoint(multicast_addr, 5004));
+        REQUIRE(receiver.sockets.at(0).socket.is_open());
+    }
+
+    SECTION("Add a redundant multicast stream") {
+        rav::rtp::Receiver3 receiver;
+
+        const auto multicast_addr_pri = boost::asio::ip::make_address_v4("239.0.0.1");
+        const auto multicast_addr_sec = boost::asio::ip::make_address_v4("239.0.0.2");
+
+        const auto src_addr_pri = boost::asio::ip::make_address("192.168.1.1");
+        const auto src_addr_sec = boost::asio::ip::make_address("192.168.1.2");
+
+        rav::rtp::Receiver3::ArrayOfSessions sessions {
+            rav::rtp::Session {multicast_addr_pri, 5004, 5005},
+            rav::rtp::Session {multicast_addr_sec, 5004, 5005},
+        };
+
+        rav::rtp::Receiver3::ArrayOfFilters filters {
+            rav::rtp::Filter {multicast_addr_pri, src_addr_pri, rav::sdp::FilterMode::include},
+            rav::rtp::Filter {multicast_addr_sec, src_addr_sec, rav::sdp::FilterMode::include},
+        };
+
+        rav::rtp::Receiver3::ArrayOfAddresses interface_addresses {
+            boost::asio::ip::make_address_v4("127.0.0.1"),
+            boost::asio::ip::make_address_v4("127.0.0.1"),
+        };
+        auto result = receiver.add_stream(rav::Id(1), sessions, filters, interface_addresses, io_context);
+        REQUIRE(result);
+
+        REQUIRE(receiver.streams.size() == 1);
+        REQUIRE(receiver.streams.at(0).associated_id == rav::Id(1));
+        REQUIRE(receiver.streams.at(0).sessions == sessions);
+        REQUIRE(receiver.streams.at(0).filters == filters);
+
+        REQUIRE(receiver.sockets.size() == 2);
+        REQUIRE(receiver.sockets.at(0).interface_address == interface_addresses.at(0));
+        REQUIRE(receiver.sockets.at(0).state == rav::rtp::Receiver3::State::ready);
+        REQUIRE(receiver.sockets.at(0).connection_endpoint == boost::asio::ip::udp::endpoint(multicast_addr_pri, 5004));
+        REQUIRE(receiver.sockets.at(0).socket.is_open());
+        REQUIRE(receiver.sockets.at(1).interface_address == interface_addresses.at(1));
+        REQUIRE(receiver.sockets.at(1).state == rav::rtp::Receiver3::State::ready);
+        REQUIRE(receiver.sockets.at(1).connection_endpoint == boost::asio::ip::udp::endpoint(multicast_addr_sec, 5004));
+        REQUIRE(receiver.sockets.at(1).socket.is_open());
     }
 }
