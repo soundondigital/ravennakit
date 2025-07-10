@@ -67,38 +67,48 @@ TEST_CASE("rav::rtp::Receiver") {
         }
     }
 
-    SECTION("Send and receive unicast UDP packets") {
-        auto multicast_address = boost::asio::ip::make_address_v4("239.0.0.1");
+    SECTION("Send and receive to and from many multicast groups") {
+        auto multicast_base_address = boost::asio::ip::make_address_v4("239.0.0.1");
         auto interface_address = boost::asio::ip::address_v4::loopback();
+        constexpr uint32_t k_num_multicast_groups = 512;
 
 #if RAV_WINDOWS
         boost::asio::ip::udp::socket rx(io_context, {interface_address, 0});
 #else
-        boost::asio::ip::udp::socket rx(io_context, {multicast_address, 0});
+        boost::asio::ip::udp::socket rx(io_context, {multicast_base_address, 0});
 #endif
-        rx.set_option(boost::asio::ip::multicast::join_group(multicast_address, interface_address));
+
+        for (uint32_t i = 0; i < k_num_multicast_groups; ++i) {
+            boost::asio::ip::address_v4 addr(multicast_base_address.to_uint() + i);
+            rx.set_option(boost::asio::ip::multicast::join_group(addr, interface_address));
+        }
 
         boost::asio::ip::udp::socket tx(io_context, {interface_address, 0});
         tx.set_option(boost::asio::ip::multicast::outbound_interface(interface_address));
 
         std::atomic_bool keep_going = true;
-        uint64_t base_value = 0x1234deadbeef5678;
-        uint64_t num_packets = 200;
-        boost::asio::ip::udp::endpoint endpoint(multicast_address, rx.local_endpoint().port());
+        uint16_t port = rx.local_endpoint().port();
 
-        std::thread tx_thead([&keep_going, base_value, &tx, endpoint] {
-            uint64_t value = base_value;
-
+        std::thread tx_thead([&keep_going, multicast_base_address, &tx, port] {
+            uint32_t i = 0;
+            const boost::asio::ip::udp::endpoint endpoint(
+                boost::asio::ip::address_v4(multicast_base_address.to_uint() + i), port
+            );
             while (keep_going) {
-                tx.send_to(boost::asio::buffer(&value, sizeof(value)), endpoint);
-                value++;
+                tx.send_to(boost::asio::buffer(&i, sizeof(i)), endpoint);
+                if (++i >= k_num_multicast_groups) {
+                    i = 0;
+                }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         });
 
-        uint64_t received = 0;
-        for (uint64_t i = 0; i < num_packets; i++) {
-            rx.receive(boost::asio::buffer(&received, sizeof(received)));
+        std::set<uint32_t> received;
+        uint32_t receiver_buffer = 0;
+
+        while (received.size() < k_num_multicast_groups) {
+            rx.receive(boost::asio::buffer(&receiver_buffer, sizeof(receiver_buffer)));
+            received.insert(receiver_buffer);
         }
 
         keep_going = false;
