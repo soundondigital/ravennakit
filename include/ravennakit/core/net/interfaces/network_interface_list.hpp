@@ -52,6 +52,13 @@ class NetworkInterfaceList {
     [[nodiscard]] const NetworkInterface* find_by_address(const boost::asio::ip::address& address) const;
 
     /**
+     * Finds a network interface by the given type.
+     * @param type The type of the interface to search for.
+     * @return A pointer to a network interface if found, otherwise nullptr.
+     */
+    [[nodiscard]] const NetworkInterface* find_by_type(NetworkInterface::Type type) const;
+
+    /**
      * @returns The list of network interfaces.
      */
     [[nodiscard]] const std::vector<NetworkInterface>& get_interfaces() const;

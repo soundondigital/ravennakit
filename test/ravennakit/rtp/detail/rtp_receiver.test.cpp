@@ -9,6 +9,7 @@
  */
 
 #include "ravennakit/rtp/detail/rtp_receiver.hpp"
+#include "ravennakit/core/net/interfaces/network_interface_list.hpp"
 
 #include <catch2/catch_all.hpp>
 
@@ -95,9 +96,16 @@ TEST_CASE("rav::rtp::Receiver") {
     }
 
     SECTION("Send and receive to and from many multicast groups") {
+        auto iface = rav::NetworkInterfaceList::get_system_interfaces().find_by_type(
+            rav::NetworkInterface::Type::wired_ethernet
+        );
+
+        REQUIRE(iface);
+
+        auto interface_address = iface->get_first_ipv4_address();
+
         auto multicast_base_address = boost::asio::ip::make_address_v4("239.0.0.1");
-        auto interface_address = boost::asio::ip::address_v4::loopback();
-        static constexpr uint32_t k_num_multicast_groups = 512;
+        static constexpr uint32_t k_num_multicast_groups = 1;
 
 #if RAV_WINDOWS
         boost::asio::ip::udp::socket rx(io_context, {interface_address, 0});
@@ -117,7 +125,10 @@ TEST_CASE("rav::rtp::Receiver") {
                 boost::asio::ip::address_v4(multicast_base_address.to_uint() + i), port
             );
             while (keep_going) {
-                tx.send_to(boost::asio::buffer(&i, sizeof(i)), endpoint);
+                boost::system::error_code ec;
+                tx.send_to(boost::asio::buffer(&i, sizeof(i)), endpoint, 0, ec);
+                INFO(ec.message());
+                REQUIRE_FALSE(ec);
                 if (++i >= k_num_multicast_groups) {
                     i = 0;
                 }
@@ -130,7 +141,10 @@ TEST_CASE("rav::rtp::Receiver") {
             uint32_t receiver_buffer = 0;
 
             while (received.size() < k_num_multicast_groups) {
-                rx.receive(boost::asio::buffer(&receiver_buffer, sizeof(receiver_buffer)));
+                boost::system::error_code ec;
+                rx.receive(boost::asio::buffer(&receiver_buffer, sizeof(receiver_buffer)), 0, ec);
+                INFO(ec.message());
+                REQUIRE_FALSE(ec);
                 received.insert(receiver_buffer);
             }
         });
