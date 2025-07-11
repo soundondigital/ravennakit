@@ -26,71 +26,52 @@ TEST_CASE("rav::AtomicRwLock") {
     SECTION("Test basic operation") {
         rav::AtomicRwLock lock;
 
-        REQUIRE(lock.lock_exclusive());
-        REQUIRE_FALSE(lock.try_lock_shared());
-        REQUIRE_FALSE(lock.try_lock_exclusive());
-        lock.unlock_exclusive();
+        {
+            auto guard = lock.lock_exclusive();
+            REQUIRE(guard);
 
-        REQUIRE(lock.lock_shared());
-        REQUIRE(lock.lock_shared());
-        REQUIRE(lock.try_lock_shared());
+            auto guard2 = lock.try_lock_shared();
+            REQUIRE_FALSE(guard2);
 
-        REQUIRE_FALSE(lock.try_lock_exclusive());
+            auto guard3 = lock.try_lock_exclusive();
+            REQUIRE_FALSE(guard3);
+        }
 
-        lock.unlock_shared();
-        lock.unlock_shared();
-        lock.unlock_shared();
+        {
+            auto guard = lock.lock_shared();
+            REQUIRE(guard);
 
-        REQUIRE(lock.lock_exclusive());
-        lock.unlock_exclusive();
+            auto guard2 = lock.lock_shared();
+            REQUIRE(guard2);
+
+            auto guard3 = lock.try_lock_shared();
+            REQUIRE(guard3);
+
+            auto guard4 = lock.try_lock_exclusive();
+            REQUIRE_FALSE(guard4);
+        }
+
+        auto guard = lock.lock_exclusive();
+        REQUIRE(guard);
     }
 
-    SECTION("Single writer, multiple readers") {
+    SECTION("Multiple writers, multiple readers") {
         rav::AtomicRwLock lock;
 
         std::atomic_bool error {};
-
-        static constexpr size_t k_max_value = 200;
-
         std::atomic<int8_t> exclusive_counter {};
 
         std::vector<std::thread> readers;
-        readers.reserve(20);
-
-        // Try locks
-        for (int i = 0; i < 10; ++i) {
+        readers.reserve(10);
+        for (size_t i = 0; i < readers.capacity(); ++i) {
             readers.emplace_back([&lock, &exclusive_counter, &error] {
                 int succeeded_times = 0;
                 while (succeeded_times < 10) {
-                    if (lock.try_lock_shared()) {
-                        if (exclusive_counter.fetch_add(2, std::memory_order_relaxed) % 2 != 0) {
-                            // Odd which means a writer is active
-                            error = true;
-                            return;
-                        }
-                        succeeded_times++;
-                        std::this_thread::sleep_for(std::chrono::milliseconds(15));
-                        if (exclusive_counter.fetch_sub(2, std::memory_order_relaxed) % 2 != 0) {
-                            // Odd which means a writer is active
-                            error = true;
-                            return;
-                        }
-                        lock.unlock_shared();
+                    const auto guard = lock.try_lock_shared();
+                    if (!guard) {
+                        continue;
                     }
-                    std::this_thread::yield();
-                }
-            });
-        }
 
-        // Locks
-        for (int i = 0; i < 10; ++i) {
-            readers.emplace_back([&lock, &error, &exclusive_counter] {
-                int succeeded_times = 0;
-                while (succeeded_times < 10) {
-                    if (!lock.lock_shared()) {
-                        error = true;
-                        return;
-                    }
                     if (exclusive_counter.fetch_add(2, std::memory_order_relaxed) % 2 != 0) {
                         // Odd which means a writer is active
                         error = true;
@@ -103,34 +84,73 @@ TEST_CASE("rav::AtomicRwLock") {
                         error = true;
                         return;
                     }
-                    lock.unlock_shared();
                 }
             });
         }
 
-        std::thread writer([&lock, &error, &exclusive_counter]() {
-            for (size_t i = 0; i < k_max_value; ++i) {
-                if (!lock.lock_exclusive()) {
-                    error = true;
-                    return;
-                }
-                if (exclusive_counter.fetch_add(1, std::memory_order_relaxed) > 0) {
-                    error = true;
-                    return;
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                if (exclusive_counter.fetch_sub(1, std::memory_order_relaxed) != 1) {
-                    error = true;
-                    return;
-                };
-                lock.unlock_exclusive();
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-        });
+        std::vector<std::thread> try_readers;
+        try_readers.reserve(10);
+        for (size_t i = 0; i < try_readers.capacity(); ++i) {
+            try_readers.emplace_back([&lock, &error, &exclusive_counter] {
+                int succeeded_times = 0;
+                while (succeeded_times < 10) {
+                    const auto guard = lock.lock_shared();
+                    if (!guard) {
+                        error = true;
+                        return;
+                    }
 
-        writer.join();
+                    if (exclusive_counter.fetch_add(2, std::memory_order_relaxed) % 2 != 0) {
+                        // Odd which means a writer is active
+                        error = true;
+                        return;
+                    }
+                    succeeded_times++;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(15));
+                    if (exclusive_counter.fetch_sub(2, std::memory_order_relaxed) % 2 != 0) {
+                        // Odd which means a writer is active
+                        error = true;
+                        return;
+                    }
+                }
+            });
+        }
+
+        // Writers
+        std::vector<std::thread> writers;
+        writers.reserve(10);
+        for (size_t i = 0; i < writers.capacity(); ++i) {
+            writers.emplace_back([&lock, &error, &exclusive_counter] {
+                int succeeded_times = 0;
+                while (succeeded_times < 10) {
+                    const auto guard = lock.lock_exclusive();
+                    if (!guard) {
+                        error = true;
+                        return;
+                    }
+                    if (exclusive_counter.fetch_add(1, std::memory_order_relaxed) > 0) {
+                        error = true;
+                        return;
+                    }
+                    succeeded_times++;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    if (exclusive_counter.fetch_sub(1, std::memory_order_relaxed) != 1) {
+                        error = true;
+                        return;
+                    };
+                }
+            });
+        }
+
+        for (auto& writer : writers) {
+            writer.join();
+        }
 
         for (auto& reader : readers) {
+            reader.join();
+        }
+
+        for (auto& reader : try_readers) {
             reader.join();
         }
 
