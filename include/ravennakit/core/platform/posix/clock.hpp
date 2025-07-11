@@ -14,6 +14,8 @@
 
 #if RAV_POSIX
 
+    #include <ctime>
+
 namespace rav {
 
 inline uint64_t clock_get_time_ns() {
