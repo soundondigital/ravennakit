@@ -114,3 +114,12 @@ const rav::NetworkInterfaceList& rav::NetworkInterfaceList::get_system_interface
     }
     return instance;
 }
+
+const rav::NetworkInterface* rav::NetworkInterfaceList::find_by_type(rav::NetworkInterface::Type type) const {
+    for (auto& interface : interfaces_) {
+        if (interface.get_type() == type) {
+            return &interface;
+        }
+    }
+    return nullptr;
+}
