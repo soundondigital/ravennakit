@@ -188,7 +188,6 @@ TEST_CASE("rav::rtp::Receiver") {
 
         REQUIRE(receiver->sockets.size() == 1);
         REQUIRE(receiver->sockets.at(0).port == 5004);
-        REQUIRE(receiver->sockets.at(0).state == rav::rtp::Receiver3::State::ready);
         REQUIRE(receiver->sockets.at(0).socket.is_open());
 
         REQUIRE(multicast_group_membership_changes.size() == 1);
@@ -196,6 +195,9 @@ TEST_CASE("rav::rtp::Receiver") {
             multicast_group_membership_changes[0]
             == std::tuple(true, 5004, boost::asio::ip::make_address_v4("239.1.2.3"), interface_address)
         );
+
+        result = receiver->remove_reader(rav::Id(1));
+        REQUIRE(result);
     }
 
     SECTION("Add and remove streams") {
@@ -239,7 +241,6 @@ TEST_CASE("rav::rtp::Receiver") {
 
         REQUIRE(receiver->sockets.size() == 1);
         REQUIRE(receiver->sockets.at(0).port == 5004);
-        REQUIRE(receiver->sockets.at(0).state == rav::rtp::Receiver3::State::ready);
         REQUIRE(receiver->sockets.at(0).socket.is_open());
 
         REQUIRE(membership_changes.size() == 2);
@@ -252,6 +253,7 @@ TEST_CASE("rav::rtp::Receiver") {
         REQUIRE(receiver->readers.size() == 2);
         REQUIRE(receiver->sockets.size() == 1);
         REQUIRE(membership_changes.size() == 2);
+        REQUIRE(receiver->readers.at(1).id == rav::Id(2));
 
         // Add a 3rd reader with the different ports
         sessions[0].rtp_port = 5006;
@@ -268,14 +270,44 @@ TEST_CASE("rav::rtp::Receiver") {
 
         REQUIRE(receiver->sockets.size() == 3);
         REQUIRE(receiver->sockets.at(1).port == 5006);
-        REQUIRE(receiver->sockets.at(1).state == rav::rtp::Receiver3::State::ready);
         REQUIRE(receiver->sockets.at(1).socket.is_open());
         REQUIRE(receiver->sockets.at(2).port == 5008);
-        REQUIRE(receiver->sockets.at(2).state == rav::rtp::Receiver3::State::ready);
         REQUIRE(receiver->sockets.at(2).socket.is_open());
 
         REQUIRE(membership_changes.size() == 4);
         REQUIRE(membership_changes[2] == std::tuple(true, 5006, multicast_addr_pri, interface_address_pri));
         REQUIRE(membership_changes[3] == std::tuple(true, 5008, multicast_addr_sec, interface_address_sec));
+
+        // Remove reader 2
+        result = receiver->remove_reader(rav::Id(2));
+        REQUIRE(result);
+        REQUIRE(receiver->sockets.size() == 3);  // Size of sockets never shrinks
+        REQUIRE(receiver->sockets[0].socket.is_open());
+        REQUIRE(receiver->readers.size() == 3);            // Size of readers never shrinks
+        REQUIRE(receiver->readers.at(1).id == rav::Id());  // The reader slot should have been invalidated
+        REQUIRE(membership_changes.size() == 4);
+
+        // Remove reader 1
+        result = receiver->remove_reader(rav::Id(1));
+        REQUIRE(result);
+        REQUIRE(receiver->sockets.size() == 3);  // Size of sockets never shrinks
+        REQUIRE_FALSE(receiver->sockets[0].socket.is_open());
+        REQUIRE(receiver->readers.size() == 3);            // Size of readers never shrinks
+        REQUIRE(receiver->readers.at(0).id == rav::Id());  // The reader slot should have been invalidated
+        REQUIRE(membership_changes.size() == 6);
+        REQUIRE(membership_changes[4] == std::tuple(false, 5004, multicast_addr_pri, interface_address_pri));
+        REQUIRE(membership_changes[5] == std::tuple(false, 5004, multicast_addr_sec, interface_address_sec));
+
+        // Remove reader 3
+        result = receiver->remove_reader(rav::Id(3));
+        REQUIRE(result);
+        REQUIRE(receiver->sockets.size() == 3);  // Size of sockets never shrinks
+        REQUIRE_FALSE(receiver->sockets[1].socket.is_open());
+        REQUIRE_FALSE(receiver->sockets[2].socket.is_open());
+        REQUIRE(receiver->readers.size() == 3);  // Size of readers never shrinks
+        REQUIRE(receiver->readers.at(2).id == rav::Id());
+        REQUIRE(membership_changes.size() == 8);
+        REQUIRE(membership_changes[6] == std::tuple(false, 5006, multicast_addr_pri, interface_address_pri));
+        REQUIRE(membership_changes[7] == std::tuple(false, 5008, multicast_addr_sec, interface_address_sec));
     }
 }

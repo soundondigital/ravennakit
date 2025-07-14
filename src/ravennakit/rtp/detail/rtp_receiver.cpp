@@ -40,7 +40,7 @@ typedef BOOL(PASCAL* LPFN_WSARECVMSG)(
 
 namespace {
 
-bool setup_socket(boost::asio::ip::udp::socket& socket, const uint16_t port) {
+[[nodiscard]] bool setup_socket(boost::asio::ip::udp::socket& socket, const uint16_t port) {
     const auto endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4::any(), port);
 
     try {
@@ -49,6 +49,7 @@ bool setup_socket(boost::asio::ip::udp::socket& socket, const uint16_t port) {
         socket.bind(endpoint);
         socket.non_blocking(true);
         socket.set_option(boost::asio::detail::socket_option::integer<IPPROTO_IP, IP_RECVDSTADDR_PKTINFO>(1));
+        RAV_TRACE("Opened socket for port {}", port);
     } catch (const std::exception& e) {
         RAV_ERROR("Failed to setup receive socket: {}", e.what());
         socket.close();
@@ -58,7 +59,7 @@ bool setup_socket(boost::asio::ip::udp::socket& socket, const uint16_t port) {
     return true;
 }
 
-boost::asio::ip::udp::socket*
+[[nodiscard]] boost::asio::ip::udp::socket*
 get_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost::asio::io_context& io_context) {
     // Try to find existing socket
     for (auto& ctx : receiver.sockets) {
@@ -69,14 +70,20 @@ get_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost::
 
     // Try to reuse existing socket slot
     for (auto& ctx : receiver.sockets) {
-        if (ctx.state.load(std::memory_order_acquire) != rav::rtp::Receiver3::State::available) {
+        const auto socket_guard = ctx.rw_lock.lock_exclusive();
+        if (!socket_guard) {
+            return nullptr;
+        }
+
+        if (ctx.socket.is_open()) {
             continue;  // Slot not available, try next one
         }
+
         if (!setup_socket(ctx.socket, port)) {
             return nullptr;
         }
+        RAV_ASSERT(ctx.socket.is_open(), "Socket expected to be open at this point");
         ctx.port = port;
-        ctx.state.store(rav::rtp::Receiver3::State::ready, std::memory_order_release);
         return &ctx.socket;
     }
 
@@ -89,12 +96,12 @@ get_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost::
     if (!setup_socket(it.socket, port)) {
         return nullptr;
     }
+    RAV_ASSERT(it.socket.is_open(), "Socket expected to be open at this point");
     it.port = port;
-    it.state.store(rav::rtp::Receiver3::State::ready, std::memory_order_release);
     return &it.socket;
 }
 
-uint32_t count_multicast_groups(
+[[nodiscard]] uint32_t count_multicast_groups(
     rav::rtp::Receiver3& receiver, const boost::asio::ip::address_v4& multicast_group,
     const boost::asio::ip::address_v4& interface_address, const uint16_t port
 ) {
@@ -117,7 +124,7 @@ uint32_t count_multicast_groups(
     return total;
 }
 
-bool setup_reader(
+[[nodiscard]] bool setup_reader(
     rav::rtp::Receiver3& receiver, rav::rtp::Receiver3::Reader& reader, const rav::Id id,
     const rav::rtp::Receiver3::ArrayOfSessions& sessions, const rav::rtp::Receiver3::ArrayOfFilters& filters,
     boost::asio::io_context& io_context
@@ -162,6 +169,68 @@ bool setup_reader(
     return true;
 }
 
+/// Leaves given multicast group if last.
+[[nodiscard]] bool leave_multicast_group_if_last(
+    rav::rtp::Receiver3& receiver, const boost::asio::ip::address_v4& multicast_address,
+    const boost::asio::ip::address_v4& interface_address, const uint16_t port
+) {
+    RAV_ASSERT(multicast_address.is_multicast(), "Expecting multicast address to be a multicast address");
+    RAV_ASSERT(!multicast_address.is_unspecified(), "Expected multicast address to not be unspecified");
+    RAV_ASSERT(!interface_address.is_multicast(), "Expected interface address to not be a multicast address");
+    RAV_ASSERT(!interface_address.is_unspecified(), "Expecting interface address to not be unspecified");
+
+    const auto count = count_multicast_groups(receiver, multicast_address, interface_address, port);
+    if (count != 1) {
+        return false;
+    }
+
+    for (auto& socket : receiver.sockets) {
+        if (socket.port == port) {
+            RAV_ASSERT(socket.socket.is_open(), "Socket is not open");
+            // Note: not locking the rw_lock here as joining and leaving a multicast group should be thread safe, and we
+            // don't want to interrupt the call to read_incoming_packets().
+            if (!receiver.leave_multicast_group(socket.socket, multicast_address, interface_address)) {
+                RAV_ERROR(
+                    "Failed to leave multicast group {}:{} on {}", multicast_address.to_string(), port,
+                    interface_address.to_string()
+                );
+            }
+        }
+    }
+
+    return true;
+}
+
+size_t count_num_sessions_using_rtp_port(rav::rtp::Receiver3& receiver, const uint16_t port) {
+    RAV_ASSERT(port > 0, "A valid port must be given, otherwise empty sessions will be counted as well");
+    size_t count = 0;
+    for (auto& reader : receiver.readers) {
+        for (const auto& session : reader.sessions) {
+            if (port == session.rtp_port) {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+void close_unused_sockets(rav::rtp::Receiver3& receiver) {
+    for (auto& socket : receiver.sockets) {
+        if (!socket.socket.is_open()) {
+            continue;
+        }
+        if (count_num_sessions_using_rtp_port(receiver, socket.port) == 0) {
+            boost::system::error_code ec;
+            socket.socket.close(ec);
+            if (ec) {
+                RAV_ERROR("Failed to close socket for port {}", socket.port);
+            } else {
+                RAV_TRACE("Closed socket for port {}", socket.port);
+            }
+        }
+    }
+}
+
 }  // namespace
 
 rav::rtp::Receiver3::Receiver3() {
@@ -177,6 +246,10 @@ rav::rtp::Receiver3::Receiver3() {
             RAV_ERROR("Failed to join multicast group: {}", ec.message());
             return false;
         }
+        RAV_TRACE(
+            "Joined multicast group {}:{} on {}", multicast_group.to_string(), socket.local_endpoint().port(),
+            interface_address.to_string()
+        );
         return true;
     };
 
@@ -192,8 +265,21 @@ rav::rtp::Receiver3::Receiver3() {
             RAV_ERROR("Failed to leave multicast group: {}", ec.message());
             return false;
         }
+        RAV_TRACE(
+            "Left multicast group {}:{} on {}", multicast_group.to_string(), socket.local_endpoint().port(),
+            interface_address.to_string()
+        );
         return true;
     };
+}
+
+rav::rtp::Receiver3::~Receiver3() {
+    for (auto& reader : readers) {
+        RAV_ASSERT(!reader.id.is_valid(), "There should be no active readers at this point");
+    }
+    for (auto& socket : sockets) {
+        RAV_ASSERT(!socket.socket.is_open(), "There should be no active socket at this point");
+    }
 }
 
 void rav::rtp::Receiver3::set_interface_addresses(const ArrayOfAddresses& addresses) {
@@ -268,13 +354,9 @@ bool rav::rtp::Receiver3::remove_reader(const Id id) {
                 auto& session = e.sessions[i];
                 if (session.valid()) {
                     if (session.connection_address.is_multicast()) {
-                        // Leave multicast group, if this is the last one
-                        const auto count = count_multicast_groups(
+                        std::ignore = leave_multicast_group_if_last(
                             *this, session.connection_address.to_v4(), interface_addresses[i], session.rtp_port
                         );
-                        if (count == 1) {
-                            // TODO: Since this is the last instance of this multicast group, we have to leave it.
-                        }
                     }
                 }
             }
@@ -285,6 +367,8 @@ bool rav::rtp::Receiver3::remove_reader(const Id id) {
             e.fifo.consume_all([](const auto&) {});
             e.receive_buffer.clear();
 
+            close_unused_sockets(*this);
+
             return true;
         }
     }
@@ -293,20 +377,20 @@ bool rav::rtp::Receiver3::remove_reader(const Id id) {
 
 void rav::rtp::Receiver3::read_incoming_packets() {
     for (auto& ctx : sockets) {
-        std::array<uint8_t, aes67::constants::k_mtu> receive_buffer {};
-
-        if (ctx.state.load(std::memory_order_acquire) != State::ready) {
-            continue;
+        const auto socket_guard = ctx.rw_lock.try_lock_shared();
+        if (!socket_guard) {
+            continue;  // Exclusively locked, so it either just appeared or is going away.
         }
 
         if (!ctx.socket.is_open()) {
-            continue;
+            continue;  // This means unused. I think the call is stable and will not be changed externally.
         }
 
         if (!ctx.socket.available()) {
             continue;
         }
 
+        std::array<uint8_t, aes67::constants::k_mtu> receive_buffer {};
         boost::asio::ip::udp::endpoint src_endpoint;
         boost::asio::ip::udp::endpoint dst_endpoint;
         uint64_t recv_time = 0;
@@ -329,8 +413,8 @@ void rav::rtp::Receiver3::read_incoming_packets() {
         }
 
         for (auto& reader : readers) {
-            const auto guard = reader.rw_lock.try_lock_shared();
-            if (!guard) {
+            const auto reader_guard = reader.rw_lock.try_lock_shared();
+            if (!reader_guard) {
                 continue;  // Failed to lock which means it is being added or removed.
             }
 
@@ -364,13 +448,6 @@ void rav::rtp::Receiver3::read_incoming_packets() {
             if (!reader.fifo.push(packet)) {
                 RAV_ERROR("Failed to push data to fifo");
             }
-        }
-    }
-
-    for (auto& ctx : sockets) {
-        if (ctx.state.load(std::memory_order_acquire) == State::should_be_closed) {
-            ctx.socket.close();  // TODO: Can we defer this call to close to the maintenance thread?
-            ctx.state.store(State::available, std::memory_order_release);
         }
     }
 }

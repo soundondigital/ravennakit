@@ -59,14 +59,14 @@ struct Receiver3 {
 
         udp_socket socket;
         uint16_t port {};
-        std::atomic<State> state {State::available};
+        AtomicRwLock rw_lock;
     };
 
     /**
      * Holds the structures to receive incoming data from redundant sources into a single buffer.
      */
     struct Reader {
-        Id id; // To associate with another entity, and to determine whether this reader is already being used.
+        Id id;  // To associate with another entity, and to determine whether this reader is already being used.
         ArrayOfSessions sessions;
         ArrayOfFilters filters;
         PacketFifo fifo;
@@ -85,6 +85,7 @@ struct Receiver3 {
     SafeFunction<bool(udp_socket&, ip_address_v4, ip_address_v4)> leave_multicast_group;
 
     Receiver3();
+    ~Receiver3();
 
     void set_interface_addresses(const ArrayOfAddresses& addresses);
     bool add_reader(
