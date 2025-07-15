@@ -18,7 +18,7 @@
     const auto multicast_addr_pri = boost::asio::ip::make_address("239.15.1.5");
     const auto multicast_addr_sec = boost::asio::ip::make_address("239.16.1.6");
 
-    const rav::rtp::Receiver3::ArrayOfAddresses interface_addresses {
+    const rav::rtp::Receiver3::ArrayOfAddresses interfaces {
         boost::asio::ip::make_address_v4("192.168.15.53"),
         boost::asio::ip::make_address_v4("192.168.16.50"),
     };
@@ -35,8 +35,7 @@
 
     boost::asio::io_context io_context;
     const auto receiver = std::make_unique<rav::rtp::Receiver3>();
-    receiver->set_interface_addresses(interface_addresses);
-    receiver->add_reader(rav::Id(1), sessions, filters, io_context);
+    std::ignore = receiver->add_reader(rav::Id(1), sessions, filters, interfaces, io_context);
 
     boost::asio::ip::udp::socket rx(io_context, {multicast_addr_pri, 0});
 
@@ -47,7 +46,6 @@
         for (auto& stream : receiver->readers) {
             while (stream.fifo.pop(buffer)) {
                 rav::rtp::PacketView view(buffer.data(), buffer.size());
-                fmt::println("{}", view.to_string());
             }
         }
     }

@@ -111,7 +111,7 @@ bool rav::UdpReceiver::SocketContext::remove_subscriber(const Subscriber* subscr
         RAV_ASSERT(!addr->interface_address.is_multicast(), "Interface address should not be multicast");
         // Check if this was the last subscriber for this multicast group and if so, leave the group
         if (!has_multicast_group_subscriber(*addr)) {
-            if (auto ec = socket_.leave_multicast_group(addr->multicast_address, addr->interface_address)) {
+            if (const auto ec = socket_.leave_multicast_group(addr->multicast_address, addr->interface_address)) {
                 RAV_ERROR("Failed to leave multicast group: {}", ec.message());
                 return true;  // Still return true even if leaving the group failed,  because the subscriber was removed
                               // successfully.

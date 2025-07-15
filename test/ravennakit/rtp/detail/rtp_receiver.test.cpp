@@ -10,6 +10,7 @@
 
 #include "ravennakit/rtp/detail/rtp_receiver.hpp"
 #include "ravennakit/core/net/interfaces/network_interface_list.hpp"
+#include "ravennakit/core/util/defer.hpp"
 
 #include <catch2/catch_all.hpp>
 
@@ -18,6 +19,17 @@
 namespace {
 using MulticastMembershipChangesVector =
     std::vector<std::tuple<bool, uint16_t, boost::asio::ip::address_v4, boost::asio::ip::address_v4>>;
+
+std::string to_string(const MulticastMembershipChangesVector& changes) {
+    std::string result;
+    for (auto& change : changes) {
+        fmt::format_to(
+            std::back_inserter(result), "{} {}:{} on {}\n", std::get<0>(change) ? "joined" : "left", std::get<1>(change),
+            std::get<2>(change).to_string(), std::get<3>(change).to_string()
+        );
+    }
+    return result;
+}
 
 void setup_receiver_multicast_hooks(rav::rtp::Receiver3& receiver, MulticastMembershipChangesVector& changes) {
     receiver.join_multicast_group = [&changes](
@@ -176,9 +188,9 @@ TEST_CASE("rav::rtp::Receiver") {
         auto receiver = std::make_unique<rav::rtp::Receiver3>();
         MulticastMembershipChangesVector multicast_group_membership_changes;
         setup_receiver_multicast_hooks(*receiver, multicast_group_membership_changes);
-        receiver->set_interface_addresses(interface_addresses);
+        receiver->set_interfaces(interface_addresses);
 
-        auto result = receiver->add_reader(rav::Id(1), sessions, filters, io_context);
+        auto result = receiver->add_reader(rav::Id(1), sessions, filters, interface_addresses, io_context);
         REQUIRE(result);
 
         REQUIRE(receiver->readers.size() == 1);
@@ -230,8 +242,8 @@ TEST_CASE("rav::rtp::Receiver") {
         MulticastMembershipChangesVector membership_changes;
         setup_receiver_multicast_hooks(*receiver, membership_changes);
 
-        receiver->set_interface_addresses(interface_addresses);
-        auto result = receiver->add_reader(rav::Id(1), sessions, filters, io_context);
+        receiver->set_interfaces(interface_addresses);
+        auto result = receiver->add_reader(rav::Id(1), sessions, filters, interface_addresses, io_context);
         REQUIRE(result);
 
         REQUIRE(receiver->readers.size() == 1);
@@ -248,7 +260,7 @@ TEST_CASE("rav::rtp::Receiver") {
         REQUIRE(membership_changes[1] == std::tuple(true, 5004, multicast_addr_sec, interface_address_sec));
 
         // Add a second reader with the same sessions
-        result = receiver->add_reader(rav::Id(2), sessions, filters, io_context);
+        result = receiver->add_reader(rav::Id(2), sessions, filters, interface_addresses, io_context);
         REQUIRE(result);
         REQUIRE(receiver->readers.size() == 2);
         REQUIRE(receiver->sockets.size() == 1);
@@ -260,7 +272,7 @@ TEST_CASE("rav::rtp::Receiver") {
         sessions[0].rtcp_port = 5007;
         sessions[1].rtp_port = 5008;
         sessions[1].rtcp_port = 5009;
-        result = receiver->add_reader(rav::Id(3), sessions, filters, io_context);
+        result = receiver->add_reader(rav::Id(3), sessions, filters, interface_addresses, io_context);
         REQUIRE(result);
 
         REQUIRE(receiver->readers.size() == 3);
@@ -309,5 +321,67 @@ TEST_CASE("rav::rtp::Receiver") {
         REQUIRE(membership_changes.size() == 8);
         REQUIRE(membership_changes[6] == std::tuple(false, 5006, multicast_addr_pri, interface_address_pri));
         REQUIRE(membership_changes[7] == std::tuple(false, 5008, multicast_addr_sec, interface_address_sec));
+    }
+
+    SECTION("Set interfaces") {
+        auto receiver = std::make_unique<rav::rtp::Receiver3>();
+
+        const auto multicast_addr_pri = boost::asio::ip::make_address_v4("239.0.0.1");
+        const auto multicast_addr_sec = boost::asio::ip::make_address_v4("239.0.0.2");
+
+        const auto interface_address_pri = boost::asio::ip::make_address_v4("192.168.1.1");
+        const auto interface_address_sec = boost::asio::ip::make_address_v4("192.168.1.2");
+
+        rav::rtp::Receiver3::ArrayOfSessions sessions {
+            rav::rtp::Session {multicast_addr_pri, 5004, 5005},
+            rav::rtp::Session {multicast_addr_sec, 5004, 5005},
+        };
+
+        rav::rtp::Receiver3::ArrayOfAddresses interface_addresses {
+            interface_address_pri,
+            interface_address_sec,
+        };
+
+        MulticastMembershipChangesVector membership_changes;
+        setup_receiver_multicast_hooks(*receiver, membership_changes);
+
+        auto id = rav::Id(1);
+        auto result = receiver->add_reader(id, sessions, {}, {}, io_context);
+        REQUIRE(result);
+
+        rav::Defer remove_reader([&] {
+            REQUIRE(receiver->remove_reader(id));
+        });
+
+        REQUIRE(membership_changes.empty());
+
+        receiver->set_interfaces(interface_addresses);
+
+        REQUIRE(membership_changes.size() == 2);
+        REQUIRE(membership_changes[0] == std::tuple(true, 5004, multicast_addr_pri, interface_address_pri));
+        REQUIRE(membership_changes[1] == std::tuple(true, 5004, multicast_addr_sec, interface_address_sec));
+
+        SECTION("Swap interfaces") {
+            std::swap(interface_addresses[0], interface_addresses[1]);
+            receiver->set_interfaces(interface_addresses);
+            fmt::println("{}", to_string(membership_changes));
+            REQUIRE(membership_changes.size() == 6);
+            REQUIRE(membership_changes[2] == std::tuple(false, 5004, multicast_addr_pri, interface_address_pri));
+            REQUIRE(membership_changes[3] == std::tuple(true, 5004, multicast_addr_pri, interface_address_sec));
+            REQUIRE(membership_changes[4] == std::tuple(false, 5004, multicast_addr_sec, interface_address_sec));
+            REQUIRE(membership_changes[5] == std::tuple(true, 5004, multicast_addr_sec, interface_address_pri));
+        }
+
+        SECTION("Clear interfaces") {
+            receiver->set_interfaces({});
+
+            REQUIRE(membership_changes.size() == 4);
+            REQUIRE(membership_changes[2] == std::tuple(false, 5004, multicast_addr_pri, interface_address_pri));
+            REQUIRE(membership_changes[3] == std::tuple(false, 5004, multicast_addr_sec, interface_address_sec));
+
+            // Clearing interfaces should not lead to closing sockets
+            REQUIRE(receiver->sockets.size() == 1);
+            REQUIRE(receiver->sockets[0].socket.is_open());
+        }
     }
 }

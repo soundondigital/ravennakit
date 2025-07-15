@@ -69,6 +69,7 @@ struct Receiver3 {
         Id id;  // To associate with another entity, and to determine whether this reader is already being used.
         ArrayOfSessions sessions;
         ArrayOfFilters filters;
+        ArrayOfAddresses interfaces;
         PacketFifo fifo;
         Ringbuffer receive_buffer;
         AtomicRwLock rw_lock;
@@ -76,22 +77,49 @@ struct Receiver3 {
 
     boost::container::static_vector<Reader, k_max_num_readers> readers;
     boost::container::static_vector<SocketWithContext, k_max_num_sessions> sockets;
-    ArrayOfAddresses interface_addresses;
 
-    /// Function for joining a multicast group. Can be overridden to alter behaviour, for example for unit testing.
+    /// Function for joining a multicast group. Can be overridden to alter behaviour. Used for unit testing.
     SafeFunction<bool(udp_socket&, ip_address_v4, ip_address_v4)> join_multicast_group;
 
-    /// Function for leaving a multicast group. Can be overridden to alter behaviour, for example for unit testing.
+    /// Function for leaving a multicast group. Can be overridden to alter behaviour. Used for unit testing.
     SafeFunction<bool(udp_socket&, ip_address_v4, ip_address_v4)> leave_multicast_group;
 
     Receiver3();
     ~Receiver3();
 
-    void set_interface_addresses(const ArrayOfAddresses& addresses);
-    bool add_reader(
-        Id id, const ArrayOfSessions& sessions, const ArrayOfFilters& filters, boost::asio::io_context& io_context
+    /**
+     * Adds a reader to the receiver.
+     * Thread safe: no.
+     * @param id The id to use, must be unique.
+     * @param sessions The sessions to receive.
+     * @param filters The source filters to use.
+     * @param interfaces The interfaces to receive multicast sessions on.
+     * @param io_context The io_context to associate with the sockets. Can be a dummy.
+     * @return true if a new reader was added, or false if not.
+     */
+    [[nodiscard]] bool add_reader(
+        Id id, const ArrayOfSessions& sessions, const ArrayOfFilters& filters, const ArrayOfAddresses& interfaces,
+        boost::asio::io_context& io_context
     );
-    bool remove_reader(Id id);
+
+    /**
+     * Removes the reader with given id, if it exists.
+     * Thread safe: no.
+     * @param id The id of the reader to remove.
+     * @return true if a reader was removed, or false if not.
+     */
+    [[nodiscard]] bool remove_reader(Id id);
+
+    /**
+     * Sets the interfaces on all readers, leaving and joining multicast groups where necessary.
+     * @param interfaces The new interfaces to use.
+     */
+    void set_interfaces(const ArrayOfAddresses& interfaces);
+
+    /**
+     * Call this to read incoming packets and place the data inside a fifo for consumption. Should be called from a
+     * single high priority thread with regular short intervals.
+     */
     void read_incoming_packets();
 };
 

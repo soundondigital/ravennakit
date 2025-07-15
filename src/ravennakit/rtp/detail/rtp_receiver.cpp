@@ -9,20 +9,15 @@
  */
 
 #include "ravennakit/rtp/detail/rtp_receiver.hpp"
-#include "ravennakit/rtp/detail/rtp_receiver.hpp"
-
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/rtp/rtcp_packet_view.hpp"
-#include "ravennakit/rtp/detail/rtp_receiver.hpp"
-
 #include "ravennakit/core/util/subscriber_list.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
 #include "ravennakit/core/util/tracy.hpp"
+#include "ravennakit/core/util/defer.hpp"
+#include "ravennakit/core/util/tracy.hpp"
 
 #include <fmt/core.h>
-#include "ravennakit/core/expected.hpp"
-#include "ravennakit/core/util/defer.hpp"
-
 #include <utility>
 
 #if RAV_APPLE
@@ -59,13 +54,21 @@ namespace {
     return true;
 }
 
-[[nodiscard]] boost::asio::ip::udp::socket*
-get_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost::asio::io_context& io_context) {
+[[nodiscard]] boost::asio::ip::udp::socket* find_socket(rav::rtp::Receiver3& receiver, const uint16_t port) {
     // Try to find existing socket
     for (auto& ctx : receiver.sockets) {
         if (ctx.port == port) {
             return &ctx.socket;
         }
+    }
+    return nullptr;
+}
+
+[[nodiscard]] boost::asio::ip::udp::socket*
+find_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost::asio::io_context& io_context) {
+    // Try to find existing socket
+    if (auto* found = find_socket(receiver, port)) {
+        return found;
     }
 
     // Try to reuse existing socket slot
@@ -111,11 +114,11 @@ get_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost::
     RAV_ASSERT(port > 0, "Port must be a non-zero value");
 
     uint32_t total = 0;
-    for (size_t i = 0; i < receiver.interface_addresses.size(); i++) {
-        if (receiver.interface_addresses[i] != interface_address) {
-            continue;
-        }
-        for (auto& reader : receiver.readers) {
+    for (auto& reader : receiver.readers) {
+        for (size_t i = 0; i < reader.sessions.size(); ++i) {
+            if (reader.interfaces[i] != interface_address) {
+                continue;
+            }
             if (reader.sessions[i].connection_address == multicast_group && reader.sessions[i].rtp_port == port) {
                 total++;
             }
@@ -127,11 +130,12 @@ get_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost::
 [[nodiscard]] bool setup_reader(
     rav::rtp::Receiver3& receiver, rav::rtp::Receiver3::Reader& reader, const rav::Id id,
     const rav::rtp::Receiver3::ArrayOfSessions& sessions, const rav::rtp::Receiver3::ArrayOfFilters& filters,
-    boost::asio::io_context& io_context
+    const rav::rtp::Receiver3::ArrayOfAddresses& interfaces, boost::asio::io_context& io_context
 ) {
     reader.id = id;
     reader.sessions = sessions;
     reader.filters = filters;
+    reader.interfaces = interfaces;
     reader.fifo.consume_all([](const auto&) {});
     reader.receive_buffer.clear();
 
@@ -142,13 +146,13 @@ get_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost::
         }
         const auto endpoint = boost::asio::ip::udp::endpoint(session.connection_address, session.rtp_port);
 
-        auto* socket = get_or_create_socket(receiver, endpoint.port(), io_context);
+        auto* socket = find_or_create_socket(receiver, endpoint.port(), io_context);
         if (socket == nullptr) {
             RAV_ERROR("Failed to create receive socket");
             continue;
         }
 
-        auto& interface_address = receiver.interface_addresses[i];
+        auto& interface_address = reader.interfaces[i];
         if (session.connection_address.is_multicast()) {
             if (!interface_address.is_unspecified()) {
                 const auto count = count_multicast_groups(
@@ -282,27 +286,50 @@ rav::rtp::Receiver3::~Receiver3() {
     }
 }
 
-void rav::rtp::Receiver3::set_interface_addresses(const ArrayOfAddresses& addresses) {
-    for (size_t i = 0; i < interface_addresses.size(); i++) {
-        if (interface_addresses[i] != addresses[i]) {
-            if (!interface_addresses[i].is_unspecified()) {
-                // Leave existing group (sessions[i], interface_addresses[i])
+void rav::rtp::Receiver3::set_interfaces(const ArrayOfAddresses& interfaces) {
+    for (auto& reader : readers) {
+        for (size_t i = 0; i < interfaces.size(); i++) {
+            if (reader.interfaces[i] == interfaces[i]) {
+                continue;
             }
-
-            if (!addresses[i].is_unspecified()) {
-                // Join group (sessions[i], addresses[i])
+            if (!reader.interfaces[i].is_unspecified()) {
+                if (reader.sessions[i].connection_address.is_multicast()) {
+                    std::ignore = leave_multicast_group_if_last(
+                        *this, reader.sessions[i].connection_address.to_v4(), reader.interfaces[i],
+                        reader.sessions[i].rtp_port
+                    );
+                }
             }
+            reader.interfaces[i] = {};
+            if (!interfaces[i].is_unspecified()) {
+                if (reader.sessions[i].connection_address.is_multicast()) {
+                    const auto count = count_multicast_groups(
+                        *this, reader.sessions[i].connection_address.to_v4(), interfaces[i], reader.sessions[i].rtp_port
+                    );
+                    if (count == 0) {
+                        auto* socket = find_socket(*this, reader.sessions[i].rtp_port);
+                        RAV_ASSERT(socket != nullptr, "Socket not found");
+                        if (!join_multicast_group(
+                                *socket, reader.sessions[i].connection_address.to_v4(), interfaces[i]
+                            )) {
+                            RAV_ERROR("Failed to join multicast group");
+                        }
+                    }
+                }
+            }
+            reader.interfaces[i] = interfaces[i];
         }
     }
 
-    interface_addresses = addresses;
+    close_unused_sockets(*this);
 }
 
 bool rav::rtp::Receiver3::add_reader(
-    const Id id, const ArrayOfSessions& sessions, const ArrayOfFilters& filters, boost::asio::io_context& io_context
+    const Id id, const ArrayOfSessions& sessions, const ArrayOfFilters& filters, const ArrayOfAddresses& interfaces,
+    boost::asio::io_context& io_context
 ) {
     RAV_ASSERT(sessions.size() == filters.size(), "Should be equal");
-    RAV_ASSERT(sessions.size() == interface_addresses.size(), "Should be equal");
+    RAV_ASSERT(sessions.size() == interfaces.size(), "Should be equal");
 
     for (auto& stream : readers) {
         if (stream.id == id) {
@@ -322,7 +349,7 @@ bool rav::rtp::Receiver3::add_reader(
             continue;
         }
 
-        return setup_reader(*this, reader, id, sessions, filters, io_context);
+        return setup_reader(*this, reader, id, sessions, filters, interfaces, io_context);
     }
 
     if (readers.size() >= decltype(readers)::max_size()) {
@@ -338,7 +365,7 @@ bool rav::rtp::Receiver3::add_reader(
         return false;
     }
 
-    return setup_reader(*this, reader, id, sessions, filters, io_context);
+    return setup_reader(*this, reader, id, sessions, filters, interfaces, io_context);
 }
 
 bool rav::rtp::Receiver3::remove_reader(const Id id) {
@@ -353,9 +380,9 @@ bool rav::rtp::Receiver3::remove_reader(const Id id) {
             for (size_t i = 0; i < e.sessions.size(); ++i) {
                 auto& session = e.sessions[i];
                 if (session.valid()) {
-                    if (session.connection_address.is_multicast()) {
+                    if (session.connection_address.is_multicast() && !e.interfaces[i].is_unspecified()) {
                         std::ignore = leave_multicast_group_if_last(
-                            *this, session.connection_address.to_v4(), interface_addresses[i], session.rtp_port
+                            *this, session.connection_address.to_v4(), e.interfaces[i], session.rtp_port
                         );
                     }
                 }
@@ -376,6 +403,8 @@ bool rav::rtp::Receiver3::remove_reader(const Id id) {
 }
 
 void rav::rtp::Receiver3::read_incoming_packets() {
+    TRACY_ZONE_SCOPED;
+
     for (auto& ctx : sockets) {
         const auto socket_guard = ctx.rw_lock.try_lock_shared();
         if (!socket_guard) {
@@ -397,6 +426,10 @@ void rav::rtp::Receiver3::read_incoming_packets() {
         boost::system::error_code ec;
         const auto bytes_received =
             receive_from_socket(ctx.socket, receive_buffer, src_endpoint, dst_endpoint, recv_time, ec);
+
+        if (ec == boost::asio::error::try_again) {
+            continue;
+        }
 
         if (ec) {
             RAV_ERROR("Failed to receive from socket: {}", ec.message());
@@ -439,11 +472,6 @@ void rav::rtp::Receiver3::read_incoming_packets() {
 
             std::array<uint8_t, aes67::constants::k_mtu> packet {};
             std::memcpy(packet.data(), receive_buffer.data(), bytes_received);
-
-            fmt::println(
-                "{}:{} => {}:{}", src_endpoint.address().to_string(), src_endpoint.port(),
-                dst_endpoint.address().to_string(), dst_endpoint.port()
-            );
 
             if (!reader.fifo.push(packet)) {
                 RAV_ERROR("Failed to push data to fifo");
