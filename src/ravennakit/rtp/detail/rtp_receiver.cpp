@@ -67,6 +67,8 @@ namespace {
 }
 
 [[nodiscard]] boost::asio::ip::udp::socket* find_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port) {
+    RAV_ASSERT(port > 0, "Port should be non zero");
+
     // Try to find existing socket
     if (auto* found = find_socket(receiver, port)) {
         return found;
@@ -256,6 +258,7 @@ void close_unused_sockets(rav::rtp::Receiver3& receiver) {
             } else {
                 RAV_TRACE("Closed socket for port {}", socket.port);
             }
+            socket.port = {};
         }
     }
 }
@@ -364,6 +367,7 @@ void rav::rtp::Receiver3::StreamContext::reset() {
 rav::rtp::Receiver3::Receiver3(boost::asio::io_context& io_context) {
     join_multicast_group = [](boost::asio::ip::udp::socket& socket, const boost::asio::ip::address_v4& multicast_group,
                               const boost::asio::ip::address_v4& interface_address) {
+        RAV_ASSERT(socket.is_open(), "Socket should be open");
         RAV_ASSERT(multicast_group.is_multicast(), "Multicast group should be a multicast address");
         RAV_ASSERT(!interface_address.is_unspecified(), "Interface address should not be unspecified");
         RAV_ASSERT(!interface_address.is_multicast(), "Interface address should not be a multicast address");
@@ -383,6 +387,7 @@ rav::rtp::Receiver3::Receiver3(boost::asio::io_context& io_context) {
 
     leave_multicast_group = [](boost::asio::ip::udp::socket& socket, const boost::asio::ip::address_v4& multicast_group,
                                const boost::asio::ip::address_v4& interface_address) {
+        RAV_ASSERT(socket.is_open(), "Socket should be open");
         RAV_ASSERT(multicast_group.is_multicast(), "Multicast group should be a multicast address");
         RAV_ASSERT(!interface_address.is_unspecified(), "Interface address should not be unspecified");
         RAV_ASSERT(!interface_address.is_multicast(), "Interface address should not be a multicast address");
@@ -400,11 +405,11 @@ rav::rtp::Receiver3::Receiver3(boost::asio::io_context& io_context) {
         return true;
     };
 
-    for (size_t i = sockets.size(); i < sockets.capacity(); i++) {
+    for (size_t i = sockets.size(); i < decltype(sockets)::capacity(); i++) {
         sockets.emplace_back(io_context);
     }
 
-    for (size_t i = readers.size(); i < readers.capacity(); i++) {
+    for (size_t i = readers.size(); i < decltype(readers)::capacity(); i++) {
         readers.emplace_back();
     }
 }

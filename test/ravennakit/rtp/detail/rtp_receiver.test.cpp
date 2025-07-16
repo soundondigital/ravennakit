@@ -37,6 +37,7 @@ void setup_receiver_multicast_hooks(rav::rtp::Receiver3& receiver, MulticastMemb
                                         const boost::asio::ip::address_v4& multicast_group,
                                         const boost::asio::ip::address_v4& interface_address
                                     ) {
+        REQUIRE(socket.is_open());
         changes.emplace_back(true, socket.local_endpoint().port(), multicast_group, interface_address);
         return true;
     };
@@ -45,6 +46,7 @@ void setup_receiver_multicast_hooks(rav::rtp::Receiver3& receiver, MulticastMemb
                                          const boost::asio::ip::address_v4& multicast_group,
                                          const boost::asio::ip::address_v4& interface_address
                                      ) {
+        REQUIRE(socket.is_open());
         changes.emplace_back(false, socket.local_endpoint().port(), multicast_group, interface_address);
         return true;
     };
@@ -433,5 +435,47 @@ TEST_CASE("rav::rtp::Receiver") {
             REQUIRE(count_open_sockets(*receiver) == 1);
             REQUIRE(receiver->sockets[0].socket.is_open());
         }
+    }
+
+    SECTION("Adding, removing and adding reader for the same port should re-open an existing slot") {
+        const auto multicast_addr = boost::asio::ip::make_address_v4("239.1.2.3");
+        const auto src_addr = boost::asio::ip::make_address_v4("192.168.1.1");
+        const auto interface_address = boost::asio::ip::address_v4::loopback();
+
+        rav::rtp::Receiver3::ArrayOfAddresses interface_addresses {interface_address};
+
+        auto receiver = std::make_unique<rav::rtp::Receiver3>(io_context);
+
+        rav::rtp::Receiver3::StreamInfo stream {
+            rav::rtp::Session {multicast_addr, 5004, 5005},
+            rav::rtp::Filter {multicast_addr, src_addr, rav::sdp::FilterMode::include},
+        };
+
+        rav::rtp::Receiver3::ReaderParameters parameters {audio_format, {stream}};
+        parameters.streams[0] = stream;
+
+        auto result = receiver->add_reader(rav::Id(1), parameters, interface_addresses);
+        REQUIRE(result);
+
+        REQUIRE(count_valid_readers(*receiver) == 1);
+        REQUIRE(count_open_sockets(*receiver) == 1);
+
+        REQUIRE(receiver->remove_reader(rav::Id(1)));
+
+        REQUIRE(count_valid_readers(*receiver) == 0);
+        REQUIRE(count_open_sockets(*receiver) == 0);
+
+        // All sockets should have been reset
+        for (auto& socket : receiver->sockets) {
+            REQUIRE(socket.port == 0);
+        }
+
+        result = receiver->add_reader(rav::Id(1), parameters, interface_addresses);
+        REQUIRE(result);
+
+        REQUIRE(count_valid_readers(*receiver) == 1);
+        REQUIRE(count_open_sockets(*receiver) == 1);
+
+        REQUIRE(receiver->remove_reader(rav::Id(1)));
     }
 }

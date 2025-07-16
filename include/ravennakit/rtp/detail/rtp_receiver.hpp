@@ -135,14 +135,14 @@ struct Receiver3 {
         WrappingUint32 next_ts;
     };
 
-    boost::container::static_vector<Reader, k_max_num_readers> readers;
-    boost::container::static_vector<SocketWithContext, k_max_num_sessions> sockets;
-
     /// Function for joining a multicast group. Can be overridden to alter behaviour. Used for unit testing.
     SafeFunction<bool(udp_socket&, ip_address_v4, ip_address_v4)> join_multicast_group;
 
     /// Function for leaving a multicast group. Can be overridden to alter behaviour. Used for unit testing.
     SafeFunction<bool(udp_socket&, ip_address_v4, ip_address_v4)> leave_multicast_group;
+
+    boost::container::static_vector<SocketWithContext, k_max_num_sessions> sockets;
+    boost::container::static_vector<Reader, k_max_num_readers> readers;
 
     explicit Receiver3(boost::asio::io_context& io_context);
     ~Receiver3();
