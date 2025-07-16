@@ -70,6 +70,7 @@ TEST_CASE("rav::RealtimeSharedObject") {
 
         // Create writer threads.
         std::vector<std::thread> writer_threads;
+        writer_threads.reserve(num_writer_threads);
         for (size_t i = 0; i < num_writer_threads; ++i) {
             writer_threads.emplace_back([&obj, &keep_going] {
                 // Writers are going to hammer the object with new values until the reader has read all values.

@@ -16,6 +16,7 @@
 #include "../rtp_packet_view.hpp"
 #include "rtp_session.hpp"
 #include "ravennakit/aes67/aes67_constants.hpp"
+#include "ravennakit/core/audio/audio_buffer_view.hpp"
 #include "ravennakit/core/net/asio/asio_helpers.hpp"
 #include "ravennakit/core/util/subscriber_list.hpp"
 #include "ravennakit/core/net/sockets/extended_udp_socket.hpp"
@@ -26,10 +27,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/container/static_vector.hpp>
-#include <boost/lockfree/policies.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
-
-#include <utility>
 
 namespace rav::rtp {
 
@@ -38,41 +36,103 @@ struct Receiver3 {
     static constexpr auto k_max_num_redundant_sessions = 2;
     static constexpr auto k_max_num_sessions = k_max_num_readers * k_max_num_redundant_sessions;
 
-    using ArrayOfSessions = std::array<Session, k_max_num_redundant_sessions>;
-    using ArrayOfFilters = std::array<Filter, k_max_num_redundant_sessions>;
-    using ArrayOfAddresses = std::array<ip_address_v4, k_max_num_redundant_sessions>;
-    using PacketBuffer = std::array<uint8_t, aes67::constants::k_mtu>;
-    using PacketFifo =
-        boost::lockfree::spsc_queue<PacketBuffer, boost::lockfree::capacity<20>, boost::lockfree::fixed_sized<true>>;
+    /// The number of milliseconds after which a stream is considered inactive.
+    static constexpr uint64_t k_receive_timeout_ms = 1000;
 
-    enum class State {
-        /// Available to be setup
-        available = 0,
-        /// Ready to be processed by the network thread
-        ready,
-        /// The network thread should stop using this entity, and change state to `available`
-        should_be_closed,
+    /// The length of the receiver buffer in milliseconds.
+    /// AES67 specifies at least 20 ms or 20 times the packet time, whichever is smaller, but since we're on desktop
+    /// systems we go a bit higher. Note that this number is not the same as the delay or added latency.
+    static constexpr uint32_t k_buffer_size_ms = 200;
+
+    using PacketBuffer = std::array<uint8_t, aes67::constants::k_mtu>;
+    using ArrayOfAddresses = std::array<ip_address_v4, k_max_num_redundant_sessions>;
+
+    struct StreamInfo {
+        Session session;
+        Filter filter;
+        uint16_t packet_time_frames {};
+
+        [[nodiscard]] auto tie() const {
+            return std::tie(session, filter, packet_time_frames);
+        }
+
+        friend bool operator==(const StreamInfo& lhs, const StreamInfo& rhs) {
+            return lhs.tie() == rhs.tie();
+        }
+
+        friend bool operator!=(const StreamInfo& lhs, const StreamInfo& rhs) {
+            return lhs.tie() != rhs.tie();
+        }
+
+        [[nodiscard]] bool is_valid() const {
+            return session.valid() && packet_time_frames > 0;
+        }
+    };
+
+    struct ReaderParameters {
+        AudioFormat audio_format;
+        std::array<StreamInfo, k_max_num_redundant_sessions> streams;
+
+        [[nodiscard]] auto tie() const {
+            return std::tie(audio_format, streams);
+        }
+
+        friend bool operator==(const ReaderParameters& lhs, const ReaderParameters& rhs) {
+            return lhs.tie() == rhs.tie();
+        }
+
+        friend bool operator!=(const ReaderParameters& lhs, const ReaderParameters& rhs) {
+            return lhs.tie() != rhs.tie();
+        }
+
+        [[nodiscard]] bool is_valid() const {
+            if (!audio_format.is_valid()) {
+                return false;
+            }
+            for (auto& stream : streams ) {
+                if (stream.is_valid()) {
+                    return true; // At least one stream needs to be valid.
+                }
+            }
+            return false;
+        }
     };
 
     struct SocketWithContext {
         explicit SocketWithContext(boost::asio::io_context& io_context) : socket(io_context) {}
 
+        AtomicRwLock rw_lock;
         udp_socket socket;
         uint16_t port {};
-        AtomicRwLock rw_lock;
+    };
+
+    struct StreamContext {
+        Session session;
+        Filter filter;
+        uint16_t packet_time_frames {};
+        ip_address_v4 interface;
+        FifoBuffer<PacketBuffer, Fifo::Spsc> packets;
+        FifoBuffer<uint16_t, Fifo::Spsc> packets_too_old;  // TODO: Which thread reads this?
+
+        void reset();
     };
 
     /**
      * Holds the structures to receive incoming data from redundant sources into a single buffer.
      */
     struct Reader {
-        Id id;  // To associate with another entity, and to determine whether this reader is already being used.
-        ArrayOfSessions sessions;
-        ArrayOfFilters filters;
-        ArrayOfAddresses interfaces;
-        PacketFifo fifo;
-        Ringbuffer receive_buffer;
         AtomicRwLock rw_lock;
+        Id id;
+        std::array<StreamContext, k_max_num_redundant_sessions> streams;
+
+        AudioFormat audio_format;
+        std::atomic_bool consumer_active_ {false};  // TODO: ???
+
+        // Audio thread:
+        Ringbuffer receive_buffer;
+        std::vector<uint8_t> read_audio_data_buffer;
+        std::optional<WrappingUint32> first_packet_timestamp;
+        WrappingUint32 next_ts;
     };
 
     boost::container::static_vector<Reader, k_max_num_readers> readers;
@@ -84,23 +144,18 @@ struct Receiver3 {
     /// Function for leaving a multicast group. Can be overridden to alter behaviour. Used for unit testing.
     SafeFunction<bool(udp_socket&, ip_address_v4, ip_address_v4)> leave_multicast_group;
 
-    Receiver3();
+    explicit Receiver3(boost::asio::io_context& io_context);
     ~Receiver3();
 
     /**
      * Adds a reader to the receiver.
      * Thread safe: no.
      * @param id The id to use, must be unique.
-     * @param sessions The sessions to receive.
-     * @param filters The source filters to use.
+     * @param parameters The parameters of a reader.
      * @param interfaces The interfaces to receive multicast sessions on.
-     * @param io_context The io_context to associate with the sockets. Can be a dummy.
      * @return true if a new reader was added, or false if not.
      */
-    [[nodiscard]] bool add_reader(
-        Id id, const ArrayOfSessions& sessions, const ArrayOfFilters& filters, const ArrayOfAddresses& interfaces,
-        boost::asio::io_context& io_context
-    );
+    [[nodiscard]] bool add_reader(Id id, const ReaderParameters& parameters, const ArrayOfAddresses& interfaces);
 
     /**
      * Removes the reader with given id, if it exists.
@@ -121,6 +176,35 @@ struct Receiver3 {
      * single high priority thread with regular short intervals.
      */
     void read_incoming_packets();
+
+    /**
+     * Reads data from the buffer at the given timestamp.
+     *
+     * Calling this function is realtime safe and thread safe when called from a single arbitrary thread.
+     *
+     * @param id The id of the reader to get data from.
+     * @param buffer The destination to write the data to.
+     * @param buffer_size The size of the buffer in bytes.
+     * @param at_timestamp The optional timestamp to read at. If nullopt, the most recent timestamp minus the delay will
+     * be used for the first read and after that the timestamp will be incremented by the packet time.
+     * @return The timestamp at which the data was read, or std::nullopt if an error occurred.
+     */
+    [[nodiscard]] std::optional<uint32_t>
+    read_data_realtime(Id id, uint8_t* buffer, size_t buffer_size, std::optional<uint32_t> at_timestamp);
+
+    /**
+     * Reads the data from the receiver with the given id.
+     *
+     * Calling this function is realtime safe and thread safe when called from a single arbitrary thread.
+     *
+     * @param id The id of the reader to get data from.
+     * @param output_buffer The buffer to read the data into.
+     * @param at_timestamp The optional timestamp to read at. If nullopt, the most recent timestamp minus the delay will
+     * be used for the first read and after that the timestamp will be incremented by the packet time.
+     * @return The timestamp at which the data was read, or std::nullopt if an error occurred.
+     */
+    [[nodiscard]] std::optional<uint32_t>
+    read_audio_data_realtime(Id id, AudioBufferView<float> output_buffer, std::optional<uint32_t> at_timestamp);
 };
 
 /**

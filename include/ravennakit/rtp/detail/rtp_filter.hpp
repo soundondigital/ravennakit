@@ -165,7 +165,7 @@ class Filter {
     };
 
     boost::asio::ip::address connection_address_;
-    std::vector<filter> filters_;
+    std::vector<filter> filters_; // TODO: Avoid allocations here. Store filters in-class.
 };
 
 }  // namespace rav::rtp

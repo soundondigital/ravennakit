@@ -11,18 +11,13 @@
 #pragma once
 
 #include "ravenna_rtsp_client.hpp"
-#include "ravennakit/core/util/exclusive_access_guard.hpp"
 #include "ravennakit/core/containers/fifo_buffer.hpp"
 #include "ravennakit/core/util/id.hpp"
 #include "ravennakit/nmos/nmos_node.hpp"
 #include "ravennakit/nmos/models/nmos_receiver_audio.hpp"
 #include "ravennakit/rtp/rtp_audio_receiver.hpp"
-#include "ravennakit/rtp/detail/rtp_filter.hpp"
-#include "ravennakit/rtp/detail/rtp_packet_stats.hpp"
 #include "ravennakit/rtp/detail/rtp_receiver.hpp"
 #include "ravennakit/sdp/sdp_session_description.hpp"
-
-#include <boost/uuid/random_generator.hpp>
 
 namespace rav {
 
@@ -58,7 +53,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
          * Called when the stream has changed.
          * @param parameters The stream parameters.
          */
-        virtual void ravenna_receiver_parameters_updated(const rtp::AudioReceiver::Parameters& parameters) {
+        virtual void ravenna_receiver_parameters_updated(const rtp::Receiver3::ReaderParameters& parameters) {
             std::ignore = parameters;
         }
 
@@ -108,7 +103,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     };
 
     explicit RavennaReceiver(
-        boost::asio::io_context& io_context, RavennaRtspClient& rtsp_client, rtp::Receiver& rtp_receiver, Id id
+        boost::asio::io_context& io_context, RavennaRtspClient& rtsp_client, rtp::Receiver3& receiver3, Id id
     );
     ~RavennaReceiver() override;
 
@@ -169,7 +164,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     /**
      * @return The SDP for the session.
      */
-    std::optional<sdp::SessionDescription> get_sdp() const;
+    [[nodiscard]] std::optional<sdp::SessionDescription> get_sdp() const;
 
     /**
      * @return The SDP text for the session. This is the original SDP text as receiver from the server potentially
@@ -235,27 +230,30 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     // ravenna_rtsp_client::subscriber overrides
     void on_announced(const RavennaRtspClient::AnnouncedEvent& event) override;
 
-    /**
-     * Creates audio receiver parameters from the given SDP.
-     * @param sdp The SDP to create the parameters from.
-     * @return The audio receiver parameters, or an error message if the SDP is invalid.
-     */
-    static tl::expected<rtp::AudioReceiver::Parameters, std::string>
-    create_audio_receiver_parameters(const sdp::SessionDescription& sdp);
-
   private:
+    boost::asio::io_context& io_context_;
     RavennaRtspClient& rtsp_client_;
+    rtp::Receiver3& rtp_receiver_;
     nmos::Node* nmos_node_ {nullptr};
-    rtp::AudioReceiver rtp_audio_receiver_;
-    Id id_;
+    const Id id_;
     Configuration configuration_;
     NetworkInterfaceConfig network_interface_config_;
     nmos::ReceiverAudio nmos_receiver_;
     SubscriberList<Subscriber> subscribers_;
+    rtp::Receiver3::ReaderParameters reader_parameters_;
 
     void handle_announced_sdp(const sdp::SessionDescription& sdp);
-    tl::expected<void, std::string> update_state(bool update_rtsp, bool update_nmos);
+    tl::expected<void, std::string> update_nmos();
+    tl::expected<void, std::string> update_rtsp();
 };
+
+/**
+ * Creates rtp receiver parameters from the given SDP.
+ * @param sdp The SDP to create the parameters from.
+ * @return The rtp receiver parameters, or an error message if the SDP is invalid.
+ */
+tl::expected<rtp::Receiver3::ReaderParameters, std::string>
+create_rtp_receiver_parameters(const sdp::SessionDescription& sdp);
 
 void tag_invoke(
     const boost::json::value_from_tag&, boost::json::value& jv, const RavennaReceiver::Configuration& config

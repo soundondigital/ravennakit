@@ -88,8 +88,7 @@ class RavennaNode {
          * @param status The updated NMOS node state.
          * @param registry_info The updated NMOS registry information.
          */
-        virtual void
-        nmos_node_status_changed(nmos::Node::Status status, const nmos::Node::StatusInfo& registry_info) {
+        virtual void nmos_node_status_changed(nmos::Node::Status status, const nmos::Node::StatusInfo& registry_info) {
             std::ignore = status;
             std::ignore = registry_info;
         }
@@ -351,21 +350,20 @@ class RavennaNode {
         return boost::asio::post(io_context_, token);
     }
 
-private:
+  private:
     struct RealtimeSharedContext {
         std::vector<RavennaReceiver*> receivers;
         std::vector<RavennaSender*> senders;
     };
 
     boost::asio::io_context io_context_;
-    UdpReceiver udp_receiver_ {io_context_};
+    rtp::Receiver3 rtp_receiver3_ {io_context_};
     std::thread maintenance_thread_;
     std::thread::id maintenance_thread_id_;
     Id::Generator id_generator_;
 
     RavennaBrowser browser_ {io_context_};
     RavennaRtspClient rtsp_client_ {io_context_, browser_};
-    std::unique_ptr<rtp::Receiver> rtp_receiver_;
     std::vector<std::unique_ptr<RavennaReceiver>> receivers_;
 
     std::unique_ptr<dnssd::Advertiser> advertiser_;

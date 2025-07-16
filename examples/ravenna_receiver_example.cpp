@@ -168,7 +168,7 @@ class RavennaReceiver: public rav::RavennaReceiver::Subscriber {
         audio_device_name_(std::move(audio_device_name)) {
         rtsp_client_ = std::make_unique<rav::RavennaRtspClient>(io_context_, browser_);
 
-        rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(udp_receiver_);
+        rtp_receiver3_ = std::make_unique<rav::rtp::Receiver3>(io_context_);
 
         rav::RavennaReceiver::Configuration config;
         config.delay_frames = 480;  // 10ms at 48KHz
@@ -176,7 +176,7 @@ class RavennaReceiver: public rav::RavennaReceiver::Subscriber {
         config.session_name = stream_name;
 
         ravenna_receiver_ = std::make_unique<rav::RavennaReceiver>(
-            io_context_, *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id()
+            io_context_, *rtsp_client_, *rtp_receiver3_, rav::Id::get_next_process_wide_unique_id()
         );
 
         ravenna_receiver_->set_network_interface_config(std::move(network_interface_config));
@@ -207,7 +207,7 @@ class RavennaReceiver: public rav::RavennaReceiver::Subscriber {
         portaudio_stream_.stop();
     }
 
-    void ravenna_receiver_parameters_updated(const rav::rtp::AudioReceiver::Parameters& parameters) override {
+    void ravenna_receiver_parameters_updated(const rav::rtp::Receiver3::ReaderParameters& parameters) override {
         if (parameters.streams.empty()) {
             RAV_WARNING("No streams available");
             return;
@@ -229,12 +229,16 @@ class RavennaReceiver: public rav::RavennaReceiver::Subscriber {
         );
     }
 
+    void read_incoming_packets() const {
+        rtp_receiver3_->read_incoming_packets();
+    }
+
   private:
     boost::asio::io_context io_context_;
     rav::UdpReceiver udp_receiver_ {io_context_};
     rav::RavennaBrowser browser_ {io_context_};
     std::unique_ptr<rav::RavennaRtspClient> rtsp_client_;
-    std::unique_ptr<rav::rtp::Receiver> rtp_receiver_;
+    std::unique_ptr<rav::rtp::Receiver3> rtp_receiver3_;
     std::unique_ptr<rav::RavennaReceiver> ravenna_receiver_;
     std::string audio_device_name_;
     PortaudioStream portaudio_stream_;
@@ -255,6 +259,7 @@ class RavennaReceiver: public rav::RavennaReceiver::Subscriber {
         if (!ravenna_receiver_->read_data_realtime(static_cast<uint8_t*>(output), buffer_size, {})) {
             std::memset(output, audio_format_.ground_value(), buffer_size);
             RAV_WARNING("Failed to read data");
+            TRACY_MESSAGE("Failed to read data");
             return paContinue;
         }
 
@@ -339,11 +344,21 @@ int main(int const argc, char* argv[]) {
     std::thread cin_thread([&receiver_example] {
         fmt::println("Press return key to stop...");
         std::cin.get();
-        receiver_example.stop();
+        receiver_example.stop();  // TODO: Protect using mutex
+    });
+
+    std::atomic keep_going {true};
+    std::thread high_prio_thread([&keep_going, &receiver_example] {
+        while (keep_going) {
+            receiver_example.read_incoming_packets();
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
     });
 
     receiver_example.run();
+    keep_going = false;
     cin_thread.join();
+    high_prio_thread.join();
 
     return 0;
 }

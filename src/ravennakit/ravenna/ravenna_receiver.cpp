@@ -39,111 +39,18 @@ bool is_connection_info_valid(const rav::sdp::ConnectionInfoField& conn) {
     return true;
 }
 
-}  // namespace
-
-boost::json::object rav::RavennaReceiver::to_boost_json() const {
-    return {
-        {"configuration", boost::json::value_from(configuration_)},
-        {"nmos_receiver_uuid", boost::uuids::to_string(nmos_receiver_.id)}
-    };
-}
-
-tl::expected<void, std::string> rav::RavennaReceiver::restore_from_json(const boost::json::value& json) {
-    try {
-        auto config = boost::json::try_value_to<Configuration>(json.at("configuration"));
-
-        if (config.has_error()) {
-            return tl::unexpected(config.error().message());
-        }
-
-        const auto nmos_receiver_uuid =
-            boost::uuids::string_generator()(json.at("nmos_receiver_uuid").as_string().c_str());
-
-        auto result = set_configuration(*config);
-        if (!result) {
-            return tl::unexpected(result.error());
-        }
-
-        nmos_receiver_.id = nmos_receiver_uuid;
-
-        return {};
-    } catch (const std::exception& e) {
-        return tl::unexpected(fmt::format("Failed to restore RavennaReceiver from JSON: {}", e.what()));
-    }
-}
-
-std::optional<uint32_t> rav::RavennaReceiver::read_data_realtime(
-    uint8_t* buffer, const size_t buffer_size, const std::optional<uint32_t> at_timestamp
-) {
-    return rtp_audio_receiver_.read_data_realtime(buffer, buffer_size, at_timestamp);
-}
-
-std::optional<uint32_t> rav::RavennaReceiver::read_audio_data_realtime(
-    const AudioBufferView<float>& output_buffer, const std::optional<uint32_t> at_timestamp
-) {
-    return rtp_audio_receiver_.read_audio_data_realtime(output_buffer, at_timestamp);
-}
-
-rav::rtp::AudioReceiver::SessionStats rav::RavennaReceiver::get_stream_stats(const Rank rank) const {
-    return rtp_audio_receiver_.get_session_stats(rank);
-}
-
-const rav::nmos::ReceiverAudio& rav::RavennaReceiver::get_nmos_receiver() const {
-    return nmos_receiver_;
-}
-
-rav::RavennaReceiver::RavennaReceiver(
-    boost::asio::io_context& io_context, RavennaRtspClient& rtsp_client, rtp::Receiver& rtp_receiver, const Id id
-) :
-    rtsp_client_(rtsp_client), rtp_audio_receiver_(io_context, rtp_receiver), id_(id) {
-    nmos_receiver_.id = boost::uuids::random_generator()();
-
-    for (auto& encoding : k_supported_encodings) {
-        nmos_receiver_.caps.media_types.emplace_back(nmos::audio_encoding_to_nmos_media_type(encoding));
-    }
-
-    rtp_audio_receiver_.on_data_received = [this](const WrappingUint32 packet_timestamp) {
-        for (auto* subscriber : subscribers_) {
-            subscriber->on_data_received(packet_timestamp);
-        }
-    };
-
-    rtp_audio_receiver_.on_data_ready = [this](const WrappingUint32 packet_timestamp) {
-        for (auto* subscriber : subscribers_) {
-            subscriber->on_data_ready(packet_timestamp);
-        }
-    };
-
-    rtp_audio_receiver_.on_state_changed =
-        [this](const rtp::AudioReceiver::Stream& session, const rtp::AudioReceiver::State state) {
-            for (auto* subscriber : subscribers_) {
-                subscriber->ravenna_receiver_stream_state_updated(session, state);
-            }
-        };
-}
-
-rav::RavennaReceiver::~RavennaReceiver() {
-    std::ignore = rtsp_client_.unsubscribe_from_all_sessions(this);
-    if (nmos_node_ != nullptr) {
-        if (!nmos_node_->remove_receiver(nmos_receiver_.id)) {
-            RAV_ERROR("Failed to remove NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));
+rav::rtp::Receiver3::ArrayOfAddresses
+get_array_of_addresses_from_network_config(const rav::NetworkInterfaceConfig& config) {
+    rav::rtp::Receiver3::ArrayOfAddresses interfaces;
+    for (const auto& [rank, addr] : config.get_interface_ipv4_addresses()) {
+        if (rank.value() < interfaces.size()) {
+            interfaces[rank.value()] = addr;
         }
     }
+    return interfaces;
 }
 
-void rav::RavennaReceiver::on_announced(const RavennaRtspClient::AnnouncedEvent& event) {
-    try {
-        RAV_ASSERT(event.session_name == configuration_.session_name, "Expecting session_name to match");
-        handle_announced_sdp(event.sdp);
-        RAV_TRACE("SDP updated for session '{}'", configuration_.session_name);
-    } catch (const std::exception& e) {
-        RAV_ERROR("Failed to process SDP for session '{}': {}", configuration_.session_name, e.what());
-    }
-}
-
-namespace {
-
-tl::expected<rav::rtp::AudioReceiver::Stream, std::string> create_stream_from_media_description(
+tl::expected<rav::rtp::Receiver3::StreamInfo, std::string> create_stream_from_media_description(
     const rav::sdp::MediaDescription& media_description, const rav::sdp::SessionDescription& sdp,
     const rav::AudioFormat& audio_format
 ) {
@@ -224,11 +131,11 @@ tl::expected<rav::rtp::AudioReceiver::Stream, std::string> create_stream_from_me
         }
     }
 
-    rav::rtp::AudioReceiver::Stream stream;
-    stream.session = session;
-    stream.filter = filter;
-    stream.packet_time_frames = packet_time_frames;
-    return stream;
+    rav::rtp::Receiver3::StreamInfo stream_info;
+    stream_info.session = session;
+    stream_info.filter = filter;
+    stream_info.packet_time_frames = packet_time_frames;
+    return stream_info;
 }
 
 const rav::sdp::MediaDescription*
@@ -243,92 +150,109 @@ find_media_description_by_mid(const rav::sdp::SessionDescription& sdp, const std
 
 }  // namespace
 
-tl::expected<rav::rtp::AudioReceiver::Parameters, std::string>
-rav::RavennaReceiver::create_audio_receiver_parameters(const sdp::SessionDescription& sdp) {
-    rtp::AudioReceiver::Parameters parameters;
+boost::json::object rav::RavennaReceiver::to_boost_json() const {
+    return {
+        {"configuration", boost::json::value_from(configuration_)},
+        {"nmos_receiver_uuid", boost::uuids::to_string(nmos_receiver_.id)}
+    };
+}
 
-    for (auto& media_description : sdp.media_descriptions) {
-        if (media_description.media_type != "audio") {
-            RAV_WARNING("Unsupported media type: {}", media_description.media_type);
-            continue;
+tl::expected<void, std::string> rav::RavennaReceiver::restore_from_json(const boost::json::value& json) {
+    try {
+        auto config = boost::json::try_value_to<Configuration>(json.at("configuration"));
+
+        if (config.has_error()) {
+            return tl::unexpected(config.error().message());
         }
 
-        if (media_description.protocol != "RTP/AVP") {
-            RAV_WARNING("Unsupported protocol {}", media_description.protocol);
-            continue;
+        const auto nmos_receiver_uuid =
+            boost::uuids::string_generator()(json.at("nmos_receiver_uuid").as_string().c_str());
+
+        auto result = set_configuration(*config);
+        if (!result) {
+            return tl::unexpected(result.error());
         }
 
-        // The first acceptable payload format from the beginning of the list SHOULD be used for the session.
-        // https://datatracker.ietf.org/doc/html/rfc8866#name-media-descriptions-m
-        std::optional<AudioFormat> selected_audio_format;
+        nmos_receiver_.id = nmos_receiver_uuid;
 
-        for (auto& format : media_description.formats) {
-            selected_audio_format = rav::sdp::make_audio_format(format);
-            if (!selected_audio_format) {
-                RAV_WARNING("Not a supported audio format: {}", rav::sdp::to_string(format));
-                continue;
-            }
-            break;
-        }
+        return {};
+    } catch (const std::exception& e) {
+        return tl::unexpected(fmt::format("Failed to restore RavennaReceiver from JSON: {}", e.what()));
+    }
+}
 
-        if (!selected_audio_format) {
-            RAV_WARNING("No supported audio format found");
-            continue;
-        }
+std::optional<uint32_t> rav::RavennaReceiver::read_data_realtime(
+    uint8_t* buffer, const size_t buffer_size, const std::optional<uint32_t> at_timestamp
+) {
+    return rtp_receiver_.read_data_realtime(id_, buffer, buffer_size, at_timestamp);
+    // return rtp_audio_receiver_.read_data_realtime(buffer, buffer_size, at_timestamp);
+}
 
-        auto stream = create_stream_from_media_description(media_description, sdp, *selected_audio_format);
+std::optional<uint32_t> rav::RavennaReceiver::read_audio_data_realtime(
+    const AudioBufferView<float>& output_buffer, const std::optional<uint32_t> at_timestamp
+) {
+    return rtp_receiver_.read_audio_data_realtime(id_, output_buffer, at_timestamp);
+    // return rtp_audio_receiver_.read_audio_data_realtime(output_buffer, at_timestamp);
+}
 
-        if (!stream) {
-            RAV_WARNING("Failed to create stream from media description: {}", stream.error());
-            continue;
-        }
+rav::rtp::AudioReceiver::SessionStats rav::RavennaReceiver::get_stream_stats(const Rank rank) const {
+    return {};  // TODO: Replace
+    // return rtp_audio_receiver_.get_session_stats(rank);
+}
 
-        auto rank = Rank(0);
-        stream->rank = rank++;
+const rav::nmos::ReceiverAudio& rav::RavennaReceiver::get_nmos_receiver() const {
+    return nmos_receiver_;
+}
 
-        parameters.audio_format = *selected_audio_format;
-        parameters.streams.push_back(*stream);
+rav::RavennaReceiver::RavennaReceiver(
+    boost::asio::io_context& io_context, RavennaRtspClient& rtsp_client, rtp::Receiver3& receiver3, const Id id
+) :
+    io_context_(io_context), rtsp_client_(rtsp_client), rtp_receiver_(receiver3), id_(id) {
+    nmos_receiver_.id = boost::uuids::random_generator()();
 
-        if (auto mid = media_description.mid) {
-            const auto group = sdp.group;
-            if (!group) {
-                RAV_WARNING("No group found for mid '{}'", *mid);
-                break;  // No group found, treating the found stream as the primary
-            }
-
-            if (group->type != sdp::Group::Type::dup) {
-                RAV_WARNING("Unsupported group type: {}", static_cast<int>(group->type));
-                break;  // Unsupported group type
-            }
-
-            auto tags = group->tags;
-            if (std::find(tags.begin(), tags.end(), *mid) == tags.end()) {
-                RAV_WARNING("Mid '{}' not found in group tags", *mid);
-                break;  // Mid not found in group tags
-            }
-
-            tags.erase(std::remove(tags.begin(), tags.end(), *mid), tags.end());
-
-            for (auto& tag : tags) {
-                auto* media_desc = find_media_description_by_mid(sdp, tag);
-                if (!media_desc) {
-                    RAV_WARNING("Media description with mid '{}' not found", tag);
-                    continue;
-                }
-                auto dup_stream = create_stream_from_media_description(*media_desc, sdp, *selected_audio_format);
-                if (!dup_stream) {
-                    RAV_WARNING("Failed to create stream from media description: {}", dup_stream.error());
-                    continue;
-                }
-                dup_stream->rank = rank++;
-                parameters.streams.push_back(*dup_stream);
-            }
-        }
-
-        return parameters;
+    for (auto& encoding : k_supported_encodings) {
+        nmos_receiver_.caps.media_types.emplace_back(nmos::audio_encoding_to_nmos_media_type(encoding));
     }
 
-    return tl::unexpected("No suitable media description found");
+    // TODO: Reimplement:
+    // rtp_audio_receiver_.on_data_received = [this](const WrappingUint32 packet_timestamp) {
+    //     for (auto* subscriber : subscribers_) {
+    //         subscriber->on_data_received(packet_timestamp);
+    //     }
+    // };
+    //
+    // rtp_audio_receiver_.on_data_ready = [this](const WrappingUint32 packet_timestamp) {
+    //     for (auto* subscriber : subscribers_) {
+    //         subscriber->on_data_ready(packet_timestamp);
+    //     }
+    // };
+    //
+    // rtp_audio_receiver_.on_state_changed =
+    //     [this](const rtp::AudioReceiver::Stream& session, const rtp::AudioReceiver::State state) {
+    //         for (auto* subscriber : subscribers_) {
+    //             subscriber->ravenna_receiver_stream_state_updated(session, state);
+    //         }
+    //     };
+}
+
+rav::RavennaReceiver::~RavennaReceiver() {
+    std::ignore = rtp_receiver_.remove_reader(id_);
+    std::ignore = rtsp_client_.unsubscribe_from_all_sessions(this);
+    if (nmos_node_ != nullptr) {
+        if (!nmos_node_->remove_receiver(nmos_receiver_.id)) {
+            RAV_ERROR("Failed to remove NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));
+        }
+    }
+}
+
+void rav::RavennaReceiver::on_announced(const RavennaRtspClient::AnnouncedEvent& event) {
+    try {
+        RAV_ASSERT(event.session_name == configuration_.session_name, "Expecting session_name to match");
+        handle_announced_sdp(event.sdp);
+        RAV_TRACE("SDP updated for session '{}'", configuration_.session_name);
+    } catch (const std::exception& e) {
+        RAV_ERROR("Failed to process SDP for session '{}': {}", configuration_.session_name, e.what());
+    }
 }
 
 void rav::RavennaReceiver::handle_announced_sdp(const sdp::SessionDescription& sdp) {
@@ -344,53 +268,32 @@ void rav::RavennaReceiver::handle_announced_sdp(const sdp::SessionDescription& s
     }
 }
 
-tl::expected<void, std::string> rav::RavennaReceiver::update_state(const bool update_rtsp, bool update_nmos) {
-    auto parameters = create_audio_receiver_parameters(configuration_.sdp);
-
-    if (!configuration_.auto_update_sdp) {
-        configuration_.session_name = configuration_.sdp.session_name;
+tl::expected<void, std::string> rav::RavennaReceiver::update_nmos() {
+    nmos_receiver_.label = configuration_.session_name;
+    nmos_receiver_.subscription.active = configuration_.enabled;
+    nmos_receiver_.transport = "urn:x-nmos:transport:rtp.mcast";
+    nmos_receiver_.interface_bindings.clear();
+    for (const auto& [rank, id] : network_interface_config_.interfaces) {
+        nmos_receiver_.interface_bindings.push_back(id);
     }
 
-    rtp_audio_receiver_.set_delay_frames(configuration_.delay_frames);
-    rtp_audio_receiver_.set_enabled(parameters.has_value() && configuration_.enabled);
-
-    if (parameters.has_value() && rtp_audio_receiver_.set_parameters(*parameters)) {
-        update_nmos = true;
-        for (auto* subscriber : subscribers_) {
-            subscriber->ravenna_receiver_parameters_updated(*parameters);
+    if (nmos_node_ != nullptr) {
+        RAV_ASSERT(nmos_receiver_.is_valid(), "NMOS receiver must be valid at this point");
+        if (!nmos_node_->add_or_update_receiver(nmos_receiver_)) {
+            RAV_ERROR("Failed to update NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));
+            return tl::unexpected("Failed to update NMOS receiver");
         }
     }
+    return {};
+}
 
-    if (update_rtsp) {
-        std::ignore = rtsp_client_.unsubscribe_from_all_sessions(this);
+tl::expected<void, std::string> rav::RavennaReceiver::update_rtsp() {
+    std::ignore = rtsp_client_.unsubscribe_from_all_sessions(this);
 
-        if (configuration_.enabled && configuration_.auto_update_sdp) {
-            if (!rtsp_client_.subscribe_to_session(this, configuration_.session_name)) {
-                RAV_ERROR("Failed to subscribe to session '{}'", configuration_.session_name);
-                return tl::unexpected("Failed to subscribe to session");
-            }
-        }
-    }
-
-    for (auto* subscriber : subscribers_) {
-        subscriber->ravenna_receiver_configuration_updated(*this, configuration_);
-    }
-
-    if (update_nmos) {
-        nmos_receiver_.label = configuration_.session_name;
-        nmos_receiver_.subscription.active = configuration_.enabled;
-        nmos_receiver_.transport = "urn:x-nmos:transport:rtp.mcast";
-        nmos_receiver_.interface_bindings.clear();
-        for (const auto& [rank, id] : network_interface_config_.interfaces) {
-            nmos_receiver_.interface_bindings.push_back(id);
-        }
-
-        if (nmos_node_ != nullptr) {
-            RAV_ASSERT(nmos_receiver_.is_valid(), "NMOS receiver must be valid at this point");
-            if (!nmos_node_->add_or_update_receiver(nmos_receiver_)) {
-                RAV_ERROR("Failed to update NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));
-                return tl::unexpected("Failed to update NMOS receiver");
-            }
+    if (configuration_.enabled && configuration_.auto_update_sdp) {
+        if (!rtsp_client_.subscribe_to_session(this, configuration_.session_name)) {
+            RAV_ERROR("Failed to subscribe to session '{}'", configuration_.session_name);
+            return tl::unexpected("Failed to subscribe to session");
         }
     }
 
@@ -420,28 +323,75 @@ tl::expected<void, std::string> rav::RavennaReceiver::set_configuration(Configur
 
     // Determine changes to apply
 
-    bool update_nmos = false;
-    bool update_rtsp = false;
+    bool do_update_nmos = false;
+    bool do_update_rtsp = false;
+    bool do_stop_start = false;
 
     if (config.enabled != configuration_.enabled) {
-        update_nmos = true;
-        update_rtsp = true;
+        do_update_nmos = true;
+        do_update_rtsp = true;
+        do_stop_start = true;
     }
 
     if (config.session_name != configuration_.session_name) {
-        update_nmos = true;
-        update_rtsp = true;
+        do_update_nmos = true;
+        do_update_rtsp = true;
     }
 
     if (config.auto_update_sdp != configuration_.auto_update_sdp) {
-        update_rtsp = true;
+        do_update_rtsp = true;
     }
 
     // Apply the configuration changes
 
     configuration_ = std::move(config);
 
-    return update_state(update_rtsp, update_nmos);
+    auto parameters = create_rtp_receiver_parameters(configuration_.sdp);
+    auto new_parameters = parameters.has_value() ? *parameters : rtp::Receiver3::ReaderParameters {};
+
+    if (std::exchange(reader_parameters_, new_parameters) != new_parameters) {
+        do_stop_start = true;
+        do_update_nmos = true;
+
+        for (auto* subscriber : subscribers_) {
+            subscriber->ravenna_receiver_parameters_updated(reader_parameters_);
+        }
+    }
+
+    if (do_stop_start) {
+        std::ignore = rtp_receiver_.remove_reader(id_);
+
+        if (reader_parameters_.is_valid() && configuration_.enabled) {
+            const auto ok = rtp_receiver_.add_reader(
+                id_, reader_parameters_, get_array_of_addresses_from_network_config(network_interface_config_)
+            );
+            if (!ok) {
+                RAV_ERROR("Failed to add RTP reader");
+            }
+        }
+    }
+
+    if (!configuration_.auto_update_sdp) {
+        configuration_.session_name = configuration_.sdp.session_name;
+    }
+
+    // TODO: Set delay (frames)
+
+    for (auto* subscriber : subscribers_) {
+        subscriber->ravenna_receiver_configuration_updated(*this, configuration_);
+    }
+
+    if (do_update_rtsp) {
+        if (auto result = update_rtsp(); !result) {
+            return result;
+        }
+    }
+
+    if (do_update_nmos) {
+        return update_nmos();
+    }
+
+    return {};
 }
 
 const rav::RavennaReceiver::Configuration& rav::RavennaReceiver::get_configuration() const {
@@ -451,16 +401,16 @@ const rav::RavennaReceiver::Configuration& rav::RavennaReceiver::get_configurati
 bool rav::RavennaReceiver::subscribe(Subscriber* subscriber) {
     if (subscribers_.add(subscriber)) {
         subscriber->ravenna_receiver_configuration_updated(*this, configuration_);
-        const auto parameters = rtp_audio_receiver_.get_parameters();
-        subscriber->ravenna_receiver_parameters_updated(parameters);
-        for (auto& stream : parameters.streams) {
-            const auto state = rtp_audio_receiver_.get_state_for_stream(stream.session);
-            if (!state) {
-                RAV_ERROR("Failed to get state for stream {}", stream.session.to_string());
-                continue;
-            }
-            subscriber->ravenna_receiver_stream_state_updated(stream, *state);
-        }
+        subscriber->ravenna_receiver_parameters_updated(reader_parameters_);
+        // TODO: Reimplement:
+        // for (auto& stream : reader_parameters_.streams) {
+        //     const auto state = rtp_audio_receiver_.get_state_for_stream(stream.session);
+        //     if (!state) {
+        //         RAV_ERROR("Failed to get state for stream {}", stream.session.to_string());
+        //         continue;
+        //     }
+        //     subscriber->ravenna_receiver_stream_state_updated(stream, *state);
+        // }
         return true;
     }
     return false;
@@ -500,11 +450,105 @@ void rav::RavennaReceiver::set_network_interface_config(NetworkInterfaceConfig n
         return;  // No change in network interface configuration
     }
     network_interface_config_ = std::move(network_interface_config);
-    rtp_audio_receiver_.set_interfaces(network_interface_config_.get_interface_ipv4_addresses());
-    auto result = update_state(false, true);
-    if (!result) {
-        RAV_ERROR("Failed to update state after setting network interface config: {}", result.error());
+
+    rtp_receiver_.set_interfaces(get_array_of_addresses_from_network_config(network_interface_config_));
+
+    // rtp_audio_receiver_.set_interfaces(network_interface_config_.get_interface_ipv4_addresses());
+
+    if (auto ok = update_nmos(); !ok) {
+        RAV_ERROR("Failed to update NMOS after setting network interface config: {}", ok.error());
     }
+}
+
+tl::expected<rav::rtp::Receiver3::ReaderParameters, std::string>
+rav::create_rtp_receiver_parameters(const sdp::SessionDescription& sdp) {
+    rtp::Receiver3::ReaderParameters parameters;
+
+    RAV_ASSERT(!parameters.streams.empty(), "There should at least be one stream");
+
+    for (auto& media_description : sdp.media_descriptions) {
+        if (media_description.media_type != "audio") {
+            RAV_WARNING("Unsupported media type: {}", media_description.media_type);
+            continue;
+        }
+
+        if (media_description.protocol != "RTP/AVP") {
+            RAV_WARNING("Unsupported protocol {}", media_description.protocol);
+            continue;
+        }
+
+        // The first acceptable payload format from the beginning of the list SHOULD be used for the session.
+        // https://datatracker.ietf.org/doc/html/rfc8866#name-media-descriptions-m
+        std::optional<AudioFormat> selected_audio_format;
+
+        for (auto& format : media_description.formats) {
+            selected_audio_format = rav::sdp::make_audio_format(format);
+            if (!selected_audio_format) {
+                RAV_WARNING("Not a supported audio format: {}", rav::sdp::to_string(format));
+                continue;
+            }
+            break;
+        }
+
+        if (!selected_audio_format) {
+            RAV_WARNING("No supported audio format found");
+            continue;
+        }
+
+        auto stream = create_stream_from_media_description(media_description, sdp, *selected_audio_format);
+
+        if (!stream) {
+            RAV_WARNING("Failed to create stream from media description: {}", stream.error());
+            continue;
+        }
+
+        parameters.audio_format = *selected_audio_format;
+
+        size_t stream_index = 0;
+        parameters.streams[stream_index++] = *stream;
+
+        if (auto mid = media_description.mid) {
+            const auto group = sdp.group;
+            if (!group) {
+                RAV_WARNING("No group found for mid '{}'", *mid);
+                break;  // No group found, treating the found stream as the primary
+            }
+
+            if (group->type != sdp::Group::Type::dup) {
+                RAV_WARNING("Unsupported group type: {}", static_cast<int>(group->type));
+                break;  // Unsupported group type
+            }
+
+            auto tags = group->tags;
+            if (std::find(tags.begin(), tags.end(), *mid) == tags.end()) {
+                RAV_WARNING("Mid '{}' not found in group tags", *mid);
+                break;  // Mid not found in group tags
+            }
+
+            tags.erase(std::remove(tags.begin(), tags.end(), *mid), tags.end());
+
+            for (auto& tag : tags) {
+                auto* media_desc = find_media_description_by_mid(sdp, tag);
+                if (!media_desc) {
+                    RAV_WARNING("Media description with mid '{}' not found", tag);
+                    continue;
+                }
+                auto dup_stream = create_stream_from_media_description(*media_desc, sdp, *selected_audio_format);
+                if (!dup_stream) {
+                    RAV_WARNING("Failed to create stream from media description: {}", dup_stream.error());
+                    continue;
+                }
+                if (stream_index == parameters.streams.size()) {
+                    break;
+                }
+                parameters.streams[stream_index++] = *dup_stream;
+            }
+        }
+
+        return parameters;
+    }
+
+    return tl::unexpected("No suitable media description found");
 }
 
 void rav::tag_invoke(

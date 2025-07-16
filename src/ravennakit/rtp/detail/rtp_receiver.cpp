@@ -9,7 +9,9 @@
  */
 
 #include "ravennakit/rtp/detail/rtp_receiver.hpp"
+#include "ravennakit/rtp/detail/rtp_receiver.hpp"
 #include "ravennakit/core/log.hpp"
+#include "ravennakit/core/audio/audio_data.hpp"
 #include "ravennakit/rtp/rtcp_packet_view.hpp"
 #include "ravennakit/core/util/subscriber_list.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
@@ -64,8 +66,7 @@ namespace {
     return nullptr;
 }
 
-[[nodiscard]] boost::asio::ip::udp::socket*
-find_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost::asio::io_context& io_context) {
+[[nodiscard]] boost::asio::ip::udp::socket* find_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port) {
     // Try to find existing socket
     if (auto* found = find_socket(receiver, port)) {
         return found;
@@ -90,18 +91,7 @@ find_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost:
         return &ctx.socket;
     }
 
-    // Try to add new socket
-    if (receiver.sockets.size() >= decltype(receiver.sockets)::max_size()) {
-        return nullptr;  // No space left
-    }
-
-    auto& it = receiver.sockets.emplace_back(io_context);
-    if (!setup_socket(it.socket, port)) {
-        return nullptr;
-    }
-    RAV_ASSERT(it.socket.is_open(), "Socket expected to be open at this point");
-    it.port = port;
-    return &it.socket;
+    return nullptr;
 }
 
 [[nodiscard]] uint32_t count_multicast_groups(
@@ -115,13 +105,17 @@ find_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost:
 
     uint32_t total = 0;
     for (auto& reader : receiver.readers) {
-        for (size_t i = 0; i < reader.sessions.size(); ++i) {
-            if (reader.interfaces[i] != interface_address) {
+        for (auto& stream : reader.streams) {
+            if (stream.interface != interface_address) {
                 continue;
             }
-            if (reader.sessions[i].connection_address == multicast_group && reader.sessions[i].rtp_port == port) {
-                total++;
+            if (stream.session.connection_address != multicast_group) {
+                continue;
             }
+            if (stream.session.rtp_port != port) {
+                continue;
+            }
+            total++;
         }
     }
     return total;
@@ -129,40 +123,71 @@ find_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port, boost:
 
 [[nodiscard]] bool setup_reader(
     rav::rtp::Receiver3& receiver, rav::rtp::Receiver3::Reader& reader, const rav::Id id,
-    const rav::rtp::Receiver3::ArrayOfSessions& sessions, const rav::rtp::Receiver3::ArrayOfFilters& filters,
-    const rav::rtp::Receiver3::ArrayOfAddresses& interfaces, boost::asio::io_context& io_context
+    const rav::rtp::Receiver3::ReaderParameters& parameters, const rav::rtp::Receiver3::ArrayOfAddresses& interfaces
 ) {
+    RAV_ASSERT(parameters.streams.size() == interfaces.size(), "Unequal size");
+    RAV_ASSERT(parameters.audio_format.is_valid(), "Invalid format");
+
     reader.id = id;
-    reader.sessions = sessions;
-    reader.filters = filters;
-    reader.interfaces = interfaces;
-    reader.fifo.consume_all([](const auto&) {});
+
+    for (size_t i = 0; i < reader.streams.size(); ++i) {
+        reader.streams[i].reset();
+        reader.streams[i].session = parameters.streams[i].session;
+        reader.streams[i].filter = parameters.streams[i].filter;
+        reader.streams[i].packet_time_frames = parameters.streams[i].packet_time_frames;
+        reader.streams[i].interface = interfaces[i];
+    }
+
+    reader.audio_format = parameters.audio_format;
     reader.receive_buffer.clear();
 
-    for (size_t i = 0; i < reader.sessions.size(); ++i) {
-        auto& session = reader.sessions[i];
-        if (!session.valid()) {
+    // Find the smallest packet time frames
+    uint16_t packet_time_frames = std::numeric_limits<uint16_t>::max();
+    for (const auto& stream : parameters.streams) {
+        if (stream.packet_time_frames > 0 && stream.packet_time_frames < packet_time_frames) {
+            packet_time_frames = stream.packet_time_frames;
+        }
+    }
+
+    const auto bytes_per_frame = reader.audio_format.bytes_per_frame();
+    RAV_ASSERT(bytes_per_frame > 0, "bytes_per_frame must be greater than 0");
+
+    const auto buffer_size_frames =
+        std::max(reader.audio_format.sample_rate * rav::rtp::Receiver3::k_buffer_size_ms / 1000, 1024u);
+    reader.receive_buffer.resize(
+        reader.audio_format.sample_rate * rav::rtp::Receiver3::k_buffer_size_ms / 1000, bytes_per_frame
+    );
+
+    reader.read_audio_data_buffer.resize(buffer_size_frames * bytes_per_frame);
+    const auto buffer_size_packets = buffer_size_frames / packet_time_frames;
+
+    for (auto& stream : reader.streams) {
+        if (!stream.session.valid()) {
+            stream.packets.reset();
+            stream.packets_too_old.reset();
             continue;
         }
-        const auto endpoint = boost::asio::ip::udp::endpoint(session.connection_address, session.rtp_port);
 
-        auto* socket = find_or_create_socket(receiver, endpoint.port(), io_context);
+        stream.packets.resize(buffer_size_packets);
+        stream.packets_too_old.resize(buffer_size_packets);
+
+        const auto endpoint =
+            boost::asio::ip::udp::endpoint(stream.session.connection_address, stream.session.rtp_port);
+
+        auto* socket = find_or_create_socket(receiver, endpoint.port());
         if (socket == nullptr) {
             RAV_ERROR("Failed to create receive socket");
             continue;
         }
 
-        auto& interface_address = reader.interfaces[i];
-        if (session.connection_address.is_multicast()) {
-            if (!interface_address.is_unspecified()) {
+        if (stream.session.connection_address.is_multicast()) {
+            if (!stream.interface.is_unspecified()) {
                 const auto count = count_multicast_groups(
-                    receiver, session.connection_address.to_v4(), interface_address, session.rtp_port
+                    receiver, stream.session.connection_address.to_v4(), stream.interface, stream.session.rtp_port
                 );
-                // 1 because the reader being set up is also counted
-                if (count == 1) {
-                    if (!receiver.join_multicast_group(
-                            *socket, session.connection_address.to_v4(), interface_address
-                        )) {
+                if (count == 1) {  // 1 because the current reader being set up is also counted
+                    if (!receiver
+                             .join_multicast_group(*socket, stream.session.connection_address.to_v4(), stream.interface)) {
                         RAV_ERROR("Failed to join multicast group");
                     }
                 }
@@ -209,8 +234,8 @@ size_t count_num_sessions_using_rtp_port(rav::rtp::Receiver3& receiver, const ui
     RAV_ASSERT(port > 0, "A valid port must be given, otherwise empty sessions will be counted as well");
     size_t count = 0;
     for (auto& reader : receiver.readers) {
-        for (const auto& session : reader.sessions) {
-            if (port == session.rtp_port) {
+        for (const auto& stream : reader.streams) {
+            if (stream.session.rtp_port == port) {
                 count++;
             }
         }
@@ -235,9 +260,108 @@ void close_unused_sockets(rav::rtp::Receiver3& receiver) {
     }
 }
 
+void do_realtime_maintenance(rav::rtp::Receiver3::Reader& reader) {
+    TRACY_ZONE_SCOPED;
+
+    RAV_ASSERT(reader.rw_lock.is_locked_shared(), "Reader must be shared locked");
+
+    if (reader.consumer_active_.exchange(true) == false) {
+        for (auto& stream : reader.streams) {
+            stream.packets.pop_all();
+            stream.packets_too_old.pop_all();
+        }
+        return;
+    }
+
+    for (auto& stream : reader.streams) {
+        for (size_t i = 0; i < stream.packets.size(); ++i) {
+            auto rtp_packet = stream.packets.pop();
+            if (!rtp_packet.has_value()) {
+                break;
+            }
+
+            rav::rtp::PacketView rtp_packet_view(rtp_packet->data(), rtp_packet->size());
+
+            const auto seq = rtp_packet_view.sequence_number();
+            const auto ts = rtp_packet_view.timestamp();
+
+            rav::WrappingUint32 packet_timestamp(ts);
+            if (!reader.first_packet_timestamp) {
+                RAV_TRACE("First packet timestamp: {}", packet_timestamp.value());
+                reader.first_packet_timestamp = packet_timestamp;
+                reader.receive_buffer.set_next_ts(packet_timestamp.value());
+                reader.next_ts = packet_timestamp - 480;  // TODO: Fix the hardcoding
+            }
+
+            // Determine whether whole packet is too old
+            if (packet_timestamp + stream.packet_time_frames <= reader.next_ts) {
+                // RAV_WARNING("Packet too late: seq={}, ts={}", packet->seq, packet->timestamp);
+                TRACY_MESSAGE("Packet too late - skipping");
+                if (!stream.packets_too_old.push(rtp_packet_view.sequence_number())) {
+                    // RAV_ERROR("Packet not enqueued to packets_too_old");
+                }
+                continue;
+            }
+
+            // Determine whether packet contains outdated data
+            if (packet_timestamp < reader.next_ts) {
+                RAV_WARNING("Packet partly too late: seq={}, ts={}", seq, ts);
+                TRACY_MESSAGE("Packet partly too late - not skipping");
+                if (!stream.packets_too_old.push(seq)) {
+                    RAV_ERROR("Packet not enqueued to packets_too_old");
+                }
+                // Still process the packet since it contains data that is not outdated
+            }
+
+            reader.receive_buffer.clear_until(ts);
+
+            if (!reader.receive_buffer.write(ts, rtp_packet_view.payload_data())) {
+                RAV_ERROR("Packet not written to buffer");
+            }
+        }
+    }
+
+    TRACY_PLOT("available_frames", static_cast<int64_t>(reader.next_ts.diff(reader.receive_buffer.get_next_ts())));
+}
+
+std::optional<uint32_t> read_data_realtime_from_reader(
+    rav::rtp::Receiver3::Reader& reader, uint8_t* buffer, const size_t buffer_size,
+    const std::optional<uint32_t> at_timestamp
+) {
+    TRACY_ZONE_SCOPED;
+
+    do_realtime_maintenance(reader);
+
+    if (at_timestamp.has_value()) {
+        reader.next_ts = *at_timestamp;
+    } else if (!reader.first_packet_timestamp.has_value()) {
+        return {};
+    }
+
+    const auto num_frames = static_cast<uint32_t>(buffer_size) / reader.audio_format.bytes_per_frame();
+
+    const auto read_at = reader.next_ts.value();
+    if (!reader.receive_buffer.read(read_at, buffer, buffer_size, true)) {
+        TRACY_MESSAGE("Failed to read data from ringbuffer");
+        return std::nullopt;
+    }
+
+    reader.next_ts += num_frames;
+
+    return read_at;
+}
+
 }  // namespace
 
-rav::rtp::Receiver3::Receiver3() {
+void rav::rtp::Receiver3::StreamContext::reset() {
+    session = {};
+    filter = {};
+    interface = {};
+    packets.reset();
+    packets_too_old.reset();
+}
+
+rav::rtp::Receiver3::Receiver3(boost::asio::io_context& io_context) {
     join_multicast_group = [](boost::asio::ip::udp::socket& socket, const boost::asio::ip::address_v4& multicast_group,
                               const boost::asio::ip::address_v4& interface_address) {
         RAV_ASSERT(multicast_group.is_multicast(), "Multicast group should be a multicast address");
@@ -275,6 +399,14 @@ rav::rtp::Receiver3::Receiver3() {
         );
         return true;
     };
+
+    for (size_t i = sockets.size(); i < sockets.capacity(); i++) {
+        sockets.emplace_back(io_context);
+    }
+
+    for (size_t i = readers.size(); i < readers.capacity(); i++) {
+        readers.emplace_back();
+    }
 }
 
 rav::rtp::Receiver3::~Receiver3() {
@@ -288,36 +420,40 @@ rav::rtp::Receiver3::~Receiver3() {
 
 void rav::rtp::Receiver3::set_interfaces(const ArrayOfAddresses& interfaces) {
     for (auto& reader : readers) {
-        for (size_t i = 0; i < interfaces.size(); i++) {
-            if (reader.interfaces[i] == interfaces[i]) {
+        RAV_ASSERT(interfaces.size() == reader.streams.size(), "Size mismatch");
+
+        // TODO: Should we lock here?
+        for (size_t i = 0; i < reader.streams.size(); i++) {
+            if (reader.streams[i].interface == interfaces[i]) {
                 continue;
             }
-            if (!reader.interfaces[i].is_unspecified()) {
-                if (reader.sessions[i].connection_address.is_multicast()) {
+            if (!reader.streams[i].interface.is_unspecified()) {
+                if (reader.streams[i].session.connection_address.is_multicast()) {
                     std::ignore = leave_multicast_group_if_last(
-                        *this, reader.sessions[i].connection_address.to_v4(), reader.interfaces[i],
-                        reader.sessions[i].rtp_port
+                        *this, reader.streams[i].session.connection_address.to_v4(), reader.streams[i].interface,
+                        reader.streams[i].session.rtp_port
                     );
                 }
             }
-            reader.interfaces[i] = {};
+            reader.streams[i].interface = {};
             if (!interfaces[i].is_unspecified()) {
-                if (reader.sessions[i].connection_address.is_multicast()) {
+                if (reader.streams[i].session.connection_address.is_multicast()) {
                     const auto count = count_multicast_groups(
-                        *this, reader.sessions[i].connection_address.to_v4(), interfaces[i], reader.sessions[i].rtp_port
+                        *this, reader.streams[i].session.connection_address.to_v4(), interfaces[i],
+                        reader.streams[i].session.rtp_port
                     );
                     if (count == 0) {
-                        auto* socket = find_socket(*this, reader.sessions[i].rtp_port);
+                        auto* socket = find_socket(*this, reader.streams[i].session.rtp_port);
                         RAV_ASSERT(socket != nullptr, "Socket not found");
                         if (!join_multicast_group(
-                                *socket, reader.sessions[i].connection_address.to_v4(), interfaces[i]
+                                *socket, reader.streams[i].session.connection_address.to_v4(), interfaces[i]
                             )) {
                             RAV_ERROR("Failed to join multicast group");
                         }
                     }
                 }
             }
-            reader.interfaces[i] = interfaces[i];
+            reader.streams[i].interface = interfaces[i];
         }
     }
 
@@ -325,11 +461,9 @@ void rav::rtp::Receiver3::set_interfaces(const ArrayOfAddresses& interfaces) {
 }
 
 bool rav::rtp::Receiver3::add_reader(
-    const Id id, const ArrayOfSessions& sessions, const ArrayOfFilters& filters, const ArrayOfAddresses& interfaces,
-    boost::asio::io_context& io_context
+    const Id id, const ReaderParameters& parameters, const ArrayOfAddresses& interfaces
 ) {
-    RAV_ASSERT(sessions.size() == filters.size(), "Should be equal");
-    RAV_ASSERT(sessions.size() == interfaces.size(), "Should be equal");
+    RAV_ASSERT(parameters.streams.size() == interfaces.size(), "Should be equal");
 
     for (auto& stream : readers) {
         if (stream.id == id) {
@@ -346,26 +480,13 @@ bool rav::rtp::Receiver3::add_reader(
         }
 
         if (reader.id.is_valid()) {
-            continue;
+            continue;  // Used already
         }
 
-        return setup_reader(*this, reader, id, sessions, filters, interfaces, io_context);
+        return setup_reader(*this, reader, id, parameters, interfaces);
     }
 
-    if (readers.size() >= decltype(readers)::max_size()) {
-        RAV_TRACE("No space available for stream");
-        return false;  // No space left
-    }
-
-    // Open a new reader slot
-    auto& reader = readers.emplace_back();
-    const auto guard = reader.rw_lock.lock_exclusive();
-    if (!guard) {
-        RAV_ERROR("Failed to exclusively lock reader");
-        return false;
-    }
-
-    return setup_reader(*this, reader, id, sessions, filters, interfaces, io_context);
+    return false;
 }
 
 bool rav::rtp::Receiver3::remove_reader(const Id id) {
@@ -377,22 +498,19 @@ bool rav::rtp::Receiver3::remove_reader(const Id id) {
                 return false;
             }
 
-            for (size_t i = 0; i < e.sessions.size(); ++i) {
-                auto& session = e.sessions[i];
-                if (session.valid()) {
-                    if (session.connection_address.is_multicast() && !e.interfaces[i].is_unspecified()) {
-                        std::ignore = leave_multicast_group_if_last(
-                            *this, session.connection_address.to_v4(), e.interfaces[i], session.rtp_port
-                        );
-                    }
+            for (auto& stream : e.streams) {
+                if (stream.session.valid() && stream.session.connection_address.is_multicast()
+                    && !stream.interface.is_unspecified()) {
+                    std::ignore = leave_multicast_group_if_last(
+                        *this, stream.session.connection_address.to_v4(), stream.interface, stream.session.rtp_port
+                    );
                 }
+                stream.reset();
             }
 
             e.id = {};
-            e.sessions = {};
-            e.filters = {};
-            e.fifo.consume_all([](const auto&) {});
             e.receive_buffer.clear();
+            // TODO: Should we reset more fields here?
 
             close_unused_sockets(*this);
 
@@ -455,29 +573,123 @@ void rav::rtp::Receiver3::read_incoming_packets() {
                 continue;
             }
 
-            bool valid_source = false;
-            for (size_t i = 0; i < reader.sessions.size(); ++i) {
-                if (reader.sessions[i].connection_address == dst_endpoint.address()
-                    && reader.sessions[i].rtp_port == dst_endpoint.port()) {
-                    if (reader.filters[i].is_valid_source(dst_endpoint.address(), src_endpoint.address())) {
-                        valid_source = true;
-                        break;
-                    }
+            for (auto& stream : reader.streams) {
+                if (stream.session.connection_address != dst_endpoint.address()) {
+                    continue;
                 }
-            }
+                if (stream.session.rtp_port != dst_endpoint.port()) {
+                    continue;
+                }
+                if (!stream.filter.is_valid_source(dst_endpoint.address(), src_endpoint.address())) {
+                    continue;
+                }
 
-            if (!valid_source) {
-                continue;
-            }
+                PacketBuffer packet;
+                std::memcpy(packet.data(), receive_buffer.data(), bytes_received);
 
-            std::array<uint8_t, aes67::constants::k_mtu> packet {};
-            std::memcpy(packet.data(), receive_buffer.data(), bytes_received);
-
-            if (!reader.fifo.push(packet)) {
-                RAV_ERROR("Failed to push data to fifo");
+                if (!stream.packets.push(packet)) {
+                    // RAV_ERROR("Failed to push data to fifo");
+                    RAV_ERROR("Push: {}", view.to_string());
+                    TRACY_MESSAGE("Failed to push packet");
+                    reader.consumer_active_ = false;
+                    // TODO: Make sure consumer_active change is notified
+                }
             }
         }
     }
+}
+
+std::optional<uint32_t> rav::rtp::Receiver3::read_data_realtime(
+    const Id id, uint8_t* buffer, const size_t buffer_size, const std::optional<uint32_t> at_timestamp
+) {
+    TRACY_ZONE_SCOPED;
+
+    for (auto& reader : readers) {
+        const auto guard = reader.rw_lock.try_lock_shared();
+        if (!guard) {
+            TRACY_MESSAGE("Failed to lock reader");
+            continue;
+        }
+        if (reader.id != id) {
+            continue;
+        }
+        return read_data_realtime_from_reader(reader, buffer, buffer_size, at_timestamp);
+    }
+
+    return std::nullopt;
+}
+
+std::optional<uint32_t> rav::rtp::Receiver3::read_audio_data_realtime(
+    const Id id, AudioBufferView<float> output_buffer, const std::optional<uint32_t> at_timestamp
+) {
+    TRACY_ZONE_SCOPED;
+
+    RAV_ASSERT(output_buffer.is_valid(), "Buffer must be valid");
+
+    for (auto& reader : readers) {
+        const auto guard = reader.rw_lock.try_lock_shared();
+        if (!guard) {
+            continue;
+        }
+        if (reader.id != id) {
+            continue;
+        }
+
+        const auto format = reader.audio_format;
+
+        if (format.byte_order != AudioFormat::ByteOrder::be) {
+            RAV_ERROR("Unexpected byte order");
+            return std::nullopt;
+        }
+
+        if (format.ordering != AudioFormat::ChannelOrdering::interleaved) {
+            RAV_ERROR("Unexpected channel ordering");
+            return std::nullopt;
+        }
+
+        if (format.num_channels != output_buffer.num_channels()) {
+            RAV_ERROR("Channel mismatch");
+            return std::nullopt;
+        }
+
+        auto& buffer = reader.read_audio_data_buffer;
+        const auto read_at = read_data_realtime_from_reader(
+            reader, buffer.data(), output_buffer.num_frames() * format.bytes_per_frame(), at_timestamp
+        );
+
+        if (!read_at.has_value()) {
+            return std::nullopt;
+        }
+
+        if (format.encoding == AudioEncoding::pcm_s16) {
+            const auto ok = AudioData::convert<
+                int16_t, AudioData::ByteOrder::Be, AudioData::Interleaving::Interleaved, float,
+                AudioData::ByteOrder::Ne>(
+                reinterpret_cast<int16_t*>(buffer.data()), output_buffer.num_frames(), output_buffer.num_channels(),
+                output_buffer.data()
+            );
+            if (!ok) {
+                RAV_WARNING("Failed to convert audio data");
+            }
+        } else if (format.encoding == AudioEncoding::pcm_s24) {
+            const auto ok = AudioData::convert<
+                int24_t, AudioData::ByteOrder::Be, AudioData::Interleaving::Interleaved, float,
+                AudioData::ByteOrder::Ne>(
+                reinterpret_cast<int24_t*>(buffer.data()), output_buffer.num_frames(), output_buffer.num_channels(),
+                output_buffer.data()
+            );
+            if (!ok) {
+                RAV_WARNING("Failed to convert audio data");
+            }
+        } else {
+            RAV_ERROR("Unsupported encoding");
+            return std::nullopt;
+        }
+
+        return read_at;
+    }
+
+    return std::nullopt;
 }
 
 rav::rtp::Receiver::Receiver(UdpReceiver& udp_receiver) : udp_receiver_(udp_receiver) {}

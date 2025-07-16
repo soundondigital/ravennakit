@@ -19,7 +19,6 @@
 rav::RavennaNode::RavennaNode() :
     rtsp_server_(io_context_, boost::asio::ip::tcp::endpoint(boost::asio::ip::address_v4::any(), 0)),
     ptp_instance_(io_context_) {
-    rtp_receiver_ = std::make_unique<rtp::Receiver>(udp_receiver_);
     advertiser_ = dnssd::Advertiser::create(io_context_);
 
     nmos_device_.id = boost::uuids::random_generator()();
@@ -89,7 +88,7 @@ std::future<tl::expected<rav::Id, std::string>>
 rav::RavennaNode::create_receiver(RavennaReceiver::Configuration initial_config) {
     auto work = [this, config = std::move(initial_config)]() mutable -> tl::expected<Id, std::string> {
         auto new_receiver =
-            std::make_unique<RavennaReceiver>(io_context_, rtsp_client_, *rtp_receiver_, id_generator_.next());
+            std::make_unique<RavennaReceiver>(io_context_, rtsp_client_, rtp_receiver3_, id_generator_.next());
         new_receiver->set_network_interface_config(network_interface_config_);
         auto result = new_receiver->set_configuration(std::move(config));
         if (!result) {
@@ -575,7 +574,7 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
 
             for (auto& receiver : receivers) {
                 auto new_receiver =
-                    std::make_unique<RavennaReceiver>(io_context_, rtsp_client_, *rtp_receiver_, id_generator_.next());
+                    std::make_unique<RavennaReceiver>(io_context_, rtsp_client_, rtp_receiver3_, id_generator_.next());
                 new_receiver->set_network_interface_config(*network_interface_config);
                 if (auto result = new_receiver->restore_from_json(receiver); !result) {
                     return tl::unexpected(result.error());

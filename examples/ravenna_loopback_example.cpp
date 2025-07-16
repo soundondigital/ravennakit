@@ -58,7 +58,7 @@ class loopback: public rav::RavennaReceiver::Subscriber, public rav::ptp::Instan
 
         sender_->set_network_interface_config(std::move(interface_config));
 
-        rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(udp_receiver_);
+        rtp_receiver_ = std::make_unique<rav::rtp::Receiver3>(io_context_);
 
         rav::RavennaReceiver::Configuration config;
         config.delay_frames = 480;  // 10ms at 48KHz
@@ -90,7 +90,7 @@ class loopback: public rav::RavennaReceiver::Subscriber, public rav::ptp::Instan
         }
     }
 
-    void ravenna_receiver_parameters_updated(const rav::rtp::AudioReceiver::Parameters& parameters) override {
+    void ravenna_receiver_parameters_updated(const rav::rtp::Receiver3::ReaderParameters& parameters) override {
         if (parameters.streams.empty()) {
             RAV_WARNING("No streams available");
             return;
@@ -137,14 +137,13 @@ class loopback: public rav::RavennaReceiver::Subscriber, public rav::ptp::Instan
   private:
     std::string stream_name_;
     boost::asio::io_context io_context_;
-    rav::UdpReceiver udp_receiver_ {io_context_};
     std::vector<uint8_t> buffer_;
     bool ptp_clock_stable_ = false;
 
     // Receiver components
     rav::RavennaBrowser browser_ {io_context_};
     std::unique_ptr<rav::RavennaRtspClient> rtsp_client_;
-    std::unique_ptr<rav::rtp::Receiver> rtp_receiver_;
+    std::unique_ptr<rav::rtp::Receiver3> rtp_receiver_;
     std::unique_ptr<rav::RavennaReceiver> ravenna_receiver_;
 
     // Sender components

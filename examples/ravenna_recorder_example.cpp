@@ -57,7 +57,7 @@ class StreamRecorder: public rav::RavennaReceiver::Subscriber {
         }
     }
 
-    void ravenna_receiver_parameters_updated(const rav::rtp::AudioReceiver::Parameters& parameters) override {
+    void ravenna_receiver_parameters_updated(const rav::rtp::Receiver3::ReaderParameters& parameters) override {
         if (parameters.streams.empty()) {
             RAV_WARNING("No streams available");
             return;
@@ -117,7 +117,7 @@ class RavennaRecorder {
   public:
     explicit RavennaRecorder() {
         rtsp_client_ = std::make_unique<rav::RavennaRtspClient>(io_context_, browser_);
-        rtp_receiver_ = std::make_unique<rav::rtp::Receiver>(udp_receiver_);
+        rtp_receiver_ = std::make_unique<rav::rtp::Receiver3>(io_context_);
     }
 
     ~RavennaRecorder() = default;
@@ -152,10 +152,9 @@ class RavennaRecorder {
 
   private:
     boost::asio::io_context io_context_;
-    rav::UdpReceiver udp_receiver_ {io_context_};
     rav::RavennaBrowser browser_ {io_context_};
     std::unique_ptr<rav::RavennaRtspClient> rtsp_client_;
-    std::unique_ptr<rav::rtp::Receiver> rtp_receiver_;
+    std::unique_ptr<rav::rtp::Receiver3> rtp_receiver_;
     std::vector<std::unique_ptr<StreamRecorder>> recorders_;
 };
 

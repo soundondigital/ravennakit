@@ -69,7 +69,7 @@ struct RavennaNode final: rav::RavennaNode::Subscriber, rav::RavennaReceiver::Su
         std::ignore = configuration;
     }
 
-    void ravenna_receiver_parameters_updated(const rav::rtp::AudioReceiver::Parameters& parameters) override {
+    void ravenna_receiver_parameters_updated(const rav::rtp::Receiver3::ReaderParameters& parameters) override {
         RAV_INFO("RAVENNA parameters updated: {}", parameters.audio_format.to_string());
     }
 

@@ -20,12 +20,6 @@ struct Session {
     uint16_t rtp_port {};
     uint16_t rtcp_port {};
 
-    void reset() {
-        connection_address = boost::asio::ip::address{};
-        rtp_port = {};
-        rtcp_port = {};
-    }
-
     [[nodiscard]] std::string to_string() const {
         return fmt::format("{}/{}/{}", connection_address.to_string(), rtp_port, rtcp_port);
     }
