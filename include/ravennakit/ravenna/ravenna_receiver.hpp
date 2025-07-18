@@ -70,14 +70,29 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
 
         /**
          * Called when the state of a stream has changed.
-         * @param stream The stream which changed.
+         * @param stream_info The stream which changed.
          * @param state The new state of the receiver.
          */
         virtual void ravenna_receiver_stream_state_updated(
-            const rtp::AudioReceiver::Stream& stream, const rtp::AudioReceiver::State state
+            const rtp::Receiver3::StreamInfo& stream_info, const rtp::Receiver3::StreamState state
         ) {
-            std::ignore = stream;
+            std::ignore = stream_info;
             std::ignore = state;
+        }
+
+        /**
+         * Called when the stats of a stream have been updated.
+         * @param receiver_id The receiver for which the stats were updated.
+         * @param stream_index The index of the stream which was updated.
+         * @param stats The updated stats of the receiver.
+         */
+        virtual void
+        ravenna_receiver_stream_stats_updated(
+            Id receiver_id, size_t stream_index, const rtp::PacketStats::Counters& stats
+        ) {
+            std::ignore = receiver_id;
+            std::ignore = stream_index;
+            std::ignore = stats;
         }
 
         /**
@@ -102,9 +117,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
         }
     };
 
-    explicit RavennaReceiver(
-        boost::asio::io_context& io_context, RavennaRtspClient& rtsp_client, rtp::Receiver3& receiver3, Id id
-    );
+    explicit RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::Receiver3& receiver3, Id id);
     ~RavennaReceiver() override;
 
     RavennaReceiver(const RavennaReceiver&) = delete;
@@ -192,6 +205,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
 
     /**
      * Reads data from the buffer at the given timestamp.
+     * TODO: Remove this function and call into rtp::Receiver3 directly
      *
      * Calling this function is realtime safe and thread safe when called from a single arbitrary thread.
      *
@@ -206,6 +220,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
 
     /**
      * Reads the data from the receiver with the given id.
+     * TODO: Remove this function and call into rtp::Receiver3 directly
      *
      * Calling this function is realtime safe and thread safe when called from a single arbitrary thread.
      *
@@ -218,14 +233,14 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     read_audio_data_realtime(const AudioBufferView<float>& output_buffer, std::optional<uint32_t> at_timestamp);
 
     /**
-     * @return The packet statistics for the first stream, if it exists, otherwise an empty structure.
-     */
-    [[nodiscard]] std::optional<rav::rtp::PacketStats::Counters> get_packet_stats(Rank rank) const;
-
-    /**
      * @return The NMOS receiver of this receiver.
      */
     [[nodiscard]] const nmos::ReceiverAudio& get_nmos_receiver() const;
+
+    /**
+     * Call regularly from the maintenance thread.
+     */
+    void do_maintenance();
 
     // ravenna_rtsp_client::subscriber overrides
     void on_announced(const RavennaRtspClient::AnnouncedEvent& event) override;
@@ -240,6 +255,8 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     nmos::ReceiverAudio nmos_receiver_;
     SubscriberList<Subscriber> subscribers_;
     rtp::Receiver3::ReaderParameters reader_parameters_;
+    std::array<rtp::Receiver3::StreamState, rtp::Receiver3::k_max_num_redundant_sessions> streams_states_;
+    Throttle<void> stats_throttle_ {std::chrono::seconds(1)};
 
     void handle_announced_sdp(const sdp::SessionDescription& sdp);
     tl::expected<void, std::string> update_nmos();

@@ -193,17 +193,40 @@ std::optional<uint32_t> rav::RavennaReceiver::read_audio_data_realtime(
     return rtp_receiver_.read_audio_data_realtime(id_, output_buffer, at_timestamp);
 }
 
-std::optional<rav::rtp::PacketStats::Counters> rav::RavennaReceiver::get_packet_stats(const Rank rank) const {
-    return rtp_receiver_.get_packet_stats(id_, rank.value());
-}
-
 const rav::nmos::ReceiverAudio& rav::RavennaReceiver::get_nmos_receiver() const {
     return nmos_receiver_;
 }
 
-rav::RavennaReceiver::RavennaReceiver(
-    boost::asio::io_context& io_context, RavennaRtspClient& rtsp_client, rtp::Receiver3& receiver3, const Id id
-) :
+void rav::RavennaReceiver::do_maintenance() {
+    // Update stream states
+    for (size_t i = 0; i < streams_states_.size(); ++i) {
+        if (auto state = rtp_receiver_.get_stream_state(id_, i)) {
+            if (streams_states_[i] != *state) {
+                streams_states_[i] = *state;
+                for (auto* subscriber : subscribers_) {
+                    subscriber->ravenna_receiver_stream_state_updated(
+                        reader_parameters_.streams[i], streams_states_[i]
+                    );
+                }
+            }
+        }
+    }
+
+    // Update stream stats
+    if (stats_throttle_.update()) {
+        for (size_t i = 0; i < streams_states_.size(); ++i) {
+            if (streams_states_[i] != rtp::Receiver3::StreamState::inactive) {
+                if (auto stats = rtp_receiver_.get_packet_stats(id_, i)) {
+                    for (auto* subscriber : subscribers_) {
+                        subscriber->ravenna_receiver_stream_stats_updated(id_, i, *stats);
+                    }
+                }
+            }
+        }
+    }
+}
+
+rav::RavennaReceiver::RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::Receiver3& receiver3, const Id id) :
     rtsp_client_(rtsp_client), rtp_receiver_(receiver3), id_(id) {
     nmos_receiver_.id = boost::uuids::random_generator()();
 

@@ -229,7 +229,7 @@ class RavennaNode {
      * @param rank The rank of the stream to get the statistics for.
      * @return The packet statistics for the stream, or an empty structure if the stream doesn't exist.
      */
-    [[nodiscard]] std::future<std::optional<rav::rtp::PacketStats::Counters>>
+    [[nodiscard]] std::future<std::optional<rtp::PacketStats::Counters>>
     get_stats_for_receiver(Id receiver_id, Rank rank);
 
     /**
@@ -384,6 +384,7 @@ class RavennaNode {
 
     [[nodiscard]] bool update_realtime_shared_context();
     uint32_t generate_unique_session_id() const;
+    void do_maintenance() const;
 };
 
 }  // namespace rav

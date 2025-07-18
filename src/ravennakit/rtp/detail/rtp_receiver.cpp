@@ -10,6 +10,9 @@
 
 #include "ravennakit/rtp/detail/rtp_receiver.hpp"
 #include "ravennakit/rtp/detail/rtp_receiver.hpp"
+#include "ravennakit/rtp/detail/rtp_receiver.hpp"
+
+#include "ravennakit/core/clock.hpp"
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/core/audio/audio_data.hpp"
 #include "ravennakit/rtp/rtcp_packet_view.hpp"
@@ -277,15 +280,13 @@ void do_realtime_maintenance(rav::rtp::Receiver3::Reader& reader) {
 
     RAV_ASSERT(reader.rw_lock.is_locked_shared(), "Reader must be shared locked");
 
-    if (reader.consumer_active.exchange(true) == false) {
-        for (auto& stream : reader.streams) {
+    for (auto& stream : reader.streams) {
+        if (stream.state.load(std::memory_order_relaxed) == rav::rtp::Receiver3::StreamState::no_consumer) {
             stream.packets.pop_all();
             stream.packets_too_old.pop_all();
+            continue;
         }
-        return;
-    }
 
-    for (auto& stream : reader.streams) {
         for (size_t i = 0; i < stream.packets.size(); ++i) {
             auto rtp_packet = stream.packets.pop();
             if (!rtp_packet.has_value()) {
@@ -363,6 +364,12 @@ std::optional<uint32_t> read_data_realtime_from_reader(
     return read_at;
 }
 
+void update_stream_active_state(rav::rtp::Receiver3::StreamContext& stream, const uint64_t now) {
+    if ((stream.last_packet_time_ns + rav::rtp::Receiver3::k_receive_timeout_ms * 1'000'000).value() < now) {
+        stream.state.store(rav::rtp::Receiver3::StreamState::inactive, std::memory_order_relaxed);
+    }
+}
+
 }  // namespace
 
 void rav::rtp::Receiver3::StreamContext::reset() {
@@ -383,7 +390,6 @@ void rav::rtp::Receiver3::Reader::reset() {
     for (auto& stream : streams) {
         stream.reset();
     }
-    consumer_active = false;
     rtp_ts = {};
     seq = 0;
     receive_buffer.clear();
@@ -552,6 +558,8 @@ bool rav::rtp::Receiver3::remove_reader(const Id id) {
 void rav::rtp::Receiver3::read_incoming_packets() {
     TRACY_ZONE_SCOPED;
 
+    const auto now = clock::now_monotonic_high_resolution_ns();
+
     for (auto& ctx : sockets) {
         const auto socket_guard = ctx.rw_lock.try_lock_shared();
         if (!socket_guard) {
@@ -608,6 +616,8 @@ void rav::rtp::Receiver3::read_incoming_packets() {
             }
 
             for (auto& stream : reader.streams) {
+                update_stream_active_state(stream, now);
+
                 if (stream.session.connection_address != dst_endpoint.address()) {
                     continue;
                 }
@@ -627,11 +637,12 @@ void rav::rtp::Receiver3::read_incoming_packets() {
                 PacketBuffer packet;
                 std::memcpy(packet.data(), receive_buffer.data(), bytes_received);
 
-                if (!stream.packets.push(packet)) {
-                    // RAV_ERROR("Failed to push data to fifo");
+                auto state = stream.state.load(std::memory_order_relaxed);
+                if (state != StreamState::no_consumer && !stream.packets.push(packet)) {
                     TRACY_MESSAGE("Failed to push packet");
-                    reader.consumer_active = false;
-                    // TODO: Make sure consumer_active change is notified
+                    stream.state.store(StreamState::no_consumer, std::memory_order_relaxed);
+                } else {
+                    stream.state.store(StreamState::receiving, std::memory_order_relaxed);
                 }
 
                 while (auto seq = stream.packets_too_old.pop()) {
@@ -649,6 +660,27 @@ void rav::rtp::Receiver3::read_incoming_packets() {
                 stream.packet_stats_counters.write(stats);
             }
         }
+
+        last_time_maintenance = now;
+    }
+
+    // Do maintenance if not done for a while
+    if (last_time_maintenance + k_receive_timeout_ms * 1'000'000 < now) {
+        for (auto& reader : readers) {
+            const auto reader_guard = reader.rw_lock.try_lock_shared();
+            if (!reader_guard) {
+                continue;  // Failed to lock which means it is being added or removed.
+            }
+
+            if (!reader.id.is_valid()) {
+                continue;
+            }
+
+            for (auto& stream : reader.streams) {
+                update_stream_active_state(stream, now);
+            }
+        }
+        last_time_maintenance = now;
     }
 }
 
@@ -766,6 +798,33 @@ rav::rtp::Receiver3::get_packet_stats(const Id reader_id, const size_t stream_in
     }
 
     return std::nullopt;
+}
+
+std::optional<rav::rtp::Receiver3::StreamState>
+rav::rtp::Receiver3::get_stream_state(const Id reader_id, const size_t stream_index) const {
+    for (auto& reader : readers) {
+        if (reader.id == reader_id) {
+            if (stream_index >= reader.streams.size()) {
+                RAV_ASSERT_FALSE("Index out of bounds");
+                return {};
+            }
+
+            return reader.streams[stream_index].state.load(std::memory_order_relaxed);
+        }
+    }
+    return {};
+}
+
+const char* rav::rtp::to_string(const Receiver3::StreamState state) {
+    switch (state) {
+        case Receiver3::StreamState::inactive:
+            return "inactive";
+        case Receiver3::StreamState::receiving:
+            return "receiving";
+        case Receiver3::StreamState::no_consumer:
+            return "ok_no_consumer";
+    }
+    return "n/a";
 }
 
 rav::rtp::Receiver::Receiver(UdpReceiver& udp_receiver) : udp_receiver_(udp_receiver) {}

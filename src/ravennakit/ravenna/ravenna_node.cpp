@@ -51,7 +51,8 @@ rav::RavennaNode::RavennaNode() :
         while (true) {
             try {
                 while (!io_context_.stopped()) {
-                    io_context_.poll();
+                    io_context_.run_for(std::chrono::seconds(1));
+                    do_maintenance();
                 }
                 break;
             } catch (const std::exception& e) {
@@ -93,27 +94,26 @@ rav::RavennaNode::RavennaNode() :
 }
 
 rav::RavennaNode::~RavennaNode() {
+    io_context_.stop();
+    if (maintenance_thread_.joinable()) {
+        maintenance_thread_.join();
+    }
+    keep_going_.store(false, std::memory_order_release);
+    if (network_thread_.joinable()) {
+        network_thread_.join();
+    }
     for (const auto& receiver : receivers_) {
         receiver->set_nmos_node(nullptr);  // Prevent receiver from sending NMOS updates upon destruction
     }
     for (const auto& sender : senders_) {
         sender->set_nmos_node(nullptr);  // Prevent receiver from sending NMOS updates upon destruction
     }
-    keep_going_.store(false, std::memory_order_release);
-    io_context_.stop();
-    if (maintenance_thread_.joinable()) {
-        maintenance_thread_.join();
-    }
-    if (network_thread_.joinable()) {
-        network_thread_.join();
-    }
 }
 
 std::future<tl::expected<rav::Id, std::string>>
 rav::RavennaNode::create_receiver(RavennaReceiver::Configuration initial_config) {
     auto work = [this, config = std::move(initial_config)]() mutable -> tl::expected<Id, std::string> {
-        auto new_receiver =
-            std::make_unique<RavennaReceiver>(io_context_, rtsp_client_, rtp_receiver3_, id_generator_.next());
+        auto new_receiver = std::make_unique<RavennaReceiver>(rtsp_client_, rtp_receiver3_, id_generator_.next());
         new_receiver->set_network_interface_config(network_interface_config_);
         auto result = new_receiver->set_configuration(std::move(config));
         if (!result) {
@@ -379,12 +379,7 @@ std::future<void> rav::RavennaNode::unsubscribe_from_ptp_instance(ptp::Instance:
 std::future<std::optional<rav::rtp::PacketStats::Counters>>
 rav::RavennaNode::get_stats_for_receiver(Id receiver_id, Rank rank) {
     auto work = [this, receiver_id, rank]() -> std::optional<rtp::PacketStats::Counters> {
-        for (const auto& receiver : receivers_) {
-            if (receiver->get_id() == receiver_id) {
-                return receiver->get_packet_stats(rank);
-            }
-        }
-        return std::nullopt;
+        return rtp_receiver3_.get_packet_stats(receiver_id, rank.value());
     };
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
 }
@@ -600,7 +595,7 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
 
             for (auto& receiver : receivers) {
                 auto new_receiver =
-                    std::make_unique<RavennaReceiver>(io_context_, rtsp_client_, rtp_receiver3_, id_generator_.next());
+                    std::make_unique<RavennaReceiver>(rtsp_client_, rtp_receiver3_, id_generator_.next());
                 new_receiver->set_network_interface_config(*network_interface_config);
                 if (auto result = new_receiver->restore_from_json(receiver); !result) {
                     return tl::unexpected(result.error());
@@ -710,4 +705,10 @@ uint32_t rav::RavennaNode::generate_unique_session_id() const {
         highest_session_id = std::max(highest_session_id, sender->get_session_id());
     }
     return highest_session_id + 1;
+}
+
+void rav::RavennaNode::do_maintenance() const {
+    for (const auto& receiver : receivers_) {
+        receiver->do_maintenance();
+    }
 }

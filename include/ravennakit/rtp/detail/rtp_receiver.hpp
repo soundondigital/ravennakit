@@ -101,6 +101,18 @@ struct Receiver3 {
         }
     };
 
+    /**
+     * The state of a reader.
+     */
+    enum class StreamState {
+        /// The stream is inactive because no packets have been received for a while.
+        inactive,
+        /// Packets are being received and consumed.
+        receiving,
+        /// Packets are being received, but they are not consumed.
+        no_consumer,
+    };
+
     struct SocketWithContext {
         explicit SocketWithContext(boost::asio::io_context& io_context) : socket(io_context) {}
 
@@ -119,8 +131,9 @@ struct Receiver3 {
         PacketStats packet_stats;
         boost::lockfree::spsc_value<PacketStats::Counters, boost::lockfree::allow_multiple_reads<true>>
             packet_stats_counters;
-        SlidingStats packet_interval_stats {1000}; // For calculating jitter
+        SlidingStats packet_interval_stats {1000};  // For calculating jitter
         WrappingUint64 last_packet_time_ns;
+        std::atomic<StreamState> state {StreamState::inactive};
 
         void reset();
     };
@@ -133,8 +146,6 @@ struct Receiver3 {
         Id id;
         AudioFormat audio_format;
         std::array<StreamContext, k_max_num_redundant_sessions> streams;
-
-        std::atomic_bool consumer_active {false};  // TODO: ???
 
         // Network thread
         std::optional<WrappingUint32> rtp_ts;
@@ -158,6 +169,8 @@ struct Receiver3 {
 
     boost::container::static_vector<SocketWithContext, k_max_num_sessions> sockets;
     boost::container::static_vector<Reader, k_max_num_readers> readers;
+
+    uint64_t last_time_maintenance{};
 
     explicit Receiver3(boost::asio::io_context& io_context);
     ~Receiver3();
@@ -227,7 +240,19 @@ struct Receiver3 {
      * @return The statistics for given stream index, or nullopt if no statistics could be read.
      */
     std::optional<PacketStats::Counters> get_packet_stats(Id reader_id, size_t stream_index);
+
+    /**
+     * @param reader_id The id of the reader to get the state for.
+     * @param stream_index The index of the stream to get the state for.
+     * @return The stream state for given reader.
+     */
+    [[nodiscard]] std::optional<StreamState> get_stream_state(Id reader_id, size_t stream_index) const;
 };
+
+/**
+ * @return A string representation of ReceiveState.
+ */
+[[nodiscard]] const char* to_string(Receiver3::StreamState state);
 
 /**
  * A class which sets up sockets for receiver RTP and RTCP packets, and allows subscribing to the received packets.
