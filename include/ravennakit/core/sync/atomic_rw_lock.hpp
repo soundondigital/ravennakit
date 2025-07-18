@@ -18,7 +18,7 @@
 namespace rav {
 
 /**
- * A reader writer lock around atomics,
+ * A lock-free (and sometimes wait-free) reader writer lock.
  */
 class AtomicRwLock {
   public:
@@ -162,7 +162,6 @@ class AtomicRwLock {
         }
 
         prev_readers = readers.fetch_add(1, std::memory_order_acq_rel);
-
         if (prev_readers >= k_readers_mask) {
             readers.fetch_sub(1, std::memory_order_release);
             return AccessGuard<Shared>(nullptr);

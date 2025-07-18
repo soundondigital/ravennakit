@@ -251,6 +251,14 @@ void close_unused_sockets(rav::rtp::Receiver3& receiver) {
             continue;
         }
         if (count_num_sessions_using_rtp_port(receiver, socket.port) == 0) {
+            // We're only locking here which is safe as long as the audio thread and network thread only take shared
+            // locks. Once that is not the case and these threads start to manipulate the socket structure there will be
+            // a data race.
+            const auto guard = socket.rw_lock.lock_exclusive();
+            if (!guard) {
+                RAV_ERROR("Failed to lock socket, cannot close");
+                continue;
+            }
             boost::system::error_code ec;
             socket.socket.close(ec);
             if (ec) {
@@ -538,7 +546,13 @@ void rav::rtp::Receiver3::read_incoming_packets() {
             continue;  // This means unused. I think the call is stable and will not be changed externally.
         }
 
-        if (!ctx.socket.available()) {
+        boost::system::error_code ec;
+        const auto available = ctx.socket.available(ec);
+        if (ec) {
+            RAV_ERROR("Failed to get available data: {}", ec.message());
+            continue;
+        }
+        if (available == 0) {
             continue;
         }
 
@@ -546,7 +560,6 @@ void rav::rtp::Receiver3::read_incoming_packets() {
         boost::asio::ip::udp::endpoint src_endpoint;
         boost::asio::ip::udp::endpoint dst_endpoint;
         uint64_t recv_time = 0;
-        boost::system::error_code ec;
         const auto bytes_received =
             receive_from_socket(ctx.socket, receive_buffer, src_endpoint, dst_endpoint, recv_time, ec);
 
@@ -594,7 +607,6 @@ void rav::rtp::Receiver3::read_incoming_packets() {
 
                 if (!stream.packets.push(packet)) {
                     // RAV_ERROR("Failed to push data to fifo");
-                    RAV_ERROR("Push: {}", view.to_string());
                     TRACY_MESSAGE("Failed to push packet");
                     reader.consumer_active_ = false;
                     // TODO: Make sure consumer_active change is notified
@@ -653,7 +665,8 @@ std::optional<uint32_t> rav::rtp::Receiver3::read_audio_data_realtime(
         }
 
         if (format.num_channels != output_buffer.num_channels()) {
-            RAV_ERROR("Channel mismatch");
+            // Channel mapping/mixing is not implemented and an equal amount of channels is expected. Ignoring silently.
+            RAV_ERROR("Unexpected number of channels");
             return std::nullopt;
         }
 
