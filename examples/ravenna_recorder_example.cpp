@@ -129,7 +129,7 @@ class RavennaRecorder {
         config.session_name = stream_name;
 
         auto receiver = std::make_unique<rav::RavennaReceiver>(
-            io_context_, *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id()
+            *rtsp_client_, *rtp_receiver_, rav::Id::get_next_process_wide_unique_id()
         );
         receiver->set_network_interface_config(network_interface_config);
         auto result = receiver->set_configuration(config);

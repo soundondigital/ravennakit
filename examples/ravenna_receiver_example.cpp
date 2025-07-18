@@ -176,7 +176,7 @@ class RavennaReceiver: public rav::RavennaReceiver::Subscriber {
         config.session_name = stream_name;
 
         ravenna_receiver_ = std::make_unique<rav::RavennaReceiver>(
-            io_context_, *rtsp_client_, *rtp_receiver3_, rav::Id::get_next_process_wide_unique_id()
+            *rtsp_client_, *rtp_receiver3_, rav::Id::get_next_process_wide_unique_id()
         );
 
         ravenna_receiver_->set_network_interface_config(std::move(network_interface_config));
