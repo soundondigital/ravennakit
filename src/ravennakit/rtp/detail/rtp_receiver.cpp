@@ -290,13 +290,11 @@ void do_realtime_maintenance(rav::rtp::Receiver3::Reader& reader) {
                 break;
             }
 
-            rav::rtp::PacketView rtp_packet_view(rtp_packet->data(), rtp_packet->size());
+            // const auto seq = rtp_packet_view.sequence_number();
+            // const auto ts = rtp_packet_view.timestamp();
+            // const auto payload = rtp_packet_view.payload_data();
 
-            const auto seq = rtp_packet_view.sequence_number();
-            const auto ts = rtp_packet_view.timestamp();
-            const auto payload = rtp_packet_view.payload_data();
-
-            rav::WrappingUint32 packet_timestamp(ts);
+            rav::WrappingUint32 packet_timestamp(rtp_packet->timestamp);
             if (!reader.first_packet_timestamp) {
                 RAV_TRACE("First packet timestamp: {}", packet_timestamp.value());
                 reader.first_packet_timestamp = packet_timestamp;
@@ -305,8 +303,8 @@ void do_realtime_maintenance(rav::rtp::Receiver3::Reader& reader) {
             }
 
             // Update most recent ts
-            const auto num_frames = static_cast<uint32_t>(payload.size_bytes()) / reader.audio_format.bytes_per_frame();
-            auto packet_most_recent_ts = rav::WrappingUint32(ts + num_frames - 1);
+            const auto num_frames = static_cast<uint32_t>(rtp_packet->data_len) / reader.audio_format.bytes_per_frame();
+            auto packet_most_recent_ts = rav::WrappingUint32(rtp_packet->timestamp + num_frames - 1);
             if (reader.most_recent_ts && packet_most_recent_ts > *reader.most_recent_ts) {
                 reader.most_recent_ts = packet_most_recent_ts;
             } else {
@@ -317,7 +315,7 @@ void do_realtime_maintenance(rav::rtp::Receiver3::Reader& reader) {
             if (packet_timestamp + stream.packet_time_frames <= reader.next_ts_to_read) {
                 // RAV_WARNING("Packet too late: seq={}, ts={}", packet->seq, packet->timestamp);
                 TRACY_MESSAGE("Packet too late - skipping");
-                if (!stream.packets_too_old.push(seq)) {
+                if (!stream.packets_too_old.push(rtp_packet->seq)) {
                     RAV_ERROR("Packet not enqueued to packets_too_old");
                 }
                 continue;
@@ -325,17 +323,19 @@ void do_realtime_maintenance(rav::rtp::Receiver3::Reader& reader) {
 
             // Determine whether part of the packet is too old
             if (packet_timestamp < reader.next_ts_to_read) {
-                RAV_WARNING("Packet partly too late: seq={}, ts={}", seq, ts);
+                RAV_WARNING("Packet partly too late: seq={}, ts={}", rtp_packet->seq, rtp_packet->timestamp);
                 TRACY_MESSAGE("Packet partly too late - not skipping");
-                if (!stream.packets_too_old.push(seq)) {
+                if (!stream.packets_too_old.push(rtp_packet->seq)) {
                     RAV_ERROR("Packet not enqueued to packets_too_old");
                 }
                 // Still process the packet since it contains data that is not outdated
             }
 
-            reader.receive_buffer.clear_until(ts);
+            reader.receive_buffer.clear_until(rtp_packet->timestamp);
 
-            if (!reader.receive_buffer.write(ts, payload)) {
+            if (!reader.receive_buffer.write(
+                    rtp_packet->timestamp, {rtp_packet->payload.data(), rtp_packet->data_len}
+                )) {
                 RAV_ERROR("Packet not written to buffer");
             }
         }
@@ -627,6 +627,17 @@ void rav::rtp::Receiver3::read_incoming_packets() {
             continue;  // Invalid RTP packet
         }
 
+        const auto payload = view.payload_data();
+        if (payload.size_bytes() == 0) {
+            RAV_WARNING("Received packet with empty payload");
+            return;
+        }
+
+        if (payload.size_bytes() > std::numeric_limits<uint16_t>::max()) {
+            RAV_WARNING("Payload size exceeds maximum size");
+            return;
+        }
+
         for (auto& reader : readers) {
             const auto reader_guard = reader.rw_lock.try_lock_shared();
             if (!reader_guard) {
@@ -656,8 +667,11 @@ void rav::rtp::Receiver3::read_incoming_packets() {
                     stream.prev_packet_time_ns = recv_time;
                 }
 
-                PacketBuffer packet;
-                std::memcpy(packet.data(), receive_buffer.data(), bytes_received);
+                PacketBuffer packet{};
+                packet.timestamp = view.timestamp();
+                packet.seq = view.sequence_number();
+                packet.data_len = static_cast<uint16_t>(payload.size_bytes());
+                std::memcpy(packet.payload.data(), payload.data(), payload.size_bytes());
 
                 auto state = stream.state.load(std::memory_order_relaxed);
                 if (state != StreamState::no_consumer && !stream.packets.push(packet)) {

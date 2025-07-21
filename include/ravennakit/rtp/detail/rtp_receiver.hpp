@@ -47,8 +47,14 @@ struct Receiver3 {
     /// systems we go a bit higher. Note that this number is not the same as the delay or added latency.
     static constexpr uint32_t k_buffer_size_ms = 200;
 
-    using PacketBuffer = std::array<uint8_t, aes67::constants::k_mtu>;
     using ArrayOfAddresses = std::array<ip_address_v4, k_max_num_redundant_sessions>;
+
+    struct PacketBuffer {
+        uint32_t timestamp;
+        uint16_t seq;
+        uint16_t data_len;
+        std::array<uint8_t, aes67::constants::k_max_payload> payload;
+    };
 
     struct StreamInfo {
         Session session;
