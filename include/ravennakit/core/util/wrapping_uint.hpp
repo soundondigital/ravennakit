@@ -208,11 +208,22 @@ class WrappingUint {
      * @return The difference between the two sequence numbers.
      */
     [[nodiscard]] std::make_signed_t<T> diff(const WrappingUint& other) const {
+        return diff(other.value_);
+    }
+
+    /**
+     * Calculates the difference between two sequence numbers, taking into account wraparound.
+     * The value will be positive if the other sequence number is newer than this one, and negative if this one is
+     * newer.
+     * @param other The other sequence number.
+     * @return The difference between the two sequence numbers.
+     */
+    [[nodiscard]] std::make_signed_t<T> diff(T other) const {
         // 1 -> 0
-        if (is_older_than(other.value_, value_)) {
-            return static_cast<std::make_signed_t<T>>(value_ - other.value_) * -1;
+        if (is_older_than(other, value_)) {
+            return static_cast<std::make_signed_t<T>>(value_ - other) * -1;
         }
-        return static_cast<std::make_signed_t<T>>(other.value_ - value_);
+        return static_cast<std::make_signed_t<T>>(other - value_);
     }
 
   private:
