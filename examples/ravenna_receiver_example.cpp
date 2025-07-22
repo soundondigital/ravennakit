@@ -203,7 +203,7 @@ class RavennaReceiverExample: public rav::RavennaReceiver::Subscriber, public ra
         }
     }
 
-    void ravenna_receiver_parameters_updated(const rav::rtp::Receiver3::ReaderParameters& parameters) override {
+    void ravenna_receiver_parameters_updated(const rav::rtp::AudioReceiver::ReaderParameters& parameters) override {
         if (parameters.streams.empty()) {
             RAV_WARNING("No streams available");
             return;

@@ -15,7 +15,7 @@
 #include "ravennakit/core/util/id.hpp"
 #include "ravennakit/nmos/nmos_node.hpp"
 #include "ravennakit/nmos/models/nmos_receiver_audio.hpp"
-#include "ravennakit/rtp/detail/rtp_receiver.hpp"
+#include "ravennakit/rtp/detail/rtp_audio_receiver.hpp"
 #include "ravennakit/sdp/sdp_session_description.hpp"
 
 namespace rav {
@@ -52,7 +52,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
          * Called when the stream has changed.
          * @param parameters The stream parameters.
          */
-        virtual void ravenna_receiver_parameters_updated(const rtp::Receiver3::ReaderParameters& parameters) {
+        virtual void ravenna_receiver_parameters_updated(const rtp::AudioReceiver::ReaderParameters& parameters) {
             std::ignore = parameters;
         }
 
@@ -73,7 +73,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
          * @param state The new state of the receiver.
          */
         virtual void ravenna_receiver_stream_state_updated(
-            const rtp::Receiver3::StreamInfo& stream_info, const rtp::Receiver3::StreamState state
+            const rtp::AudioReceiver::StreamInfo& stream_info, const rtp::AudioReceiver::StreamState state
         ) {
             std::ignore = stream_info;
             std::ignore = state;
@@ -116,7 +116,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
         }
     };
 
-    explicit RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::Receiver3& receiver3, Id id);
+    explicit RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::AudioReceiver& receiver3, Id id);
     ~RavennaReceiver() override;
 
     RavennaReceiver(const RavennaReceiver&) = delete;
@@ -246,15 +246,15 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
 
   private:
     RavennaRtspClient& rtsp_client_;
-    rtp::Receiver3& rtp_receiver_;
+    rtp::AudioReceiver& rtp_receiver_;
     nmos::Node* nmos_node_ {nullptr};
     const Id id_;
     Configuration configuration_;
     NetworkInterfaceConfig network_interface_config_;
     nmos::ReceiverAudio nmos_receiver_;
     SubscriberList<Subscriber> subscribers_;
-    rtp::Receiver3::ReaderParameters reader_parameters_;
-    std::array<rtp::Receiver3::StreamState, rtp::Receiver3::k_max_num_redundant_sessions> streams_states_{};
+    rtp::AudioReceiver::ReaderParameters reader_parameters_;
+    std::array<rtp::AudioReceiver::StreamState, rtp::AudioReceiver::k_max_num_redundant_sessions> streams_states_{};
     Throttle<void> stats_throttle_ {std::chrono::seconds(1)};
 
     void handle_announced_sdp(const sdp::SessionDescription& sdp);
@@ -267,7 +267,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
  * @param sdp The SDP to create the parameters from.
  * @return The rtp receiver parameters, or an error message if the SDP is invalid.
  */
-tl::expected<rtp::Receiver3::ReaderParameters, std::string>
+tl::expected<rtp::AudioReceiver::ReaderParameters, std::string>
 create_rtp_receiver_parameters(const sdp::SessionDescription& sdp);
 
 void tag_invoke(

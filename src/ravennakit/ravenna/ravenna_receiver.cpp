@@ -39,9 +39,9 @@ bool is_connection_info_valid(const rav::sdp::ConnectionInfoField& conn) {
     return true;
 }
 
-rav::rtp::Receiver3::ArrayOfAddresses
+rav::rtp::AudioReceiver::ArrayOfAddresses
 get_array_of_addresses_from_network_config(const rav::NetworkInterfaceConfig& config) {
-    rav::rtp::Receiver3::ArrayOfAddresses interfaces;
+    rav::rtp::AudioReceiver::ArrayOfAddresses interfaces;
     for (const auto& [rank, addr] : config.get_interface_ipv4_addresses()) {
         if (rank.value() < interfaces.size()) {
             interfaces[rank.value()] = addr;
@@ -50,7 +50,7 @@ get_array_of_addresses_from_network_config(const rav::NetworkInterfaceConfig& co
     return interfaces;
 }
 
-tl::expected<rav::rtp::Receiver3::StreamInfo, std::string> create_stream_from_media_description(
+tl::expected<rav::rtp::AudioReceiver::StreamInfo, std::string> create_stream_from_media_description(
     const rav::sdp::MediaDescription& media_description, const rav::sdp::SessionDescription& sdp,
     const rav::AudioFormat& audio_format
 ) {
@@ -131,7 +131,7 @@ tl::expected<rav::rtp::Receiver3::StreamInfo, std::string> create_stream_from_me
         }
     }
 
-    rav::rtp::Receiver3::StreamInfo stream_info;
+    rav::rtp::AudioReceiver::StreamInfo stream_info;
     stream_info.session = session;
     stream_info.filter = filter;
     stream_info.packet_time_frames = packet_time_frames;
@@ -215,7 +215,7 @@ void rav::RavennaReceiver::do_maintenance() {
     // Update stream stats
     if (stats_throttle_.update()) {
         for (size_t i = 0; i < streams_states_.size(); ++i) {
-            if (streams_states_[i] != rtp::Receiver3::StreamState::inactive) {
+            if (streams_states_[i] != rtp::AudioReceiver::StreamState::inactive) {
                 if (auto stats = rtp_receiver_.get_packet_stats(id_, i)) {
                     for (auto* subscriber : subscribers_) {
                         subscriber->ravenna_receiver_stream_stats_updated(id_, i, *stats);
@@ -226,7 +226,7 @@ void rav::RavennaReceiver::do_maintenance() {
     }
 }
 
-rav::RavennaReceiver::RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::Receiver3& receiver3, const Id id) :
+rav::RavennaReceiver::RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::AudioReceiver& receiver3, const Id id) :
     rtsp_client_(rtsp_client), rtp_receiver_(receiver3), id_(id) {
     nmos_receiver_.id = boost::uuids::random_generator()();
 
@@ -363,7 +363,7 @@ tl::expected<void, std::string> rav::RavennaReceiver::set_configuration(Configur
     configuration_ = std::move(config);
 
     auto parameters = create_rtp_receiver_parameters(configuration_.sdp);
-    auto new_parameters = parameters.has_value() ? *parameters : rtp::Receiver3::ReaderParameters {};
+    auto new_parameters = parameters.has_value() ? *parameters : rtp::AudioReceiver::ReaderParameters {};
 
     if (std::exchange(reader_parameters_, new_parameters) != new_parameters) {
         do_stop_start = true;
@@ -476,9 +476,9 @@ void rav::RavennaReceiver::set_network_interface_config(NetworkInterfaceConfig n
     }
 }
 
-tl::expected<rav::rtp::Receiver3::ReaderParameters, std::string>
+tl::expected<rav::rtp::AudioReceiver::ReaderParameters, std::string>
 rav::create_rtp_receiver_parameters(const sdp::SessionDescription& sdp) {
-    rtp::Receiver3::ReaderParameters parameters;
+    rtp::AudioReceiver::ReaderParameters parameters;
 
     RAV_ASSERT(!parameters.streams.empty(), "There should at least be one stream");
 

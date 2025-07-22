@@ -56,7 +56,7 @@ TEST_CASE("rav::RavennaReceiver") {
         REQUIRE(parameters->streams[0].session.rtp_port == 5004);
         REQUIRE(parameters->streams[0].session.rtcp_port == 5005);
         REQUIRE(parameters->streams[0].packet_time_frames == 48);
-        REQUIRE(parameters->streams[1] == rav::rtp::Receiver3::StreamInfo());
+        REQUIRE(parameters->streams[1] == rav::rtp::AudioReceiver::StreamInfo());
     }
 
     SECTION("Create audio receiver parameters from Lawo SDP") {
@@ -138,7 +138,7 @@ TEST_CASE("rav::RavennaReceiver") {
         rav::RavennaBrowser ravenna_browser(io_context);
         rav::RavennaRtspClient rtsp_client(io_context, ravenna_browser);
         rav::UdpReceiver udp_receiver(io_context);
-        rav::rtp::Receiver3 rtp_receiver(io_context);
+        rav::rtp::AudioReceiver rtp_receiver(io_context);
         rav::RavennaReceiver receiver(rtsp_client, rtp_receiver, rav::Id(1));
         REQUIRE(receiver.set_configuration(config));
         rav::test_ravenna_receiver_json(receiver, receiver.to_boost_json());
@@ -165,7 +165,7 @@ TEST_CASE("rav::RavennaReceiver") {
         rav::RavennaBrowser ravenna_browser(io_context);
         rav::RavennaRtspClient rtsp_client(io_context, ravenna_browser);
         rav::UdpReceiver udp_receiver(io_context);
-        rav::rtp::Receiver3 rtp_receiver(io_context);
+        rav::rtp::AudioReceiver rtp_receiver(io_context);
         rav::RavennaReceiver receiver(rtsp_client, rtp_receiver, rav::Id(1));
         REQUIRE(receiver.set_configuration(config));
         const auto receiver_json = receiver.to_boost_json();

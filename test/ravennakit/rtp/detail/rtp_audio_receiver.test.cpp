@@ -8,7 +8,7 @@
  * Copyright (c) 2025 Owllab. All rights reserved.
  */
 
-#include "ravennakit/rtp/detail/rtp_receiver.hpp"
+#include "ravennakit/rtp/detail/rtp_audio_receiver.hpp"
 #include "ravennakit/core/net/interfaces/network_interface_list.hpp"
 #include "ravennakit/core/util/defer.hpp"
 
@@ -31,7 +31,7 @@ using MulticastMembershipChangesVector =
     return result;
 }
 
-void setup_receiver_multicast_hooks(rav::rtp::Receiver3& receiver, MulticastMembershipChangesVector& changes) {
+void setup_receiver_multicast_hooks(rav::rtp::AudioReceiver& receiver, MulticastMembershipChangesVector& changes) {
     receiver.join_multicast_group = [&changes](
                                         const boost::asio::ip::udp::socket& socket,
                                         const boost::asio::ip::address_v4& multicast_group,
@@ -52,7 +52,7 @@ void setup_receiver_multicast_hooks(rav::rtp::Receiver3& receiver, MulticastMemb
     };
 }
 
-[[nodiscard]] size_t count_valid_readers(rav::rtp::Receiver3& receiver) {
+[[nodiscard]] size_t count_valid_readers(rav::rtp::AudioReceiver& receiver) {
     size_t count = 0;
     for (auto& reader : receiver.readers) {
         if (reader.id.is_valid()) {
@@ -62,7 +62,7 @@ void setup_receiver_multicast_hooks(rav::rtp::Receiver3& receiver, MulticastMemb
     return count;
 }
 
-[[nodiscard]] size_t count_open_sockets(rav::rtp::Receiver3& receiver) {
+[[nodiscard]] size_t count_open_sockets(rav::rtp::AudioReceiver& receiver) {
     size_t count = 0;
     for (auto& socket : receiver.sockets) {
         if (socket.socket.is_open()) {
@@ -78,24 +78,24 @@ TEST_CASE("rav::rtp::Receiver") {
     boost::asio::io_context io_context;
 
     SECTION("Test bounds") {
-        REQUIRE(rav::rtp::Receiver3::k_max_num_readers >= 1);
-        REQUIRE(rav::rtp::Receiver3::k_max_num_redundant_sessions >= 1);
+        REQUIRE(rav::rtp::AudioReceiver::k_max_num_readers >= 1);
+        REQUIRE(rav::rtp::AudioReceiver::k_max_num_redundant_sessions >= 1);
         REQUIRE(
-            rav::rtp::Receiver3::k_max_num_sessions
-            == rav::rtp::Receiver3::k_max_num_readers * rav::rtp::Receiver3::k_max_num_redundant_sessions
+            rav::rtp::AudioReceiver::k_max_num_sessions
+            == rav::rtp::AudioReceiver::k_max_num_readers * rav::rtp::AudioReceiver::k_max_num_redundant_sessions
         );
     }
 
     SECTION("Initial state") {
-        auto receiver = std::make_unique<rav::rtp::Receiver3>(io_context);
+        auto receiver = std::make_unique<rav::rtp::AudioReceiver>(io_context);
 
         // Sockets
-        REQUIRE(decltype(receiver->sockets)::capacity() == rav::rtp::Receiver3::k_max_num_sessions);
-        REQUIRE(receiver->sockets.size() == rav::rtp::Receiver3::k_max_num_sessions);
+        REQUIRE(decltype(receiver->sockets)::capacity() == rav::rtp::AudioReceiver::k_max_num_sessions);
+        REQUIRE(receiver->sockets.size() == rav::rtp::AudioReceiver::k_max_num_sessions);
 
         // Streams
-        REQUIRE(decltype(receiver->readers)::capacity() == rav::rtp::Receiver3::k_max_num_readers);
-        REQUIRE(receiver->readers.size() == rav::rtp::Receiver3::k_max_num_readers);
+        REQUIRE(decltype(receiver->readers)::capacity() == rav::rtp::AudioReceiver::k_max_num_readers);
+        REQUIRE(receiver->readers.size() == rav::rtp::AudioReceiver::k_max_num_readers);
     }
 
     SECTION("Binding a UDP socket to the any address") {
@@ -205,19 +205,19 @@ TEST_CASE("rav::rtp::Receiver") {
         const auto src_addr = boost::asio::ip::make_address_v4("192.168.1.1");
         const auto interface_address = boost::asio::ip::address_v4::loopback();
 
-        rav::rtp::Receiver3::ArrayOfAddresses interface_addresses {interface_address};
+        rav::rtp::AudioReceiver::ArrayOfAddresses interface_addresses {interface_address};
 
-        auto receiver = std::make_unique<rav::rtp::Receiver3>(io_context);
+        auto receiver = std::make_unique<rav::rtp::AudioReceiver>(io_context);
         MulticastMembershipChangesVector multicast_group_membership_changes;
         setup_receiver_multicast_hooks(*receiver, multicast_group_membership_changes);
         receiver->set_interfaces(interface_addresses);
 
-        rav::rtp::Receiver3::StreamInfo stream {
+        rav::rtp::AudioReceiver::StreamInfo stream {
             rav::rtp::Session {multicast_addr, 5004, 5005},
             rav::rtp::Filter {multicast_addr, src_addr, rav::sdp::FilterMode::include},
         };
 
-        rav::rtp::Receiver3::ReaderParameters parameters {audio_format, {stream}};
+        rav::rtp::AudioReceiver::ReaderParameters parameters {audio_format, {stream}};
         parameters.streams[0] = stream;
 
         auto result = receiver->add_reader(rav::Id(1), parameters, interface_addresses);
@@ -245,7 +245,7 @@ TEST_CASE("rav::rtp::Receiver") {
     }
 
     SECTION("Add and remove streams") {
-        auto receiver = std::make_unique<rav::rtp::Receiver3>(io_context);
+        auto receiver = std::make_unique<rav::rtp::AudioReceiver>(io_context);
 
         const auto multicast_addr_pri = boost::asio::ip::make_address_v4("239.0.0.1");
         const auto multicast_addr_sec = boost::asio::ip::make_address_v4("239.0.0.2");
@@ -256,21 +256,21 @@ TEST_CASE("rav::rtp::Receiver") {
         const auto interface_address_pri = boost::asio::ip::make_address_v4("192.168.1.3");
         const auto interface_address_sec = boost::asio::ip::make_address_v4("192.168.1.4");
 
-        rav::rtp::Receiver3::StreamInfo stream_pri {
+        rav::rtp::AudioReceiver::StreamInfo stream_pri {
             rav::rtp::Session {multicast_addr_pri, 5004, 5005},
             rav::rtp::Filter {multicast_addr_pri, src_addr_pri, rav::sdp::FilterMode::include},
             48,
         };
 
-        rav::rtp::Receiver3::StreamInfo stream_sec {
+        rav::rtp::AudioReceiver::StreamInfo stream_sec {
             rav::rtp::Session {multicast_addr_sec, 5004, 5005},
             rav::rtp::Filter {multicast_addr_sec, src_addr_sec, rav::sdp::FilterMode::include},
             48,
         };
 
-        rav::rtp::Receiver3::ReaderParameters parameters {audio_format, {stream_pri, stream_sec}};
+        rav::rtp::AudioReceiver::ReaderParameters parameters {audio_format, {stream_pri, stream_sec}};
 
-        rav::rtp::Receiver3::ArrayOfAddresses interface_addresses {
+        rav::rtp::AudioReceiver::ArrayOfAddresses interface_addresses {
             interface_address_pri,
             interface_address_sec,
         };
@@ -368,7 +368,7 @@ TEST_CASE("rav::rtp::Receiver") {
     }
 
     SECTION("Set interfaces") {
-        auto receiver = std::make_unique<rav::rtp::Receiver3>(io_context);
+        auto receiver = std::make_unique<rav::rtp::AudioReceiver>(io_context);
 
         const auto multicast_addr_pri = boost::asio::ip::make_address_v4("239.0.0.1");
         const auto multicast_addr_sec = boost::asio::ip::make_address_v4("239.0.0.2");
@@ -376,21 +376,21 @@ TEST_CASE("rav::rtp::Receiver") {
         const auto interface_address_pri = boost::asio::ip::make_address_v4("192.168.1.1");
         const auto interface_address_sec = boost::asio::ip::make_address_v4("192.168.1.2");
 
-        rav::rtp::Receiver3::StreamInfo stream_pri {
+        rav::rtp::AudioReceiver::StreamInfo stream_pri {
             rav::rtp::Session {multicast_addr_pri, 5004, 5005},
             rav::rtp::Filter {multicast_addr_pri},
             48,
         };
 
-        rav::rtp::Receiver3::StreamInfo stream_sec {
+        rav::rtp::AudioReceiver::StreamInfo stream_sec {
             rav::rtp::Session {multicast_addr_sec, 5004, 5005},
             rav::rtp::Filter {multicast_addr_sec},
             48,
         };
 
-        rav::rtp::Receiver3::ReaderParameters parameters {audio_format, {stream_pri, stream_sec}};
+        rav::rtp::AudioReceiver::ReaderParameters parameters {audio_format, {stream_pri, stream_sec}};
 
-        rav::rtp::Receiver3::ArrayOfAddresses interface_addresses {
+        rav::rtp::AudioReceiver::ArrayOfAddresses interface_addresses {
             interface_address_pri,
             interface_address_sec,
         };
@@ -442,16 +442,16 @@ TEST_CASE("rav::rtp::Receiver") {
         const auto src_addr = boost::asio::ip::make_address_v4("192.168.1.1");
         const auto interface_address = boost::asio::ip::address_v4::loopback();
 
-        rav::rtp::Receiver3::ArrayOfAddresses interface_addresses {interface_address};
+        rav::rtp::AudioReceiver::ArrayOfAddresses interface_addresses {interface_address};
 
-        auto receiver = std::make_unique<rav::rtp::Receiver3>(io_context);
+        auto receiver = std::make_unique<rav::rtp::AudioReceiver>(io_context);
 
-        rav::rtp::Receiver3::StreamInfo stream {
+        rav::rtp::AudioReceiver::StreamInfo stream {
             rav::rtp::Session {multicast_addr, 5004, 5005},
             rav::rtp::Filter {multicast_addr, src_addr, rav::sdp::FilterMode::include},
         };
 
-        rav::rtp::Receiver3::ReaderParameters parameters {audio_format, {stream}};
+        rav::rtp::AudioReceiver::ReaderParameters parameters {audio_format, {stream}};
         parameters.streams[0] = stream;
 
         auto result = receiver->add_reader(rav::Id(1), parameters, interface_addresses);

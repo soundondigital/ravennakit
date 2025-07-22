@@ -59,7 +59,7 @@ class StreamRecorder: public rav::RavennaReceiver::Subscriber {
         }
     }
 
-    void ravenna_receiver_parameters_updated(const rav::rtp::Receiver3::ReaderParameters& parameters) override {
+    void ravenna_receiver_parameters_updated(const rav::rtp::AudioReceiver::ReaderParameters& parameters) override {
         RAV_ASSERT_NODE_MAINTENANCE_THREAD(ravenna_node_);
 
         std::lock_guard guard(mutex_);

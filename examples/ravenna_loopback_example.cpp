@@ -27,10 +27,10 @@ constexpr uint32_t k_delay = 480;
 /// Helper class which forwards virtual calls to rav::SafeFunction.
 class RavennaReceiverSubscriber: public rav::RavennaReceiver::Subscriber {
   public:
-    rav::SafeFunction<void(const rav::rtp::Receiver3::ReaderParameters& parameters)>
+    rav::SafeFunction<void(const rav::rtp::AudioReceiver::ReaderParameters& parameters)>
         on_ravenna_receiver_parameters_updated;
 
-    void ravenna_receiver_parameters_updated(const rav::rtp::Receiver3::ReaderParameters& parameters) override {
+    void ravenna_receiver_parameters_updated(const rav::rtp::AudioReceiver::ReaderParameters& parameters) override {
         on_ravenna_receiver_parameters_updated(parameters);
     }
 };
@@ -82,7 +82,7 @@ int main(int const argc, char* argv[]) {
 
     RavennaReceiverSubscriber receiver_subscriber;
     receiver_subscriber.on_ravenna_receiver_parameters_updated =
-        [&ravenna_node, &buffer, &stream_name, &sender_id](const rav::rtp::Receiver3::ReaderParameters& parameters) {
+        [&ravenna_node, &buffer, &stream_name, &sender_id](const rav::rtp::AudioReceiver::ReaderParameters& parameters) {
             if (parameters.streams.empty()) {
                 RAV_WARNING("No streams available");
                 return;

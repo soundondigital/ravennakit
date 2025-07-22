@@ -13,16 +13,11 @@
 #include "rtp_filter.hpp"
 #include "rtp_packet_stats.hpp"
 #include "rtp_ringbuffer.hpp"
-#include "../rtcp_packet_view.hpp"
-#include "../rtp_packet_view.hpp"
 #include "rtp_session.hpp"
 #include "ravennakit/aes67/aes67_constants.hpp"
 #include "ravennakit/core/audio/audio_buffer_view.hpp"
 #include "ravennakit/core/math/sliding_stats.hpp"
 #include "ravennakit/core/net/asio/asio_helpers.hpp"
-#include "ravennakit/core/util/subscriber_list.hpp"
-#include "ravennakit/core/net/sockets/extended_udp_socket.hpp"
-#include "ravennakit/core/net/sockets/udp_receiver.hpp"
 #include "ravennakit/core/sync/atomic_rw_lock.hpp"
 #include "ravennakit/core/util/id.hpp"
 #include "ravennakit/core/util/safe_function.hpp"
@@ -33,7 +28,7 @@
 
 namespace rav::rtp {
 
-struct Receiver3 {
+struct AudioReceiver {
     static constexpr auto k_max_num_readers = 16;
     static constexpr auto k_max_num_redundant_sessions = 2;
     static constexpr auto k_max_num_sessions = k_max_num_readers * k_max_num_redundant_sessions;
@@ -177,8 +172,8 @@ struct Receiver3 {
 
     uint64_t last_time_maintenance {};
 
-    explicit Receiver3(boost::asio::io_context& io_context);
-    ~Receiver3();
+    explicit AudioReceiver(boost::asio::io_context& io_context);
+    ~AudioReceiver();
 
     /**
      * Adds a reader to the receiver.
@@ -269,6 +264,6 @@ struct Receiver3 {
 /**
  * @return A string representation of ReceiveState.
  */
-[[nodiscard]] const char* to_string(Receiver3::StreamState state);
+[[nodiscard]] const char* to_string(AudioReceiver::StreamState state);
 
 }  // namespace rav::rtp

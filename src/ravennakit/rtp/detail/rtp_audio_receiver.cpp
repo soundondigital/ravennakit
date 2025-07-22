@@ -8,11 +8,12 @@
  * Copyright (c) 2024 Owllab. All rights reserved.
  */
 
-#include "ravennakit/rtp/detail/rtp_receiver.hpp"
+#include "ravennakit/rtp/detail/rtp_audio_receiver.hpp"
 
 #include "ravennakit/core/clock.hpp"
 #include "ravennakit/core/log.hpp"
 #include "ravennakit/core/audio/audio_data.hpp"
+#include "ravennakit/core/net/sockets/extended_udp_socket.hpp"
 #include "ravennakit/rtp/rtcp_packet_view.hpp"
 #include "ravennakit/core/util/subscriber_list.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
@@ -56,7 +57,7 @@ namespace {
     return true;
 }
 
-[[nodiscard]] boost::asio::ip::udp::socket* find_socket(rav::rtp::Receiver3& receiver, const uint16_t port) {
+[[nodiscard]] boost::asio::ip::udp::socket* find_socket(rav::rtp::AudioReceiver& receiver, const uint16_t port) {
     // Try to find existing socket
     for (auto& ctx : receiver.sockets) {
         if (ctx.port == port) {
@@ -66,7 +67,8 @@ namespace {
     return nullptr;
 }
 
-[[nodiscard]] boost::asio::ip::udp::socket* find_or_create_socket(rav::rtp::Receiver3& receiver, const uint16_t port) {
+[[nodiscard]] boost::asio::ip::udp::socket*
+find_or_create_socket(rav::rtp::AudioReceiver& receiver, const uint16_t port) {
     RAV_ASSERT(port > 0, "Port should be non zero");
 
     // Try to find existing socket
@@ -97,7 +99,7 @@ namespace {
 }
 
 [[nodiscard]] uint32_t count_multicast_groups(
-    rav::rtp::Receiver3& receiver, const boost::asio::ip::address_v4& multicast_group,
+    rav::rtp::AudioReceiver& receiver, const boost::asio::ip::address_v4& multicast_group,
     const boost::asio::ip::address_v4& interface_address, const uint16_t port
 ) {
     RAV_ASSERT(multicast_group.is_multicast(), "Multicast group should be a multicast address");
@@ -124,8 +126,9 @@ namespace {
 }
 
 [[nodiscard]] bool setup_reader(
-    rav::rtp::Receiver3& receiver, rav::rtp::Receiver3::Reader& reader, const rav::Id id,
-    const rav::rtp::Receiver3::ReaderParameters& parameters, const rav::rtp::Receiver3::ArrayOfAddresses& interfaces
+    rav::rtp::AudioReceiver& receiver, rav::rtp::AudioReceiver::Reader& reader, const rav::Id id,
+    const rav::rtp::AudioReceiver::ReaderParameters& parameters,
+    const rav::rtp::AudioReceiver::ArrayOfAddresses& interfaces
 ) {
     RAV_ASSERT(parameters.streams.size() == interfaces.size(), "Unequal size");
     RAV_ASSERT(parameters.audio_format.is_valid(), "Invalid format");
@@ -156,9 +159,9 @@ namespace {
     RAV_ASSERT(bytes_per_frame > 0, "bytes_per_frame must be greater than 0");
 
     const auto buffer_size_frames =
-        std::max(reader.audio_format.sample_rate * rav::rtp::Receiver3::k_buffer_size_ms / 1000, 1024u);
+        std::max(reader.audio_format.sample_rate * rav::rtp::AudioReceiver::k_buffer_size_ms / 1000, 1024u);
     reader.receive_buffer.resize(
-        reader.audio_format.sample_rate * rav::rtp::Receiver3::k_buffer_size_ms / 1000, bytes_per_frame
+        reader.audio_format.sample_rate * rav::rtp::AudioReceiver::k_buffer_size_ms / 1000, bytes_per_frame
     );
 
     reader.read_audio_data_buffer.resize(buffer_size_frames * bytes_per_frame);
@@ -203,7 +206,7 @@ namespace {
 
 /// Leaves given multicast group if last.
 [[nodiscard]] bool leave_multicast_group_if_last(
-    rav::rtp::Receiver3& receiver, const boost::asio::ip::address_v4& multicast_address,
+    rav::rtp::AudioReceiver& receiver, const boost::asio::ip::address_v4& multicast_address,
     const boost::asio::ip::address_v4& interface_address, const uint16_t port
 ) {
     RAV_ASSERT(multicast_address.is_multicast(), "Expecting multicast address to be a multicast address");
@@ -233,7 +236,7 @@ namespace {
     return true;
 }
 
-size_t count_num_sessions_using_rtp_port(rav::rtp::Receiver3& receiver, const uint16_t port) {
+size_t count_num_sessions_using_rtp_port(rav::rtp::AudioReceiver& receiver, const uint16_t port) {
     RAV_ASSERT(port > 0, "A valid port must be given, otherwise empty sessions will be counted as well");
     size_t count = 0;
     for (auto& reader : receiver.readers) {
@@ -246,7 +249,7 @@ size_t count_num_sessions_using_rtp_port(rav::rtp::Receiver3& receiver, const ui
     return count;
 }
 
-void close_unused_sockets(rav::rtp::Receiver3& receiver) {
+void close_unused_sockets(rav::rtp::AudioReceiver& receiver) {
     for (auto& socket : receiver.sockets) {
         if (!socket.socket.is_open()) {
             continue;
@@ -272,13 +275,13 @@ void close_unused_sockets(rav::rtp::Receiver3& receiver) {
     }
 }
 
-void do_realtime_maintenance(rav::rtp::Receiver3::Reader& reader) {
+void do_realtime_maintenance(rav::rtp::AudioReceiver::Reader& reader) {
     TRACY_ZONE_SCOPED;
 
     RAV_ASSERT(reader.rw_lock.is_locked_shared(), "Reader must be shared locked");
 
     for (auto& stream : reader.streams) {
-        if (stream.state.load(std::memory_order_relaxed) == rav::rtp::Receiver3::StreamState::no_consumer) {
+        if (stream.state.load(std::memory_order_relaxed) == rav::rtp::AudioReceiver::StreamState::no_consumer) {
             stream.packets.pop_all();
             stream.packets_too_old.pop_all();
             continue;
@@ -341,7 +344,7 @@ void do_realtime_maintenance(rav::rtp::Receiver3::Reader& reader) {
 }
 
 std::optional<uint32_t> read_data_from_reader_realtime(
-    rav::rtp::Receiver3::Reader& reader, uint8_t* buffer, const size_t buffer_size,
+    rav::rtp::AudioReceiver::Reader& reader, uint8_t* buffer, const size_t buffer_size,
     const std::optional<uint32_t> at_timestamp, const std::optional<uint32_t> require_delay
 ) {
     TRACY_ZONE_SCOPED;
@@ -380,15 +383,15 @@ std::optional<uint32_t> read_data_from_reader_realtime(
     return read_at;
 }
 
-void update_stream_active_state(rav::rtp::Receiver3::StreamContext& stream, const uint64_t now) {
-    if ((stream.prev_packet_time_ns + rav::rtp::Receiver3::k_receive_timeout_ms * 1'000'000).value() < now) {
-        stream.state.store(rav::rtp::Receiver3::StreamState::inactive, std::memory_order_relaxed);
+void update_stream_active_state(rav::rtp::AudioReceiver::StreamContext& stream, const uint64_t now) {
+    if ((stream.prev_packet_time_ns + rav::rtp::AudioReceiver::k_receive_timeout_ms * 1'000'000).value() < now) {
+        stream.state.store(rav::rtp::AudioReceiver::StreamState::inactive, std::memory_order_relaxed);
     }
 }
 
 }  // namespace
 
-void rav::rtp::Receiver3::StreamContext::reset() {
+void rav::rtp::AudioReceiver::StreamContext::reset() {
     session = {};
     filter = {};
     interface = {};
@@ -400,7 +403,7 @@ void rav::rtp::Receiver3::StreamContext::reset() {
     prev_packet_time_ns = {};
 }
 
-void rav::rtp::Receiver3::Reader::reset() {
+void rav::rtp::AudioReceiver::Reader::reset() {
     id = {};
     audio_format = {};
     for (auto& stream : streams) {
@@ -414,7 +417,7 @@ void rav::rtp::Receiver3::Reader::reset() {
     next_ts_to_read = {};
 }
 
-rav::rtp::Receiver3::Receiver3(boost::asio::io_context& io_context) {
+rav::rtp::AudioReceiver::AudioReceiver(boost::asio::io_context& io_context) {
     join_multicast_group = [](boost::asio::ip::udp::socket& socket, const boost::asio::ip::address_v4& multicast_group,
                               const boost::asio::ip::address_v4& interface_address) {
         RAV_ASSERT(socket.is_open(), "Socket should be open");
@@ -464,7 +467,7 @@ rav::rtp::Receiver3::Receiver3(boost::asio::io_context& io_context) {
     }
 }
 
-rav::rtp::Receiver3::~Receiver3() {
+rav::rtp::AudioReceiver::~AudioReceiver() {
     for (auto& reader : readers) {
         RAV_ASSERT(!reader.id.is_valid(), "There should be no active readers at this point");
     }
@@ -473,7 +476,7 @@ rav::rtp::Receiver3::~Receiver3() {
     }
 }
 
-void rav::rtp::Receiver3::set_interfaces(const ArrayOfAddresses& interfaces) {
+void rav::rtp::AudioReceiver::set_interfaces(const ArrayOfAddresses& interfaces) {
     for (auto& reader : readers) {
         RAV_ASSERT(interfaces.size() == reader.streams.size(), "Size mismatch");
 
@@ -515,7 +518,7 @@ void rav::rtp::Receiver3::set_interfaces(const ArrayOfAddresses& interfaces) {
     close_unused_sockets(*this);
 }
 
-bool rav::rtp::Receiver3::add_reader(
+bool rav::rtp::AudioReceiver::add_reader(
     const Id id, const ReaderParameters& parameters, const ArrayOfAddresses& interfaces
 ) {
     RAV_ASSERT(parameters.streams.size() == interfaces.size(), "Should be equal");
@@ -544,7 +547,7 @@ bool rav::rtp::Receiver3::add_reader(
     return false;
 }
 
-bool rav::rtp::Receiver3::remove_reader(const Id id) {
+bool rav::rtp::AudioReceiver::remove_reader(const Id id) {
     for (auto& reader : readers) {
         if (reader.id == id) {
             const auto guard = reader.rw_lock.lock_exclusive();
@@ -571,7 +574,7 @@ bool rav::rtp::Receiver3::remove_reader(const Id id) {
     return false;
 }
 
-void rav::rtp::Receiver3::read_incoming_packets() {
+void rav::rtp::AudioReceiver::read_incoming_packets() {
     TRACY_ZONE_SCOPED;
 
     const auto now = clock::now_monotonic_high_resolution_ns();
@@ -713,7 +716,7 @@ void rav::rtp::Receiver3::read_incoming_packets() {
     }
 }
 
-std::optional<uint32_t> rav::rtp::Receiver3::read_data_realtime(
+std::optional<uint32_t> rav::rtp::AudioReceiver::read_data_realtime(
     const Id id, uint8_t* buffer, const size_t buffer_size, const std::optional<uint32_t> at_timestamp,
     const std::optional<uint32_t> require_delay
 ) {
@@ -734,7 +737,7 @@ std::optional<uint32_t> rav::rtp::Receiver3::read_data_realtime(
     return std::nullopt;
 }
 
-std::optional<uint32_t> rav::rtp::Receiver3::read_audio_data_realtime(
+std::optional<uint32_t> rav::rtp::AudioReceiver::read_audio_data_realtime(
     const Id id, AudioBufferView<float> output_buffer, const std::optional<uint32_t> at_timestamp,
     const std::optional<uint32_t> require_delay
 ) {
@@ -810,7 +813,7 @@ std::optional<uint32_t> rav::rtp::Receiver3::read_audio_data_realtime(
 }
 
 std::optional<rav::rtp::PacketStats::Counters>
-rav::rtp::Receiver3::get_packet_stats(const Id reader_id, const size_t stream_index) {
+rav::rtp::AudioReceiver::get_packet_stats(const Id reader_id, const size_t stream_index) {
     for (auto& reader : readers) {
         if (reader.id != reader_id) {
             continue;
@@ -831,8 +834,8 @@ rav::rtp::Receiver3::get_packet_stats(const Id reader_id, const size_t stream_in
     return std::nullopt;
 }
 
-std::optional<rav::rtp::Receiver3::StreamState>
-rav::rtp::Receiver3::get_stream_state(const Id reader_id, const size_t stream_index) const {
+std::optional<rav::rtp::AudioReceiver::StreamState>
+rav::rtp::AudioReceiver::get_stream_state(const Id reader_id, const size_t stream_index) const {
     for (auto& reader : readers) {
         if (reader.id == reader_id) {
             if (stream_index >= reader.streams.size()) {
@@ -846,13 +849,13 @@ rav::rtp::Receiver3::get_stream_state(const Id reader_id, const size_t stream_in
     return {};
 }
 
-const char* rav::rtp::to_string(const Receiver3::StreamState state) {
+const char* rav::rtp::to_string(const AudioReceiver::StreamState state) {
     switch (state) {
-        case Receiver3::StreamState::inactive:
+        case AudioReceiver::StreamState::inactive:
             return "inactive";
-        case Receiver3::StreamState::receiving:
+        case AudioReceiver::StreamState::receiving:
             return "receiving";
-        case Receiver3::StreamState::no_consumer:
+        case AudioReceiver::StreamState::no_consumer:
             return "ok_no_consumer";
     }
     return "n/a";
