@@ -22,8 +22,9 @@
 #include <utility>
 
 namespace {
-constexpr int k_block_size = 32;
-constexpr uint32_t k_delay = 240;  // Delay should at least be 2 times k_block_size
+constexpr int k_block_size = 32;   // Frames
+constexpr uint32_t k_delay = 240;  // Frames
+static_assert(k_delay > k_block_size * 2, "Delay should at least be 2 block sizes");
 
 void portaudio_iterate_devices(const std::function<bool(PaDeviceIndex index, const PaDeviceInfo&)>& callback) {
     const auto num_devices = Pa_GetDeviceCount();
@@ -282,7 +283,6 @@ class RavennaReceiverExample: public rav::RavennaReceiver::Subscriber, public ra
         }
 
         return paContinue;
-
     }
 
     static int stream_callback(
