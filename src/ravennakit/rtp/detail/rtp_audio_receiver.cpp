@@ -23,19 +23,6 @@
 #include <fmt/core.h>
 #include <utility>
 
-#if RAV_APPLE
-    #define IP_RECVDSTADDR_PKTINFO IP_RECVDSTADDR
-#else
-    #define IP_RECVDSTADDR_PKTINFO IP_PKTINFO
-#endif
-
-#if RAV_WINDOWS
-typedef BOOL(PASCAL* LPFN_WSARECVMSG)(
-    SOCKET s, LPWSAMSG lpMsg, LPDWORD lpNumberOfBytesRecvd, LPWSAOVERLAPPED lpOverlapped,
-    LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
-);
-#endif
-
 namespace {
 
 [[nodiscard]] bool setup_socket(boost::asio::ip::udp::socket& socket, const uint16_t port) {

@@ -221,26 +221,6 @@ rav::RavennaReceiver::RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::Audio
     for (auto& encoding : k_supported_encodings) {
         nmos_receiver_.caps.media_types.emplace_back(nmos::audio_encoding_to_nmos_media_type(encoding));
     }
-
-    // TODO: Reimplement:
-    // rtp_audio_receiver_.on_data_received = [this](const WrappingUint32 packet_timestamp) {
-    //     for (auto* subscriber : subscribers_) {
-    //         subscriber->on_data_received(packet_timestamp);
-    //     }
-    // };
-    //
-    // rtp_audio_receiver_.on_data_ready = [this](const WrappingUint32 packet_timestamp) {
-    //     for (auto* subscriber : subscribers_) {
-    //         subscriber->on_data_ready(packet_timestamp);
-    //     }
-    // };
-    //
-    // rtp_audio_receiver_.on_state_changed =
-    //     [this](const rtp::AudioReceiver::Stream& session, const rtp::AudioReceiver::State state) {
-    //         for (auto* subscriber : subscribers_) {
-    //             subscriber->ravenna_receiver_stream_state_updated(session, state);
-    //         }
-    //     };
 }
 
 rav::RavennaReceiver::~RavennaReceiver() {
@@ -454,11 +434,7 @@ void rav::RavennaReceiver::set_network_interface_config(NetworkInterfaceConfig n
         return;  // No change in network interface configuration
     }
     network_interface_config_ = std::move(network_interface_config);
-
     rtp_receiver_.set_interfaces(get_array_of_addresses_from_network_config(network_interface_config_));
-
-    // rtp_audio_receiver_.set_interfaces(network_interface_config_.get_interface_ipv4_addresses());
-
     if (auto ok = update_nmos(); !ok) {
         RAV_ERROR("Failed to update NMOS after setting network interface config: {}", ok.error());
     }
