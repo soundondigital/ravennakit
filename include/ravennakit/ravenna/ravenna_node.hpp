@@ -241,7 +241,7 @@ class RavennaNode {
     [[nodiscard]] std::future<std::optional<std::string>> get_sdp_text_for_receiver(Id receiver_id);
 
     /**
-     * @copydoc rtp::Receiver3::read_data_realtime
+     * @copydoc rtp::AudioReceiver::read_data_realtime
      */
     [[nodiscard]] std::optional<uint32_t> read_data_realtime(
         Id receiver_id, uint8_t* buffer, size_t buffer_size, std::optional<uint32_t> at_timestamp,
@@ -249,7 +249,7 @@ class RavennaNode {
     );
 
     /**
-     * @copydoc rtp::Receiver3::read_audio_data_realtime
+     * @copydoc rtp::AudioReceiver::read_audio_data_realtime
      */
     [[nodiscard]] std::optional<uint32_t> read_audio_data_realtime(
         Id receiver_id, const AudioBufferView<float>& output_buffer, std::optional<uint32_t> at_timestamp,
@@ -338,7 +338,6 @@ class RavennaNode {
 
   private:
     struct RealtimeSharedContext {
-        std::vector<RavennaReceiver*> receivers;
         std::vector<RavennaSender*> senders;
     };
 

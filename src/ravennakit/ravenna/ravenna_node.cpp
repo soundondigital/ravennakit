@@ -666,9 +666,6 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
 
 bool rav::RavennaNode::update_realtime_shared_context() {
     auto new_context = std::make_unique<RealtimeSharedContext>();
-    for (auto& receiver : receivers_) {
-        new_context->receivers.emplace_back(receiver.get());
-    }
     for (auto& sender : senders_) {
         new_context->senders.emplace_back(sender.get());
     }
