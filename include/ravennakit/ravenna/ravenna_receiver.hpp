@@ -93,27 +93,6 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
             std::ignore = stream_index;
             std::ignore = stats;
         }
-
-        /**
-         * Called when new data has been received.
-         * The timestamp will monotonically increase, but might have gaps because out-of-order and dropped packets.
-         * @param timestamp The timestamp of newly received the data.
-         */
-        virtual void on_data_received(const WrappingUint32 timestamp) {
-            std::ignore = timestamp;
-        }
-
-        /**
-         * Called when data is ready to be consumed.
-         * The timestamp will be the timestamp of the packet which triggered this event, minus the delay. This makes it
-         * convenient for consumers to read data from the buffer when the delay has passed. There will be no gaps in
-         * timestamp as newer packets will trigger this event for lost packets, and out of order packet (which are
-         * basically lost, not lost but late packets) will be ignored.
-         * @param timestamp The timestamp of the packet which triggered this event, ** minus the delay **.
-         */
-        virtual void on_data_ready(const WrappingUint32 timestamp) {
-            std::ignore = timestamp;
-        }
     };
 
     explicit RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::AudioReceiver& receiver3, Id id);
