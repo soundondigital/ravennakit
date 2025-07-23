@@ -83,7 +83,9 @@ rav::RavennaNode::RavennaNode() :
                 while (keep_going_.load(std::memory_order_acquire)) {
                     rtp_receiver_.read_incoming_packets();
                     rtp_sender_.send_outgoing_packets();
+#if !RAV_WINDOWS
                     std::this_thread::sleep_for(std::chrono::microseconds(100));
+#endif
                 }
                 break;
             } catch (const std::exception& e) {

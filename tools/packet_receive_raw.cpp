@@ -8,6 +8,12 @@
  * Copyright (c) 2025 Owllab. All rights reserved.
  */
 
+#include "ravennakit/core/platform.hpp"
+
+#include <iostream>
+
+#if RAV_POSIX
+
 #include "ravennakit/core/clock.hpp"
 #include "ravennakit/core/platform/apple/priority.hpp"
 #include "ravennakit/core/util/tracy.hpp"
@@ -154,3 +160,12 @@ int main() {
     close(fd);
     return 0;
 }
+
+#else
+
+int main() {
+    std::cerr << "This tool is only available on POSIX systems.\n";
+    return -1;
+}
+
+#endif
