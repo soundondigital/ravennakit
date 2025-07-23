@@ -425,13 +425,20 @@ std::future<void> rav::RavennaNode::set_network_interface_config(NetworkInterfac
         }
 
         network_interface_config_ = config;
+        const auto array_of_addresses =
+            network_interface_config_.get_array_of_interface_addresses<rtp::AudioSender::k_max_num_redundant_sessions>(
+            );
 
-        rtp_receiver_.set_interfaces(
-            network_interface_config_.get_array_of_interface_addresses<rtp::AudioSender::k_max_num_redundant_sessions>()
-        );
+        if (!rtp_receiver_.set_interfaces(array_of_addresses)) {
+            RAV_ERROR("Failed to set network interfaces on rtp receiver");
+        }
 
         for (const auto& receiver : receivers_) {
             receiver->set_network_interface_config(network_interface_config_);
+        }
+
+        if (!rtp_sender_.set_interfaces(array_of_addresses)) {
+            RAV_ERROR("Failed to set network interface on rtp sender");
         }
 
         for (const auto& sender : senders_) {

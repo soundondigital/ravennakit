@@ -463,11 +463,16 @@ rav::rtp::AudioReceiver::~AudioReceiver() {
     }
 }
 
-void rav::rtp::AudioReceiver::set_interfaces(const ArrayOfAddresses& interfaces) {
+bool rav::rtp::AudioReceiver::set_interfaces(const ArrayOfAddresses& interfaces) {
     for (auto& reader : readers) {
         RAV_ASSERT(interfaces.size() == reader.streams.size(), "Size mismatch");
 
-        // TODO: Should we lock here?
+        const auto guard = reader.rw_lock.lock_exclusive();
+        if (!guard) {
+            RAV_ERROR("Failed to exclusively lock writer");
+            return false;
+        }
+
         for (size_t i = 0; i < reader.streams.size(); i++) {
             if (reader.streams[i].interface == interfaces[i]) {
                 continue;
@@ -503,6 +508,7 @@ void rav::rtp::AudioReceiver::set_interfaces(const ArrayOfAddresses& interfaces)
     }
 
     close_unused_sockets(*this);
+    return true;
 }
 
 bool rav::rtp::AudioReceiver::add_reader(

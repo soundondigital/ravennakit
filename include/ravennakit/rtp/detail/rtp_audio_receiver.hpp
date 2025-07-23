@@ -133,7 +133,7 @@ struct AudioReceiver {
      * Sets the interfaces on all readers, leaving and joining multicast groups where necessary.
      * @param interfaces The new interfaces to use.
      */
-    void set_interfaces(const ArrayOfAddresses& interfaces);
+    [[nodiscard]] bool set_interfaces(const ArrayOfAddresses& interfaces);
 
     /**
      * Call this to read incoming packets and place the data inside a fifo for consumption. Should be called from a
