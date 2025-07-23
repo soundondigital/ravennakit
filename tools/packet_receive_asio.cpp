@@ -50,8 +50,7 @@ void handle_received_packet(State& state) {
         state.previous_packet_time.update(rav::clock::now_monotonic_high_resolution_ns());
     } else {
         if (const auto diff = state.previous_packet_time.update(rav::clock::now_monotonic_high_resolution_ns())) {
-            const auto interval = static_cast<double>(*diff) / 1'000'000;
-            TRACY_PLOT("Packet interval", interval);
+            TRACY_PLOT("Packet interval", static_cast<double>(*diff) / 1'000'000.0);
             state.max = std::max(state.max, *diff);
             state.min = std::min(state.min, *diff);
         }

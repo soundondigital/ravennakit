@@ -57,7 +57,7 @@ bool setup_writer(
         }
     }
 
-    // TODO: Implement proper SSRC generation
+    // TODO: Implement proper SSRC generation (RAV-1)
     const auto ssrc = static_cast<uint32_t>(rav::Random().get_random_int(0, std::numeric_limits<int>::max()));
 
     const auto audio_format = parameters.audio_format;

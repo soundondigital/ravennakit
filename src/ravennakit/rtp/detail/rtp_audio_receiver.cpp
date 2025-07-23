@@ -112,6 +112,32 @@ find_or_create_socket(rav::rtp::AudioReceiver& receiver, const uint16_t port) {
     return total;
 }
 
+void reset_stream_context(rav::rtp::AudioReceiver::StreamContext& stream) {
+    stream.session = {};
+    stream.filter = {};
+    stream.interface = {};
+    stream.packets.reset();
+    stream.packets_too_old.reset();
+    stream.packet_stats.reset();
+    stream.packet_stats_counters.write({});
+    stream.packet_interval_stats.reset();
+    stream.prev_packet_time_ns = {};
+}
+
+void reset_reader(rav::rtp::AudioReceiver::Reader& reader) {
+    reader.id = {};
+    reader.audio_format = {};
+    for (auto& stream : reader.streams) {
+        reset_stream_context(stream);
+    }
+    reader.rtp_ts = {};
+    reader.seq = 0;
+    reader.receive_buffer.clear();
+    reader.read_audio_data_buffer = {};
+    reader.most_recent_ts = {};
+    reader.next_ts_to_read = {};
+}
+
 [[nodiscard]] bool setup_reader(
     rav::rtp::AudioReceiver& receiver, rav::rtp::AudioReceiver::Reader& reader, const rav::Id id,
     const rav::rtp::AudioReceiver::ReaderParameters& parameters,
@@ -124,7 +150,7 @@ find_or_create_socket(rav::rtp::AudioReceiver& receiver, const uint16_t port) {
     reader.id = id;
 
     for (size_t i = 0; i < reader.streams.size(); ++i) {
-        reader.streams[i].reset();
+        reset_stream_context(reader.streams[i]);
         reader.streams[i].session = parameters.streams[i].session;
         reader.streams[i].filter = parameters.streams[i].filter;
         reader.streams[i].packet_time_frames = parameters.streams[i].packet_time_frames;
@@ -378,32 +404,6 @@ void update_stream_active_state(rav::rtp::AudioReceiver::StreamContext& stream, 
 
 }  // namespace
 
-void rav::rtp::AudioReceiver::StreamContext::reset() {
-    session = {};
-    filter = {};
-    interface = {};
-    packets.reset();
-    packets_too_old.reset();
-    packet_stats.reset();
-    packet_stats_counters.write({});
-    packet_interval_stats.reset();
-    prev_packet_time_ns = {};
-}
-
-void rav::rtp::AudioReceiver::Reader::reset() {
-    id = {};
-    audio_format = {};
-    for (auto& stream : streams) {
-        stream.reset();
-    }
-    rtp_ts = {};
-    seq = 0;
-    receive_buffer.clear();
-    read_audio_data_buffer = {};
-    most_recent_ts = {};
-    next_ts_to_read = {};
-}
-
 rav::rtp::AudioReceiver::AudioReceiver(boost::asio::io_context& io_context) {
     join_multicast_group = [](boost::asio::ip::udp::socket& socket, const boost::asio::ip::address_v4& multicast_group,
                               const boost::asio::ip::address_v4& interface_address) {
@@ -552,7 +552,7 @@ bool rav::rtp::AudioReceiver::  remove_reader(const Id id) {
                 }
             }
 
-            reader.reset();
+            reset_reader(reader);
             close_unused_sockets(*this);
 
             return true;

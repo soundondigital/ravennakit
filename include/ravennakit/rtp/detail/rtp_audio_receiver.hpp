@@ -29,9 +29,11 @@
 namespace rav::rtp {
 
 struct AudioReceiver {
+    /// The maximum number of readers.
     static constexpr auto k_max_num_readers = 16;
+
+    /// The maximum number of redundant sessions per reader (redundant paths).
     static constexpr auto k_max_num_redundant_sessions = 2;  // How many redundant paths
-    static constexpr auto k_max_num_sessions = k_max_num_readers * k_max_num_redundant_sessions;
 
     /// The number of milliseconds after which a stream is considered inactive.
     static constexpr uint64_t k_receive_timeout_ms = 1000;
@@ -42,13 +44,6 @@ struct AudioReceiver {
     static constexpr uint32_t k_buffer_size_ms = 200;
 
     using ArrayOfAddresses = std::array<ip_address_v4, k_max_num_redundant_sessions>;
-
-    struct PacketBuffer {
-        uint32_t timestamp;
-        uint16_t seq;
-        uint16_t data_len;
-        std::array<uint8_t, aes67::constants::k_max_payload> payload;
-    };
 
     struct StreamInfo {
         Session session;
@@ -112,65 +107,6 @@ struct AudioReceiver {
         /// Packets are being received, but they are not consumed.
         no_consumer,
     };
-
-    struct SocketWithContext {
-        explicit SocketWithContext(boost::asio::io_context& io_context) : socket(io_context) {}
-
-        AtomicRwLock rw_lock;
-        udp_socket socket;
-        uint16_t port {};
-    };
-
-    struct StreamContext {
-        Session session;
-        Filter filter;
-        uint16_t packet_time_frames {};
-        ip_address_v4 interface;
-        FifoBuffer<PacketBuffer, Fifo::Spsc> packets;
-        FifoBuffer<uint16_t, Fifo::Spsc> packets_too_old;
-        PacketStats packet_stats;
-        boost::lockfree::spsc_value<PacketStats::Counters, boost::lockfree::allow_multiple_reads<true>>
-            packet_stats_counters;
-        SlidingStats packet_interval_stats {1000};  // For calculating jitter
-        WrappingUint64 prev_packet_time_ns;
-        std::atomic<StreamState> state {StreamState::inactive};
-
-        void reset();
-    };
-
-    /**
-     * Holds the structures to receive incoming data from redundant sources into a single buffer.
-     */
-    struct Reader {
-        AtomicRwLock rw_lock;
-        Id id;
-        AudioFormat audio_format;
-        std::array<StreamContext, k_max_num_redundant_sessions> streams;
-
-        // Network thread
-        std::optional<WrappingUint32> rtp_ts;
-        WrappingUint16 seq;
-
-        // Audio thread
-        Ringbuffer receive_buffer;
-        std::vector<uint8_t> read_audio_data_buffer;
-        std::optional<WrappingUint32> most_recent_ts;  // ts of the latest received data
-        WrappingUint32 next_ts_to_read;
-
-        /// Resets this struct to initial state, except for the rw_lock which is not touched.
-        void reset();
-    };
-
-    /// Function for joining a multicast group. Can be overridden to alter behaviour. Used for unit testing.
-    SafeFunction<bool(udp_socket&, ip_address_v4, ip_address_v4)> join_multicast_group;
-
-    /// Function for leaving a multicast group. Can be overridden to alter behaviour. Used for unit testing.
-    SafeFunction<bool(udp_socket&, ip_address_v4, ip_address_v4)> leave_multicast_group;
-
-    boost::container::static_vector<SocketWithContext, k_max_num_sessions> sockets;
-    boost::container::static_vector<Reader, k_max_num_readers> readers;
-
-    uint64_t last_time_maintenance {};
 
     explicit AudioReceiver(boost::asio::io_context& io_context);
     ~AudioReceiver();
@@ -259,6 +195,69 @@ struct AudioReceiver {
      * @return The stream state for given reader.
      */
     [[nodiscard]] std::optional<StreamState> get_stream_state(Id reader_id, size_t stream_index) const;
+
+    struct SocketWithContext {
+        explicit SocketWithContext(boost::asio::io_context& io_context) : socket(io_context) {}
+
+        AtomicRwLock rw_lock;
+        udp_socket socket;
+        uint16_t port {};
+    };
+
+    struct PacketBuffer {
+        uint32_t timestamp;
+        uint16_t seq;
+        uint16_t data_len;
+        std::array<uint8_t, aes67::constants::k_max_payload> payload;
+    };
+
+    struct StreamContext {
+        Session session;
+        Filter filter;
+        uint16_t packet_time_frames {};
+        ip_address_v4 interface;
+        FifoBuffer<PacketBuffer, Fifo::Spsc> packets;
+        FifoBuffer<uint16_t, Fifo::Spsc> packets_too_old;
+        PacketStats packet_stats;
+        boost::lockfree::spsc_value<PacketStats::Counters, boost::lockfree::allow_multiple_reads<true>>
+            packet_stats_counters;
+        SlidingStats packet_interval_stats {1000};  // For calculating jitter
+        WrappingUint64 prev_packet_time_ns;
+        std::atomic<StreamState> state {StreamState::inactive};
+    };
+
+    /**
+     * Holds the structures to receive incoming data from redundant sources into a single buffer.
+     */
+    struct Reader {
+        AtomicRwLock rw_lock;
+        Id id;
+        AudioFormat audio_format;
+        std::array<StreamContext, k_max_num_redundant_sessions> streams;
+
+        // Network thread
+        std::optional<WrappingUint32> rtp_ts;
+        WrappingUint16 seq;
+
+        // Audio thread
+        Ringbuffer receive_buffer;
+        std::vector<uint8_t> read_audio_data_buffer;
+        std::optional<WrappingUint32> most_recent_ts;  // ts of the latest received data
+        WrappingUint32 next_ts_to_read;
+    };
+
+    /// Function for joining a multicast group. Can be overridden to alter behaviour. Used for unit testing.
+    SafeFunction<bool(udp_socket&, ip_address_v4, ip_address_v4)> join_multicast_group;
+
+    /// Function for leaving a multicast group. Can be overridden to alter behaviour. Used for unit testing.
+    SafeFunction<bool(udp_socket&, ip_address_v4, ip_address_v4)> leave_multicast_group;
+
+    static constexpr auto k_max_num_sessions = k_max_num_readers * k_max_num_redundant_sessions;
+
+    boost::container::static_vector<SocketWithContext, k_max_num_sessions> sockets;
+    boost::container::static_vector<Reader, k_max_num_readers> readers;
+
+    uint64_t last_time_maintenance {};
 };
 
 /**
