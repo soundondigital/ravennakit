@@ -11,9 +11,10 @@
 #pragma once
 
 #if defined(__clang__)
-    #define RAV_BEGIN_IGNORE_WARNINGS                                                             \
-        _Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Wextra-semi\"") \
-            _Pragma("clang diagnostic ignored \"-Wswitch-enum\"")
+    #define RAV_BEGIN_IGNORE_WARNINGS _Pragma("clang diagnostic push")
+_Pragma("clang diagnostic ignored \"-Wextra-semi\"") _Pragma("clang diagnostic ignored \"-Wundef\"") _Pragma(
+    "clang diagnostic ignored \"-Wswitch-enum\""
+)
 
 #elif defined(__GNUC__) && (__GNUC__ >= 5)
     #define RAV_BEGIN_IGNORE_WARNINGS _Pragma("GCC diagnostic push")
