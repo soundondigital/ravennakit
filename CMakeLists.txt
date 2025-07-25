@@ -156,7 +156,7 @@ if (WIN32)
     elseif (MSVC_CXX_ARCHITECTURE_ID MATCHES "86")
         target_link_libraries(ravennakit PUBLIC "C:/Program Files/Bonjour SDK/Lib/Win32/dnssd.lib")
     else ()
-        message(FATAL_ERROR "Unknown MSVC architecture or non CXX language [${MSVC_CXX_ARCHITECTURE_ID}]")
+        message(FATAL_ERROR "Unknown MSVC architecture or non CXX language [${MSVC_CXX_ARCHITECTURE_ID}]. Note: MinGW is not supported.")
     endif ()
 
     target_link_libraries(ravennakit PUBLIC ws2_32)
