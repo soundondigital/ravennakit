@@ -17,6 +17,8 @@
 #include "ravennakit/core/streams/output_stream.hpp"
 #include "ravennakit/core/types/uint48.hpp"
 
+#include <ctime>
+
 namespace rav::ptp {
 
 /**
