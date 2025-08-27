@@ -11,6 +11,7 @@
 #pragma once
 
 #include "mac_address.hpp"
+#include "ravennakit/core/assert.hpp"
 #include "ravennakit/core/platform.hpp"
 #include "ravennakit/core/expected.hpp"
 

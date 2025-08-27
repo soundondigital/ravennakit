@@ -11,7 +11,6 @@
 #pragma once
 
 #include "platform.hpp"
-#include "assert.hpp"
 
 #if RAV_WINDOWS
     #include <windows.h>

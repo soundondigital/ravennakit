@@ -11,6 +11,7 @@
 #pragma once
 
 #include "log.hpp"
+#include "assert.hpp"
 
 #ifdef TL_ASSERT
     #error "TL_ASSERT is already defined. Please include this header before including <tl/expected.hpp>."
