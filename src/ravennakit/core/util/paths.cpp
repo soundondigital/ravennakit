@@ -122,9 +122,9 @@ inline std::filesystem::path resolve_xdg_folder(const char* type, std::filesyste
 
             // eg. resolve XDG_MUSIC_DIR="$HOME/Music" to /home/user/Music
             auto replaced = rav::string_replace(path, "$HOME", home.c_str());
-
-            if (std::filesystem::is_directory(rav::string_unquoted(replaced))) {
-                return replaced;
+            auto unquoted = rav::string_unquoted(replaced);
+            if (std::filesystem::is_directory(unquoted)) {
+                return unquoted;
             }
         }
     }
@@ -223,7 +223,7 @@ std::filesystem::path rav::paths::application_data() {
 #elif RAV_WINDOWS
     return windows_get_roaming_app_data();
 #elif RAV_LINUX
-    return resolve_xdg_folder("XDG_CONFIG_HOME", get_home() / ".config");
+    return resolve_xdg_folder("XDG_CONFIG_HOME", get_home() / ".local" / "share");
 #else
     RAV_ASSERT_FALSE("Platform not supported");
     return {};
