@@ -247,22 +247,3 @@ std::filesystem::path rav::paths::cache() {
     return {};
 #endif
 }
-
-std::filesystem::path rav::paths::temporary() {
-#if RAV_MACOS
-    return cache();
-#elif RAV_WINDOWS
-    CHAR dest[2048];
-    dest[0] = 0;
-    GetTempPath (static_cast<DWORD>(rav::num_elements_in_array (dest)), dest);
-    return dest;
-#elif RAV_LINUX
-    if (auto* tmpdir = std::getenv("TMPDIR")) {
-        return tmpdir;
-    }
-    return {"/tmp"};
-#else
-    RAV_ASSERT_FALSE("Platform not supported");
-    return {};
-#endif
-}

@@ -11,21 +11,21 @@
 
 namespace {
 void print(const char* subject, const std::filesystem::path& path) {
-#ifdef RAV_WINDOWS
+#if RAV_WINDOWS
     fmt::println("{}: {}", subject, path.string());
 #else
-    fmt::println("{}: file://{}", subject, rav::Uri::encode(rav::paths::home().string()));
+    fmt::println("{}: file://{}", subject, rav::Uri::encode(path.string()));
 #endif
 }
 }  // namespace
 
 int main() {
     print("Home", rav::paths::home());
-    print("Desktop", rav::paths::desktop().string());
-    print("Documents", rav::paths::documents().string());
-    print("Downloads", rav::paths::downloads().string());
-    print("Pictures", rav::paths::pictures().string());
-    print("Application data", rav::paths::application_data().string());
-    print("Cache", rav::paths::cache().string());
-    print("Temporary", rav::paths::temporary().string());
+    print("Desktop", rav::paths::desktop());
+    print("Documents", rav::paths::documents());
+    print("Downloads", rav::paths::downloads());
+    print("Pictures", rav::paths::pictures());
+    print("Application data", rav::paths::application_data());
+    print("Cache", rav::paths::cache());
+    print("Temporary std", std::filesystem::temp_directory_path());
 }
