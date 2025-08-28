@@ -260,7 +260,7 @@ std::filesystem::path rav::paths::temporary() {
     if (auto* tmpdir = std::getenv("TMPDIR")) {
         return tmpdir;
     }
-    return {"/tmp"}
+    return {"/tmp"};
 #else
     RAV_ASSERT_FALSE("Platform not supported");
     return {};
