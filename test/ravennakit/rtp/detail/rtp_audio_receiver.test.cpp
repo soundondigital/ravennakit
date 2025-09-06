@@ -210,7 +210,7 @@ TEST_CASE("rav::rtp::Receiver") {
         auto receiver = std::make_unique<rav::rtp::AudioReceiver>(io_context);
         MulticastMembershipChangesVector multicast_group_membership_changes;
         setup_receiver_multicast_hooks(*receiver, multicast_group_membership_changes);
-        receiver->set_interfaces(interface_addresses);
+        REQUIRE(receiver->set_interfaces(interface_addresses));
 
         rav::rtp::AudioReceiver::StreamInfo stream {
             rav::rtp::Session {multicast_addr, 5004, 5005},
@@ -278,7 +278,7 @@ TEST_CASE("rav::rtp::Receiver") {
         MulticastMembershipChangesVector membership_changes;
         setup_receiver_multicast_hooks(*receiver, membership_changes);
 
-        receiver->set_interfaces(interface_addresses);
+        REQUIRE(receiver->set_interfaces(interface_addresses));
         auto result = receiver->add_reader(rav::Id(1), parameters, interface_addresses);
         REQUIRE(result);
 
@@ -408,7 +408,7 @@ TEST_CASE("rav::rtp::Receiver") {
 
         REQUIRE(membership_changes.empty());
 
-        receiver->set_interfaces(interface_addresses);
+        REQUIRE(receiver->set_interfaces(interface_addresses));
 
         REQUIRE(membership_changes.size() == 2);
         REQUIRE(membership_changes[0] == std::tuple(true, 5004, multicast_addr_pri, interface_address_pri));
@@ -416,7 +416,7 @@ TEST_CASE("rav::rtp::Receiver") {
 
         SECTION("Swap interfaces") {
             std::swap(interface_addresses[0], interface_addresses[1]);
-            receiver->set_interfaces(interface_addresses);
+            REQUIRE(receiver->set_interfaces(interface_addresses));
             REQUIRE(membership_changes.size() == 6);
             REQUIRE(membership_changes[2] == std::tuple(false, 5004, multicast_addr_pri, interface_address_pri));
             REQUIRE(membership_changes[3] == std::tuple(true, 5004, multicast_addr_pri, interface_address_sec));
@@ -425,7 +425,7 @@ TEST_CASE("rav::rtp::Receiver") {
         }
 
         SECTION("Clear interfaces") {
-            receiver->set_interfaces({});
+            REQUIRE(receiver->set_interfaces({}));
 
             REQUIRE(membership_changes.size() == 4);
             REQUIRE(membership_changes[2] == std::tuple(false, 5004, multicast_addr_pri, interface_address_pri));
