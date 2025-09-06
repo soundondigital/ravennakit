@@ -59,7 +59,7 @@ class RequestResponseDelaySequence {
      */
     void update(const FollowUpMessage& follow_up_message) {
         TRACY_ZONE_SCOPED;
-        RAV_ASSERT(state_ == state::awaiting_follow_up, "State should be awaiting_follow_up");
+        RAV_ASSERT_RETURN(state_ == state::awaiting_follow_up, "State should be awaiting_follow_up");
         follow_up_correction_field_ = TimeInterval::from_wire_format(follow_up_message.header.correction_field);
         t1_ = follow_up_message.precise_origin_timestamp;
         state_ = state::ready_to_be_scheduled;
@@ -72,10 +72,7 @@ class RequestResponseDelaySequence {
      */
     void update(const DelayRespMessage& delay_resp_message) {
         TRACY_ZONE_SCOPED;
-        if (state_ != state::awaiting_delay_resp) {
-            RAV_ASSERT_FALSE("State should be awaiting_delay_resp");
-            return;
-        }
+        RAV_ASSERT_RETURN(state_ == state::awaiting_delay_resp, "State should be awaiting_delay_resp");
         delay_resp_correction_field_ = TimeInterval::from_wire_format(delay_resp_message.header.correction_field);
         t4_ = delay_resp_message.receive_timestamp;
         state_ = state::delay_resp_received;
