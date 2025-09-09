@@ -120,7 +120,7 @@ void reset_stream_context(rav::rtp::AudioReceiver::StreamContext& stream) {
     stream.packets_too_old.reset();
     stream.packet_stats.reset();
     stream.packet_stats_counters.write({});
-    stream.packet_interval_stats.reset();
+    stream.packet_interval_stats = {};
     stream.prev_packet_time_ns = {};
 }
 
@@ -399,6 +399,7 @@ std::optional<uint32_t> read_data_from_reader_realtime(
 }
 
 void update_stream_active_state(rav::rtp::AudioReceiver::StreamContext& stream, const uint64_t now) {
+    TRACY_ZONE_SCOPED;
     if ((stream.prev_packet_time_ns + rav::rtp::AudioReceiver::k_receive_timeout_ms * 1'000'000).value() < now) {
         stream.state.store(rav::rtp::AudioReceiver::StreamState::inactive, std::memory_order_relaxed);
     }
@@ -677,13 +678,18 @@ void rav::rtp::AudioReceiver::read_incoming_packets() {
                 }
 
                 if (const auto interval = stream.prev_packet_time_ns.update(recv_time)) {
-                    TRACY_PLOT("packet interval (ms)", static_cast<double>(*interval) / 1'000'000.0);
-                    stream.packet_interval_stats.add(static_cast<double>(*interval) / 1'000'000.0);
+                    if (stream.packet_interval_stats.initialized || *interval != 0) {
+                        if (stream.reset_max_values.exchange(false, std::memory_order_acq_rel)) {
+                            stream.packet_interval_stats.max_deviation = {};
+                        }
+                        stream.packet_interval_stats.update(static_cast<double>(*interval) / 1'000'000.0);
+                        TRACY_PLOT("packet interval (ms)", static_cast<double>(*interval) / 1'000'000.0);
+                    }
                 }
 
                 std::ignore = stream.packet_stats.update(view.sequence_number());
                 auto stats = stream.packet_stats.get_total_counts();
-                stats.jitter = stream.packet_interval_stats.peak_deviation_from_mean();
+                stats.jitter = stream.packet_interval_stats.max_deviation;
                 stream.packet_stats_counters.write(stats);
             }
         }
@@ -823,7 +829,9 @@ rav::rtp::AudioReceiver::get_packet_stats(const Id reader_id, const size_t strea
             return std::nullopt;
         }
 
-        return reader.streams[stream_index].packet_stats_counters.read(boost::lockfree::uses_optional);
+        auto& stream = reader.streams[stream_index];
+        stream.reset_max_values.store(true, std::memory_order_release);
+        return stream.packet_stats_counters.read(boost::lockfree::uses_optional);
     }
 
     return std::nullopt;

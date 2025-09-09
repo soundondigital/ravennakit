@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "ravennakit/core/math/running_average.hpp"
 #include "ravennakit/core/util/tracy.hpp"
 #include "ravennakit/core/util/wrapping_uint.hpp"
 #include "ravennakit/rtp/rtp_packet_view.hpp"
@@ -33,7 +34,7 @@ class PacketStats {
         /// The number of packets which were too late for consumer.
         uint32_t too_late {};
         /// The difference between the average interval and the min/max interval.
-        double jitter {};  // Note used by this class, but can be filled in externally.
+        double jitter {};  // Not used by this class, but can be filled in externally.
 
         [[nodiscard]] auto tie() const {
             return std::tie(out_of_order, too_late, duplicates, dropped);
@@ -56,7 +57,7 @@ class PacketStats {
             return result;
         }
 
-        std::string to_string() const {
+        [[nodiscard]] std::string to_string() const {
             return fmt::format(
                 "out_of_order: {}, duplicates: {}, dropped: {}, too_late: {}, jitter: {}", out_of_order, duplicates,
                 dropped, too_late, jitter
@@ -72,6 +73,7 @@ class PacketStats {
      * @return Returns the total counts if changed.
      */
     std::optional<Counters> update(const uint16_t sequence_number) {
+        TRACY_ZONE_SCOPED;
         const auto packet_sequence_number = WrappingUint16(sequence_number);
 
         if (!most_recent_sequence_number_) {

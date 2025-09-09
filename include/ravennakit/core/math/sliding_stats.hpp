@@ -117,7 +117,7 @@ class SlidingStats {
     /**
      * @return The peak deviation from mean (or some form of jitter).
      */
-    double peak_deviation_from_mean() const {
+    [[nodiscard]] double peak_deviation_from_mean() const {
         return std::max(std::fabs(mean_ - min_), std::fabs(mean_ - max_));
     }
 

@@ -16,6 +16,7 @@
 #include "rtp_session.hpp"
 #include "ravennakit/aes67/aes67_constants.hpp"
 #include "ravennakit/core/audio/audio_buffer_view.hpp"
+#include "ravennakit/core/math/interval_stats.hpp"
 #include "ravennakit/core/math/sliding_stats.hpp"
 #include "ravennakit/core/net/asio/asio_helpers.hpp"
 #include "ravennakit/core/sync/atomic_rw_lock.hpp"
@@ -221,7 +222,8 @@ struct AudioReceiver {
         PacketStats packet_stats;
         boost::lockfree::spsc_value<PacketStats::Counters, boost::lockfree::allow_multiple_reads<true>>
             packet_stats_counters;
-        SlidingStats packet_interval_stats {1000};  // For calculating jitter
+        std::atomic<bool> reset_max_values{false};
+        IntervalStats packet_interval_stats;
         WrappingUint64 prev_packet_time_ns;
         std::atomic<StreamState> state {StreamState::inactive};
     };
