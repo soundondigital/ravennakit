@@ -586,15 +586,6 @@ void rav::rtp::AudioReceiver::read_incoming_packets() {
         }
 
         boost::system::error_code ec;
-        const auto available = ctx.socket.available(ec);
-        if (ec) {
-            RAV_ERROR("Failed to get available data: {}", ec.message());
-            continue;
-        }
-        if (available == 0) {
-            continue;
-        }
-
         std::array<uint8_t, aes67::constants::k_mtu> receive_buffer {};
         boost::asio::ip::udp::endpoint src_endpoint;
         boost::asio::ip::udp::endpoint dst_endpoint;
@@ -603,6 +594,8 @@ void rav::rtp::AudioReceiver::read_incoming_packets() {
             receive_from_socket(ctx.socket, receive_buffer, src_endpoint, dst_endpoint, recv_time, ec);
 
         if (ec == boost::asio::error::try_again) {
+            // Normally you would call ctx.socket.available(ec); to test if there is data available, but to safe time we
+            // test for boost::asio::error::try_again.
             continue;
         }
 
