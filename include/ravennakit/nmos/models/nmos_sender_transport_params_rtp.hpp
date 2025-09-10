@@ -47,6 +47,11 @@ struct SenderTransportParamsRtp {
      * destination port for RTP packets (auto = 5004 by default)
      */
     std::variant<int, std::string> destination_port {"auto"};
+
+    /**
+     * RTP transmission active/inactive
+     */
+    bool rtp_enabled {false};
 };
 
 inline void tag_invoke(
@@ -57,6 +62,7 @@ inline void tag_invoke(
         {"destination_ip", boost::json::value_from(sender_transport_params.destination_ip)},
         {"source_port", boost::json::value_from(sender_transport_params.source_port)},
         {"destination_port", boost::json::value_from(sender_transport_params.destination_port)},
+        {"rtp_enabled", boost::json::value_from(sender_transport_params.rtp_enabled)},
     };
 }
 

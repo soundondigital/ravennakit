@@ -20,7 +20,9 @@ namespace rav::nmos {
  */
 struct ConstraintsRtp {
     Constraint source_ip;
+    Constraint source_port;
     Constraint destination_port;
+    Constraint destination_ip;
     Constraint rtp_enabled;
 };
 
@@ -28,7 +30,9 @@ inline void
 tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const ConstraintsRtp& constraint_rtp) {
     jv = {
         {"source_ip", boost::json::value_from(constraint_rtp.source_ip)},
+        {"source_port", boost::json::value_from(constraint_rtp.source_ip)},
         {"destination_port", boost::json::value_from(constraint_rtp.destination_port)},
+        {"destination_ip", boost::json::value_from(constraint_rtp.destination_port)},
         {"rtp_enabled", boost::json::value_from(constraint_rtp.rtp_enabled)},
     };
 }

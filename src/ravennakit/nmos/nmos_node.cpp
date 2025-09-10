@@ -707,6 +707,31 @@ rav::nmos::Node::Node(
         }
     );
 
+    http_server_.patch(
+        "/x-nmos/connection/{version}/single/receivers/{receiver_id}/staged",
+        [this](const HttpServer::Request& request, HttpServer::Response& res, const PathMatcher::Parameters& params) {
+            if (!get_valid_api_version_from_parameters(params, k_connection_api_versions).has_value()) {
+                return invalid_api_version_response(res);
+            }
+
+            const auto* receiver_id = params.get("receiver_id");
+            if (receiver_id == nullptr) {
+                set_error_response(res, http::status::bad_request, "Invalid receiver ID", "No receiver ID provided");
+                return;
+            }
+
+            auto* receiver = find_receiver(boost::uuids::string_generator()(*receiver_id));
+            if (receiver == nullptr) {
+                set_error_response(res, http::status::not_found, "Not found", "Receiver not found");
+                return;
+            }
+
+            RAV_TRACE("{}: {}", std::string(request.target()), request.body());
+
+            ok_response(res, {});
+        }
+    );
+
     http_server_.get(
         "/x-nmos/connection/{version}/single/receivers/{receiver_id}/active",
         [this](const HttpServer::Request&, HttpServer::Response& res, const PathMatcher::Parameters& params) {
