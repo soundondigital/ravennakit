@@ -216,6 +216,7 @@ struct AudioReceiver {
         Session session;
         Filter filter;
         uint16_t packet_time_frames {};
+        std::optional<WrappingUint32> rtp_ts;
         ip_address_v4 interface;
         FifoBuffer<PacketBuffer, Fifo::Spsc> packets;
         FifoBuffer<uint16_t, Fifo::Spsc> packets_too_old;
@@ -236,10 +237,6 @@ struct AudioReceiver {
         Id id;
         AudioFormat audio_format;
         std::array<StreamContext, k_max_num_redundant_sessions> streams;
-
-        // Network thread
-        std::optional<WrappingUint32> rtp_ts;
-        WrappingUint16 seq;
 
         // Audio thread
         Ringbuffer receive_buffer;

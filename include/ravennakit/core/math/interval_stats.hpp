@@ -20,40 +20,43 @@ namespace rav {
  * Keeps track of an ema with outliers filtered out and a max deviation.
  */
 struct IntervalStats {
-    double average = 0.0;
+    /// Interval as measured over time
+    double interval = 0.0;
+    /// The max deviation compared to interval
     double max_deviation = 0.0;
+    /// Whether this struct has been initialized
     bool initialized = false;
+    /// The alpa of ema calculation. Lower is smoother.
     double alpha = 0.001;
-    double rejection_factor = 1.5;
 
     void update(const double interval_ms) {
         if (!initialized) {
-            average = interval_ms;
+            interval = interval_ms;
             initialized = true;
             return;
         }
 
-        const auto ema = alpha * interval_ms + (1.0 - alpha) * average;
-        const auto step = ema - average;
+        const auto ema = alpha * interval_ms + (1.0 - alpha) * interval;
+        const auto step = ema - interval;
 
-        if (step > current_step_size) {
-            average += current_step_size;  // Limit positive change
-            current_step_size = std::min(current_step_size * 2.0, k_max_step_size);
-        } else if (step < -current_step_size) {
-            average -= current_step_size;  // Limit negative change
-            current_step_size = std::min(current_step_size * 2.0, k_max_step_size);
+        if (step > current_step_size_) {
+            interval += current_step_size_;  // Limit positive change
+            current_step_size_ = std::min(current_step_size_ * 2.0, k_max_step_size);
+        } else if (step < -current_step_size_) {
+            interval -= current_step_size_;  // Limit negative change
+            current_step_size_ = std::min(current_step_size_ * 2.0, k_max_step_size);
         } else {
-            average = ema;  // Change is within limit
-            current_step_size = std::max(current_step_size / 2.0, k_min_step_size);
+            interval = ema;  // Change is within limit
+            current_step_size_ = std::max(current_step_size_ / 2.0, k_min_step_size);
         }
 
-        max_deviation = std::max(std::fabs(interval_ms - average), max_deviation);
+        max_deviation = std::max(std::fabs(interval_ms - interval), max_deviation);
     }
 
 private:
     static constexpr auto k_min_step_size = 0.00001;
     static constexpr auto k_max_step_size = 100'000.0;
-    double current_step_size = k_min_step_size;
+    double current_step_size_ = k_min_step_size;
 };
 
 }  // namespace rav

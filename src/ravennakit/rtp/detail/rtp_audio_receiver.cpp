@@ -116,6 +116,7 @@ void reset_stream_context(rav::rtp::AudioReceiver::StreamContext& stream) {
     stream.session = {};
     stream.filter = {};
     stream.interface = {};
+    stream.rtp_ts = {};
     stream.packets.reset();
     stream.packets_too_old.reset();
     stream.packet_stats.reset();
@@ -130,8 +131,6 @@ void reset_reader(rav::rtp::AudioReceiver::Reader& reader) {
     for (auto& stream : reader.streams) {
         reset_stream_context(stream);
     }
-    reader.rtp_ts = {};
-    reader.seq = 0;
     reader.receive_buffer.clear();
     reader.read_audio_data_buffer = {};
     reader.most_recent_ts = {};
@@ -647,9 +646,10 @@ void rav::rtp::AudioReceiver::read_incoming_packets() {
                     continue;
                 }
 
-                if (!reader.rtp_ts.has_value()) {
-                    reader.seq = view.sequence_number();
-                    reader.rtp_ts = view.timestamp();
+                update_stream_active_state(stream, now);
+
+                if (!stream.rtp_ts.has_value()) {
+                    stream.rtp_ts = view.timestamp();
                     stream.prev_packet_time_ns = recv_time;
                 }
 
@@ -672,11 +672,9 @@ void rav::rtp::AudioReceiver::read_incoming_packets() {
 
                 if (const auto interval = stream.prev_packet_time_ns.update(recv_time)) {
                     if (stream.packet_interval_stats.initialized || *interval != 0) {
-                        if (stream.reset_max_values.exchange(false, std::memory_order_acq_rel)) {
-                            stream.packet_interval_stats.max_deviation = {};
-                        }
                         stream.packet_interval_stats.update(static_cast<double>(*interval) / 1'000'000.0);
                         TRACY_PLOT("packet interval (ms)", static_cast<double>(*interval) / 1'000'000.0);
+                        TRACY_PLOT("packet interval EMA (ms)", stream.packet_interval_stats.interval);
                     }
                 }
 
