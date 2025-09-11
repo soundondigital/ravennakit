@@ -13,7 +13,7 @@
 
 #include <boost/asio/io_context.hpp>
 
-int main() {
+int main(const int argc, const char* argv[]) {
     rav::set_log_level_from_env();
     rav::do_system_checks();
 
@@ -34,6 +34,17 @@ int main() {
         return 1;
     }
 
+    if (argc < 2) {
+        RAV_ERROR("Please specify an argument listing the network interfaces to use.");
+        return 1;
+    }
+
+    auto network_config = rav::parse_network_interface_config_from_string(argv[1]);
+    if (!network_config) {
+        RAV_ERROR("Invalid network interface(s): {}", result.error());
+        return 1;
+    }
+    
     static constexpr uint32_t k_num_devices = 2;
     static constexpr uint32_t k_num_sources_per_device = 2;
     static constexpr uint32_t k_num_senders_per_source = 2;
@@ -119,6 +130,8 @@ int main() {
 
         device_count++;
     }
+
+    node.set_network_interface_config(*network_config);
 
     std::string url =
         fmt::format("http://{}:{}", node.get_local_endpoint().address().to_string(), node.get_local_endpoint().port());

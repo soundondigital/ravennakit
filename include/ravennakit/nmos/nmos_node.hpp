@@ -207,6 +207,25 @@ class Node: public ptp::Instance::Subscriber {
     [[nodiscard]] bool add_or_update_sender(Sender sender);
 
     /**
+     * Adds or updates the transport file for sender with given uuid.
+     * @param sender_uuid The uuid of the sender.
+     * @param transport_file The transportfile to set. If empty, the transportfile will be removed.
+     * @return True if successful, or false if not.
+     */
+    void
+    set_sender_transport_file(boost::uuids::uuid sender_uuid, std::optional<sdp::SessionDescription> transport_file);
+
+    /**
+     * Adds or updates the transport file for receiver with given uuid.
+     * @param receiver_uuid The uuid of the receiver.
+     * @param transport_file The transportfile to set. If empty, the transportfile will be removed.
+     * @return True if successful, or false if not.
+     */
+    void set_receiver_transport_file(
+        boost::uuids::uuid receiver_uuid, std::optional<sdp::SessionDescription> transport_file
+    );
+
+    /**
      * Finds a sender by its uuid.
      * @param uuid The uuid of the sender to find.
      * @return A pointer to the sender if found, or nullptr if not found.
@@ -308,6 +327,8 @@ class Node: public ptp::Instance::Subscriber {
     std::vector<ReceiverAudio> receivers_;
     std::vector<Sender> senders_;
     std::vector<Source> sources_;
+    std::unordered_map<boost::uuids::uuid, sdp::SessionDescription> sender_transport_files_;
+    std::unordered_map<boost::uuids::uuid, sdp::SessionDescription> receiver_transport_files_;
 
     Configuration configuration_;
     Status status_ {Status::disabled};

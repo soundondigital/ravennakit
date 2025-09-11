@@ -262,6 +262,12 @@ tl::expected<void, std::string> rav::RavennaReceiver::update_nmos() {
             RAV_ERROR("Failed to update NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));
             return tl::unexpected("Failed to update NMOS receiver");
         }
+
+        if (validate(configuration_.sdp.origin)) {
+            nmos_node_->set_receiver_transport_file(nmos_receiver_.id, configuration_.sdp);
+        } else {
+            nmos_node_->set_receiver_transport_file(nmos_receiver_.id, std::nullopt);
+        }
     }
     return {};
 }
@@ -402,12 +408,7 @@ void rav::RavennaReceiver::set_nmos_node(nmos::Node* nmos_node) {
         return;
     }
     nmos_node_ = nmos_node;
-    if (nmos_node_ != nullptr) {
-        RAV_ASSERT(nmos_receiver_.is_valid(), "NMOS receiver must be valid at this point");
-        if (!nmos_node_->add_or_update_receiver(nmos_receiver_)) {
-            RAV_ERROR("Failed to add NMOS receiver with ID: {}", boost::uuids::to_string(nmos_receiver_.id));
-        }
-    }
+    update_nmos();
 }
 
 void rav::RavennaReceiver::set_nmos_device_id(const boost::uuids::uuid& device_id) {

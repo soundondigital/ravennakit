@@ -351,9 +351,7 @@ void rav::RavennaSender::ptp_parent_changed(const ptp::ParentDs& parent) {
         return;
     }
     grandmaster_identity_ = parent.grandmaster_identity;
-    if (!rtsp_path_by_name_.empty()) {
-        send_announce();
-    }
+    update_state(false, !rtsp_path_by_name_.empty(), true);
 }
 
 void rav::RavennaSender::send_announce() const {
@@ -562,9 +560,9 @@ void rav::RavennaSender::update_state(const bool update_advertisement, const boo
     if (update_nmos) {
         const auto& audio_format = configuration_.audio_format;
 
-        nmos_sender_.label = configuration_.session_name;
         nmos_flow_.label = configuration_.session_name;
         nmos_source_.label = configuration_.session_name;
+        nmos_sender_.label = configuration_.session_name;
         nmos_sender_.transport = "urn:x-nmos:transport:rtp.mcast";
         nmos_sender_.subscription.active = configuration_.enabled;
         nmos_sender_.interface_bindings.clear();
@@ -597,6 +595,11 @@ void rav::RavennaSender::update_state(const bool update_advertisement, const boo
             }
             if (!nmos_node_->add_or_update_sender(nmos_sender_)) {
                 RAV_ERROR("Failed to add NMOS sender with ID: {}", boost::uuids::to_string(nmos_sender_.id));
+            }
+            if (auto sdp = build_sdp()) {
+                nmos_node_->set_sender_transport_file(nmos_sender_.id, std::move(*sdp));
+            } else {
+                nmos_node_->set_sender_transport_file(nmos_sender_.id, {});
             }
         }
     }
