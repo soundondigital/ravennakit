@@ -22,6 +22,7 @@
 #include "ravennakit/nmos/models/nmos_sender_transport_params_rtp.hpp"
 #include "ravennakit/nmos/models/nmos_transport_file.hpp"
 #include "ravennakit/nmos/detail/nmos_uuid.hpp"
+#include "ravennakit/nmos/models/nmos_activation.hpp"
 
 #include <boost/lexical_cast.hpp>
 #include <boost/range.hpp>
@@ -778,7 +779,11 @@ rav::nmos::Node::Node(
             const auto it = receiver_transport_files_.find(boost::uuids::string_generator()(*receiver_id));
             if (it != receiver_transport_files_.end()) {
                 transport_params = get_receiver_transport_params_from_sdp(it->second);
-                transport_file.data = to_string(it->second);
+                if (auto transport_file_data = to_string(it->second)) {
+                    transport_file.data = *transport_file_data;
+                } else {
+                    RAV_ERROR("Failed to encode SDP");
+                }
             }
 
             ActivationResponse activation_response;
@@ -871,12 +876,23 @@ rav::nmos::Node::Node(
                 return;
             }
 
-            if (auto result = json.try_at("sender_id")) {
-                auto new_sender_id = uuid_from_json(*result);
-                if (!receiver->set_sender_id(new_sender_id)) {
-                    set_error_response(res, http::status::bad_request, "Bad Request", "Failed to change sender id");
-                    return;
+            // Refuse activation modes other than activate_immediate
+            if (const auto result = json.try_at("activation")) {
+                auto activation = boost::json::value_to<Activation>(*result);
+                if (const auto mode = activation.mode) {
+                    if (*mode != Activation::Mode::activate_immediate) {
+                        set_error_response(
+                            res, http::status::not_implemented, "Not Implemented",
+                            "Only activate_immediate is implemented"
+                        );
+                        return;
+                    }
                 }
+            }
+
+            if (auto result = receiver->on_patch_request(json); !result) {
+                set_error_response(res, http::status::bad_request, "Bad Request", result.error());
+                return;
             }
 
             boost::json::array transport_params;
@@ -886,7 +902,11 @@ rav::nmos::Node::Node(
             const auto it = receiver_transport_files_.find(boost::uuids::string_generator()(*receiver_id));
             if (it != receiver_transport_files_.end()) {
                 transport_params = get_receiver_transport_params_from_sdp(it->second);
-                transport_file.data = to_string(it->second);
+                if (auto transport_file_data = to_string(it->second)) {
+                    transport_file.data = *transport_file_data;
+                } else {
+                    RAV_ERROR("Failed to encode SDP");
+                }
             }
 
             ActivationResponse activation_response;
@@ -929,7 +949,11 @@ rav::nmos::Node::Node(
             const auto it = receiver_transport_files_.find(boost::uuids::string_generator()(*receiver_id));
             if (it != receiver_transport_files_.end()) {
                 transport_params = get_receiver_transport_params_from_sdp(it->second);
-                transport_file.data = to_string(it->second);
+                if (auto transport_file_data = to_string(it->second)) {
+                    transport_file.data = *transport_file_data;
+                } else {
+                    RAV_ERROR("Failed to encode SDP");
+                }
             }
 
             ActivationResponse activation_response;

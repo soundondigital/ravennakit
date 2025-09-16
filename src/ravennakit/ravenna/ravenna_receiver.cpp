@@ -14,6 +14,8 @@
 #include "ravennakit/core/audio/audio_data.hpp"
 #include "ravennakit/core/util/todo.hpp"
 #include "ravennakit/nmos/detail/nmos_media_types.hpp"
+#include "ravennakit/nmos/detail/nmos_uuid.hpp"
+#include "ravennakit/nmos/models/nmos_transport_file.hpp"
 #include "ravennakit/rtp/detail/rtp_filter.hpp"
 
 #include <boost/uuid/string_generator.hpp>
@@ -213,9 +215,33 @@ rav::RavennaReceiver::RavennaReceiver(
         nmos_receiver_.caps.media_types.emplace_back(nmos::audio_encoding_to_nmos_media_type(encoding));
     }
 
-    nmos_receiver_.set_sender_id = [this](const std::optional<boost::uuids::uuid>& new_sender_id) {
-        nmos_receiver_.subscription.sender_id = new_sender_id;
-        return true;
+    nmos_receiver_.on_patch_request =
+        [this](const boost::json::value& patch_request) -> tl::expected<void, std::string> {
+        if (const auto result = patch_request.try_at("sender_id")) {
+            nmos_receiver_.subscription.sender_id = uuid_from_json(*result);
+        }
+
+        auto configuration = configuration_;
+        if (const auto result = patch_request.try_at("master_enable")) {
+            configuration.enabled = boost::json::value_to<bool>(*result);
+        }
+
+        if (const auto result = patch_request.try_at("transport_file")) {
+            const auto transport_file = boost::json::value_to<nmos::TransportFile>(*result);
+            if (transport_file.type != "application/sdp") {
+                return tl::unexpected("Expected application/sdp");
+            }
+            if (transport_file.data.empty()) {
+                return tl::unexpected("Expected non empty string");
+            }
+            auto sdp = sdp::parse_session_description(transport_file.data);
+            if (!sdp) {
+                return tl::unexpected(sdp.error());
+            }
+            configuration.sdp = *sdp;
+        }
+
+        return set_configuration(configuration);
     };
 }
 
@@ -549,7 +575,7 @@ rav::tag_invoke(const boost::json::value_to_tag<RavennaReceiver::Configuration>&
     config.enabled = jv.at("enabled").as_bool();
     config.auto_update_sdp = jv.at("auto_update_sdp").as_bool();
 
-    const auto sdp = jv.at("sdp"); // It is expected that the "sdp" field exists at all time.
+    const auto sdp = jv.at("sdp");  // It is expected that the "sdp" field exists at all time.
     if (auto* str = sdp.if_string()) {
         config.sdp = sdp::parse_session_description(str->c_str()).value();
     }

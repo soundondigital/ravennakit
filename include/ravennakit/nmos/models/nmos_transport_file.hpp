@@ -23,10 +23,10 @@ namespace rav::nmos {
  */
 struct TransportFile {
     /// Content of the transport file
-    std::optional<std::string> data;
+    std::string data;
 
     /// IANA assigned media type for file (e.g. application/sdp)
-    std::optional<std::string> type;
+    std::string type;
 };
 
 inline void
@@ -35,6 +35,14 @@ tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const Tra
         {"data", boost::json::value_from(transport_file.data)},
         {"type", boost::json::value_from(transport_file.type)},
     };
+}
+
+inline TransportFile
+tag_invoke(const boost::json::value_to_tag<TransportFile>&, const boost::json::value& jv) {
+    TransportFile transport_file;
+    transport_file.data = jv.at("data").as_string();
+    transport_file.type = jv.at("type").as_string();
+    return transport_file;
 }
 
 }  // namespace rav::nmos

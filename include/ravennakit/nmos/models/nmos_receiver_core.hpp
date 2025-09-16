@@ -46,16 +46,20 @@ struct ReceiverCore: ResourceCore {
     /// Object indicating how this Receiver is currently configured to receive data.
     Subscription subscription;
 
-    SafeFunction<bool(const std::optional<boost::uuids::uuid>& new_sender_id)> set_sender_id;
+    SafeFunction<tl::expected<void, std::string>(const boost::json::value& patch_request)> on_patch_request;
 };
 
-inline void tag_invoke(
-    const boost::json::value_from_tag&, boost::json::value& jv, const ReceiverCore::Subscription& subscription
-) {
-    jv = {
-        {"sender_id", boost::json::value_from(subscription.sender_id)},
+inline void
+tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const ReceiverCore::Subscription& subscription) {
+    auto object = boost::json::object {
         {"active", subscription.active},
     };
+    if (subscription.sender_id.has_value()) {
+        object["sender_id"] = boost::uuids::to_string(*subscription.sender_id);
+    } else {
+        object["sender_id"] = nullptr;
+    }
+    jv = object;
 }
 
 inline void tag_invoke(const boost::json::value_from_tag& tag, boost::json::value& jv, const ReceiverCore& receiver) {

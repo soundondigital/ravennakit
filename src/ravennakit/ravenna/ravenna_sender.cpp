@@ -56,7 +56,7 @@ rav::RavennaSender::RavennaSender(
         return true;
     };
 
-    nmos_sender_.patch_transport_params = [this](const nmos::SenderTransportParamsRtp& transport_params_rtp) {
+    nmos_sender_.patch_transport_params = [](const nmos::SenderTransportParamsRtp&) {
         return false;
     };
 
