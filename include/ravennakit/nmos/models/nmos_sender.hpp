@@ -11,6 +11,7 @@
 #pragma once
 
 #include "nmos_resource_core.hpp"
+#include "nmos_sender_transport_params_rtp.hpp"
 
 namespace rav::nmos {
 
@@ -69,7 +70,8 @@ struct Sender: ResourceCore {
         return true;
     }
 
-    SafeFunction<bool(const std::optional<boost::uuids::uuid>& new_receiver_id)> set_receiver_id;
+    SafeFunction<bool(const std::optional<boost::uuids::uuid>& new_receiver_id)> patch_receiver_id;
+    SafeFunction<bool(const SenderTransportParamsRtp& transport_params_rtp)> patch_transport_params;
 };
 
 inline void

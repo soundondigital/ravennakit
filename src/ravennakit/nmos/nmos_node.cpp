@@ -121,6 +121,7 @@ boost::json::array get_sender_transport_params_from_sdp(const rav::sdp::SessionD
     boost::json::array transport_params;
     for (auto& media : sdp.media_descriptions) {
         rav::nmos::SenderTransportParamsRtp params {};
+        params.rtp_enabled = true;
         params.destination_port = media.port;
         params.source_port = media.port;  // TODO: This is probably not correct. I suspect that this should be the port
                                           // of the sending socket, however we don't bind the socket and so there is no
@@ -1175,9 +1176,64 @@ rav::nmos::Node::Node(
 
             if (auto result = json.try_at("receiver_id")) {
                 auto new_receiver_id = uuid_from_json(*result);
-                if (!sender->set_receiver_id(new_receiver_id)) {
+                if (!sender->patch_receiver_id(new_receiver_id)) {
                     set_error_response(res, http::status::bad_request, "Bad Request", "Failed to change receiver id");
                     return;
+                }
+            }
+
+            if (auto result = json.try_at("transport_params")) {
+                if (!result->is_array()) {
+                    set_error_response(
+                        res, http::status::bad_request, "Bad Request", "Transport params should be an array"
+                    );
+                    return;
+                }
+
+                for (auto& p : result->as_array()) {
+                    auto transport_params = boost::json::value_to<SenderTransportParamsRtp>(p);
+                    if (transport_params.source_ip.has_value() && transport_params.source_ip != "auto") {
+                        set_error_response(
+                            res, http::status::bad_request, "Bad Request", "Changing source ip is not allowed"
+                        );
+                        return;
+                    }
+
+                    if (!std::holds_alternative<std::monostate>(transport_params.source_port)) {
+                        auto* source_port = std::get_if<std::string>(&transport_params.source_port);
+                        if (source_port == nullptr || *source_port != "auto") {
+                            set_error_response(
+                                res, http::status::not_implemented, "Not Implemented",
+                                "Changing source port is not implemented"
+                            );
+                            return;
+                        }
+                    }
+
+                    if (transport_params.destination_ip.has_value() && transport_params.destination_ip != "auto") {
+                        set_error_response(
+                            res, http::status::bad_request, "Bad Request", "Changing destination ip is not allowed"
+                        );
+                        return;
+                    }
+
+                    if (!std::holds_alternative<std::monostate>(transport_params.destination_port)) {
+                        auto* destination_port = std::get_if<std::string>(&transport_params.destination_port);
+                        if (destination_port == nullptr || *destination_port != "auto") {
+                            set_error_response(
+                                res, http::status::not_implemented, "Not Implemented",
+                                "Changing destination port is not implemented"
+                            );
+                            return;
+                        }
+                    }
+
+                    if (transport_params.rtp_enabled.has_value()) {
+                        set_error_response(
+                            res, http::status::bad_request, "Bad Request", "Changing RTP enabled is not allowed"
+                        );
+                        return;
+                    }
                 }
             }
 

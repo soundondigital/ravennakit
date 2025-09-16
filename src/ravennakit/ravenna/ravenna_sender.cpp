@@ -51,9 +51,13 @@ rav::RavennaSender::RavennaSender(
     destinations.emplace_back(Destination {Rank::secondary(), {boost::asio::ip::address_v4::any(), 5004}, true});
     configuration_.destinations = std::move(destinations);
 
-    nmos_sender_.set_receiver_id = [this](const std::optional<boost::uuids::uuid>& new_receiver_id) {
+    nmos_sender_.patch_receiver_id = [this](const std::optional<boost::uuids::uuid>& new_receiver_id) {
         nmos_sender_.subscription.receiver_id = new_receiver_id;
         return true;
+    };
+
+    nmos_sender_.patch_transport_params = [this](const nmos::SenderTransportParamsRtp& transport_params_rtp) {
+        return false;
     };
 
     if (!ptp_instance_.subscribe(this)) {

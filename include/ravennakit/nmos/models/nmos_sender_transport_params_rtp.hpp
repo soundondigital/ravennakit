@@ -29,29 +29,29 @@ struct SenderTransportParamsRtp {
      * parameter is set to auto the sender should establish for itself which interface it should use, based on routing
      * rules or its own internal configuration.
      */
-    std::string source_ip {"auto"};
+    std::optional<std::string> source_ip {};
 
     /**
      * IP address to which RTP packets will be sent. If auto is set the sender should select a multicast address to send
      * to itself. For example, it may implement MADCAP (RFC 2730), ZMAAP, or be allocated address by some other system
      * responsible for co-ordination multicast address use.
      */
-    std::string destination_ip {"auto"};
+    std::optional<std::string> destination_ip {};
 
     /**
      * Source port for RTP packets (auto = 5004 by default)
      */
-    std::variant<int, std::string> source_port {"auto"};
+    std::variant<std::monostate, int, std::string> source_port {};
 
     /**
      * destination port for RTP packets (auto = 5004 by default)
      */
-    std::variant<int, std::string> destination_port {"auto"};
+    std::variant<std::monostate, int, std::string> destination_port {};
 
     /**
      * RTP transmission active/inactive
      */
-    bool rtp_enabled {false};
+    std::optional<bool> rtp_enabled {};
 };
 
 inline void tag_invoke(
@@ -64,6 +64,28 @@ inline void tag_invoke(
         {"destination_port", boost::json::value_from(sender_transport_params.destination_port)},
         {"rtp_enabled", boost::json::value_from(sender_transport_params.rtp_enabled)},
     };
+}
+
+inline SenderTransportParamsRtp
+tag_invoke(const boost::json::value_to_tag<SenderTransportParamsRtp>&, const boost::json::value& jv) {
+    SenderTransportParamsRtp rtp {};
+    if (const auto destination_ip = jv.try_at("destination_ip")) {
+        rtp.destination_ip = destination_ip->as_string();
+    }
+    if (const auto destination_port = jv.try_at("destination_port")) {
+        // rtp.destination_port = destination_port->to_number<uint16_t>();
+        rtp.destination_port = boost::json::value_to<decltype(rtp.destination_port)>(*destination_port);
+    }
+    if (const auto source_ip = jv.try_at("source_ip")) {
+        rtp.source_ip = source_ip->as_string();
+    }
+    if (const auto source_port = jv.try_at("source_port")) {
+        // rtp.source_port = source_port->to_number<uint16_t>();
+    }
+    if (const auto rtp_enabled = jv.try_at("rtp_enabled")) {
+        rtp.rtp_enabled = rtp_enabled->as_bool();
+    }
+    return rtp;
 }
 
 }  // namespace rav::nmos
