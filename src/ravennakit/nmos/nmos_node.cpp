@@ -382,7 +382,13 @@ rav::nmos::Node::Node(
                 return invalid_api_version_response(res);
             }
 
-            ok_response(res, boost::json::serialize(boost::json::value_from(devices_)));
+            boost::json::array devices;
+
+            for (const auto* device : devices_) {
+                devices.push_back(boost::json::value_from(*device));
+            }
+
+            ok_response(res, boost::json::serialize(devices));
         }
     );
 
@@ -423,7 +429,13 @@ rav::nmos::Node::Node(
                 return invalid_api_version_response(res);
             }
 
-            ok_response(res, boost::json::serialize(boost::json::value_from(flows_)));
+            boost::json::array flows;
+
+            for (auto* flow : flows_) {
+                flows.push_back(boost::json::value_from(*flow));
+            }
+
+            ok_response(res, boost::json::serialize(flows));
         }
     );
 
@@ -534,7 +546,13 @@ rav::nmos::Node::Node(
                 return invalid_api_version_response(res);
             }
 
-            ok_response(res, boost::json::serialize(boost::json::value_from(senders_)));
+            boost::json::array senders;
+
+            for (auto* sender : senders_) {
+                senders.push_back(boost::json::value_from(*sender));
+            }
+
+            ok_response(res, boost::json::serialize(senders));
         }
     );
 
@@ -575,7 +593,13 @@ rav::nmos::Node::Node(
                 return invalid_api_version_response(res);
             }
 
-            ok_response(res, boost::json::serialize(boost::json::value_from(sources_)));
+            boost::json::array sources;
+
+            for (auto* source : sources_) {
+                sources.push_back(boost::json::value_from(*source));
+            }
+
+            ok_response(res, boost::json::serialize(sources));
         }
     );
 
@@ -1007,7 +1031,7 @@ rav::nmos::Node::Node(
             auto array = boost::json::array();
 
             for (auto& sender : senders_) {
-                array.push_back(boost::json::value_from(fmt::format("{}/", boost::uuids::to_string(sender.id))));
+                array.push_back(boost::json::value_from(fmt::format("{}/", boost::uuids::to_string(sender->id))));
             }
 
             ok_response(res, boost::json::serialize(array));
@@ -1084,7 +1108,7 @@ rav::nmos::Node::Node(
                 return;
             }
 
-            const auto transport_file = sender_transport_files_.find(boost::uuids::string_generator()(*sender_id));
+            const auto transport_file = sender_transport_files_.find(sender);
             if (transport_file == sender_transport_files_.end()) {
                 set_error_response(res, http::status::not_found, "Not found", "Sender transport file not found");
                 return;
@@ -1159,7 +1183,7 @@ rav::nmos::Node::Node(
                 return;
             }
 
-            const auto transport_file = sender_transport_files_.find(boost::uuids::string_generator()(*sender_id));
+            const auto transport_file = sender_transport_files_.find(sender);
             if (transport_file == sender_transport_files_.end()) {
                 set_error_response(res, http::status::not_found, "Not Found", "Sender transport file not found");
                 return;
@@ -1198,7 +1222,7 @@ rav::nmos::Node::Node(
                 return;
             }
 
-            const auto transport_file = sender_transport_files_.find(boost::uuids::string_generator()(*sender_id));
+            const auto transport_file = sender_transport_files_.find(sender);
             if (transport_file == sender_transport_files_.end()) {
                 set_error_response(res, http::status::not_found, "Not found", "Sender transport file not found");
                 return;
@@ -1238,7 +1262,7 @@ rav::nmos::Node::Node(
             }
 
             boost::json::array constraints;
-            const auto transport_file = sender_transport_files_.find(boost::uuids::string_generator()(*sender_id));
+            const auto transport_file = sender_transport_files_.find(sender);
             if (transport_file != sender_transport_files_.end()) {
                 constraints = get_sender_constraints_from_sdp(transport_file->second);
             }
@@ -1266,7 +1290,7 @@ rav::nmos::Node::Node(
                 return;
             }
 
-            const auto it = sender_transport_files_.find(boost::uuids::string_generator()(*sender_id));
+            const auto it = sender_transport_files_.find(sender);
             if (it == sender_transport_files_.end()) {
                 set_error_response(res, http::status::not_found, "Not found", "Sender transport file not found");
                 return;
@@ -1422,6 +1446,13 @@ boost::system::result<void, rav::nmos::Error> rav::nmos::Node::start_internal() 
     const auto http_endpoint = http_server_.get_local_endpoint();
     for (auto& endpoint : self_.api.endpoints) {
         endpoint.port = http_endpoint.port();
+    }
+
+    for (auto& i : network_interface_config_.get_array_of_interface_addresses<2>()) {
+        if (!i.is_unspecified()) {
+            self_.href = fmt::format("http://{}:{}", i.to_string(), http_endpoint.port());
+            break;
+        }
     }
 
     status_info_.api_port = http_endpoint.port();
@@ -1671,20 +1702,20 @@ void rav::nmos::Node::connect_to_registry_async(const std::string_view host, con
     connect_to_registry_async();
 }
 
-bool rav::nmos::Node::add_receiver_to_device(const ReceiverAudio& receiver) {
-    for (auto& device : devices_) {
-        if (device.id == receiver.device_id) {
-            device.receivers.push_back(receiver.id);
+bool rav::nmos::Node::add_receiver_to_device(const ReceiverAudio& receiver) const {
+    for (auto* device : devices_) {
+        if (device->id == receiver.device_id) {
+            device->receivers.push_back(receiver.id);
             return true;
         }
     }
     return false;
 }
 
-bool rav::nmos::Node::add_sender_to_device(const Sender& sender) {
-    for (auto& device : devices_) {
-        if (device.id == sender.device_id) {
-            device.senders.push_back(sender.id);
+bool rav::nmos::Node::add_sender_to_device(const Sender& sender) const {
+    for (auto* device : devices_) {
+        if (device->id == sender.device_id) {
+            device->senders.push_back(sender.id);
             return true;
         }
     }
@@ -1729,20 +1760,20 @@ void rav::nmos::Node::update_all_resources_to_now() {
 
     self_.version = version;
 
-    for (auto& device : devices_) {
-        device.version = version;
+    for (auto* device : devices_) {
+        device->version = version;
     }
 
-    for (auto& source : sources_) {
-        source.set_version(version);
+    for (auto* source : sources_) {
+        source->version = version;
     }
 
-    for (auto& flow : flows_) {
-        flow.set_version(version);
+    for (auto* flow : flows_) {
+        flow->version = version;
     }
 
-    for (auto& sender : senders_) {
-        sender.version = version;
+    for (auto* sender : senders_) {
+        sender->version = version;
     }
 
     for (auto* receiver : receivers_) {
@@ -1757,27 +1788,27 @@ void rav::nmos::Node::send_updated_resources_async() {
         post_resource_async("node", boost::json::value_from(self_));
     }
 
-    for (auto& device : devices_) {
-        if (device.version > current_version_) {
-            post_resource_async("device", boost::json::value_from(device));
+    for (auto* device : devices_) {
+        if (device->version > current_version_) {
+            post_resource_async("device", boost::json::value_from(*device));
         }
     }
 
-    for (auto& source : sources_) {
-        if (source.get_version() > current_version_) {
-            post_resource_async("source", boost::json::value_from(source));
+    for (auto* source : sources_) {
+        if (source->version > current_version_) {
+            post_resource_async("source", boost::json::value_from(*source));
         }
     }
 
-    for (auto& flow : flows_) {
-        if (flow.get_version() > current_version_) {
-            post_resource_async("flow", boost::json::value_from(flow));
+    for (auto* flow : flows_) {
+        if (flow->version > current_version_) {
+            post_resource_async("flow", boost::json::value_from(*flow));
         }
     }
 
-    for (auto& sender : senders_) {
-        if (sender.version > current_version_) {
-            post_resource_async("sender", boost::json::value_from(sender));
+    for (auto* sender : senders_) {
+        if (sender->version > current_version_) {
+            post_resource_async("sender", boost::json::value_from(*sender));
         }
     }
 
@@ -1826,27 +1857,32 @@ boost::asio::ip::tcp::endpoint rav::nmos::Node::get_local_endpoint() const {
     return http_server_.get_local_endpoint();
 }
 
-bool rav::nmos::Node::add_or_update_device(Device device) {
-    RAV_ASSERT(!device.id.is_nil(), "Device ID should not be nil");
+bool rav::nmos::Node::add_or_update_device(Device* device) {
+    RAV_ASSERT(device != nullptr, "Device should not be nullptr");
+    RAV_ASSERT(!device->id.is_nil(), "Device ID should not be nil");
     RAV_ASSERT(!self_.id.is_nil(), "Node ID should not be nil");
 
-    device.node_id = self_.id;
-    device.version.update(get_local_clock().now());
-    update_device(device);
+    device->node_id = self_.id;
+    device->version.update(get_local_clock().now());
+    update_device(*device);
 
-    bool updated = false;
-    for (auto& existing_device : devices_) {
-        if (existing_device.id == device.id) {
-            device.senders = std::move(existing_device.senders);
-            device.receivers = std::move(existing_device.receivers);
-            existing_device = std::move(device);
-            updated = true;
-            break;
+    // Test is a device with the same uuid exists
+    for (const auto* existing_device : devices_) {
+        if (existing_device != device && existing_device->id == device->id) {
+            RAV_ERROR("Device with same uuid already exists");
+            return false;
         }
     }
 
-    if (!updated) {
-        devices_.push_back(std::move(device));
+    bool device_exists = false;
+    for (const auto* existing_device : devices_) {
+        if (existing_device == device) {
+            device_exists = true;
+        }
+    }
+
+    if (!device_exists) {
+        devices_.push_back(device);
     }
 
     if (status_ == Status::registered) {
@@ -1857,31 +1893,31 @@ bool rav::nmos::Node::add_or_update_device(Device device) {
 }
 
 const rav::nmos::Device* rav::nmos::Node::find_device(const boost::uuids::uuid& uuid) const {
-    const auto it = std::find_if(devices_.begin(), devices_.end(), [uuid](const Device& device) {
-        return device.id == uuid;
+    const auto it = std::find_if(devices_.begin(), devices_.end(), [uuid](const Device* device) {
+        return device->id == uuid;
     });
     if (it != devices_.end()) {
-        return &*it;
+        return *it;
     }
     return nullptr;
 }
 
-bool rav::nmos::Node::add_or_update_flow(Flow flow) {
-    if (flow.get_id().is_nil()) {
+bool rav::nmos::Node::add_or_update_flow(FlowAudioRaw* flow) {
+    RAV_ASSERT(flow != nullptr, "Flow should not be nullptr");
+
+    if (flow->id.is_nil()) {
         RAV_ERROR("Flow ID should not be nil");
         return false;
     }
 
-    flow.set_version(Version(get_local_clock().now()));
+    flow->version = Version(get_local_clock().now());
 
-    const auto it = std::find_if(flows_.begin(), flows_.end(), [&flow](const Flow& existing_flow) {
-        return existing_flow.get_id() == flow.get_id();
+    const auto it = std::find_if(flows_.begin(), flows_.end(), [flow](const FlowAudioRaw* existing_flow) {
+        return existing_flow == flow;
     });
 
-    if (it != flows_.end()) {
-        *it = std::move(flow);
-    } else {
-        flows_.push_back(std::move(flow));
+    if (it == flows_.end()) {
+        flows_.push_back(flow);
     }
 
     if (status_ == Status::registered) {
@@ -1891,51 +1927,53 @@ bool rav::nmos::Node::add_or_update_flow(Flow flow) {
     return true;
 }
 
-bool rav::nmos::Node::remove_device(boost::uuids::uuid uuid) {
-    stl_remove_if(senders_, [&uuid](const Sender& s) {
-        return s.device_id == uuid;
+bool rav::nmos::Node::remove_device(Device* device) {
+    RAV_ASSERT(device != nullptr, "Device is null");
+
+    stl_remove_if(senders_, [&device](const Sender* s) {
+        return s->device_id == device->id;
     });
 
-    stl_remove_if(flows_, [&uuid](const Flow& f) {
-        return f.get_device_id() == uuid;
+    stl_remove_if(flows_, [&device](const FlowAudioRaw* f) {
+        return f->device_id == device->id;
     });
 
-    stl_remove_if(sources_, [&uuid](const Source& s) {
-        return s.get_device_id() == uuid;
+    stl_remove_if(sources_, [&device](const SourceAudio* s) {
+        return s->device_id == device->id;
     });
 
-    stl_remove_if(receivers_, [&uuid](const ReceiverAudio* r) {
-        return r->device_id == uuid;
+    stl_remove_if(receivers_, [&device](const ReceiverAudio* r) {
+        return r->device_id == device->id;
     });
 
-    const auto count = stl_remove_if(devices_, [&uuid](const Device& d) {
-        return d.id == uuid;
+    const auto count = stl_remove_if(devices_, [device](const Device* d) {
+        return d == device;
     });
 
     if (status_ == Status::registered && count > 0) {
-        delete_resource_async("devices", uuid);
+        delete_resource_async("devices", device->id);
     }
 
     return count > 0;
 }
 
-const rav::nmos::Flow* rav::nmos::Node::find_flow(const boost::uuids::uuid& uuid) const {
-    const auto it = std::find_if(flows_.begin(), flows_.end(), [uuid](const Flow& flow) {
-        return flow.get_id() == uuid;
+const rav::nmos::FlowAudioRaw* rav::nmos::Node::find_flow(const boost::uuids::uuid& uuid) const {
+    const auto it = std::find_if(flows_.begin(), flows_.end(), [uuid](const FlowAudioRaw* flow) {
+        return flow->id == uuid;
     });
     if (it != flows_.end()) {
-        return &*it;
+        return *it;
     }
     return nullptr;
 }
 
-bool rav::nmos::Node::remove_flow(const boost::uuids::uuid& uuid) {
-    const auto count = stl_remove_if(flows_, [&uuid](const Flow& f) {
-        return f.get_id() == uuid;
+bool rav::nmos::Node::remove_flow(FlowAudioRaw* flow) {
+    const auto count = stl_remove_if(flows_, [&flow](const FlowAudioRaw* f) {
+        return f == flow;
     });
 
     if (status_ == Status::registered && count > 0) {
-        delete_resource_async("flows", uuid);
+        delete_resource_async("flows", flow->id);
     }
 
     return count > 0;
@@ -1995,26 +2033,24 @@ bool rav::nmos::Node::remove_receiver(ReceiverAudio* receiver) {
     return count > 0;
 }
 
-bool rav::nmos::Node::add_or_update_sender(Sender sender) {
-    if (sender.id.is_nil()) {
+bool rav::nmos::Node::add_or_update_sender(Sender* sender) {
+    if (sender->id.is_nil()) {
         RAV_ERROR("Sender ID should not be nil");
         return false;
     }
 
-    sender.version = Version(get_local_clock().now());
+    sender->version = Version(get_local_clock().now());
 
-    const auto it = std::find_if(senders_.begin(), senders_.end(), [&sender](const Sender& existing_receiver) {
-        return existing_receiver.id == sender.id;
+    const auto it = std::find_if(senders_.begin(), senders_.end(), [sender](const Sender* s) {
+        return s->id == sender->id;
     });
 
-    if (it != senders_.end()) {
-        *it = std::move(sender);
-    } else {
-        if (!add_sender_to_device(sender)) {
+    if (it == senders_.end()) {
+        if (!add_sender_to_device(*sender)) {
             RAV_ERROR("Device not found");
             return false;
         }
-        senders_.push_back(std::move(sender));
+        senders_.push_back(sender);
     }
 
     if (status_ == Status::registered) {
@@ -2024,15 +2060,14 @@ bool rav::nmos::Node::add_or_update_sender(Sender sender) {
     return true;
 }
 
-void rav::nmos::Node::set_sender_transport_file(
-    const boost::uuids::uuid sender_uuid, std::optional<sdp::SessionDescription> transport_file
-) {
-    RAV_ASSERT(!sender_uuid.is_nil(), "Sender uuid should be valid");
+void rav::nmos::Node::set_sender_transport_file(Sender* sender, std::optional<sdp::SessionDescription> transport_file) {
+    RAV_ASSERT(sender != nullptr, "Expected sender to be a valid pointer");
+    RAV_ASSERT(!sender->id.is_nil(), "Sender uuid should be valid");
     if (!transport_file.has_value()) {
-        sender_transport_files_.erase(sender_uuid);
+        sender_transport_files_.erase(sender);
         return;
     }
-    sender_transport_files_[sender_uuid] = std::move(*transport_file);
+    sender_transport_files_[sender] = std::move(*transport_file);
 }
 
 void rav::nmos::Node::set_receiver_transport_file(
@@ -2046,43 +2081,43 @@ void rav::nmos::Node::set_receiver_transport_file(
     receiver_transport_files_[receiver_uuid] = std::move(*transport_file);
 }
 
-const rav::nmos::Sender* rav::nmos::Node::find_sender(const boost::uuids::uuid& uuid) const {
-    const auto it = std::find_if(senders_.begin(), senders_.end(), [uuid](const Sender& sender) {
-        return sender.id == uuid;
+rav::nmos::Sender* rav::nmos::Node::find_sender(const boost::uuids::uuid& uuid) const {
+    const auto it = std::find_if(senders_.begin(), senders_.end(), [uuid](const Sender* sender) {
+        return sender->id == uuid;
     });
     if (it != senders_.end()) {
-        return &*it;
+        return *it;
     }
     return nullptr;
 }
 
-bool rav::nmos::Node::remove_sender(boost::uuids::uuid uuid) {
-    const auto count = stl_remove_if(senders_, [&uuid](const Sender& s) {
-        return s.id == uuid;
+bool rav::nmos::Node::remove_sender(Sender* sender) {
+    const auto count = stl_remove_if(senders_, [&sender](const Sender* s) {
+        return s == sender;
     });
 
     if (status_ == Status::registered && count > 0) {
-        delete_resource_async("senders", uuid);
+        delete_resource_async("senders", sender->id);
     }
 
     return count > 0;
 }
 
-bool rav::nmos::Node::add_or_update_source(Source source) {
-    if (source.get_id().is_nil()) {
+bool rav::nmos::Node::add_or_update_source(SourceAudio* source) {
+    RAV_ASSERT(source != nullptr, "Source must not be null");
+
+    if (source->id.is_nil()) {
         RAV_ERROR("Source ID should not be nil");
         return false;
     }
 
-    source.set_version(Version(get_local_clock().now()));
+    source->version = Version(get_local_clock().now());
 
-    const auto it = std::find_if(sources_.begin(), sources_.end(), [&source](const Source& existing_source) {
-        return existing_source.get_id() == source.get_id();
+    const auto it = std::find_if(sources_.begin(), sources_.end(), [&source](const SourceAudio* existing_source) {
+        return existing_source->id == source->id;
     });
 
-    if (it != sources_.end()) {
-        *it = std::move(source);
-    } else {
+    if (it == sources_.end()) {
         sources_.push_back(std::move(source));
     }
 
@@ -2093,23 +2128,23 @@ bool rav::nmos::Node::add_or_update_source(Source source) {
     return true;
 }
 
-const rav::nmos::Source* rav::nmos::Node::find_source(const boost::uuids::uuid& uuid) const {
-    const auto it = std::find_if(sources_.begin(), sources_.end(), [uuid](const Source& source) {
-        return source.get_id() == uuid;
+const rav::nmos::SourceAudio* rav::nmos::Node::find_source(const boost::uuids::uuid& uuid) const {
+    const auto it = std::find_if(sources_.begin(), sources_.end(), [uuid](const SourceAudio* source) {
+        return source->id == uuid;
     });
     if (it != sources_.end()) {
-        return &*it;
+        return *it;
     }
     return nullptr;
 }
 
-bool rav::nmos::Node::remove_source(boost::uuids::uuid uuid) {
-    const auto count = stl_remove_if(sources_, [&uuid](const Source& s) {
-        return s.get_id() == uuid;
+bool rav::nmos::Node::remove_source(SourceAudio* source) {
+    const auto count = stl_remove_if(sources_, [&source](const SourceAudio* s) {
+        return s == source;
     });
 
     if (status_ == Status::registered && count > 0) {
-        delete_resource_async("sources", uuid);
+        delete_resource_async("sources", source->id);
     }
 
     return count > 0;
@@ -2119,11 +2154,11 @@ const boost::uuids::uuid& rav::nmos::Node::get_uuid() const {
     return self_.id;
 }
 
-const std::vector<rav::nmos::Device>& rav::nmos::Node::get_devices() const {
+const std::vector<rav::nmos::Device*>& rav::nmos::Node::get_devices() const {
     return devices_;
 }
 
-const std::vector<rav::nmos::Flow>& rav::nmos::Node::get_flows() const {
+const std::vector<rav::nmos::FlowAudioRaw*>& rav::nmos::Node::get_flows() const {
     return flows_;
 }
 
@@ -2131,11 +2166,11 @@ const std::vector<rav::nmos::ReceiverAudio*>& rav::nmos::Node::get_receivers() c
     return receivers_;
 }
 
-const std::vector<rav::nmos::Sender>& rav::nmos::Node::get_senders() const {
+const std::vector<rav::nmos::Sender*>& rav::nmos::Node::get_senders() const {
     return senders_;
 }
 
-const std::vector<rav::nmos::Source>& rav::nmos::Node::get_sources() const {
+const std::vector<rav::nmos::SourceAudio*>& rav::nmos::Node::get_sources() const {
     return sources_;
 }
 
@@ -2185,8 +2220,8 @@ void rav::nmos::Node::set_network_interface_config(NetworkInterfaceConfig config
         self_.api.endpoints.emplace_back(Self::Endpoint {ip.to_string(), http_endpoint.port(), "http", false});
     }
 
-    for (auto& device : devices_) {
-        update_device(device);
+    for (auto* device : devices_) {
+        update_device(*device);
     }
 
     self_.version.update(get_local_clock().now());

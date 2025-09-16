@@ -70,13 +70,13 @@ rav::RavennaSender::~RavennaSender() {
     rtsp_server_.unregister_handler(this);
 
     if (nmos_node_ != nullptr) {
-        if (!nmos_node_->remove_sender(nmos_sender_.id)) {
+        if (!nmos_node_->remove_sender(&nmos_sender_)) {
             RAV_ERROR("Failed to remove NMOS receiver with ID: {}", boost::uuids::to_string(nmos_sender_.id));
         }
-        if (!nmos_node_->remove_flow(nmos_flow_.id)) {
+        if (!nmos_node_->remove_flow(&nmos_flow_)) {
             RAV_ERROR("Failed to remove NMOS flow with ID: {}", boost::uuids::to_string(nmos_flow_.id));
         }
-        if (!nmos_node_->remove_source(nmos_source_.id)) {
+        if (!nmos_node_->remove_source(&nmos_source_)) {
             RAV_ERROR("Failed to remove NMOS source with ID: {}", boost::uuids::to_string(nmos_source_.id));
         }
     }
@@ -235,13 +235,13 @@ void rav::RavennaSender::set_nmos_node(nmos::Node* nmos_node) {
         RAV_ASSERT(nmos_sender_.is_valid(), "NMOS receiver must be valid at this point");
         RAV_ASSERT(nmos_flow_.is_valid(), "NMOS flow must be valid at this point");
         RAV_ASSERT(nmos_source_.is_valid(), "NMOS source must be valid at this point");
-        if (!nmos_node_->add_or_update_source({nmos_source_})) {
+        if (!nmos_node_->add_or_update_source(&nmos_source_)) {
             RAV_ERROR("Failed to add NMOS source with ID: {}", boost::uuids::to_string(nmos_source_.id));
         }
-        if (!nmos_node_->add_or_update_flow({nmos_flow_})) {
+        if (!nmos_node_->add_or_update_flow(&nmos_flow_)) {
             RAV_ERROR("Failed to add NMOS flow with ID: {}", boost::uuids::to_string(nmos_flow_.id));
         }
-        if (!nmos_node_->add_or_update_sender(nmos_sender_)) {
+        if (!nmos_node_->add_or_update_sender(&nmos_sender_)) {
             RAV_ERROR("Failed to add NMOS sender with ID: {}", boost::uuids::to_string(nmos_sender_.id));
         }
     }
@@ -587,19 +587,19 @@ void rav::RavennaSender::update_state(const bool update_advertisement, const boo
         nmos_flow_.bit_depth = audio_format.bytes_per_sample() * 8;
 
         if (nmos_node_ != nullptr) {
-            if (!nmos_node_->add_or_update_source({nmos_source_})) {
+            if (!nmos_node_->add_or_update_source(&nmos_source_)) {
                 RAV_ERROR("Failed to add NMOS source with ID: {}", boost::uuids::to_string(nmos_source_.id));
             }
-            if (!nmos_node_->add_or_update_flow({nmos_flow_})) {
+            if (!nmos_node_->add_or_update_flow(&nmos_flow_)) {
                 RAV_ERROR("Failed to add NMOS flow with ID: {}", boost::uuids::to_string(nmos_flow_.id));
             }
-            if (!nmos_node_->add_or_update_sender(nmos_sender_)) {
+            if (!nmos_node_->add_or_update_sender(&nmos_sender_)) {
                 RAV_ERROR("Failed to add NMOS sender with ID: {}", boost::uuids::to_string(nmos_sender_.id));
             }
             if (auto sdp = build_sdp()) {
-                nmos_node_->set_sender_transport_file(nmos_sender_.id, std::move(*sdp));
+                nmos_node_->set_sender_transport_file(&nmos_sender_, std::move(*sdp));
             } else {
-                nmos_node_->set_sender_transport_file(nmos_sender_.id, {});
+                nmos_node_->set_sender_transport_file(&nmos_sender_, {});
             }
         }
     }

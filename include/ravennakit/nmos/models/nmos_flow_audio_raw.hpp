@@ -24,7 +24,7 @@ struct FlowAudioRaw: FlowAudio {
     /**
      * @return True if the flow is valid, loosely following the NMOS JSON schema, or false otherwise.
      */
-    bool is_valid() const {
+    [[nodiscard]] bool is_valid() const {
         if (id.is_nil()) {
             return false;
         }

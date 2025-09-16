@@ -68,7 +68,7 @@ int main(const int argc, const char* argv[]) {
         device.description = fmt::format("RAVENNAKIT Device {}", device_count + 1);
         device.version = rav::nmos::Version {i_device + 1, (i_device + 1) * 1000};
         device.controls.push_back(control);
-        std::ignore = node.add_or_update_device(device);
+        std::ignore = node.add_or_update_device(&device);
 
         // Sources
         for (uint32_t i_source = 0; i_source < k_num_sources_per_device; ++i_source) {
@@ -79,7 +79,7 @@ int main(const int argc, const char* argv[]) {
             source.version = rav::nmos::Version {i_source + 1, (i_source + 1) * 1000};
             source.device_id = device.id;
             source.channels.push_back({"Channel 1"});
-            std::ignore = node.add_or_update_source({source});
+            std::ignore = node.add_or_update_source(&source);
 
             // Flow
             for (uint32_t i_sender = 0; i_sender < k_num_senders_per_source; ++i_sender) {
@@ -93,7 +93,7 @@ int main(const int argc, const char* argv[]) {
                 flow.media_type = "audio/L24";
                 flow.device_id = device.id;
                 flow.source_id = source.id;
-                std::ignore = node.add_or_update_flow({flow});
+                std::ignore = node.add_or_update_flow(&flow);
 
                 // Sender
                 rav::nmos::Sender sender;
@@ -104,7 +104,7 @@ int main(const int argc, const char* argv[]) {
                 sender.device_id = device.id;
                 sender.flow_id = flow.id;
                 sender.transport = "urn:x-nmos:transport:rtp";
-                std::ignore = node.add_or_update_sender(sender);
+                std::ignore = node.add_or_update_sender(&sender);
 
                 flow_count++;
                 sender_count++;

@@ -22,7 +22,7 @@ rav::RavennaNode::RavennaNode() :
     advertiser_ = dnssd::Advertiser::create(io_context_);
 
     nmos_device_.id = boost::uuids::random_generator()();
-    if (!nmos_node_.add_or_update_device(nmos_device_)) {
+    if (!nmos_node_.add_or_update_device(&nmos_device_)) {
         RAV_ERROR("Failed to add NMOS device with ID: {}", boost::uuids::to_string(nmos_device_.id));
     }
 
@@ -238,7 +238,7 @@ rav::RavennaNode::set_nmos_configuration(nmos::Node::Configuration update) {
         }
         nmos_device_.label = u.label;
         nmos_device_.description = u.description;
-        if (!nmos_node_.add_or_update_device(nmos_device_)) {
+        if (!nmos_node_.add_or_update_device(&nmos_device_)) {
             return tl::unexpected("Failed to update NMOS device configuration");
         }
         return {};
@@ -560,7 +560,7 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
                 }
 
                 nmos_node_.stop();
-                if (!nmos_node_.remove_device(nmos_device_.id)) {
+                if (!nmos_node_.remove_device(&nmos_device_)) {
                     RAV_ERROR("Failed to remove NMOS device with ID: {}", boost::uuids::to_string(nmos_device_.id));
                 }
                 auto result = nmos_node_.set_configuration(*config);
@@ -570,7 +570,7 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
                 nmos_device_.id = nmos_device_id;
                 nmos_device_.label = config->label;
                 nmos_device_.description = config->description;
-                if (!nmos_node_.add_or_update_device(std::move(nmos_device_))) {
+                if (!nmos_node_.add_or_update_device(&nmos_device_)) {
                     RAV_ERROR("Failed to add NMOS device to node");
                 }
             } else {
