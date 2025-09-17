@@ -15,31 +15,32 @@
 TEST_CASE("rav::ptp::ClockIdentity") {
     SECTION("Construct from MAC address") {
         const rav::MacAddress mac_address("a1:b2:c3:d4:e5:f6");
-        const rav::ptp::ClockIdentity clock_identity = rav::ptp::ClockIdentity::from_mac_address(mac_address);
+        const auto clock_identity = rav::ptp::ClockIdentity::from_mac_address(mac_address);
 
-        REQUIRE(clock_identity.data[0] == 0xa1);
-        REQUIRE(clock_identity.data[1] == 0xb2);
-        REQUIRE(clock_identity.data[2] == 0xc3);
-        REQUIRE(clock_identity.data[3] == 0xff);
-        REQUIRE(clock_identity.data[4] == 0xfe);
-        REQUIRE(clock_identity.data[5] == 0xd4);
-        REQUIRE(clock_identity.data[6] == 0xe5);
-        REQUIRE(clock_identity.data[7] == 0xf6);
+        REQUIRE(clock_identity.has_value());
+        REQUIRE(clock_identity->data[0] == 0xa1);
+        REQUIRE(clock_identity->data[1] == 0xb2);
+        REQUIRE(clock_identity->data[2] == 0xc3);
+        REQUIRE(clock_identity->data[3] == 0xd4);
+        REQUIRE(clock_identity->data[4] == 0xe5);
+        REQUIRE(clock_identity->data[5] == 0xf6);
+        REQUIRE(clock_identity->data[6] == rav::ptp::ClockIdentity::k_implementer_specific_octets[0]);
+        REQUIRE(clock_identity->data[7] == rav::ptp::ClockIdentity::k_implementer_specific_octets[1]);
     }
 
     SECTION("Default constructor") {
         constexpr rav::ptp::ClockIdentity clock_identity;
-        REQUIRE(clock_identity.empty());
+        REQUIRE(clock_identity.all_zero());
     }
 
     SECTION("Empty") {
         rav::ptp::ClockIdentity clock_identity;
-        REQUIRE(clock_identity.empty());
+        REQUIRE(clock_identity.all_zero());
 
         for (unsigned char& i : clock_identity.data) {
             SECTION("Test every byte") {
                 i = 1;
-                REQUIRE_FALSE(clock_identity.empty());
+                REQUIRE_FALSE(clock_identity.all_zero());
             }
         }
     }
