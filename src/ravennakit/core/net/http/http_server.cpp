@@ -302,7 +302,12 @@ void rav::HttpServer::on_client_error(const boost::beast::error_code& ec, std::s
 
 boost::beast::http::message_generator
 rav::HttpServer::on_request(const boost::beast::http::request<boost::beast::http::string_body>& request) {
-    RAV_INFO("Request: {} {}", request.method_string(), request.target());
+    if (!request.body().empty()) {
+        RAV_INFO("{} {} {}", request.method_string(), request.target(), request.body().c_str());
+    } else {
+        RAV_INFO("{} {}", request.method_string(), request.target());
+    }
+
     try {
         PathMatcher::Parameters parameters;
 
@@ -312,7 +317,17 @@ rav::HttpServer::on_request(const boost::beast::http::request<boost::beast::http
             response.keep_alive(request.keep_alive());
             response.version(request.version());
             (*match)(request, response, parameters);
-            RAV_INFO("Response: {} {}", response.result_int(), response.reason());
+            auto result_int = response.result_int();
+            if (result_int >= 200 && result_int < 300) {
+                RAV_INFO(
+                    "{} {} {}", result_int, response.reason(),
+                    !response.body().empty() ? rav::string_replace(response.body(), "\r\n", "<crlf>") : ""
+                );
+            } else {
+                RAV_WARNING(
+                    "{} {} {}", result_int, response.reason(), !response.body().empty() ? response.body().c_str() : ""
+                );
+            }
             return response;
         }
 
@@ -322,7 +337,7 @@ rav::HttpServer::on_request(const boost::beast::http::request<boost::beast::http
         res.keep_alive(request.keep_alive());
         res.body() = std::string("No matching handler");
         res.prepare_payload();
-        RAV_INFO("Response: {} {}", res.result_int(), res.reason());
+        RAV_WARNING("Response: {} {}", res.result_int(), res.reason());
         return res;
     } catch (const std::exception& e) {
         RAV_ERROR("Exception in handler: {}", e.what());
@@ -330,7 +345,7 @@ rav::HttpServer::on_request(const boost::beast::http::request<boost::beast::http
         res.set(boost::beast::http::field::content_type, "text/plain");
         res.body() = "Internal server error";
         res.prepare_payload();
-        RAV_INFO("Response: {} {}", res.result_int(), res.reason());
+        RAV_WARNING("Response: {} {}", res.result_int(), res.reason());
         return res;
     }
 }

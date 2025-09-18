@@ -63,7 +63,7 @@ rav::ptp::Instance::add_port(const uint16_t port_number, const boost::asio::ip::
         return tl::unexpected(Error::network_interface_not_found);
     }
 
-    if (default_ds_.clock_identity.empty()) {
+    if (default_ds_.clock_identity.all_zero()) {
         // Need to assign the instance clock identity based on the first port added
         const auto mac_address = iface->get_mac_address();
         if (!mac_address) {
@@ -71,11 +71,11 @@ rav::ptp::Instance::add_port(const uint16_t port_number, const boost::asio::ip::
         }
 
         const auto identity = ClockIdentity::from_mac_address(mac_address.value());
-        if (!identity.is_valid()) {
+        if (!identity) {
             return tl::unexpected(Error::invalid_clock_identity);
         }
 
-        default_ds_.clock_identity = identity;
+        default_ds_.clock_identity = *identity;
     }
 
     PortIdentity port_identity;

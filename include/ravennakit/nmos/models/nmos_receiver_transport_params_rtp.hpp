@@ -28,17 +28,17 @@ struct ReceiverTransportParamsRtp {
      * the receiver should determine which interface to use for itself, for example by using the routing tables. The
      * behaviour of auto is undefined in unicast mode, and controllers should supply a specific interface address.
      */
-    std::string interface_ip {"auto"};
+    std::optional<std::string> interface_ip {};
 
     /**
      * RTP reception active/inactive.
      */
-    bool rtp_enabled {};
+    std::optional<bool> rtp_enabled {};
 
     /**
      * Destination port for RTP packets (auto = 5004 by default)
      */
-    std::variant<int, std::string> destination_port{"auto"};
+    std::variant<std::monostate, int, std::string> destination_port {};
 
     /**
      * IP multicast group address used in multicast operation only. Should be set to null during unicast operation. A
@@ -52,11 +52,44 @@ inline void tag_invoke(
 ) {
     jv = {
         {"source_ip", boost::json::value_from(transport_file.source_ip)},
-        {"interface_ip", transport_file.interface_ip},
-        {"rtp_enabled", transport_file.rtp_enabled},
+        {"interface_ip", boost::json::value_from(transport_file.interface_ip)},
+        {"rtp_enabled", boost::json::value_from(transport_file.rtp_enabled)},
         {"destination_port", boost::json::value_from(transport_file.destination_port)},
         {"multicast_ip", boost::json::value_from(transport_file.multicast_ip)},
     };
+}
+
+inline ReceiverTransportParamsRtp
+tag_invoke(const boost::json::value_to_tag<ReceiverTransportParamsRtp>&, const boost::json::value& jv) {
+    ReceiverTransportParamsRtp transport_params_rtp {};
+
+    if (const auto result = jv.try_at("source_ip")) {
+        transport_params_rtp.source_ip = boost::json::value_to<std::optional<std::string>>(*result);
+    }
+
+    if (const auto result = jv.try_at("interface_ip")) {
+        transport_params_rtp.interface_ip = boost::json::value_to<std::optional<std::string>>(*result);
+    }
+
+    if (const auto result = jv.try_at("rtp_enabled")) {
+        transport_params_rtp.rtp_enabled = boost::json::value_to<std::optional<bool>>(*result);
+    }
+
+    if (const auto result = jv.try_at("destination_port")) {
+        if (result->is_string()) {
+            transport_params_rtp.destination_port = std::string(result->get_string());
+        } else if (result->is_number()) {
+            transport_params_rtp.destination_port = result->to_number<uint16_t>();
+        } else {
+            throw std::runtime_error("Invalid type");
+        }
+    }
+
+    if (const auto result = jv.try_at("multicast_ip")) {
+        transport_params_rtp.multicast_ip = boost::json::value_to<std::optional<std::string>>(*result);
+    }
+
+    return transport_params_rtp;
 }
 
 }  // namespace rav::nmos

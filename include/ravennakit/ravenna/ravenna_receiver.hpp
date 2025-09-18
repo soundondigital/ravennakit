@@ -95,7 +95,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
         }
     };
 
-    explicit RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::AudioReceiver& rtp_audio_receiver, Id id);
+    explicit RavennaReceiver(RavennaRtspClient& rtsp_client, rtp::AudioReceiver& rtp_audio_receiver, Id id, NetworkInterfaceConfig network_interface_config);
     ~RavennaReceiver() override;
 
     RavennaReceiver(const RavennaReceiver&) = delete;
@@ -210,6 +210,7 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
     void handle_announced_sdp(const sdp::SessionDescription& sdp);
     tl::expected<void, std::string> update_nmos();
     tl::expected<void, std::string> update_rtsp();
+    tl::expected<void, nmos::ApiError> handle_patch_request(const  boost::json::value& patch_request);
 };
 
 /**

@@ -203,6 +203,7 @@ bool rav::rtp::AudioSender::add_writer(
             continue;  // In use already
         }
 
+        RAV_TRACE("Adding writer {}", id.value());
         return setup_writer(writer, id, parameters, interfaces);
     }
 
@@ -217,7 +218,7 @@ bool rav::rtp::AudioSender::remove_writer(const Id id) {
                 RAV_ERROR("Failed to exclusively lock writer");
                 return false;
             }
-
+            RAV_TRACE("Removing writer {}", writer.id.value());
             reset_writer(writer);
             return true;
         }

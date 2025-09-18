@@ -29,13 +29,31 @@ namespace rav::ptp {
 struct ClockIdentity {
     std::array<uint8_t, 8> data {};
 
+    /// Octet 6 & 7 of a ClockIdentity for when constructing from an EUI-48 based on IEEE1588-2019 7.5.2.2.2.2
+    static constexpr uint8_t k_implementer_specific_octets[] = {0x2f, 0xaa};  // Random
+
     /**
-     * Construct a PTP clock identity from a byte array.
+     * Construct a PTP clock identity from a mac address based on IEEE1588-2019 7.5.2.2.2.2
      * @param mac_address The MAC address to construct the clock identity from.
+     * @return A ClockIdentity or a std::nullopt when a ClockIdentity could not be constructed.
      */
-    static ClockIdentity from_mac_address(const MacAddress& mac_address) {
+    static std::optional<ClockIdentity> from_mac_address(const MacAddress& mac_address) {
         const auto mac_bytes = mac_address.bytes();
-        return {mac_bytes[0], mac_bytes[1], mac_bytes[2], 0xff, 0xfe, mac_bytes[3], mac_bytes[4], mac_bytes[5]};
+        if (std::all_of(mac_bytes.begin(), mac_bytes.end(), [&](const auto byte) {
+                return byte == 0;
+            })) {
+            return std::nullopt;
+        }
+        return ClockIdentity {
+            mac_bytes[0],
+            mac_bytes[1],
+            mac_bytes[2],
+            mac_bytes[3],
+            mac_bytes[4],
+            mac_bytes[5],
+            k_implementer_specific_octets[0],
+            k_implementer_specific_octets[1]
+        };
     }
 
     /**
@@ -68,22 +86,17 @@ struct ClockIdentity {
     }
 
     /**
-     * Check if the clock identity appears to be valid. This is not a formal validation, just a simple check. Logs
-     * detailed messages if invalid.
-     * Note: this is a partial implementation.
+     * Check if the clock identity appears to be valid. This is not a formal validation, just a simple check.
      * @return True if the clock identity appears to be valid, false otherwise.
      */
     [[nodiscard]] bool is_valid() const {
-        if (empty()) {
+        if (all_zero()) {
             return false;
         }
-        if (data[0] == 0 && data[1] == 0 && data[2] == 0) {
-            return false;
+        if (data[6] == k_implementer_specific_octets[0] && data[7] == k_implementer_specific_octets[1]) {
+            return data[0] != 0 || data[1] != 0 || data[2] != 0 || data[3] != 0 || data[4] != 0 || data[5] != 0;
         }
-        if (data[5] == 0 && data[6] == 0 && data[7] == 0) {
-            return false;
-        }
-        // Not sure what valid values for bytes 3 and 4 are at the moment.
+
         return true;
     }
 
@@ -91,17 +104,14 @@ struct ClockIdentity {
      * Checks the internal state of this object according to IEEE1588-2019. Asserts when something is wrong.
      */
     void assert_valid_state() const {
-        RAV_ASSERT(!empty(), "All bytes are zero");
-        RAV_ASSERT(data[0] != 0 || data[1] != 0 || data[2] != 0, "Bytes 0-2 are zero");
-        RAV_ASSERT(data[3] == 0xff && data[4] == 0xfe, "Bytes 3-4 are not 0xfffe");
-        RAV_ASSERT(data[5] != 0 || data[6] != 0 || data[7] != 0, "Bytes 5-7 are zero");
+        RAV_ASSERT(!all_zero(), "All bytes are zero");
     }
 
     /**
      * @return True if all bytes are zero, false otherwise.
      */
-    [[nodiscard]] bool empty() const {
-        return std::all_of(data.data(), data.data() + 8, [](const uint8_t byte) {
+    [[nodiscard]] bool all_zero() const {
+        return std::all_of(data.begin(), data.end(), [](const uint8_t byte) {
             return byte == 0;
         });
     }
@@ -123,4 +133,4 @@ struct ClockIdentity {
     }
 };
 
-}  // namespace rav
+}  // namespace rav::ptp

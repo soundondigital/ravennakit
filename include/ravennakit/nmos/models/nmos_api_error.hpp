@@ -15,6 +15,7 @@
 #include <boost/json/value_from.hpp>
 
 #include <string>
+#include <boost/beast/http/status.hpp>
 
 namespace rav::nmos {
 
@@ -22,6 +23,15 @@ struct ApiError {
     unsigned code {};
     std::string error {};
     std::string debug {};
+
+    ApiError() = default;
+
+    ApiError(boost::beast::http::status status, std::string error_msg, std::string debug_msg = {}) :
+        code(static_cast<decltype(code)>(status)), error(std::move(error_msg)), debug(std::move(debug_msg)) {
+        if (debug.empty()) {
+            debug = "error: " + error;
+        }
+    }
 };
 
 inline void tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const ApiError& value) {

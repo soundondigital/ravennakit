@@ -672,9 +672,13 @@ void rav::rtp::AudioReceiver::read_incoming_packets() {
 
                 if (const auto interval = stream.prev_packet_time_ns.update(recv_time)) {
                     if (stream.packet_interval_stats.initialized || *interval != 0) {
+                        if (stream.reset_max_values.exchange(false, std::memory_order_acq_rel)) {
+                            stream.packet_interval_stats.max_deviation = {};
+                        }
                         stream.packet_interval_stats.update(static_cast<double>(*interval) / 1'000'000.0);
                         TRACY_PLOT("packet interval (ms)", static_cast<double>(*interval) / 1'000'000.0);
                         TRACY_PLOT("packet interval EMA (ms)", stream.packet_interval_stats.interval);
+                        TRACY_PLOT("packet interval MAX (ms)", stream.packet_interval_stats.max_deviation);
                     }
                 }
 

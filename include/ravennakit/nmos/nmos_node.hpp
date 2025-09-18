@@ -15,7 +15,7 @@
 #include "detail/nmos_operating_mode.hpp"
 #include "detail/nmos_registry_browser.hpp"
 #include "models/nmos_device.hpp"
-#include "models/nmos_flow.hpp"
+#include "models/nmos_flow_audio_raw.hpp"
 #include "models/nmos_receiver_audio.hpp"
 #include "models/nmos_self.hpp"
 #include "models/nmos_sender.hpp"
@@ -29,6 +29,8 @@
 #include <boost/uuid.hpp>
 #include <boost/system/result.hpp>
 #include <fmt/ostream.h>
+
+#include <unordered_map>
 
 namespace rav::nmos {
 
@@ -141,7 +143,7 @@ class Node: public ptp::Instance::Subscriber {
      * The node if of the device is set to the node's uuid.
      * @param device The device to set or update.
      */
-    [[nodiscard]] bool add_or_update_device(Device device);
+    [[nodiscard]] bool add_or_update_device(Device* device);
 
     /**
      * Finds a device by its uuid.
@@ -152,38 +154,38 @@ class Node: public ptp::Instance::Subscriber {
 
     /**
      * Removes a device from the node by its uuid. Resources associated with the device will be removed as well.
-     * @param uuid The uuid of the device to remove.
+     * @param device The uuid of the device to remove.
      * @return True if the device was removed successfully, false otherwise.
      */
-    [[nodiscard]] bool remove_device(boost::uuids::uuid uuid);
+    [[nodiscard]] bool remove_device(Device* device);
 
     /**
      * Adds the given flow to the node or updates an existing flow if it already exists (based on the uuid).
      * @param flow The flow to set.
      * @return True if the flow was set successfully, false otherwise.
      */
-    [[nodiscard]] bool add_or_update_flow(Flow flow);
+    [[nodiscard]] bool add_or_update_flow(FlowAudioRaw* flow);
 
     /**
      * Finds a flow by its uuid.
      * @param uuid The uuid of the flow to find.
      * @return A pointer to the flow if found, or nullptr if not found.
      */
-    [[nodiscard]] const Flow* find_flow(const boost::uuids::uuid& uuid) const;
+    [[nodiscard]] const FlowAudioRaw* find_flow(const boost::uuids::uuid& uuid) const;
 
     /**
      * Removes a flow from the node by its uuid.
-     * @param uuid The uuid of the flow to remove.
+     * @param flow The uuid of the flow to remove.
      * @return True if the flow was removed successfully, false otherwise.
      */
-    [[nodiscard]] bool remove_flow(const boost::uuids::uuid& uuid);
+    [[nodiscard]] bool remove_flow(FlowAudioRaw* flow);
 
     /**
      * Adds the given receiver to the node or updates an existing receiver if it already exists (based on the uuid).
      * @param receiver The receiver to set.
      * @return True if the receiver was set successfully, false otherwise.
      */
-    [[nodiscard]] bool add_or_update_receiver(ReceiverAudio receiver);
+    [[nodiscard]] bool add_or_update_receiver(ReceiverAudio* receiver);
 
     /**
      * Finds a receiver by its uuid.
@@ -194,52 +196,52 @@ class Node: public ptp::Instance::Subscriber {
 
     /**
      * Removes a receiver from the node by its uuid.
-     * @param uuid The uuid of the receiver to remove.
+     * @param receiver The uuid of the receiver to remove.
      * @return True if the device was removed successfully, false otherwise.
      */
-    [[nodiscard]] bool remove_receiver(boost::uuids::uuid uuid);
+    [[nodiscard]] bool remove_receiver(ReceiverAudio* receiver);
 
     /**
      * Adds the given sender to the node or updates an existing sender if it already exists (based on the uuid).
      * @param sender The sender to set.
      * @return True if the sender was set successfully, false otherwise.
      */
-    [[nodiscard]] bool add_or_update_sender(Sender sender);
+    [[nodiscard]] bool add_or_update_sender(Sender* sender);
 
     /**
      * Finds a sender by its uuid.
      * @param uuid The uuid of the sender to find.
      * @return A pointer to the sender if found, or nullptr if not found.
      */
-    [[nodiscard]] const Sender* find_sender(const boost::uuids::uuid& uuid) const;
+    [[nodiscard]] Sender* find_sender(const boost::uuids::uuid& uuid) const;
 
     /**
      * Removes a sender from the node by its uuid.
-     * @param uuid The uuid of the sender to remove.
+     * @param sender The uuid of the sender to remove.
      * @return True if the sender was removed successfully, false otherwise.
      */
-    [[nodiscard]] bool remove_sender(boost::uuids::uuid uuid);
+    [[nodiscard]] bool remove_sender(Sender* sender);
 
     /**
      * Adds the given source to the node or updates an existing source if it already exists (based on the uuid).
      * @param source The source to set.
      * @return True if the source was set successfully, false otherwise.
      */
-    [[nodiscard]] bool add_or_update_source(Source source);
+    [[nodiscard]] bool add_or_update_source(SourceAudio* source);
 
     /**
      * Finds a source by its uuid.
      * @param uuid The uuid of the source to find.
      * @return A pointer to the source if found, or nullptr if not found.
      */
-    [[nodiscard]] const Source* find_source(const boost::uuids::uuid& uuid) const;
+    [[nodiscard]] const SourceAudio* find_source(const boost::uuids::uuid& uuid) const;
 
     /**
      * Removes a source from the node by its uuid.
-     * @param uuid The uuid of the source to remove.
+     * @param source The uuid of the source to remove.
      * @return True if the source was removed successfully, false otherwise.
      */
-    [[nodiscard]] bool remove_source(boost::uuids::uuid uuid);
+    [[nodiscard]] bool remove_source(SourceAudio* source);
 
     /**
      * @return The uuid of the node.
@@ -249,27 +251,27 @@ class Node: public ptp::Instance::Subscriber {
     /**
      * @return The list of devices in the node.
      */
-    [[nodiscard]] const std::vector<Device>& get_devices() const;
+    [[nodiscard]] const std::vector<Device*>& get_devices() const;
 
     /**
      * @return The list of flows in the node.
      */
-    [[nodiscard]] const std::vector<Flow>& get_flows() const;
+    [[nodiscard]] const std::vector<FlowAudioRaw*>& get_flows() const;
 
     /**
      * @return The list of receivers in the node.
      */
-    [[nodiscard]] const std::vector<ReceiverAudio>& get_receivers() const;
+    [[nodiscard]] const std::vector<ReceiverAudio*>& get_receivers() const;
 
     /**
      * @return The list of senders in the node.
      */
-    [[nodiscard]] const std::vector<Sender>& get_senders() const;
+    [[nodiscard]] const std::vector<Sender*>& get_senders() const;
 
     /**
      * @return  The list of sources in the node.
      */
-    [[nodiscard]] const std::vector<Source>& get_sources() const;
+    [[nodiscard]] const std::vector<SourceAudio*>& get_sources() const;
 
     /**
      * @return The current state.
@@ -303,11 +305,11 @@ class Node: public ptp::Instance::Subscriber {
 
     ptp::Instance& ptp_instance_;
     Self self_;
-    std::vector<Device> devices_;
-    std::vector<Flow> flows_;
-    std::vector<ReceiverAudio> receivers_;
-    std::vector<Sender> senders_;
-    std::vector<Source> sources_;
+    std::vector<Device*> devices_;
+    std::vector<FlowAudioRaw*> flows_;
+    std::vector<ReceiverAudio*> receivers_;
+    std::vector<Sender*> senders_;
+    std::vector<SourceAudio*> sources_;
 
     Configuration configuration_;
     Status status_ {Status::disabled};
@@ -338,8 +340,8 @@ class Node: public ptp::Instance::Subscriber {
     void connect_to_registry_async();
     void connect_to_registry_async(std::string_view host, std::string_view service);
 
-    [[nodiscard]] bool add_receiver_to_device(const ReceiverAudio& receiver);
-    [[nodiscard]] bool add_sender_to_device(const Sender& sender);
+    [[nodiscard]] bool add_receiver_to_device(const ReceiverAudio& receiver) const;
+    [[nodiscard]] bool add_sender_to_device(const Sender& sender) const;
 
     bool select_registry(const dnssd::ServiceDescription& desc);
     void handle_registry_discovered(const dnssd::ServiceDescription& desc);

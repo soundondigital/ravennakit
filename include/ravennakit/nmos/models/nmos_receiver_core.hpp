@@ -10,7 +10,12 @@
 
 #pragma once
 
+#include "nmos_api_error.hpp"
 #include "nmos_resource_core.hpp"
+
+#include "ravennakit/core/util/safe_function.hpp"
+#include "ravennakit/nmos/detail/nmos_uuid.hpp"
+#include "ravennakit/sdp/sdp.hpp"
 
 namespace rav::nmos {
 
@@ -45,15 +50,30 @@ struct ReceiverCore: ResourceCore {
 
     /// Object indicating how this Receiver is currently configured to receive data.
     Subscription subscription;
+
+    std::function<tl::expected<void, ApiError>(const boost::json::value& patch_request)> on_patch_request;
+    std::function<tl::expected<sdp::SessionDescription, ApiError>()> get_transport_file;
 };
 
-inline void tag_invoke(
-    const boost::json::value_from_tag&, boost::json::value& jv, const ReceiverCore::Subscription& subscription
-) {
-    jv = {
-        {"sender_id", boost::json::value_from(subscription.sender_id)},
+inline void
+tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const ReceiverCore::Subscription& subscription) {
+    auto object = boost::json::object {
         {"active", subscription.active},
     };
+    if (subscription.sender_id.has_value()) {
+        object["sender_id"] = boost::uuids::to_string(*subscription.sender_id);
+    } else {
+        object["sender_id"] = nullptr;
+    }
+    jv = object;
+}
+
+inline ReceiverCore::Subscription
+tag_invoke(const boost::json::value_to_tag<ReceiverCore::Subscription>&, const boost::json::value& jv) {
+    ReceiverCore::Subscription sub;
+    sub.sender_id = uuid_from_json(jv.at("sender_id"));
+    sub.active = jv.at("active").as_bool();
+    return sub;
 }
 
 inline void tag_invoke(const boost::json::value_from_tag& tag, boost::json::value& jv, const ReceiverCore& receiver) {

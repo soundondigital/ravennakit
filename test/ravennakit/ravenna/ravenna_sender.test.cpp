@@ -54,13 +54,13 @@ TEST_CASE("rav::RavennaSender") {
     rav::rtsp::Server rtsp_server(io_context, "127.0.0.1", 0);
     rav::ptp::Instance ptp_instance(io_context);
     rav::rtp::AudioSender rtp_audio_sender(io_context);
-    rav::RavennaSender sender(rtp_audio_sender, *advertiser, rtsp_server, ptp_instance, rav::Id {1}, 1);
+    rav::RavennaSender sender(rtp_audio_sender, *advertiser, rtsp_server, ptp_instance, rav::Id {1}, 1, {});
     REQUIRE(sender.set_configuration(config).has_value());
     const auto sender_json = sender.to_boost_json();
     rav::test_ravenna_sender_json(sender, sender_json);
     rav::test_ravenna_sender_json(sender, sender.to_boost_json());
 
-    rav::RavennaSender sender2(rtp_audio_sender, *advertiser, rtsp_server, ptp_instance, rav::Id {2}, 2);
+    rav::RavennaSender sender2(rtp_audio_sender, *advertiser, rtsp_server, ptp_instance, rav::Id {2}, 2, {});
     REQUIRE(sender2.restore_from_json(sender_json));
     rav::test_ravenna_sender_json(sender2, sender_json);
 }

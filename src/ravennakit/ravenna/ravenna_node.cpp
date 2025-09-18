@@ -22,7 +22,7 @@ rav::RavennaNode::RavennaNode() :
     advertiser_ = dnssd::Advertiser::create(io_context_);
 
     nmos_device_.id = boost::uuids::random_generator()();
-    if (!nmos_node_.add_or_update_device(nmos_device_)) {
+    if (!nmos_node_.add_or_update_device(&nmos_device_)) {
         RAV_ERROR("Failed to add NMOS device with ID: {}", boost::uuids::to_string(nmos_device_.id));
     }
 
@@ -85,7 +85,7 @@ rav::RavennaNode::RavennaNode() :
                     rtp_receiver_.read_incoming_packets();
                     rtp_sender_.send_outgoing_packets();
 #if RAV_APPLE
-                    next += 10'000; // 10us
+                    next += 10'000;  // 10us
                     if (!mach_wait_until_ns(next)) {
                         RAV_ERROR("mach_wait_until_ns failed");
                     }
@@ -122,8 +122,9 @@ rav::RavennaNode::~RavennaNode() {
 std::future<tl::expected<rav::Id, std::string>>
 rav::RavennaNode::create_receiver(RavennaReceiver::Configuration initial_config) {
     auto work = [this, config = std::move(initial_config)]() mutable -> tl::expected<Id, std::string> {
-        auto new_receiver = std::make_unique<RavennaReceiver>(rtsp_client_, rtp_receiver_, id_generator_.next());
-        new_receiver->set_network_interface_config(network_interface_config_);
+        auto new_receiver = std::make_unique<RavennaReceiver>(
+            rtsp_client_, rtp_receiver_, id_generator_.next(), network_interface_config_
+        );
         auto result = new_receiver->set_configuration(std::move(config));
         if (!result) {
             RAV_ERROR("Failed to set receiver configuration: {}", result.error());
@@ -176,12 +177,12 @@ std::future<tl::expected<rav::Id, std::string>>
 rav::RavennaNode::create_sender(RavennaSender::Configuration initial_config) {
     auto work = [this, initial_config]() mutable -> tl::expected<Id, std::string> {
         auto new_sender = std::make_unique<RavennaSender>(
-            rtp_sender_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), generate_unique_session_id()
+            rtp_sender_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), generate_unique_session_id(),
+            network_interface_config_
         );
         if (initial_config.session_name.empty()) {
             initial_config.session_name = fmt::format("Sender {}", new_sender->get_session_id());
         }
-        new_sender->set_network_interface_config(network_interface_config_);
         auto result = new_sender->set_configuration(initial_config);
         if (!result) {
             RAV_ERROR("Failed to set sender configuration: {}", result.error());
@@ -238,7 +239,7 @@ rav::RavennaNode::set_nmos_configuration(nmos::Node::Configuration update) {
         }
         nmos_device_.label = u.label;
         nmos_device_.description = u.description;
-        if (!nmos_node_.add_or_update_device(nmos_device_)) {
+        if (!nmos_node_.add_or_update_device(&nmos_device_)) {
             return tl::unexpected("Failed to update NMOS device configuration");
         }
         return {};
@@ -520,9 +521,9 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
 
             for (auto& sender : senders) {
                 auto new_sender = std::make_unique<RavennaSender>(
-                    rtp_sender_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), 1
+                    rtp_sender_, *advertiser_, rtsp_server_, ptp_instance_, id_generator_.next(), 1,
+                    *network_interface_config
                 );
-                new_sender->set_network_interface_config(*network_interface_config);
                 if (auto result = new_sender->restore_from_json(sender); !result) {
                     return tl::unexpected(result.error());
                 }
@@ -536,9 +537,9 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
             std::vector<std::unique_ptr<RavennaReceiver>> new_receivers;
 
             for (auto& receiver : receivers) {
-                auto new_receiver =
-                    std::make_unique<RavennaReceiver>(rtsp_client_, rtp_receiver_, id_generator_.next());
-                new_receiver->set_network_interface_config(*network_interface_config);
+                auto new_receiver = std::make_unique<RavennaReceiver>(
+                    rtsp_client_, rtp_receiver_, id_generator_.next(), *network_interface_config
+                );
                 if (auto result = new_receiver->restore_from_json(receiver); !result) {
                     return tl::unexpected(result.error());
                 }
@@ -560,7 +561,7 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
                 }
 
                 nmos_node_.stop();
-                if (!nmos_node_.remove_device(nmos_device_.id)) {
+                if (!nmos_node_.remove_device(&nmos_device_)) {
                     RAV_ERROR("Failed to remove NMOS device with ID: {}", boost::uuids::to_string(nmos_device_.id));
                 }
                 auto result = nmos_node_.set_configuration(*config);
@@ -570,7 +571,7 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
                 nmos_device_.id = nmos_device_id;
                 nmos_device_.label = config->label;
                 nmos_device_.description = config->description;
-                if (!nmos_node_.add_or_update_device(std::move(nmos_device_))) {
+                if (!nmos_node_.add_or_update_device(&nmos_device_)) {
                     RAV_ERROR("Failed to add NMOS device to node");
                 }
             } else {

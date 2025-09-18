@@ -138,7 +138,7 @@ TEST_CASE("rav::RavennaReceiver") {
         rav::RavennaBrowser ravenna_browser(io_context);
         rav::RavennaRtspClient rtsp_client(io_context, ravenna_browser);
         rav::rtp::AudioReceiver rtp_receiver(io_context);
-        rav::RavennaReceiver receiver(rtsp_client, rtp_receiver, rav::Id(1));
+        rav::RavennaReceiver receiver(rtsp_client, rtp_receiver, rav::Id(1), {});
         REQUIRE(receiver.set_configuration(config));
         rav::test_ravenna_receiver_json(receiver, receiver.to_boost_json());
 #endif
@@ -164,7 +164,7 @@ TEST_CASE("rav::RavennaReceiver") {
         rav::RavennaBrowser ravenna_browser(io_context);
         rav::RavennaRtspClient rtsp_client(io_context, ravenna_browser);
         rav::rtp::AudioReceiver rtp_receiver(io_context);
-        rav::RavennaReceiver receiver(rtsp_client, rtp_receiver, rav::Id(1));
+        rav::RavennaReceiver receiver(rtsp_client, rtp_receiver, rav::Id(1), {});
         REQUIRE(receiver.set_configuration(config));
         const auto receiver_json = receiver.to_boost_json();
         REQUIRE(receiver.restore_from_json(receiver_json));

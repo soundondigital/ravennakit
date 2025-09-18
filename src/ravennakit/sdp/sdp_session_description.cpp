@@ -215,8 +215,13 @@ rav::sdp::parse_session_description(const std::string& sdp_text) {
     return sd;
 }
 
-std::string rav::sdp::to_string(const SessionDescription& session_description, const char* newline) {
+std::optional<std::string> rav::sdp::to_string(const SessionDescription& session_description, const char* newline) {
     RAV_ASSERT(newline != nullptr, "newline must not be nullptr");
+
+    if (!validate(session_description.origin)) {
+        return std::nullopt;
+    }
+
     std::string sdp;
 
     // Version

@@ -120,7 +120,7 @@ class NetworkInterfaceConfig {
      * @return An array of addresses of the interfaces, ordered by rank.
      */
     template<size_t N>
-    std::array<ip_address_v4, N> get_array_of_interface_addresses() {
+    std::array<ip_address_v4, N> get_array_of_interface_addresses() const {
         std::array<ip_address_v4, N> addresses {};
         auto addresses_vector = get_interface_ipv4_addresses();
 

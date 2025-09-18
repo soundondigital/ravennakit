@@ -134,4 +134,9 @@ tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const Tim
     jv = timestamp.to_string();
 }
 
+inline Timestamp
+tag_invoke(const boost::json::value_to_tag<Timestamp>&, const boost::json::value& jv) {
+    return Timestamp::from_string(jv.as_string()).value();
+}
+
 }  // namespace rav::nmos
