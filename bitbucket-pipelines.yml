@@ -77,10 +77,10 @@ pipelines:
   pull-requests:
     '**':
       - parallel:
-#          - step: *build-macos
-#          - step: *build-windows
-#          - step: *build-linux
-#          - step: *build-android
+          - step: *build-macos
+          - step: *build-windows
+          - step: *build-linux
+          - step: *build-android
           - step: *build-dist
   tags:
     'v*':
