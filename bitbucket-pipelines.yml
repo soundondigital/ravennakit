@@ -52,8 +52,7 @@ definitions:
         image: debian:latest
         name: 'Build distribution package'
         script:
-          - apt-get update && apt-get install -y git python3 python3-pip doxygen
-          - python3 -m pip install pygit2 boto3 requests
+          - apt-get update && apt-get install -y git python3 python3-pip python-pygit2 python-boto3 python-requests doxygen
           - python3 -u build.py --dist --path-to-build build-dist --build-number $BITBUCKET_BUILD_NUMBER --upload --spaces-key $SPACES_KEY --spaces-secret $SPACES_SECRET
         artifacts:
           - build-dist/*.zip
