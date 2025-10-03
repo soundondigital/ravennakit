@@ -116,8 +116,7 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     [[nodiscard]] uint32_t get_session_id() const;
 
     /**
-     * Updates the configuration of the sender. Only takes into account the fields in the configuration that are set.
-     * This allows to update only a subset of the configuration.
+     * Updates the configuration of the sender.
      * @param config The configuration to update.
      */
     [[nodiscard]] tl::expected<void, std::string> set_configuration(Configuration config);

@@ -225,6 +225,14 @@ class RavennaNode {
     [[nodiscard]] std::future<void> unsubscribe_from_ptp_instance(ptp::Instance::Subscriber* subscriber);
 
     /**
+     * Sets the configuration of the PTP instance.
+     * @param update The configuration to set.
+     * @return A future that will be set when the operation is complete.
+     */
+    [[nodiscard]] std::future<tl::expected<void, std::string>>
+    set_ptp_instance_configuration(ptp::Instance::Configuration update);
+
+    /**
      * Get the SDP for the receiver with the given id.
      * TODO: Deprecate and signal sdp changes through RavennaReceiver::Subscriber
      * @param receiver_id The id of the receiver to get the SDP for.

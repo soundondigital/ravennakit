@@ -372,6 +372,18 @@ std::future<void> rav::RavennaNode::unsubscribe_from_ptp_instance(ptp::Instance:
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
 }
 
+std::future<tl::expected<void, std::string>>
+rav::RavennaNode::set_ptp_instance_configuration(ptp::Instance::Configuration update) {
+    auto work = [this, u = std::move(update)]() -> tl::expected<void, std::string> {
+        auto result = ptp_instance_.set_configuration(u);
+        if (!result) {
+            return tl::unexpected(fmt::format("Failed to set PTP instance configuration: {}", result.error()));
+        }
+        return {};
+    };
+    return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
+}
+
 std::future<std::optional<rav::sdp::SessionDescription>> rav::RavennaNode::get_sdp_for_receiver(Id receiver_id) {
     auto work = [this, receiver_id]() -> std::optional<sdp::SessionDescription> {
         for (const auto& receiver : receivers_) {
@@ -493,6 +505,7 @@ std::future<boost::json::object> rav::RavennaNode::to_boost_json() {
             {"config", config},
             {"senders", senders},
             {"receivers", receivers},
+            {"ptp_instance_config", boost::json::value_from(ptp_instance_.get_configuration())},
             {"nmos_node", boost::json::object {{"configuration", nmos_node_.get_configuration().to_json()}}},
             {"nmos_device_id", boost::uuids::to_string(nmos_device_.id)},
         };
@@ -545,6 +558,13 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
                 }
                 new_receiver->set_nmos_device_id(nmos_device_id);
                 new_receivers.push_back(std::move(new_receiver));
+            }
+
+            // PTP Instance
+
+            ptp::Instance::Configuration ptp_config;
+            if (auto ptp_instance_config = json.try_at("ptp_instance_config")) {
+                ptp_config = boost::json::value_to<ptp::Instance::Configuration>(*ptp_instance_config);
             }
 
             // TODO: Restoring the NMOS node can still fail, should this go below that?
@@ -618,6 +638,9 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
                 }
             }
 
+            if (auto result = ptp_instance_.set_configuration(ptp_config); !result) {
+                RAV_ERROR("Failed to set PTP configuration: {}", result.error());
+            }
         } catch (const std::exception& e) {
             return tl::unexpected(fmt::format("Failed to parse RavennaNode JSON: {}", e.what()));
         }

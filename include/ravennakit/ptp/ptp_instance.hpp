@@ -30,6 +30,13 @@ namespace rav::ptp {
  */
 class Instance {
   public:
+    /**
+     * Defines the configuration of the PTP instance (of parameters which need to be persisted).
+     */
+    struct Configuration {
+        uint8_t domain_number {};
+    };
+
     class Subscriber {
       public:
         virtual ~Subscriber() = default;
@@ -56,6 +63,14 @@ class Instance {
          */
         virtual void ptp_port_removed(const uint16_t port_number) {
             std::ignore = port_number;
+        }
+
+        /**
+         * Called when the configuration was updated.
+         * @param config The new configuration.
+         */
+        virtual void ptp_configuration_updated(const Configuration& config) {
+            std::ignore = config;
         }
 
         /**
@@ -93,6 +108,17 @@ class Instance {
      * @return True if the subscriber was removed successfully, false if the subscriber was not found.
      */
     [[nodiscard]] bool unsubscribe(const Subscriber* subscriber);
+
+    /**
+     * Updates the configuration of the sender.
+     * @param config The configuration to update.
+     */
+    [[nodiscard]] tl::expected<void, std::string> set_configuration(Configuration config);
+
+    /**
+     * @returns The current configuration of the sender.
+     */
+    [[nodiscard]] const Configuration& get_configuration() const;
 
     /**
      * Adds a port to the PTP instance. The port will be used to send and receive PTP messages. The clock identity of
@@ -207,6 +233,7 @@ class Instance {
 
   private:
     boost::asio::io_context& io_context_;
+    Configuration config_;
     boost::asio::steady_timer state_decision_timer_;
     DefaultDs default_ds_;
     CurrentDs current_ds_;
@@ -220,5 +247,10 @@ class Instance {
     [[nodiscard]] uint16_t get_next_available_port_number() const;
     void schedule_state_decision_timer();
 };
+
+void tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const Instance::Configuration& config);
+
+Instance::Configuration
+tag_invoke(const boost::json::value_to_tag<Instance::Configuration>&, const boost::json::value& jv);
 
 }  // namespace rav::ptp
