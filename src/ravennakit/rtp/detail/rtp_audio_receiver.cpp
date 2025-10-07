@@ -323,7 +323,6 @@ void do_realtime_maintenance(rav::rtp::AudioReceiver::Reader& reader) {
 
             // Determine whether part of the packet is too old
             if (packet_timestamp < reader.next_ts_to_read) {
-                RAV_LOG_WARNING("Packet partly too late: seq={}, ts={}", rtp_packet->seq, rtp_packet->timestamp);
                 TRACY_MESSAGE("Packet partly too late - not skipping");
                 if (!stream.packets_too_old.push(rtp_packet->seq)) {
                     RAV_LOG_ERROR("Packet not enqueued to packets_too_old");
@@ -369,7 +368,7 @@ std::optional<uint32_t> read_data_from_reader_realtime(
         }
     }
 
-    TRACY_PLOT("Current buffer", static_cast<int64_t>(reader.next_ts_to_read.diff(reader.receive_buffer.get_next_ts())) - num_frames);
+    TRACY_PLOT("Buffer", static_cast<int64_t>(reader.next_ts_to_read.diff(reader.receive_buffer.get_next_ts())) - num_frames);
 
     const auto read_at = reader.next_ts_to_read.value();
     if (!reader.receive_buffer.read(read_at, buffer, buffer_size, true)) {
