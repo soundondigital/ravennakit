@@ -648,13 +648,12 @@ void rav::rtp::AudioReceiver::read_incoming_packets() {
 
                 {
                     // This block compares the rtp timestamp against the recv_time converted to PTP scale.
-                    auto ptp_now = ptp_instance_subscriber.get_local_clock().get_adjusted_time(recv_time);
-                    auto ptp_now_samples = ptp_now.to_samples(reader.audio_format.sample_rate);
-                    uint64_t rtp_ts_samples = (ptp_now_samples & 0xffffffff00000000ull) | packet.timestamp;
-                    double receive_latency_ms =
-                        static_cast<double>(ptp_now_samples - rtp_ts_samples) / static_cast<double>(reader.audio_format.sample_rate) * 1000.0;
-
-                    TRACY_PLOT("receive latency (ms)", receive_latency_ms);
+                    const auto& local_clock = ptp_instance_subscriber.get_local_clock();
+                    if (local_clock.is_locked()) {
+                        auto ptp_time = local_clock.get_adjusted_time(recv_time);
+                        auto rtp_time = ptp_time.from_rtp_timestamp(packet.timestamp, reader.audio_format.sample_rate);
+                        TRACY_PLOT("receive latency (ms)", ptp_time.to_milliseconds_double() - rtp_time.to_milliseconds_double());
+                    }
                 }
 
                 while (auto seq = stream.packets_too_old.pop()) {

@@ -84,7 +84,7 @@ class WavFilePlayer {
             return;
         }
 
-        const auto ptp_ts = static_cast<uint32_t>(clock.now().to_samples(audio_format_.sample_rate));
+        const auto ptp_ts = static_cast<uint32_t>(clock.now().to_rtp_timestamp(audio_format_.sample_rate));
         // Positive means audio device is ahead of the PTP clock, negative means behind
         const auto drift = rav::WrappingUint32(ptp_ts).diff(rav::WrappingUint32(rtp_ts_));
 

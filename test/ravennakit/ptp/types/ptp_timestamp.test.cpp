@@ -181,45 +181,45 @@ TEST_CASE("rav::ptp::Timestamp") {
     SECTION("Convert to samples") {
         SECTION("0.5 seconds") {
             rav::ptp::Timestamp ts(500'000'000);
-            REQUIRE(ts.to_samples(44'100) == 22'050);
-            REQUIRE(ts.to_samples(48'000) == 24'000);
-            REQUIRE(ts.to_samples(96'000) == 48'000);
+            REQUIRE(ts.to_rtp_timestamp(44'100) == 22'050);
+            REQUIRE(ts.to_rtp_timestamp(48'000) == 24'000);
+            REQUIRE(ts.to_rtp_timestamp(96'000) == 48'000);
         }
 
         SECTION("1 second") {
             rav::ptp::Timestamp ts(1'000'000'000);
-            REQUIRE(ts.to_samples(44'100) == 44'100);
-            REQUIRE(ts.to_samples(48'000) == 48'000);
-            REQUIRE(ts.to_samples(96'000) == 96'000);
+            REQUIRE(ts.to_rtp_timestamp(44'100) == 44'100);
+            REQUIRE(ts.to_rtp_timestamp(48'000) == 48'000);
+            REQUIRE(ts.to_rtp_timestamp(96'000) == 96'000);
         }
 
         SECTION("2 seconds") {
             rav::ptp::Timestamp ts(2'000'000'000);
-            REQUIRE(ts.to_samples(44'100) == 88'200);
-            REQUIRE(ts.to_samples(48'000) == 96'000);
-            REQUIRE(ts.to_samples(96'000) == 192'000);
+            REQUIRE(ts.to_rtp_timestamp(44'100) == 88'200);
+            REQUIRE(ts.to_rtp_timestamp(48'000) == 96'000);
+            REQUIRE(ts.to_rtp_timestamp(96'000) == 192'000);
         }
 
         SECTION("1 second") {
             rav::ptp::Timestamp ts(1'000'000'000);
-            REQUIRE(ts.to_samples(44'100) == 44'100);
-            REQUIRE(ts.to_samples(48'000) == 48'000);
-            REQUIRE(ts.to_samples(96'000) == 96'000);
+            REQUIRE(ts.to_rtp_timestamp(44'100) == 44'100);
+            REQUIRE(ts.to_rtp_timestamp(48'000) == 48'000);
+            REQUIRE(ts.to_rtp_timestamp(96'000) == 96'000);
         }
 
         SECTION("2.5 seconds") {
             rav::ptp::Timestamp ts(2'500'000'000);
-            REQUIRE(ts.to_samples(44'100) == 110'250);
-            REQUIRE(ts.to_samples(48'000) == 120'000);
-            REQUIRE(ts.to_samples(96'000) == 240'000);
+            REQUIRE(ts.to_rtp_timestamp(44'100) == 110'250);
+            REQUIRE(ts.to_rtp_timestamp(48'000) == 120'000);
+            REQUIRE(ts.to_rtp_timestamp(96'000) == 240'000);
         }
 
         SECTION("330 years 2300 absolute") {
             auto ts = rav::ptp::Timestamp::from_years(330);
-            auto r44 = ts.to_samples(44'100);
-            auto r48 = ts.to_samples(48'000);
-            auto r96 = ts.to_samples(96'000);
-            auto r384 = ts.to_samples(384'000);
+            auto r44 = ts.to_rtp_timestamp(44'100);
+            auto r48 = ts.to_rtp_timestamp(48'000);
+            auto r96 = ts.to_rtp_timestamp(96'000);
+            auto r384 = ts.to_rtp_timestamp(384'000);
             REQUIRE(r44 == 458'943'408'000'000);
             REQUIRE(r48 == 499'530'240'000'000);
             REQUIRE(r96 == 999'060'480'000'000);
@@ -230,7 +230,7 @@ TEST_CASE("rav::ptp::Timestamp") {
 
         SECTION("Take lower 32 bits") {
             auto ts = rav::ptp::Timestamp::from_seconds(0x1122334455667788);
-            auto samples = ts.to_samples(1);
+            auto samples = ts.to_rtp_timestamp(1);
             REQUIRE(samples == 0x1122334455667788);
             // Casting to uint32_t gives us the 4 least significant bits.
             REQUIRE(static_cast<uint32_t>(samples) == 0x55667788);

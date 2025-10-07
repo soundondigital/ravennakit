@@ -252,7 +252,7 @@ class RavennaReceiverExample: public rav::RavennaReceiver::Subscriber, public ra
         }
 
         const auto ptp_ts =
-            static_cast<uint32_t>(get_local_clock().now().to_samples(audio_format_.sample_rate)) - k_delay;
+            static_cast<uint32_t>(get_local_clock().now().to_rtp_timestamp(audio_format_.sample_rate)) - k_delay;
 
         // First we try to read data
         auto rtp_ts =

@@ -256,13 +256,26 @@ struct Timestamp {
     }
 
     /**
-     * Converts the timestamp to samples at the given sample rate.
-     * @param sample_rate The sample rate to convert to.
-     * @return The number of samples.
+     * Converts the timestamp to an RTP timestamp.
+     * @param frequency The frequency, which is the sample rate for audio.
+     * @return The RTP timestamp.
      */
-    [[nodiscard]] uint64_t to_samples(const uint32_t sample_rate) const {
-        RAV_ASSERT(seconds_ + 1 <= std::numeric_limits<decltype(seconds_)>::max() / sample_rate, "Overflow in seconds_ * sample_rate");
-        return seconds_ * sample_rate + static_cast<uint64_t>(nanoseconds_) * sample_rate / 1'000'000'000;
+    [[nodiscard]] uint64_t to_rtp_timestamp(const uint32_t frequency) const {
+        RAV_ASSERT(seconds_ + 1 <= std::numeric_limits<decltype(seconds_)>::max() / frequency, "Overflow in seconds_ * sample_rate");
+        return seconds_ * frequency + static_cast<uint64_t>(nanoseconds_) * frequency / 1'000'000'000;
+    }
+
+    /**
+     * Converts an RTP timestamp to a PTP timestamp. The most significant bits of the current Timestamp are taken to form a full 64 bit
+     * RTP timestamp, after which it's converted to a PTP timestamp.
+     * @param rtp_timestamp The RTP timestamp.
+     * @param frequency The frequency of the RTP time.
+     * @return The reconstructed PTP timestamp.
+     */
+    [[nodiscard]] Timestamp from_rtp_timestamp(const uint32_t rtp_timestamp, const uint32_t frequency) const {
+        const uint64_t ts_samples_full = (to_rtp_timestamp(frequency) & 0xFFFFFFFF00000000ULL) | rtp_timestamp;
+        const auto seconds = static_cast<double>(ts_samples_full) / frequency;
+        return Timestamp(static_cast<uint64_t>(seconds * 1'000'000'000.0));
     }
 
     /**
@@ -286,7 +299,6 @@ struct Timestamp {
         if (gmtime_s(&tm_result, &time) != 0) {
             return {};
         }
-
 #else
         std::tm tm_result {};
         if (gmtime_r(&time, &tm_result) == nullptr) {
