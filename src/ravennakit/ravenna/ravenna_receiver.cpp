@@ -425,12 +425,11 @@ bool rav::RavennaReceiver::subscribe(Subscriber* subscriber) {
             if (!reader_parameters_.streams[i].is_valid()) {
                 continue;
             }
-            const auto state = rtp_audio_receiver_.get_stream_state(id_, 0);
-            if (!state) {
-                RAV_LOG_ERROR("Failed to get state for stream {}", reader_parameters_.streams[i].session.to_string());
-                continue;
+
+            // The stream might not exist, for example when the receiver is turned off.
+            if (const auto state = rtp_audio_receiver_.get_stream_state(id_, 0)) {
+                subscriber->ravenna_receiver_stream_state_updated(reader_parameters_.streams[i], *state);
             }
-            subscriber->ravenna_receiver_stream_state_updated(reader_parameters_.streams[i], *state);
         }
         return true;
     }
