@@ -648,7 +648,7 @@ void rav::rtp::AudioReceiver::read_incoming_packets() {
                     const auto& local_clock = ptp_instance_subscriber.get_local_clock();
                     if (local_clock.is_locked()) {
                         auto ptp_time = local_clock.get_adjusted_time(recv_time);
-                        auto rtp_time = ptp_time.from_rtp_timestamp(packet.timestamp, reader.audio_format.sample_rate);
+                        [[maybe_unused]] auto rtp_time = ptp_time.from_rtp_timestamp(packet.timestamp, reader.audio_format.sample_rate);
                         TRACY_PLOT("receive latency (ms)", ptp_time.to_milliseconds_double() - rtp_time.to_milliseconds_double());
                     }
                 }
