@@ -188,6 +188,14 @@ class RealtimeSharedObject {
         return false;
     }
 
+    /**
+     * Resets the object to contain a new, default constructed object.
+     * @return True if resetting succeeded, or false if not.
+     */
+    [[nodiscard]] bool reset() {
+        return update(std::make_unique<T>());
+    }
+
   private:
     std::unique_ptr<T> storage_;
     std::atomic<T*> ptr_ {nullptr};
