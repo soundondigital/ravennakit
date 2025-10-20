@@ -127,7 +127,7 @@ class AudioData {
                 if constexpr (little_endian) {
                     std::memcpy(std::addressof(value), data, sizeof(T));
                 } else {
-                    RAV_ASSERT_FALSE("Not implemented");
+                    static_assert(false, "Not implemented");
                 }
                 return value;
             }
@@ -146,7 +146,7 @@ class AudioData {
                 if constexpr (little_endian) {
                     std::memcpy(data, std::addressof(value), size);
                 } else {
-                    RAV_ASSERT_FALSE("Not implemented");
+                    static_assert(false, "Not implemented");
                 }
             }
         };
@@ -175,13 +175,13 @@ class AudioData {
                 if constexpr (std::is_same_v<DstType, int8_t>) {
                     DstByteOrder::write(dst, sizeof(DstType), src_sample - 0x80);
                 } else {
-                    RAV_ASSERT_FALSE("Conversion not implemented");
+                    static_assert(false, "Conversion not implemented");
                 }
             } else if constexpr (std::is_same_v<SrcType, int8_t>) {
                 if constexpr (std::is_same_v<DstType, int16_t>) {
                     DstByteOrder::write(dst, sizeof(DstType), src_sample << 8);
                 } else {
-                    RAV_ASSERT_FALSE("Conversion not implemented");
+                    static_assert(false, "Conversion not implemented");
                 }
             } else if constexpr (std::is_same_v<SrcType, int16_t>) {
                 if constexpr (std::is_same_v<DstType, int24_t>) {
@@ -197,7 +197,7 @@ class AudioData {
                     auto f = static_cast<double>(int64) * 0.000030517578125f;
                     DstByteOrder::write(dst, sizeof(DstType), f);
                 } else {
-                    RAV_ASSERT_FALSE("Conversion not implemented");
+                    static_assert(false, "Conversion not implemented");
                 }
             } else if constexpr (std::is_same_v<SrcType, int24_t>) {
                 if constexpr (std::is_same_v<DstType, float>) {
@@ -209,7 +209,7 @@ class AudioData {
                     auto f = static_cast<double>(int64) * 0.00000011920928955078125f;
                     DstByteOrder::write(dst, sizeof(DstType), f);
                 } else {
-                    RAV_ASSERT_FALSE("Conversion not implemented");
+                    static_assert(false, "Conversion not implemented");
                 }
             } else if constexpr (std::is_same_v<SrcType, float>) {
                 float f32;
@@ -219,7 +219,7 @@ class AudioData {
                 } else if constexpr (std::is_same_v<DstType, int24_t>) {
                     DstByteOrder::write(dst, sizeof(DstType), static_cast<int24_t>(f32 * 8388607.f));
                 } else {
-                    RAV_ASSERT_FALSE("Conversion not implemented");
+                    static_assert(false, "Conversion not implemented");
                 }
             } else if constexpr (std::is_same_v<SrcType, double>) {
                 double f64;
@@ -229,10 +229,10 @@ class AudioData {
                 } else if constexpr (std::is_same_v<DstType, int24_t>) {
                     DstByteOrder::write(dst, sizeof(DstType), static_cast<int24_t>(f64 * 8388607.0));
                 } else {
-                    RAV_ASSERT_FALSE("Conversion not implemented");
+                    static_assert(false, "Conversion not implemented");
                 }
             } else {
-                RAV_ASSERT_FALSE("Conversion not implemented");
+                static_assert(false, "Conversion not implemented");
             }
         }
     }
@@ -315,7 +315,7 @@ class AudioData {
                 }
             }
         } else {
-            RAV_ASSERT_FALSE("Invalid interleaving");
+            static_assert(false, "Invalid interleaving");
         }
     }
 
@@ -361,7 +361,7 @@ class AudioData {
                 );
             }
         } else {
-            RAV_ASSERT_FALSE("Invalid interleaving");
+            static_assert(false, "Invalid interleaving");
         }
     }
 
@@ -407,7 +407,7 @@ class AudioData {
                 }
             }
         } else {
-            RAV_ASSERT_FALSE("Invalid interleaving");
+            static_assert(false, "Invalid interleaving");
         }
     }
 
