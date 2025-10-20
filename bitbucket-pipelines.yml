@@ -25,6 +25,7 @@ definitions:
           - export VCPKG_BINARY_SOURCES=clear
           - apt-get update -y
           - apt-get -y install git build-essential cmake ninja-build pkg-config ca-certificates curl zip unzip tar python3-pip python3-pygit2 python3-boto3
+          - gcc --version
           - git submodule update --recursive --init
           - python3 -u build.py --path-to-build build-linux --build-number $BITBUCKET_BUILD_NUMBER
     - step: &build-android
