@@ -58,8 +58,11 @@ rav::RavennaNode::RavennaNode() :
                 }
                 break;
             } catch (const std::exception& e) {
-                RAV_LOG_ERROR("Unhandled exception on maintenance thread: {}", e.what());
-                RAV_ASSERT_FALSE("Unhandled exception on maintenance thread");
+                RAV_LOG_CRITICAL("Unhandled exception on maintenance thread: {}", e.what());
+                RAV_ASSERT_DEBUG(false, "Unhandled exception on maintenance thread");
+            } catch (...) {
+                RAV_LOG_CRITICAL("Unhandled unknown exception on maintenance thread");
+                RAV_ASSERT_DEBUG(false, "Unhandled unknown exception on maintenance thread");
             }
         }
     });
@@ -101,8 +104,11 @@ rav::RavennaNode::RavennaNode() :
                 }
                 break;
             } catch (const std::exception& e) {
-                RAV_LOG_ERROR("Unhandled exception on network thread: {}", e.what());
-                RAV_ASSERT_FALSE("Unhandled exception on network thread");
+                RAV_LOG_CRITICAL("Unhandled exception on network thread: {}", e.what());
+                RAV_ASSERT_DEBUG(false, "Unhandled exception on network thread");
+            } catch (...) {
+                RAV_LOG_CRITICAL("Unhandled unknown exception on maintenance thread");
+                RAV_ASSERT_DEBUG(false, "Unhandled unknown exception on maintenance thread");
             }
         }
     });

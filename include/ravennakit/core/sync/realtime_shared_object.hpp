@@ -24,7 +24,7 @@ namespace rav {
  * mutex. Internally a CAS loop is used to update the value in a thread-safe manner.
  * @tparam T The type of the object to share.
  * @tparam loop_upper_bound The maximum number of iterations to perform in the CAS loop. If the loop doesn't succeed in
- * the specified number of iterations, the operation is considered failed. Default is 100'000.
+ * the specified number of iterations, the operation is considered failed.
  */
 template<class T, size_t loop_upper_bound = 1'000'000>
 class RealtimeSharedObject {

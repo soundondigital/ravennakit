@@ -381,11 +381,6 @@ void rav::ptp::Port::handle_recv_event(const ExtendedUdpSocket::RecvEvent& event
         return;
     }
 
-    // RAV_LOG_TRACE(
-    //     "{} from {}", to_string(header.value().message_type),
-    //     header.value().source_port_identity.clock_identity.to_string()
-    // );
-
     if (port_ds_.port_state == State::initializing) {
         RAV_LOG_TRACE("Discarding announce message while initializing");
         return;
@@ -455,14 +450,8 @@ void rav::ptp::Port::handle_recv_event(const ExtendedUdpSocket::RecvEvent& event
             handle_pdelay_resp_follow_up_message(pdelay_resp_follow_up.value(), {});
             break;
         }
-        case MessageType::signaling: {
-            RAV_ASSERT_FALSE("Signaling messages are not implemented");
-            break;
-        }
-        case MessageType::management: {
-            RAV_ASSERT_FALSE("Management messages are not implemented");
-            break;
-        }
+        case MessageType::signaling:
+        case MessageType::management:
         case MessageType::reserved1:
         case MessageType::reserved2:
         case MessageType::reserved3:

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed a crash caused by an assertion when receiving PTP management messages (and when `RAV_ABORT_ON_ASSERT` was
+  enabled). Now PTP management and signalling messages are ignored.
+
 ## [v0.17.0] - October 27, 2025
 
 ### Fixed
