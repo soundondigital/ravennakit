@@ -122,18 +122,6 @@ rav::RavennaNode::RavennaNode() :
             }
         }
     });
-
-    // When the application starts, we don't want to start discovery until we know that no state is restored. Consider previous state
-    // with browsing disable, if we don't wait until this is loaded, we might end up enabling browsing for a short while after which it
-    // will be disabled again. This will produce noise on the network which we don't want.
-    update_browser_timer_.expires_after(std::chrono::seconds(2));
-    update_browser_timer_.async_wait([this](const boost::system::error_code& ec) {
-        if (ec) {
-            RAV_LOG_ERROR("Failed to update browser timer: {}", ec.message());
-            return;
-        }
-        update_ravenna_browser();
-    });
 }
 
 rav::RavennaNode::~RavennaNode() {

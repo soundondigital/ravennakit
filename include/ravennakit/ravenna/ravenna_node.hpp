@@ -38,13 +38,13 @@ class RavennaNode {
      */
     struct Configuration {
         /// When true, the RAVENNA node will discover other nodes using dns-sd.
-        bool enable_dnssd_node_discovery {true};
+        bool enable_dnssd_node_discovery {};
 
         /// When true, the RAVENNA node will advertise senders using dns-sd.
-        bool enable_dnssd_session_advertisement {true};
+        bool enable_dnssd_session_advertisement {};
 
         /// When true, the RAVENNA node will discover sessions (streams) using dns-sd.
-        bool enable_dnssd_session_discovery {true};
+        bool enable_dnssd_session_discovery {};
     };
 
     /**
@@ -384,7 +384,6 @@ class RavennaNode {
     Id::Generator id_generator_;
 
     RavennaBrowser browser_ {io_context_};
-    boost::asio::steady_timer update_browser_timer_{io_context_};
     RavennaRtspClient rtsp_client_ {io_context_, browser_};
     std::vector<std::unique_ptr<RavennaReceiver>> receivers_;
 
