@@ -19,8 +19,7 @@
 namespace rav {
 
 inline bool operator==(const rav::RavennaNode::Configuration& lhs, const rav::RavennaNode::Configuration& rhs) {
-    return lhs.enable_dnssd_node_advertisement == rhs.enable_dnssd_node_advertisement
-        && lhs.enable_dnssd_session_advertisement == rhs.enable_dnssd_session_advertisement
+    return lhs.enable_dnssd_session_advertisement == rhs.enable_dnssd_session_advertisement
         && lhs.enable_dnssd_node_discovery == rhs.enable_dnssd_node_discovery
         && lhs.enable_dnssd_session_discovery == rhs.enable_dnssd_session_discovery;
 }
@@ -122,6 +121,18 @@ rav::RavennaNode::RavennaNode() :
                 RAV_ASSERT_DEBUG(false, "Unhandled unknown exception on maintenance thread");
             }
         }
+    });
+
+    // When the application starts, we don't want to start discovery until we know that no state is restored. Consider previous state
+    // with browsing disable, if we don't wait until this is loaded, we might end up enabling browsing for a short while after which it
+    // will be disabled again. This will produce noise on the network which we don't want.
+    update_browser_timer_.expires_after(std::chrono::seconds(2));
+    update_browser_timer_.async_wait([this](const boost::system::error_code& ec) {
+        if (ec) {
+            RAV_LOG_ERROR("Failed to update browser timer: {}", ec.message());
+            return;
+        }
+        update_ravenna_browser();
     });
 }
 
@@ -505,6 +516,7 @@ std::future<void> rav::RavennaNode::set_configuration(Configuration config) {
         for (auto* s : subscribers_) {
             s->ravenna_node_configuration_updated(configuration_);
         }
+        update_ravenna_browser();
     };
     return boost::asio::dispatch(io_context_, boost::asio::use_future(work));
 }
@@ -524,10 +536,13 @@ std::future<boost::json::object> rav::RavennaNode::to_boost_json() {
             receivers.push_back(receiver->to_boost_json());
         }
 
-        boost::json::object config {{
-            "network_config",
-            network_interface_config_.to_boost_json(),
-        }};
+        boost::json::object config {
+            {
+                "network_config",
+                network_interface_config_.to_boost_json(),
+            },
+            {"node_config", boost::json::value_from(configuration_)}
+        };
 
         return boost::json::object {
             {"config", config},
@@ -546,10 +561,16 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
         try {
             // Configuration
 
-            auto network_interface_config = NetworkInterfaceConfig::from_boost_json(json.at("config").at("network_config"));
+            auto config = json.at("config");
+            auto network_interface_config = NetworkInterfaceConfig::from_boost_json(config.at("network_config"));
 
             if (!network_interface_config) {
                 return tl::unexpected(network_interface_config.error());
+            }
+
+            Configuration node_config;
+            if (auto result = config.try_at("node_config")) {
+                node_config = boost::json::value_to<Configuration>(*result);
             }
 
             auto nmos_device_id = boost::uuids::string_generator()(json.at("nmos_device_id").as_string().c_str());
@@ -592,36 +613,36 @@ std::future<tl::expected<void, std::string>> rav::RavennaNode::restore_from_boos
                 ptp_config = boost::json::value_to<ptp::Instance::Configuration>(*ptp_instance_config);
             }
 
-            // TODO: Restoring the NMOS node can still fail, should this go below that?
-            set_network_interface_config(*network_interface_config).wait();
-
             // NMOS Node
 
             auto nmos_node = json.try_at("nmos_node");
             if (nmos_node.has_value()) {
                 auto nmos_node_object = nmos_node->as_object();
-                auto config = nmos::Node::Configuration::from_json(nmos_node_object.at("configuration"));
-                if (config.has_error()) {
-                    return tl::unexpected(config.error());
+                auto nmos_config = nmos::Node::Configuration::from_json(nmos_node_object.at("configuration"));
+                if (nmos_config.has_error()) {
+                    return tl::unexpected(nmos_config.error());
                 }
 
                 nmos_node_.stop();
                 if (!nmos_node_.remove_device(&nmos_device_)) {
                     RAV_LOG_ERROR("Failed to remove NMOS device with ID: {}", boost::uuids::to_string(nmos_device_.id));
                 }
-                auto result = nmos_node_.set_configuration(*config);
+                auto result = nmos_node_.set_configuration(*nmos_config);
                 if (!result) {
                     return tl::unexpected(fmt::format("Failed to set NMOS node configuration: {}", result.error()));
                 }
                 nmos_device_.id = nmos_device_id;
-                nmos_device_.label = config->label;
-                nmos_device_.description = config->description;
+                nmos_device_.label = nmos_config->label;
+                nmos_device_.description = nmos_config->description;
                 if (!nmos_node_.add_or_update_device(&nmos_device_)) {
                     RAV_LOG_ERROR("Failed to add NMOS device to node");
                 }
             } else {
                 return tl::unexpected("No NMOS node state found in JSON");
             }
+
+            set_network_interface_config(*network_interface_config).wait();
+            set_configuration(node_config).wait();
 
             // Swap senders
 
@@ -688,3 +709,32 @@ void rav::RavennaNode::do_maintenance() const {
         receiver->do_maintenance();
     }
 }
+
+void rav::RavennaNode::update_ravenna_browser() {
+    if (auto r = browser_.set_node_browsing_enabled(configuration_.enable_dnssd_node_discovery); !r) {
+        RAV_LOG_ERROR("Failed to set node browsing enabled: {}", r.error());
+    }
+    if (auto r = browser_.set_session_browsing_enabled(configuration_.enable_dnssd_session_discovery); !r) {
+        RAV_LOG_ERROR("Failed to set session browsing: {}", r.error());
+    }
+}
+
+namespace rav {
+
+inline void tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const RavennaNode::Configuration& config) {
+    jv = {
+        {"enable_dnssd_node_discovery", config.enable_dnssd_node_discovery},
+        {"enable_dnssd_session_advertisement", config.enable_dnssd_session_advertisement},
+        {"enable_dnssd_session_discovery", config.enable_dnssd_session_discovery},
+    };
+}
+
+inline RavennaNode::Configuration tag_invoke(const boost::json::value_to_tag<RavennaNode::Configuration>&, const boost::json::value& jv) {
+    RavennaNode::Configuration config;
+    config.enable_dnssd_node_discovery = jv.at("enable_dnssd_node_discovery").as_bool();
+    config.enable_dnssd_session_discovery = jv.at("enable_dnssd_session_discovery").as_bool();
+    config.enable_dnssd_session_advertisement = jv.at("enable_dnssd_session_advertisement").as_bool();
+    return config;
+}
+
+}  // namespace rav

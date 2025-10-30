@@ -12,6 +12,7 @@
 
 #include "ravennakit/core/util/subscriber_list.hpp"
 #include "ravennakit/dnssd/dnssd_browser.hpp"
+#include "ravennakit/core/expected.hpp"
 
 namespace rav {
 
@@ -82,7 +83,20 @@ class RavennaBrowser {
      */
     [[nodiscard]] bool unsubscribe(const Subscriber* subscriber_to_remove);
 
+    /**
+     * Enables or disables browsing for nodes.
+     * @param enabled True to enable browsing, false to disable browsing.
+     */
+    tl::expected<void, const char*> set_node_browsing_enabled(bool enabled);
+
+    /**
+     * Enables or disables browsing for nodes.
+     * @param enabled True to enable browsing, false to disable browsing.
+     */
+    tl::expected<void, const char*> set_session_browsing_enabled(bool enabled);
+
   private:
+    boost::asio::io_context& io_context_;
     std::unique_ptr<dnssd::Browser> node_browser_;
     std::unique_ptr<dnssd::Browser> session_browser_;
 

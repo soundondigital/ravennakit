@@ -37,9 +37,6 @@ class RavennaNode {
      * Holds the configuration of the node.
      */
     struct Configuration {
-        /// When true, the RAVENNA node will advertise itself using dns-sd.
-        bool enable_dnssd_node_advertisement {true};
-
         /// When true, the RAVENNA node will discover other nodes using dns-sd.
         bool enable_dnssd_node_discovery {true};
 
@@ -387,6 +384,7 @@ class RavennaNode {
     Id::Generator id_generator_;
 
     RavennaBrowser browser_ {io_context_};
+    boost::asio::steady_timer update_browser_timer_{io_context_};
     RavennaRtspClient rtsp_client_ {io_context_, browser_};
     std::vector<std::unique_ptr<RavennaReceiver>> receivers_;
 
@@ -403,6 +401,7 @@ class RavennaNode {
 
     uint32_t generate_unique_session_id() const;
     void do_maintenance() const;
+    void update_ravenna_browser();
 };
 
 }  // namespace rav
