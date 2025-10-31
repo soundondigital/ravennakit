@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added configuration options to enable or disable dns-sd discovery and advertisement.
+
 ### Fixed
 
 - Fixed a crash caused by an assertion when receiving PTP management messages (and when `RAV_ABORT_ON_ASSERT` was
   enabled). Now PTP management and signalling messages are ignored.
+- Fixed TTL not being updated. TTL is now updated for both unicast and multicast datagrams.
 
 ## [v0.17.0] - October 27, 2025
 

@@ -147,10 +147,6 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(Configurat
             return tl::unexpected("no enabled destinations");
         }
 
-        if (config.ttl <= 0) {
-            return tl::unexpected("Invalid TTL");
-        }
-
         const auto& audio_format = config.audio_format;
         if (!audio_format.is_valid()) {
             return tl::unexpected("Invalid audio format");
@@ -172,6 +168,7 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(Configurat
     bool do_announce = false;
     bool do_update_nmos = false;
     bool do_restart_streaming = false;
+    bool do_update_ttl = false;
 
     if (config.enabled != configuration_.enabled) {
         do_update_advertisement = true;
@@ -194,7 +191,7 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(Configurat
 
     if (config.ttl != configuration_.ttl) {
         do_announce = true;
-        // TODO: Update socket option for TTL. Probably both multicast and unicast in one go (which are separate opts).
+        do_update_ttl = true;
     }
 
     if (config.payload_type != configuration_.payload_type) {
@@ -225,6 +222,11 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(Configurat
 
     if (do_restart_streaming) {
         restart_streaming();
+    } else if (do_update_ttl) {
+        // If not restarting streaming (which would update TTL), update TTL directly to avoid a complete restart when only TTL changed.
+        if (!rtp_audio_sender_.set_ttl(id_, configuration_.ttl)) {
+            RAV_LOG_ERROR("Failed to update TTL");
+        }
     }
     if (do_update_advertisement) {
         update_advertisement();
@@ -684,6 +686,7 @@ void rav::RavennaSender::restart_streaming() const {
     params.audio_format = configuration_.audio_format;
     params.packet_time_frames = configuration_.packet_time.framecount(configuration_.audio_format.sample_rate);
     params.payload_type = configuration_.payload_type;
+    params.ttl = configuration_.ttl;
     for (auto& dst : configuration_.destinations) {
         if (dst.enabled && dst.interface_by_rank.value() < params.destinations.size()) {
             params.destinations[dst.interface_by_rank.value()] = dst.endpoint;
@@ -794,7 +797,7 @@ rav::tag_invoke(const boost::json::value_to_tag<RavennaSender::Configuration>&, 
     RavennaSender::Configuration config;
     config.session_name = jv.at("session_name").as_string();
     config.destinations = boost::json::value_to<std::vector<RavennaSender::Destination>>(jv.at("destinations"));
-    config.ttl = jv.at("ttl").to_number<int32_t>();
+    config.ttl = jv.at("ttl").to_number<uint8_t>();
     config.payload_type = jv.at("payload_type").to_number<uint8_t>();
     config.packet_time = boost::json::value_to<aes67::PacketTime>(jv.at("packet_time"));
     config.audio_format = boost::json::value_to<AudioFormat>(jv.at("audio_format"));

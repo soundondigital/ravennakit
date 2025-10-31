@@ -70,7 +70,7 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
     struct Configuration {
         std::string session_name;
         std::vector<Destination> destinations;
-        int32_t ttl {};
+        uint8_t ttl {};
         uint8_t payload_type {};
         AudioFormat audio_format;
         aes67::PacketTime packet_time;

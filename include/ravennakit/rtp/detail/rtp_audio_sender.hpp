@@ -48,6 +48,7 @@ struct AudioSender {
         AudioFormat audio_format;
         std::array<udp_endpoint, 2> destinations;
         uint32_t packet_time_frames {};
+        uint8_t ttl{15};
         uint8_t payload_type {};
     };
 
@@ -77,6 +78,14 @@ struct AudioSender {
      * @param interfaces The new interfaces to use.
      */
     [[nodiscard]] bool set_interfaces(const ArrayOfAddresses& interfaces);
+
+    /**
+     * Sets the ttl of the sockets.
+     * @param id The writer id.
+     * @param ttl The new ttl.
+     * @return True is writer was found and no error occurred, or false otherwise.
+     */
+    bool set_ttl(Id id, uint8_t ttl);
 
     /**
      * Call this to send outgoing packets onto the network. Should be called from a single high priority thread with

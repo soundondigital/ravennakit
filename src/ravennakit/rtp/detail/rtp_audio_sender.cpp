@@ -36,6 +36,21 @@ boost::system::error_code setup_socket(rav::udp_socket& socket) {
     return {};
 }
 
+bool set_socket_ttl(rav::udp_socket& socket, const uint8_t ttl) {
+    boost::system::error_code ec;
+    socket.set_option(boost::asio::ip::unicast::hops(ttl), ec);
+    if (ec) {
+        RAV_LOG_ERROR("Failed to set unicast ttl: {}", ec.message());
+        return false;
+    }
+    socket.set_option(boost::asio::ip::multicast::hops(ttl), ec);
+    if (ec) {
+        RAV_LOG_ERROR("Failed to set multicast ttl: {}", ec.message());
+        return false;
+    }
+    return true;
+}
+
 bool setup_writer(
     rav::rtp::AudioSender::Writer& writer, const rav::Id id, const rav::rtp::AudioSender::WriterParameters& parameters,
     const rav::rtp::AudioSender::ArrayOfAddresses& interfaces
@@ -54,6 +69,10 @@ bool setup_writer(
         writer.sockets[i].set_option(boost::asio::ip::multicast::outbound_interface(interfaces[i]), ec);
         if (ec) {
             RAV_LOG_ERROR("Failed to set outbound interface: {}", ec.message());
+            return false;
+        }
+        if (!set_socket_ttl(writer.sockets[i], parameters.ttl)) {
+            return false;
         }
     }
 
@@ -242,6 +261,27 @@ bool rav::rtp::AudioSender::set_interfaces(const ArrayOfAddresses& interfaces) {
     }
 
     return true;
+}
+
+bool rav::rtp::AudioSender::set_ttl(const Id id, const uint8_t ttl) {
+    for (auto& writer : writers) {
+        if (writer.id == id) {
+            const auto guard = writer.rw_lock.lock_exclusive();
+            if (!guard) {
+                RAV_LOG_ERROR("Failed to exclusively lock writer");
+                return false;
+            }
+
+            for (auto& socket : writer.sockets) {
+                if (!set_socket_ttl(socket, ttl)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void rav::rtp::AudioSender::send_outgoing_packets() {
