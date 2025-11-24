@@ -12,11 +12,9 @@
 
 #include "ravennakit/core/file.hpp"
 #include "ravennakit/core/audio/audio_format.hpp"
-#include "ravennakit/core/streams/file_input_stream.hpp"
 #include "ravennakit/core/streams/input_stream.hpp"
 #include "ravennakit/core/streams/output_stream.hpp"
 
-#include <ios>
 #include <array>
 
 namespace rav {

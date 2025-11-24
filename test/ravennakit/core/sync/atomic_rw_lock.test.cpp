@@ -9,13 +9,11 @@
  */
 
 #include "ravennakit/core/sync/atomic_rw_lock.hpp"
-#include "ravennakit/core/util/exclusive_access_guard.hpp"
 
 #include <catch2/catch_all.hpp>
 
 #include <future>
 #include <thread>
-#include <boost/mpl/integral_c_tag.hpp>
 
 static_assert(!std::is_copy_constructible_v<rav::AtomicRwLock>);
 static_assert(!std::is_move_constructible_v<rav::AtomicRwLock>);
