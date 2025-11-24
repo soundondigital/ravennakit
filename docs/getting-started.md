@@ -34,9 +34,9 @@ as the CMake approach:
 To influence how RAVENNAKIT is built, several variables can be set. Head over to the [options](options.md)
 documentation for more details.
 
-## Setting up a ravenna_node
+## Setting up a RavennaNode
 
-The easiest way to get started is to use the `rav::ravenna_node` class. This class offers the highest available 
+The easiest way to get started is to use the `rav::RavennaNode` class. This class offers the highest available 
 abstraction of a RAVENNA node and provides a simple API to set up streams and to configure the node. It basically acts 
 like a virtual RAVENNA node. Using this class also makes it easier to deal with cross thread boundaries.
 
