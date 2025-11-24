@@ -214,6 +214,7 @@ class AudioData {
             } else if constexpr (std::is_same_v<SrcType, float>) {
                 float f32;
                 std::memcpy(std::addressof(f32), &src_sample, sizeof(float));
+                f32 = std::clamp(f32, -1.0f, 1.0f);
                 if constexpr (std::is_same_v<DstType, int16_t>) {
                     DstByteOrder::write(dst, sizeof(DstType), static_cast<int16_t>(f32 * 32767.f));
                 } else if constexpr (std::is_same_v<DstType, int24_t>) {
@@ -224,6 +225,7 @@ class AudioData {
             } else if constexpr (std::is_same_v<SrcType, double>) {
                 double f64;
                 std::memcpy(std::addressof(f64), &src_sample, sizeof(double));
+                f64 = std::clamp(f64, -1.0, 1.0);
                 if constexpr (std::is_same_v<DstType, int16_t>) {
                     DstByteOrder::write(dst, sizeof(DstType), static_cast<int16_t>(f64 * 32767.0));
                 } else if constexpr (std::is_same_v<DstType, int24_t>) {
