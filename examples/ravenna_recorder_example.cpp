@@ -206,7 +206,7 @@ int main(int const argc, char* argv[]) {
     }
 
     rav::NetworkInterfaceConfig interface_config;
-    interface_config.set_interface(rav::Rank::primary().value(), iface->get_identifier());
+    interface_config.set_interface(rav::rank::primary, iface->get_identifier());
 
     rav::RavennaNode node;
     node.set_network_interface_config(std::move(interface_config)).get();

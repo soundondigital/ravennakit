@@ -56,7 +56,7 @@ class WavFilePlayer {
         config.packet_time = rav::aes67::PacketTime::ms_1();
         config.payload_type = 98;
         config.ttl = 15;
-        config.destinations.emplace_back(rav::RavennaSender::Destination {rav::Rank(0), {{}, 5004}, true});
+        config.destinations.emplace_back(rav::RavennaSender::Destination {rav::rank::primary, {{}, 5004}, true});
 
         auto result = ravenna_node_.create_sender(config).get();
         if (!result) {

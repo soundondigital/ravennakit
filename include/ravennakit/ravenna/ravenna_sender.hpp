@@ -43,7 +43,7 @@ class RavennaSender: public rtsp::Server::PathHandler, public ptp::Instance::Sub
      * destination can only be used by one sender. The destination is defined by a port and an address.
      */
     struct Destination {
-        Rank interface_by_rank;
+        uint8_t interface_by_rank;
         boost::asio::ip::udp::endpoint endpoint {};
         bool enabled {};
 

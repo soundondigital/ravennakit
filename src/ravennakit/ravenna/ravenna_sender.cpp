@@ -49,8 +49,8 @@ rav::RavennaSender::RavennaSender(
     nmos_sender_.flow_id = nmos_flow_.id;
 
     std::vector<Destination> destinations;
-    destinations.emplace_back(Destination {Rank::primary(), {boost::asio::ip::address_v4::any(), 5004}, true});
-    destinations.emplace_back(Destination {Rank::secondary(), {boost::asio::ip::address_v4::any(), 5004}, true});
+    destinations.emplace_back(Destination {rank::primary, {boost::asio::ip::address_v4::any(), 5004}, true});
+    destinations.emplace_back(Destination {rank::secondary, {boost::asio::ip::address_v4::any(), 5004}, true});
     configuration_.destinations = std::move(destinations);
 
     nmos_sender_.on_patch_request = [this](const boost::json::value& patch_request) -> tl::expected<void, nmos::ApiError> {
@@ -132,14 +132,14 @@ tl::expected<void, std::string> rav::RavennaSender::set_configuration(Configurat
                 continue;
             }
             if (!dst.endpoint.address().is_unspecified() && !dst.endpoint.address().is_multicast()) {
-                return tl::unexpected(fmt::format("{} address must be multicast", dst.interface_by_rank.to_ordinal_latin()));
+                return tl::unexpected(fmt::format("{} address must be multicast", rank::to_ordinal_latin(dst.interface_by_rank)));
             }
             num_enabled_destinations++;
             if (dst.endpoint.address().is_unspecified()) {
-                return tl::unexpected(fmt::format("{} destination address is unspecified", dst.interface_by_rank.to_ordinal_latin()));
+                return tl::unexpected(fmt::format("{} destination address is unspecified", rank::to_ordinal_latin(dst.interface_by_rank)));
             }
             if (dst.endpoint.port() == 0) {
-                return tl::unexpected(fmt::format("{} destination port is 0", dst.interface_by_rank.to_ordinal_latin()));
+                return tl::unexpected(fmt::format("{} destination port is 0", rank::to_ordinal_latin(dst.interface_by_rank)));
             }
         }
 
@@ -435,7 +435,7 @@ void rav::RavennaSender::send_announce() const {
         return;
     }
 
-    const auto interface_address_string = network_interface_config_.get_interface_ipv4_address(Rank::primary().value()).to_string();
+    const auto interface_address_string = network_interface_config_.get_interface_ipv4_address(rank::primary).to_string();
 
     rtsp::Request request;
     request.method = "ANNOUNCE";
@@ -459,11 +459,11 @@ void rav::RavennaSender::update_nmos() {
     nmos_sender_.interface_bindings.clear();
     for (const auto& dst : configuration_.destinations) {
         if (dst.enabled) {
-            const auto iface = network_interface_config_.get_interface_for_rank(dst.interface_by_rank.value());
+            const auto iface = network_interface_config_.get_interface_for_rank(dst.interface_by_rank);
             if (iface != nullptr) {
                 nmos_sender_.interface_bindings.push_back(*iface);
             } else {
-                RAV_LOG_WARNING("No interface for rank {}", dst.interface_by_rank.to_ordinal_latin());
+                RAV_LOG_WARNING("No interface for rank {}", rank::to_ordinal_latin(dst.interface_by_rank));
             }
         }
     }
@@ -568,7 +568,7 @@ tl::expected<rav::sdp::SessionDescription, std::string> rav::RavennaSender::gene
         0,
         sdp::NetwType::internet,
         sdp::AddrType::ipv4,
-        network_interface_config_.get_interface_ipv4_address(Rank::primary().value()).to_string(),
+        network_interface_config_.get_interface_ipv4_address(rank::primary).to_string(),
     };
 
     sdp::SessionDescription sdp;
@@ -597,7 +597,7 @@ tl::expected<rav::sdp::SessionDescription, std::string> rav::RavennaSender::gene
         // Connection info
         const sdp::ConnectionInfoField connection_info {sdp::NetwType::internet, sdp::AddrType::ipv4, dst_address_str, 15, {}};
 
-        auto addr = network_interface_config_.get_interface_ipv4_address(dst.interface_by_rank.value());
+        auto addr = network_interface_config_.get_interface_ipv4_address(dst.interface_by_rank);
         RAV_ASSERT(!addr.is_multicast(), "Interface address must not be multicast");
 
         // Source filter
@@ -620,8 +620,8 @@ tl::expected<rav::sdp::SessionDescription, std::string> rav::RavennaSender::gene
         media.ravenna_framecount = get_framecount();
 
         if (num_active_destinations > 1) {
-            media.mid = dst.interface_by_rank.to_ordinal_latin();
-            group.tags.emplace_back(dst.interface_by_rank.to_ordinal_latin());
+            media.mid = rank::to_ordinal_latin(dst.interface_by_rank);
+            group.tags.emplace_back(rank::to_ordinal_latin(dst.interface_by_rank));
         }
 
         sdp.media_descriptions.push_back(std::move(media));
@@ -646,11 +646,11 @@ bool rav::RavennaSender::generate_auto_addresses_if_needed(std::vector<Destinati
     bool changed = false;
     for (auto& dst : destinations) {
         if (dst.endpoint.address().is_unspecified()) {
-            const auto iface = network_interface_config_.get_interface_for_rank(dst.interface_by_rank.value());
+            const auto iface = network_interface_config_.get_interface_for_rank(dst.interface_by_rank);
             if (iface != nullptr) {
-                auto addr = network_interface_config_.get_interface_ipv4_address(dst.interface_by_rank.value());
+                auto addr = network_interface_config_.get_interface_ipv4_address(dst.interface_by_rank);
                 if (addr.is_unspecified()) {
-                    RAV_LOG_WARNING("Invalid interface address for rank {}", dst.interface_by_rank.value());
+                    RAV_LOG_WARNING("Invalid interface address for rank {}", dst.interface_by_rank);
                     continue;
                 }
                 // Construct a multicast address from the interface address
@@ -663,7 +663,7 @@ bool rav::RavennaSender::generate_auto_addresses_if_needed(std::vector<Destinati
                 changed = true;
 
                 RAV_LOG_TRACE(
-                    "Generated {} multicast address {}", dst.interface_by_rank.to_ordinal_latin(), dst.endpoint.address().to_string()
+                    "Generated {} multicast address {}", rank::to_ordinal_latin(dst.interface_by_rank), dst.endpoint.address().to_string()
                 );
             }
         }
@@ -684,8 +684,8 @@ void rav::RavennaSender::restart_streaming() const {
     params.payload_type = configuration_.payload_type;
     params.ttl = configuration_.ttl;
     for (auto& dst : configuration_.destinations) {
-        if (dst.enabled && dst.interface_by_rank.value() < params.destinations.size()) {
-            params.destinations[dst.interface_by_rank.value()] = dst.endpoint;
+        if (dst.enabled && dst.interface_by_rank < params.destinations.size()) {
+            params.destinations[dst.interface_by_rank] = dst.endpoint;
         }
     }
     const auto interfaces = network_interface_config_.get_array_of_interface_addresses<rtp::AudioSender::k_max_num_redundant_sessions>();
@@ -757,7 +757,7 @@ void rav::RavennaSender::register_dnssd_session_advertisement() {
 
 void rav::tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv, const RavennaSender::Destination& destination) {
     jv = {
-        {"interface_by_rank", destination.interface_by_rank.value()},
+        {"interface_by_rank", destination.interface_by_rank},
         {"address", destination.endpoint.address().to_string()},
         {"port", destination.endpoint.port()},
         {"enabled", destination.enabled},
@@ -780,7 +780,7 @@ rav::RavennaSender::Destination
 rav::tag_invoke(const boost::json::value_to_tag<RavennaSender::Destination>&, const boost::json::value& jv) {
     RavennaSender::Destination dst;
     dst.enabled = jv.at("enabled").as_bool();
-    dst.interface_by_rank = Rank(jv.at("interface_by_rank").to_number<uint8_t>());
+    dst.interface_by_rank = jv.at("interface_by_rank").to_number<uint8_t>();
     const boost::asio::ip::udp::endpoint endpoint(
         boost::asio::ip::make_address(jv.at("address").as_string()), jv.at("port").to_number<uint16_t>()
     );

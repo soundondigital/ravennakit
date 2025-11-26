@@ -42,12 +42,12 @@ TEST_CASE("rav::RavennaNode") {
     rav::RavennaSender::Destination primary;
     primary.enabled = true;
     primary.endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::make_address_v4("192.168.1.1"), 1234);
-    primary.interface_by_rank = rav::Rank(0);
+    primary.interface_by_rank = rav::rank::primary;
 
     rav::RavennaSender::Destination secondary;
     secondary.enabled = true;
     secondary.endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::make_address_v4("192.168.1.2"), 2345);
-    secondary.interface_by_rank = rav::Rank(1);
+    secondary.interface_by_rank = rav::rank::secondary;
 
     rav::RavennaSender::Configuration sender1;
     sender1.enabled = false;
