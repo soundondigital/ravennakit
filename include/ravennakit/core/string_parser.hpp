@@ -17,7 +17,6 @@
 #include <string_view>
 
 #include "assert.hpp"
-#include "constants.hpp"
 #include "string.hpp"
 
 namespace rav {
@@ -28,6 +27,8 @@ namespace rav {
  */
 class StringParser {
   public:
+    static constexpr auto k_max_leading_spaces = 100'000;
+
     /**
      * Constructs a parser from given string view. Doesn't take ownership of the string, so make sure for the original
      * string to outlive this parser instance.
@@ -222,7 +223,7 @@ class StringParser {
     template<class T>
     std::optional<T> read_int() {
         T value;
-        if (skip_n(' ', RAV_LOOP_UPPER_BOUND) == RAV_LOOP_UPPER_BOUND) {
+        if (skip_n(' ', k_max_leading_spaces) == k_max_leading_spaces) {
             RAV_ASSERT_FALSE("Loop upper bound reached while skipping spaces");
         }
         const auto result = std::from_chars(str_.data(), str_.data() + str_.size(), value);

@@ -18,12 +18,8 @@
 
 TEST_CASE("rav::RavennaSender") {
     std::vector<rav::RavennaSender::Destination> destinations;
-    destinations.push_back(
-        {rav::Rank(0), boost::asio::ip::udp::endpoint(boost::asio::ip::make_address("239.0.0.1"), 5005), true}
-    );
-    destinations.push_back(
-        {rav::Rank(1), boost::asio::ip::udp::endpoint(boost::asio::ip::make_address("239.0.0.2"), 5006), false}
-    );
+    destinations.push_back({0, boost::asio::ip::udp::endpoint(boost::asio::ip::make_address("239.0.0.1"), 5005), true});
+    destinations.push_back({1, boost::asio::ip::udp::endpoint(boost::asio::ip::make_address("239.0.0.2"), 5006), false});
 
     for (auto& destination : destinations) {
         rav::test_ravenna_sender_destination_json(destination, boost::json::value_from(destination));
@@ -74,13 +70,11 @@ void rav::test_ravenna_sender_json(const RavennaSender& sender, const boost::jso
     test_ravenna_sender_configuration_json(sender.get_configuration(), json.at("configuration"));
 }
 
-void rav::test_ravenna_sender_destination_json(
-    const RavennaSender::Destination& destination, const boost::json::value& json
-) {
+void rav::test_ravenna_sender_destination_json(const RavennaSender::Destination& destination, const boost::json::value& json) {
     REQUIRE(json.at("enabled") == destination.enabled);
     REQUIRE(json.at("address").as_string() == destination.endpoint.address().to_string());
     REQUIRE(json.at("port") == destination.endpoint.port());
-    REQUIRE(json.at("interface_by_rank") == destination.interface_by_rank.value());
+    REQUIRE(json.at("interface_by_rank") == destination.interface_by_rank);
 }
 
 void rav::test_ravenna_sender_destinations_json(
@@ -94,9 +88,7 @@ void rav::test_ravenna_sender_destinations_json(
     }
 }
 
-void rav::test_ravenna_sender_configuration_json(
-    const RavennaSender::Configuration& config, const boost::json::value& json
-) {
+void rav::test_ravenna_sender_configuration_json(const RavennaSender::Configuration& config, const boost::json::value& json) {
     REQUIRE(json.at("session_name").as_string() == config.session_name);
     REQUIRE(json.at("ttl") == config.ttl);
     REQUIRE(json.at("payload_type") == config.payload_type);

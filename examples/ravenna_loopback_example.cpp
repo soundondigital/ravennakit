@@ -100,9 +100,7 @@ int main(int const argc, char* argv[]) {
 
         for (size_t i = 0; i < parameters.streams.size(); ++i) {
             if (parameters.streams[i].is_valid()) {
-                rav::RavennaSender::Destination destination {
-                    rav::Rank(static_cast<uint8_t>(i)), boost::asio::ip::udp::endpoint {{}, 5004}, true
-                };
+                rav::RavennaSender::Destination destination {static_cast<uint8_t>(i), boost::asio::ip::udp::endpoint {{}, 5004}, true};
                 sender_config.destinations.emplace_back(destination);
             }
         }

@@ -26,7 +26,7 @@ rav::rtsp::Parser::result rav::rtsp::Parser::parse(StringBuffer& input) {
         }
 
         if (state_ == state::headers) {
-            for (int i = 0; i < RAV_LOOP_UPPER_BOUND; ++i) {
+            for (int i = 0; i < k_loop_upper_bound; ++i) {
                 const auto header_line = input.read_until_newline();
                 if (!header_line) {
                     return result::indeterminate;

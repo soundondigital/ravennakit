@@ -21,11 +21,11 @@ namespace rav {
  */
 class FileInputStream final: public InputStream {
   public:
-    explicit FileInputStream(const File& f) {
+    explicit FileInputStream(const std::filesystem::path& f) {
         fstream_.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-        fstream_.open(f.path(), std::ios::binary | std::ios::ate);
+        fstream_.open(f, std::ios::binary | std::ios::ate);
         if (!fstream_.is_open()) {
-            if (!f.exists()) {
+            if (!std::filesystem::exists(f)) {
                 RAV_THROW_EXCEPTION("File does not exist");
             }
             RAV_THROW_EXCEPTION("Failed to open file");
@@ -35,7 +35,7 @@ class FileInputStream final: public InputStream {
         file_size_ = static_cast<size_t>(fstream_.tellg());
         fstream_.seekg(0);
 
-        RAV_ASSERT(f.size() == file_size_, "File reports a different size than the stream");
+        RAV_ASSERT(std::filesystem::file_size(f) == file_size_, "File reports a different size than the stream");
     }
 
     // input_stream overrides

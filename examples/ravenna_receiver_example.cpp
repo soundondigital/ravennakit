@@ -331,7 +331,7 @@ int main(int const argc, char* argv[]) {
     portaudio_print_devices();
 
     rav::NetworkInterfaceConfig network_interface_config;
-    network_interface_config.set_interface(rav::Rank::primary().value(), iface->get_identifier());
+    network_interface_config.set_interface(rav::rank::primary, iface->get_identifier());
 
     rav::RavennaNode node;
     node.set_network_interface_config(network_interface_config).wait();

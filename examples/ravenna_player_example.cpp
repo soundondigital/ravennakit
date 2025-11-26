@@ -33,10 +33,10 @@ static constexpr uint32_t k_frames_per_read = 1024;
  */
 class WavFilePlayer {
   public:
-    explicit WavFilePlayer(rav::RavennaNode& ravenna_node, const rav::File& file_to_play, const std::string& session_name) :
+    explicit WavFilePlayer(rav::RavennaNode& ravenna_node, const std::filesystem::path& file_to_play, const std::string& session_name) :
         ravenna_node_(ravenna_node) {
-        if (!file_to_play.exists()) {
-            throw std::runtime_error("File does not exist: " + file_to_play.path().string());
+        if (!std::filesystem::exists(file_to_play)) {
+            throw std::runtime_error("File does not exist: " + file_to_play.string());
         }
 
         auto file_input_stream = std::make_unique<rav::FileInputStream>(file_to_play);
@@ -44,7 +44,7 @@ class WavFilePlayer {
 
         const auto format = reader->get_audio_format();
         if (!format) {
-            throw std::runtime_error("Failed to read audio format from file: " + file_to_play.path().string());
+            throw std::runtime_error("Failed to read audio format from file: " + file_to_play.string());
         }
 
         audio_format_ = *format;
@@ -56,7 +56,7 @@ class WavFilePlayer {
         config.packet_time = rav::aes67::PacketTime::ms_1();
         config.payload_type = 98;
         config.ttl = 15;
-        config.destinations.emplace_back(rav::RavennaSender::Destination {rav::Rank(0), {{}, 5004}, true});
+        config.destinations.emplace_back(rav::RavennaSender::Destination {rav::rank::primary, {{}, 5004}, true});
 
         auto result = ravenna_node_.create_sender(config).get();
         if (!result) {
@@ -167,8 +167,8 @@ int main(int const argc, char* argv[]) {
     std::vector<std::unique_ptr<examples::WavFilePlayer>> wav_file_players;
 
     for (auto& file_path : file_paths) {
-        auto file = rav::File(file_path);
-        const auto file_session_name = file.path().filename().string();
+        auto file = std::filesystem::path(file_path);
+        const auto file_session_name = file.filename().string();
 
         wav_file_players.emplace_back(
             std::make_unique<examples::WavFilePlayer>(

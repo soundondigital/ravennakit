@@ -22,6 +22,8 @@ namespace rav::rtsp {
  */
 class Parser final {
   public:
+    static constexpr auto k_loop_upper_bound = 100'000;
+
     SafeFunction<void(const Request& request)> on_request;
     SafeFunction<void(const Response& response)> on_response;
 

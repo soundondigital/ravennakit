@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include "ravennakit/core/constants.hpp"
 #include "ravennakit/core/string_parser.hpp"
 
 #include <map>
@@ -32,6 +31,8 @@ namespace rav {
  */
 class PathMatcher {
   public:
+    static constexpr auto k_loop_upper_bound = 100'000;
+
     enum class Error {
         invalid_recursive_wildcard,
         invalid_argument,
@@ -131,7 +132,7 @@ class PathMatcher {
         auto path_section = path_parser.split('/');
         auto pattern_section = pattern_parser.split('/');
 
-        for (size_t i = 0; i < RAV_LOOP_UPPER_BOUND; ++i) {
+        for (size_t i = 0; i < k_loop_upper_bound; ++i) {
             if (!path_section && !pattern_section) {
                 return true;
             }

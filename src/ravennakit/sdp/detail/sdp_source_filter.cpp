@@ -75,7 +75,8 @@ tl::expected<rav::sdp::SourceFilter, std::string> rav::sdp::parse_source_filter(
 
     filter.dest_address = *dest_address;
 
-    for (auto i = 0; i < RAV_LOOP_UPPER_BOUND; ++i) {
+    constexpr auto s_loop_upper_bound = 100'000;
+    for (auto i = 0; i < s_loop_upper_bound; ++i) {
         const auto src_address = parser.split(' ');
         if (!src_address) {
             break;

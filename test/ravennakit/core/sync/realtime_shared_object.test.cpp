@@ -18,22 +18,49 @@ static_assert(!std::is_move_constructible_v<rav::RealtimeSharedObject<int>>);
 static_assert(!std::is_copy_assignable_v<rav::RealtimeSharedObject<int>>);
 static_assert(!std::is_move_assignable_v<rav::RealtimeSharedObject<int>>);
 
-static_assert(!std::is_copy_constructible_v<rav::RealtimeSharedObject<int>::RealtimeLock>);
-static_assert(!std::is_move_constructible_v<rav::RealtimeSharedObject<int>::RealtimeLock>);
-static_assert(!std::is_copy_assignable_v<rav::RealtimeSharedObject<int>::RealtimeLock>);
-static_assert(!std::is_move_assignable_v<rav::RealtimeSharedObject<int>::RealtimeLock>);
+static_assert(!std::is_copy_constructible_v<rav::RealtimeSharedObject<int>::RealtimeAccessGuard>);
+static_assert(!std::is_move_constructible_v<rav::RealtimeSharedObject<int>::RealtimeAccessGuard>);
+static_assert(!std::is_copy_assignable_v<rav::RealtimeSharedObject<int>::RealtimeAccessGuard>);
+static_assert(!std::is_move_assignable_v<rav::RealtimeSharedObject<int>::RealtimeAccessGuard>);
 
 TEST_CASE("rav::RealtimeSharedObject") {
     SECTION("Default state") {
+        static constexpr auto k_string_a = "String                                           A";
+        static constexpr auto k_string_b = "String                                           B";
+
         rav::RealtimeSharedObject<std::string> obj;
-        auto lock = obj.lock_realtime();
-        REQUIRE(lock.get() != nullptr);
-        REQUIRE(lock->empty());
+        {
+            auto guard = obj.access_realtime();
+            REQUIRE(guard.get() != nullptr);
+            REQUIRE(guard->empty());
+        }
+
+        const auto old_empty_string = obj.update(k_string_a);
+        REQUIRE(old_empty_string->empty());
+
+        {
+            auto guard = obj.access_realtime();
+            REQUIRE(guard.get() != nullptr);
+            REQUIRE(*guard == k_string_a);
+        }
+
+        const auto old_string_a = obj.update(k_string_b);
+        REQUIRE(old_string_a);
+        REQUIRE(*old_string_a == k_string_a);
+
+        {
+            auto guard = obj.access_realtime();
+            REQUIRE(guard.get() != nullptr);
+            REQUIRE(*guard == k_string_b);
+        }
+
+        const auto old_string_b = obj.update({});
+        REQUIRE(old_string_b);
+        REQUIRE(*old_string_b == k_string_b);
     }
 
     SECTION("Updating and reading the value should be thread safe") {
-        static constexpr size_t num_values = 50;
-        static constexpr size_t num_writer_threads = 2;
+        static constexpr size_t num_values = 500;
 
         rav::RealtimeSharedObject<std::pair<size_t, std::string>> obj;
 
@@ -44,19 +71,19 @@ TEST_CASE("rav::RealtimeSharedObject") {
             std::vector<std::string> values(num_values);
 
             while (num_values_read < num_values) {
-                const auto lock = obj.lock_realtime();
-                if (lock.get() == nullptr) {
+                const auto guard = obj.access_realtime();
+                if (guard.get() == nullptr) {
                     return std::vector<std::string>();
                 }
-                if (lock->second.empty()) {
+                if (guard->second.empty()) {
                     continue;  // obj was default constructed
                 }
-                if (lock->first >= num_values) {
+                if (guard->first >= num_values) {
                     return std::vector<std::string>();  // obj was updated with an invalid index
                 }
-                auto& it = values.at(lock->first);
+                auto& it = values.at(guard->first);
                 if (it.empty()) {
-                    it = lock->second;
+                    it = guard->second;
                     ++num_values_read;
                 }
             }
@@ -68,26 +95,19 @@ TEST_CASE("rav::RealtimeSharedObject") {
         // Give reader thread some time to start.
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        // Create writer threads.
-        std::vector<std::thread> writer_threads;
-        writer_threads.reserve(num_writer_threads);
-        for (size_t i = 0; i < num_writer_threads; ++i) {
-            writer_threads.emplace_back([&obj, &keep_going] {
-                // Writers are going to hammer the object with new values until the reader has read all values.
-                while (keep_going) {
-                    for (size_t j = 0; j < num_values; ++j) {
-                        std::ignore = obj.update(j, std::to_string(j + 1));
-                        std::this_thread::yield();
-                    }
+        const auto writer = std::async(std::launch::async, [&obj, &keep_going] {
+            // Writers are going to hammer the object with new values until the reader has read all values.
+            while (keep_going) {
+                for (size_t j = 0; j < num_values; ++j) {
+                    std::ignore = obj.update(std::make_pair(j, std::to_string(j + 1)));
+                    std::this_thread::yield();
                 }
-            });
-        }
+            }
+        });
 
-        auto read_values = reader.get();
-
-        for (auto& thread : writer_threads) {
-            thread.join();
-        }
+        const auto read_values = reader.get();
+        keep_going = false;
+        writer.wait();
 
         for (size_t i = 0; i < num_values; ++i) {
             REQUIRE(read_values[i] == std::to_string(i + 1));
