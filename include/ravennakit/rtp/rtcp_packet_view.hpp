@@ -51,7 +51,7 @@ class PacketView {
     /**
      * Validates the RTP header data. After this method returns all other methods should return valid data and not lead
      * to undefined behavior.
-     * TODO: Add more validation checks.
+     *
      * @returns The result of the validation.
      */
     [[nodiscard]] bool validate() const;

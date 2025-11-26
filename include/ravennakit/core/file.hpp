@@ -15,113 +15,6 @@
 #include <filesystem>
 #include <fstream>
 
-namespace rav {
-
-/**
- * Represents a file on the file system.
- */
-class File {
-  public:
-    File() = default;
-
-    /**
-     * Constructs a file object with the given path.
-     * @param path The path to the file or directory.
-     */
-    explicit File(std::filesystem::path path) : path_(std::move(path)) {}
-
-    /**
-     * Constructs a file object with the given path.
-     * @param path The path to the file or directory.
-     */
-    explicit File(const char* path) : path_(path) {}
-
-    /**
-     * Appends given path to the file path.
-     * @param p The path to append.
-     * @return A new file object with the appended path.
-     */
-    File& operator/(const std::filesystem::path& p) {
-        return *this /= p;
-    }
-
-    /**
-     * Appends given path to the file path.
-     * @param p The path to append.
-     * @return A new file object with the appended path.
-     */
-    File& operator/=(const std::filesystem::path& p) {
-        path_ /= p;
-        return *this;
-    }
-
-    /**
-     * @returns True if the file of directory exists, or false if the file or directory does not exist.
-     */
-    [[nodiscard]] bool exists() const {
-        return std::filesystem::exists(path_);
-    }
-
-    /**
-     * Creates the file if it does not already exist.
-     * @return True if the file was created or already existed, or false if the file could not be created.
-     */
-    [[nodiscard]] bool create_if_not_exists() const {
-        if (!exists()) {
-            std::ofstream f(path_);
-            if (!f.good()) {
-                return false;  // Failed to create the file
-            }
-            f.close();
-            if (!exists()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * @return The path to the file or directory.
-     */
-    [[nodiscard]] const std::filesystem::path& path() const {
-        return path_;
-    }
-
-    /**
-     * @return The parent directory of the file.
-     */
-    [[nodiscard]] File parent() const {
-        return File(path_.parent_path());
-    }
-
-    /**
-     * @return The absolute path to the file.
-     */
-    [[nodiscard]] File absolute() const {
-        return File(std::filesystem::absolute(path_));
-    }
-
-    /**
-     * @throws std::filesystem::filesystem_error if the file does not exist.
-     * @return The size of the file in bytes.
-     */
-    [[nodiscard]] std::uintmax_t size() const {
-        return std::filesystem::file_size(path_);
-    }
-
-    /**
-     * @return Path as a string.
-     */
-    [[nodiscard]] std::string to_string() const {
-        return path_.string();
-    }
-
-  private:
-    std::filesystem::path path_;
-};
-
-}  // namespace rav
-
 namespace rav::file {
 
 enum class Error {
@@ -132,6 +25,29 @@ enum class Error {
     failed_to_read_from_file,
 };
 
+/**
+ * Creates the file if it does not already exist.
+ * @return True if the file was created or already existed, or false if the file could not be created.
+ */
+[[nodiscard]] inline bool create_if_not_exists(const std::filesystem::path& path) {
+    if (!std::filesystem::exists(path)) {
+        std::ofstream f(path);
+        if (!f.good()) {
+            return false;  // Failed to create the file
+        }
+        f.close();
+        if (!std::filesystem::exists(path)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Reads the contents of given file into a string.
+ * @param file The file to read from.
+ * @return An expected holding a string with the contents on success, or an Error in case of failure.
+ */
 inline tl::expected<std::string, Error> read_file_as_string(const std::filesystem::path& file) {
     if (file.empty()) {
         return tl::unexpected(Error::invalid_path);

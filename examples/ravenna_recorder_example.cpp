@@ -157,9 +157,9 @@ class StreamRecorder: public rav::RavennaReceiver::Subscriber {
             return;
         }
 
-        auto file_path = rav::File(session_name_ + ".wav").absolute();
+        auto file_path = std::filesystem::absolute(session_name_ + ".wav");
 
-        RAV_LOG_INFO("Start recording stream to: \"{}\" to file: {}", session_name_, file_path.to_string());
+        RAV_LOG_INFO("Start recording stream to: \"{}\" to file: {}", session_name_, file_path.string());
 
         file_output_stream_ = std::make_unique<rav::FileOutputStream>(file_path);
         wav_writer_ = std::make_unique<rav::WavAudioFormat::Writer>(
