@@ -74,6 +74,8 @@ For commercial support or licensing inquiries, please contact us at: https://rav
 To learn how to get started integrating RAVENNAKIT into your project, head over to
 the [getting started documentation](docs/getting-started.md).
 
+Reference documentation can be found at: https://reference.ravennakit.com/
+
 ## Prerequisites
 
 To build the project you will need to install the following external dependencies:
