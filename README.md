@@ -125,9 +125,11 @@ For more options and info run:
 python3 -u build.py --help
 ```
 
-## Building for macOS using CMake
+## Building using CMake
 
 To use CMake directly, you can use the following commands:
+
+### macOS
 
 ```
 # From the project root (generates build folder if necessary)
@@ -144,7 +146,21 @@ cmake --build xcode-build --config Release
 
 Note: adjust the parameters to match your platform.
 
-## Building for Windows using CMake
+### Linux
+
+```
+# From the project root (generates build folder if necessary)
+cmake -B build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_TOOLCHAIN_FILE=submodules/vcpkg/scripts/buildsystems/vcpkg.cmake \
+    -DVCPKG_OVERLAY_TRIPLETS=triplets \
+    -DVCPKG_TARGET_TRIPLET=linux-x64
+cmake --build build --config Release
+```
+
+Note: adjust the parameters to match your platform.
+
+### Windows
 
 ```
 # From the project root (generates build folder if necessary)
