@@ -11,31 +11,31 @@ desktop applications and cloud deployments.
 ## What's Included
 
 ### RAVENNA / AES67 / ST2110-30 
-Full support for RAVENNA as specified by the RAVENNA protocol including AES67 and ST2110-30 ([link](include/ravennakit/ravenna)).
+Full support for RAVENNA as specified by the RAVENNA protocol including AES67 and ST2110-30 ([ravennakit/ravenna](include/ravennakit/ravenna)).
 
 ### NMOS
 
-NMOS IS-04 for discovery and IS-05 for connection management ([link](include/ravennakit/nmos)).
+NMOS IS-04 for discovery and IS-05 for connection management ([ravennakit/nmos](include/ravennakit/nmos)).
 
 ### RTP  
-An implementation of RTP and RTCP to support the main audio-over-IP protocols ([link](include/ravennakit/rtp)).
+An implementation of RTP and RTCP to support the main audio-over-IP protocols ([ravennakit/rtp](include/ravennakit/rtp)).
 
 ### DNS-SD  
 DNS-SD support for device discovery on local networks. Currently implemented for macOS and Windows; Linux support is
-planned ([link](include/ravennakit/dnssd)).
+planned ([ravennakit/dnssd](include/ravennakit/dnssd)).
 
 ### PTPv2  
-A virtual PTP follower based on IEEE 1588-2019 ([link](include/ravennakit/ptp)).
+A virtual PTP follower based on IEEE 1588-2019 ([ravennakit/ptp](include/ravennakit/ptp)).
 
 ### RTSP
-RTSP client and server implementation used for connection management in RAVENNA workflows ([link](include/ravennakit/rtsp)).
+RTSP client and server implementation used for connection management in RAVENNA workflows ([ravennakit/rtsp](include/ravennakit/rtsp)).
 
 ### SDP  
-Session Description Protocol (SDP) parsing and generation to support signaling between devices ([link](include/ravennakit/sdp)).
+Session Description Protocol (SDP) parsing and generation to support signaling between devices ([ravennakit/sdp](include/ravennakit/sdp)).
 
 ### Core Utilities
 A rich set of utilities for audio buffers, audio formats, generic containers, streams, lock-free programming, integer
-wraparound, URIs, and more to support all of the above ([link](include/ravennakit/core)).
+wraparound, URIs, and more to support all of the above ([ravennakit/core](include/ravennakit/core)).
 
 ## Demo application
 
