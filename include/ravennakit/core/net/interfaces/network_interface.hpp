@@ -197,7 +197,7 @@ class NetworkInterface {
 
     /**
      * @returns A list of all network interfaces on the system. Only several operating systems are supported: macOS,
-     * Windows and Linux. Not Android.
+     * Windows and Linux.
      */
     static tl::expected<std::vector<NetworkInterface>, int> get_all();
 
