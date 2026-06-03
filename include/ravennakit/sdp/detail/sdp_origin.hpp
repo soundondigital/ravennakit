@@ -47,7 +47,7 @@ struct OriginField {
     std::string session_id;
 
     /// The version number for this session description.
-    int session_version {};
+    uint64_t session_version {};
 
     /// Specifies the type of network.
     NetwType network_type {NetwType::undefined};

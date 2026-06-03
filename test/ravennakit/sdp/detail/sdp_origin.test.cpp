@@ -51,12 +51,23 @@ TEST_CASE("rav::sdp::OriginField") {
         REQUIRE(rav::sdp::validate(origin));
     }
 
-    SECTION("") {
+    SECTION("To string") {
         rav::sdp::OriginField origin;
         origin.session_id = "13";
         origin.unicast_address = "192.168.15.52";
         origin.network_type = rav::sdp::NetwType::internet;
         origin.address_type = rav::sdp::AddrType::ipv4;
         REQUIRE(rav::sdp::to_string(origin) == "o=- 13 0 IN IP4 192.168.15.52");
+    }
+
+    SECTION("Parse origin version as int64") {
+        auto origin = rav::sdp::parse_origin("o=- 3989391735 3989391741 IN IP4 10.1.0.111");
+        REQUIRE(origin);
+        REQUIRE(origin->username == "-");
+        REQUIRE(origin->session_id == "3989391735");
+        REQUIRE(origin->session_version == 3989391741);
+        REQUIRE(origin->network_type == rav::sdp::NetwType::internet);
+        REQUIRE(origin->address_type == rav::sdp::AddrType::ipv4);
+        REQUIRE(origin->unicast_address == "10.1.0.111");
     }
 }

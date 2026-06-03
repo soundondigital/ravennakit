@@ -50,7 +50,7 @@ tl::expected<rav::sdp::OriginField, std::string> rav::sdp::parse_origin(std::str
     }
 
     // Session version
-    if (const auto version = parser.read_int<int32_t>()) {
+    if (const auto version = parser.read_int<uint64_t>()) {
         o.session_version = *version;
         parser.skip(' ');
     } else {

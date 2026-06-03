@@ -911,13 +911,13 @@ rav::nmos::Node::Node(
                 }
             }
 
-            RAV_ASSERT(receiver->on_patch_request, "Expecting valid function");
+            RAV_ASSERT_RETURN(receiver->on_patch_request, "Expecting valid function");
             if (auto result = receiver->on_patch_request(json); !result) {
                 set_error_response(res, result.error());
                 return;
             }
 
-            RAV_ASSERT(receiver->get_transport_file, "Expecting valid function");
+            RAV_ASSERT_RETURN(receiver->get_transport_file, "Expecting valid function");
             auto sdp = receiver->get_transport_file();
             if (!sdp) {
                 set_error_response(res, sdp.error());
@@ -1186,7 +1186,7 @@ rav::nmos::Node::Node(
                 return;
             }
 
-            auto body = req.body();
+            const auto& body = req.body();
             auto json = boost::json::parse(body);
 
             // Validate object
