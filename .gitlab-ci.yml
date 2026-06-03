@@ -22,7 +22,9 @@ build-macos:
   script:
     - export ASAN_OPTIONS=detect_container_overflow=0 # Disable ASAN container overflow detection
     - brew install pkg-config ninja
-    - python3 -m pip install pygit2 boto3
+    - python3 -m venv .venv
+    - source .venv/bin/activate
+    - pip install pygit2 boto3
     - python3 -u build.py --path-to-build build-macos --build-number $CI_PIPELINE_IID --asan --tsan
 
 build-windows:
@@ -51,7 +53,9 @@ build-android:
     - macos
   stage: build
   script:
-    - python3 -m pip install pygit2 boto3
+    - python3 -m venv .venv
+    - source .venv/bin/activate
+    - pip install pygit2 boto3
     - python3 -u build.py --android --path-to-build build-android --build-number "$env:CI_PIPELINE_IID"
 
 build-dist:
@@ -59,10 +63,11 @@ build-dist:
     - macos
   stage: build
   script:
-    - python3 -m pip install pygit2 boto3
     - brew install doxygen
     - git submodule update --recursive --init
-    - python3 -m pip install pygit2 boto3 requests
+    - python3 -m venv .venv
+    - source .venv/bin/activate
+    - pip install pygit2 boto3
     - python3 -u build.py --dist --path-to-build build-dist --build-number $CI_PIPELINE_IID --upload --spaces-key $SPACES_KEY --spaces-secret $SPACES_SECRET
     - rm -R build-dist/dist
   artifacts:
