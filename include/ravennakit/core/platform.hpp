@@ -51,7 +51,7 @@
     #include <TargetConditionals.h>
     #if TARGET_IPHONE_SIMULATOR  // iOS, tvOS, or watchOS Simulator
         #define RAV_SIMULATOR 1
-    #elif TARGET_OS_MACCATALYST  // Mac's Catalyst (ports iOS API into Mac, like UIKit).
+    #elif TARGET_OS_MACCATALYST  // macOS Catalyst (ports iOS API into Mac, like UIKit).
         #define RAV_MACCATALYST 1
     #elif TARGET_OS_IPHONE  // iOS, tvOS, or watchOS device
         #define RAV_IPHONE 1

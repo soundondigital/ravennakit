@@ -24,10 +24,6 @@ option(RAV_TOOLS "Build the tools" OFF)
 set(RAV_TRACY_PATH "C:/tracy-0.11.1" CACHE STRING "Path to Tracy")
 set(RAV_WINDOWS_VERSION "0x0A00" CACHE STRING "The minimum supported version of Windows")
 
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
-    set(RAV_EXAMPLES OFF)
-endif ()
-
 ##########################
 # Compiler configuration #
 ##########################

@@ -48,16 +48,6 @@ build-linux:
     - python3 -m pip install pygit2 boto3
     - python3 -u build.py --path-to-build build-linux --build-number $CI_PIPELINE_IID
 
-build-android:
-  tags:
-    - macos
-  stage: build
-  script:
-    - python3 -m venv .venv
-    - source .venv/bin/activate
-    - pip install pygit2 boto3
-    - python3 -u build.py --android --path-to-build build-android --build-number "$env:CI_PIPELINE_IID"
-
 build-dist:
   tags:
     - macos

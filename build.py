@@ -188,51 +188,6 @@ def build_linux(args, arch, build_config: Config, subfolder: str, spdlog: bool =
     return path_to_build
 
 
-def build_android(args, arch, build_config: Config, subfolder: str, spdlog: bool = False):
-    path_to_build = Path(args.path_to_build) / subfolder
-
-    if args.skip_build:
-        return path_to_build
-
-    android_abi_vcpkg_triplets = {"arm64-v8a": "arm64-android", "armeabi-v7a": "arm-android", "x86_64": "x64-android",
-                                  "x86": "x86-android"}
-
-    triplet = android_abi_vcpkg_triplets[arch]
-
-    if triplet is None:
-        raise ValueError(f'Unknown android architecture {arch}')
-
-    android_ndk_home = Path.home() / 'Library' / 'Android' / 'sdk' / 'ndk' / '23.1.7779620'
-    env = os.environ.copy()
-    env['ANDROID_NDK_HOME'] = str(android_ndk_home)
-
-    path_to_build.mkdir(parents=True, exist_ok=True)
-
-    cmake = CMake()
-    cmake.env(env)
-    cmake.path_to_build(path_to_build)
-    cmake.path_to_source(script_dir)
-    cmake.build_config(build_config)
-    cmake.parallel(multiprocessing.cpu_count())
-
-    cmake.option('CMAKE_TOOLCHAIN_FILE', 'submodules/vcpkg/scripts/buildsystems/vcpkg.cmake')
-    cmake.option('VCPKG_CHAINLOAD_TOOLCHAIN_FILE', f'{android_ndk_home}/build/cmake/android.toolchain.cmake')
-    cmake.option('VCPKG_TARGET_TRIPLET', triplet)
-    cmake.option('ANDROID_ABI', arch)
-    cmake.option('ANDROID_PLATFORM', 'android-29')
-    cmake.option('BUILD_NUMBER', args.build_number)
-
-    if spdlog:
-        cmake.option('RAV_ENABLE_SPDLOG', 'ON')
-
-    cmake.option('RAV_ENABLE_DEBUG', 'ON')
-
-    cmake.configure()
-    cmake.build()
-
-    return path_to_build
-
-
 def build_dist(args):
     path_to_dist = Path(args.path_to_build) / 'dist'
     path_to_dist.mkdir(parents=True, exist_ok=True)
@@ -320,32 +275,19 @@ def build(args):
         archive = build_dist(args)
     else:
         if platform.system() == 'Darwin':
-            if args.android:
-                path_to_build = build_android(args, 'arm64-v8a', build_config, 'android_arm64')
-                path_to_build = build_android(args, 'arm64-v8a', build_config, 'android_arm64_spdlog', spdlog=True)
+            path_to_build = build_macos(args, build_config, 'macos_universal')
+            run_test(path_to_build / ravennakit_tests_target, 'macos_universal')
+            subprocess.run([path_to_build / ravennakit_benchmarks_target], check=True)
 
-                path_to_build = build_android(args, 'x86_64', build_config, 'android_x64')
-                path_to_build = build_android(args, 'x86_64', build_config, 'android_x64_spdlog', spdlog=True)
+            if args.asan:
+                path_to_build = build_macos(args, build_config, 'macos_universal_spdlog_asan', spdlog=True,
+                                            asan=True)
+                run_test(path_to_build / ravennakit_tests_target, 'macos_universal_spdlog_asan')
 
-                path_to_build = build_android(args, 'armeabi-v7a', build_config, 'android_arm')
-                path_to_build = build_android(args, 'armeabi-v7a', build_config, 'android_arm_spdlog', spdlog=True)
-
-                path_to_build = build_android(args, 'x86', build_config, 'android_x86')
-                path_to_build = build_android(args, 'x86', build_config, 'android_x86_spdlog', spdlog=True)
-            else:
-                path_to_build = build_macos(args, build_config, 'macos_universal')
-                run_test(path_to_build / ravennakit_tests_target, 'macos_universal')
-                subprocess.run([path_to_build / ravennakit_benchmarks_target], check=True)
-
-                if args.asan:
-                    path_to_build = build_macos(args, build_config, 'macos_universal_spdlog_asan', spdlog=True,
-                                                asan=True)
-                    run_test(path_to_build / ravennakit_tests_target, 'macos_universal_spdlog_asan')
-
-                if args.tsan:
-                    path_to_build = build_macos(args, build_config, 'macos_universal_spdlog_tsan', spdlog=True,
-                                                tsan=True)
-                    run_test(path_to_build / ravennakit_tests_target, 'macos_universal_spdlog_tsan')
+            if args.tsan:
+                path_to_build = build_macos(args, build_config, 'macos_universal_spdlog_tsan', spdlog=True,
+                                            tsan=True)
+                run_test(path_to_build / ravennakit_tests_target, 'macos_universal_spdlog_tsan')
 
         elif platform.system() == 'Windows':
             path_to_build = build_windows(args, 'x64', build_config, 'windows_x64')
