@@ -41,17 +41,19 @@ class RavennaReceiver: public RavennaRtspClient::Subscriber {
 
     /**
      * Defines the configuration for the receiver.
-     * When no sdp_text is set, but the session_name is set, the SDP will be requested from the server.
+     * When no sdp.session_name is set, but the session_name is set, the SDP will be requested from the RTSP server.
      */
     struct Configuration {
         sdp::SessionDescription sdp;
-        std::string session_name;
+        std::string session_name;  // RAVENNA session name
         uint32_t delay_frames {};
         bool enabled {};
         bool auto_update_sdp {true};  // When true, the receiver will connect to the RTSP server for SDP updates.
+        std::string label;            // Freeform string label for the resource.
+        std::string description;      // Detailed description of the resource.
 
         static Configuration default_config() {
-            return Configuration {{}, {}, 480, true, true};
+            return Configuration {{}, {}, 480, true, true, {}, {}};
         }
     };
 

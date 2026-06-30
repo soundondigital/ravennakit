@@ -275,7 +275,8 @@ void rav::RavennaReceiver::handle_announced_sdp(const sdp::SessionDescription& s
 }
 
 tl::expected<void, std::string> rav::RavennaReceiver::update_nmos() {
-    nmos_receiver_.label = configuration_.session_name;
+    nmos_receiver_.label = configuration_.label;
+    nmos_receiver_.description = configuration_.description;
     nmos_receiver_.subscription.active = configuration_.enabled;
     nmos_receiver_.transport = "urn:x-nmos:transport:rtp.mcast";
     nmos_receiver_.interface_bindings.clear();
@@ -376,6 +377,10 @@ tl::expected<void, std::string> rav::RavennaReceiver::set_configuration(Configur
         do_update_rtsp = true;
     }
 
+    if (config.label != configuration_.label || config.description != configuration_.description) {
+        do_update_nmos = true;
+    }
+
     // Apply the configuration changes
 
     configuration_ = std::move(config);
@@ -459,7 +464,9 @@ void rav::RavennaReceiver::set_nmos_node(nmos::Node* nmos_node) {
         return;
     }
     nmos_node_ = nmos_node;
-    update_nmos();
+    if (auto result = update_nmos(); !result.has_value()) {
+        RAV_LOG_ERROR("Failed to update NMOS: {}", result.error());
+    }
 }
 
 void rav::RavennaReceiver::set_nmos_device_id(const boost::uuids::uuid& device_id) {
@@ -581,7 +588,9 @@ void rav::tag_invoke(const boost::json::value_from_tag&, boost::json::value& jv,
         {"delay_frames", config.delay_frames},
         {"enabled", config.enabled},
         {"auto_update_sdp", config.auto_update_sdp},
-        {"sdp", boost::json::value_from(sdp::to_string(config.sdp))}
+        {"sdp", boost::json::value_from(sdp::to_string(config.sdp))},
+        {"label", config.label},
+        {"description", config.description},
     };
 }
 
@@ -597,6 +606,12 @@ rav::tag_invoke(const boost::json::value_to_tag<RavennaReceiver::Configuration>&
     if (auto* str = sdp.if_string()) {
         config.sdp = sdp::parse_session_description(str->c_str()).value();
     }
+
+    if (const auto label = jv.try_at("label"))
+        config.label = label.value().as_string();
+
+    if (const auto description = jv.try_at("description"))
+        config.description = description.value().as_string();
 
     return config;
 }

@@ -419,7 +419,10 @@ class RavennaNode {
     SubscriberList<Subscriber> subscribers_;
     NetworkInterfaceConfig network_interface_config_;
 
+    size_t next_receiver_number_{1};
+
     uint32_t generate_unique_session_id() const;
+    std::string generate_receiver_label();
     void do_maintenance() const;
     void update_ravenna_browser();
 };

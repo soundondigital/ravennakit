@@ -159,6 +159,9 @@ rav::RavennaNode::~RavennaNode() {
 std::future<tl::expected<rav::Id, std::string>> rav::RavennaNode::create_receiver(RavennaReceiver::Configuration initial_config) {
     auto work = [this, config = std::move(initial_config)]() mutable -> tl::expected<Id, std::string> {
         auto new_receiver = std::make_unique<RavennaReceiver>(rtsp_client_, rtp_receiver_, id_generator_.next(), network_interface_config_);
+        if (config.label.empty()) {
+            config.label = generate_receiver_label();
+        }
         auto result = new_receiver->set_configuration(std::move(config));
         if (!result) {
             RAV_LOG_ERROR("Failed to set receiver configuration: {}", result.error());
@@ -731,6 +734,24 @@ uint32_t rav::RavennaNode::generate_unique_session_id() const {
         highest_session_id = std::max(highest_session_id, sender->get_session_id());
     }
     return highest_session_id + 1;
+}
+
+std::string rav::RavennaNode::generate_receiver_label() {
+    for (size_t i = next_receiver_number_; i < 10'000; i++) {
+        auto new_label = fmt::format("Receiver {}", i);
+        bool exists = false;
+        for (auto& receiver : receivers_) {
+            if (new_label == receiver->get_configuration().label) {
+                exists = true;
+                break;
+            }
+        }
+        if (!exists) {
+            next_receiver_number_ = i + 1;
+            return new_label;
+        }
+    }
+    return {};
 }
 
 void rav::RavennaNode::do_maintenance() const {
